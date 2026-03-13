@@ -20,6 +20,8 @@ model households {
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
   is_active        Boolean  @default(true)
+
+  users            users[]
 }
 
 model super_admins {
@@ -45,6 +47,8 @@ model users {
   is_active            Boolean  @default(true)
   created_at           DateTime @default(now())
   last_login_at        DateTime?
+
+  household            households @relation(fields: [household_id], references: [id])
 }
 
 enum UserRole {
