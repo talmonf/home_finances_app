@@ -1,4 +1,5 @@
-import NextAuth, { type DefaultSession } from "next-auth";
+import type { DefaultSession, NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@/generated/prisma/client";
@@ -40,7 +41,7 @@ declare module "next-auth" {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
@@ -126,10 +127,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
   },
-});
+};
+
+export function getAuthSession() {
+  return getServerSession(authOptions);
+}
 
 export async function requireSuperAdmin() {
-  const session = await auth();
+  const session = await getAuthSession();
   if (!session?.user?.isSuperAdmin) {
     throw new Error("Not authorized");
   }
@@ -137,7 +142,7 @@ export async function requireSuperAdmin() {
 }
 
 export async function requireHouseholdAdmin() {
-  const session = await auth();
+  const session = await getAuthSession();
   if (!session?.user || session.user.isSuperAdmin) {
     throw new Error("Not authorized");
   }
@@ -148,7 +153,7 @@ export async function requireHouseholdAdmin() {
 }
 
 export async function requireHouseholdMember() {
-  const session = await auth();
+  const session = await getAuthSession();
   if (!session?.user || session.user.isSuperAdmin) {
     throw new Error("Not authorized");
   }
@@ -156,7 +161,7 @@ export async function requireHouseholdMember() {
 }
 
 export async function getCurrentHouseholdId() {
-  const session = await auth();
+  const session = await getAuthSession();
   return session?.user?.householdId ?? null;
 }
 
