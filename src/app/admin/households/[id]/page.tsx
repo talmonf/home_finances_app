@@ -18,8 +18,15 @@ export default async function HouseholdUsersPage({
 }: PageProps) {
   await requireSuperAdmin();
 
+  // Guard against missing or invalid route parameter to avoid Prisma errors
+  if (!params?.id) {
+    notFound();
+  }
+
+  const householdId = params.id;
+
   const household = await prisma.households.findUnique({
-    where: { id: params.id },
+    where: { id: householdId },
   });
 
   if (!household) {
@@ -27,7 +34,7 @@ export default async function HouseholdUsersPage({
   }
 
   const users = await prisma.users.findMany({
-    where: { household_id: params.id },
+    where: { household_id: householdId },
     orderBy: { created_at: "asc" },
   });
 
@@ -78,8 +85,8 @@ export default async function HouseholdUsersPage({
       data: { is_active: nextActive },
     });
 
-    revalidatePath(`/admin/households/${params.id}`);
-    redirect(`/admin/households/${params.id}?updated=1`);
+    revalidatePath(`/admin/households/${householdId}`);
+    redirect(`/admin/households/${householdId}?updated=1`);
   }
 
   return (
