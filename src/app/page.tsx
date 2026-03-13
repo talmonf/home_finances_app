@@ -25,6 +25,8 @@ export default async function Home() {
     );
   }
 
+  const isSuperAdmin = session.user.isSuperAdmin;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
       <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -34,38 +36,53 @@ export default async function Home() {
               Welcome back, {session.user.name ?? "user"}
             </h1>
             <p className="text-sm text-slate-400">
-              This dashboard will show your households, accounts, and key
-              finance insights.
+              {isSuperAdmin
+                ? "Use the super admin tools to manage households and platform users."
+                : "This dashboard will show your households, accounts, and key finance insights."}
             </p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Households
+              {isSuperAdmin ? "Households (Super Admin)" : "Households"}
             </h2>
-            <p className="text-xs text-slate-400">
-              A households overview page will appear here once implemented.
+            <p className="mb-3 text-xs text-slate-400">
+              {isSuperAdmin
+                ? "Create and manage all households on the platform."
+                : "A households overview page will appear here once implemented."}
             </p>
+            {isSuperAdmin && (
+              <Link
+                href="/admin/households"
+                className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+              >
+                Open household admin
+              </Link>
+            )}
           </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Accounts
-            </h2>
-            <p className="text-xs text-slate-400">
-              Bank accounts, cards, and wallets will be accessible from the
-              Accounts section.
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Reports
-            </h2>
-            <p className="text-xs text-slate-400">
-              Your P&amp;L and other reports will live here as we build them
-              out.
-            </p>
-          </div>
+          {!isSuperAdmin && (
+            <>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Accounts
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Bank accounts, cards, and wallets will be accessible from the
+                  Accounts section.
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Reports
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Your P&amp;L and other reports will live here as we build them
+                  out.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
