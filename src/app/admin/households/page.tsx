@@ -3,6 +3,8 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   searchParams?: {
     created?: string;

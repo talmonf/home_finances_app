@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: { id: string };
   searchParams?: {
