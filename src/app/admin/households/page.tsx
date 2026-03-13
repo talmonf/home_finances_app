@@ -1,6 +1,17 @@
 import { prisma, requireSuperAdmin } from "@/lib/auth";
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-export default async function HouseholdsAdminPage() {
+type PageProps = {
+  searchParams?: {
+    created?: string;
+    updated?: string;
+    error?: string;
+  };
+};
+
+export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
   await requireSuperAdmin();
 
   const households = await prisma.households.findMany({
@@ -18,7 +29,7 @@ export default async function HouseholdsAdminPage() {
       ((formData.get("primary_currency") as string | null) || "ILS").trim();
 
     if (!name) {
-      throw new Error("Household name is required");
+      redirect("/admin/households?error=Household+name+is+required");
     }
 
     await prisma.households.create({
@@ -29,6 +40,9 @@ export default async function HouseholdsAdminPage() {
         primary_currency: currency,
       },
     });
+
+    revalidatePath("/admin/households");
+    redirect("/admin/households?created=1");
   }
 
   async function toggleHouseholdActive(id: string, nextActive: boolean) {
@@ -40,12 +54,15 @@ export default async function HouseholdsAdminPage() {
       where: { id },
       data: { is_active: nextActive },
     });
+
+    revalidatePath("/admin/households");
+    redirect("/admin/households?updated=1");
   }
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-slate-50">
               Households (Super Admin)
@@ -54,6 +71,30 @@ export default async function HouseholdsAdminPage() {
               Create and manage all households on the platform.
             </p>
           </div>
+
+          {(searchParams?.created || searchParams?.updated || searchParams?.error) && (
+            <div
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
+                searchParams.error
+                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
+                  : "border-emerald-600 bg-emerald-950/60 text-emerald-100"
+              }`}
+            >
+              <span>
+                {searchParams.error
+                  ? decodeURIComponent(searchParams.error)
+                  : searchParams.created
+                    ? "Household created successfully."
+                    : "Household updated successfully."}
+              </span>
+              <Link
+                href="/admin/households"
+                className="ml-4 text-[11px] font-medium underline underline-offset-2"
+              >
+                Dismiss
+              </Link>
+            </div>
+          )}
         </header>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
@@ -147,7 +188,13 @@ export default async function HouseholdsAdminPage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 pr-4 text-right">
+                      <td className="flex items-center justify-end gap-2 py-2 pr-4">
+                        <Link
+                          href={`/admin/households/${h.id}`}
+                          className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                        >
+                          Manage users
+                        </Link>
                         <form
                           action={async () => {
                             "use server";
