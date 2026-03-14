@@ -91,7 +91,7 @@ export function AssistChat({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask or answer…”
+          placeholder="Ask or answer..."
           className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
           disabled={loading}
         />
@@ -100,7 +100,7 @@ export function AssistChat({
           disabled={loading}
           className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60"
         >
-          {loading ? "…" : "Send"}
+          {loading ? "..." : "Send"}
         </button>
       </form>
     </div>
