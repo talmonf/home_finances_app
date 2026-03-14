@@ -27,6 +27,10 @@ model households {
   credit_cards          credit_cards[]
   studies_and_classes   studies_and_classes[]
   subscriptions         subscriptions[]
+  categories            categories[]
+  payees                payees[]
+  documents             documents[]
+  transactions          transactions[]
 }
 
 model family_members {
@@ -42,6 +46,7 @@ model family_members {
   household           households     @relation(fields: [household_id], references: [id])
   credit_cards        credit_cards[]
   studies_and_classes studies_and_classes[]
+  transactions        transactions[]
 }
 
 model bank_accounts {
@@ -59,6 +64,8 @@ model bank_accounts {
 
   household    households   @relation(fields: [household_id], references: [id])
   credit_cards credit_cards[]
+  documents    documents[]
+  transactions transactions[]
 }
 
 model credit_cards {
@@ -97,6 +104,132 @@ model studies_and_classes {
 
   household     households     @relation(fields: [household_id], references: [id])
   family_member family_members @relation(fields: [family_member_id], references: [id])
+  transactions  transactions[]
+}
+
+model categories {
+  id             String   @id @default(uuid())
+  household_id   String
+  name           String
+  parent_id      String?
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  household    households    @relation(fields: [household_id], references: [id])
+  parent       categories?   @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children     categories[]  @relation("CategoryHierarchy")
+  transactions transactions[]
+}
+
+model payees {
+  id           String   @id @default(uuid())
+  household_id String
+  name         String
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household    households    @relation(fields: [household_id], references: [id])
+  transactions transactions[]
+}
+
+model documents {
+  id               String    @id @default(uuid())
+  household_id     String
+  bank_account_id  String?
+  file_name        String
+  file_type        String
+  storage_path     String?
+  processing_status DocumentProcessingStatus @default(pending)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  household      households     @relation(fields: [household_id], references: [id])
+  bank_account   bank_accounts? @relation(fields: [bank_account_id], references: [id])
+  source_records source_records[]
+  transactions   transactions[]
+}
+
+model source_records {
+  id               String   @id @default(uuid())
+  document_id      String
+  row_index        Int
+  raw_date         String?
+  raw_amount       String?
+  raw_description  String?
+  raw_balance      String?
+  parsed_date      DateTime?
+  parsed_amount    Decimal? @db.Decimal(15, 2)
+  parsed_direction String?
+  created_at       DateTime @default(now())
+
+  document     documents     @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  transactions transactions[]
+}
+
+model transactions {
+  id                    String    @id @default(uuid())
+  household_id          String
+  bank_account_id       String?
+  source_record_id      String?
+  document_id           String?
+  transaction_date      DateTime
+  amount                Decimal   @db.Decimal(15, 2)
+  transaction_direction TransactionDirection
+  transaction_type      TransactionType     @default(regular)
+  description          String?
+  category_id           String?
+  payee_id              String?
+  notes                 String?
+  family_member_id      String?
+  study_or_class_id     String?
+  import_status         TransactionImportStatus @default(pending_review)
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  household      households     @relation(fields: [household_id], references: [id])
+  bank_account   bank_accounts? @relation(fields: [bank_account_id], references: [id])
+  source_record  source_records? @relation(fields: [source_record_id], references: [id])
+  document       documents?      @relation(fields: [document_id], references: [id])
+  category       categories?     @relation(fields: [category_id], references: [id])
+  payee          payees?        @relation(fields: [payee_id], references: [id])
+  family_member  family_members? @relation(fields: [family_member_id], references: [id])
+  study_or_class studies_and_classes? @relation(fields: [study_or_class_id], references: [id])
+}
+
+enum DocumentProcessingStatus {
+  pending
+  processing
+  completed
+  failed
+
+  @@map("document_processing_status")
+}
+
+enum TransactionDirection {
+  debit
+  credit
+
+  @@map("transaction_direction")
+}
+
+enum TransactionType {
+  regular
+  transfer
+  donation
+  installment
+  salary
+  refund
+
+  @@map("transaction_type")
+}
+
+enum TransactionImportStatus {
+  pending_review
+  confirmed
+
+  @@map("transaction_import_status")
 }
 
 model subscriptions {

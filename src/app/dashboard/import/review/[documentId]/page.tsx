@@ -1,0 +1,253 @@
+import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import Link from "next/link";
+import { redirect, notFound } from "next/navigation";
+import {
+  updateTransactionRow,
+  confirmAllTransactionsForDocument,
+  createCategory,
+  createPayee,
+} from "../../actions";
+
+export const dynamic = "force-dynamic";
+
+type PageProps = {
+  params: Promise<{ documentId: string }>;
+  searchParams?: Promise<{ confirmed?: string; error?: string }>;
+};
+
+function formatDate(d: Date) {
+  return new Date(d).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatMoney(value: unknown) {
+  if (value == null) return "—";
+  const n =
+    typeof value === "object" && value !== null && "toNumber" in value
+      ? (value as { toNumber(): number }).toNumber()
+      : Number(value);
+  return Number.isNaN(n)
+    ? "—"
+    : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default async function ImportReviewPage({ params, searchParams }: PageProps) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const { documentId } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
+  const [doc, transactions, categories, payees, familyMembers, studies] = await Promise.all([
+    prisma.documents.findFirst({
+      where: { id: documentId, household_id: householdId },
+      include: { bank_account: true },
+    }),
+    prisma.transactions.findMany({
+      where: { document_id: documentId, household_id: householdId },
+      include: {
+        category: true,
+        payee: true,
+        family_member: true,
+        study_or_class: true,
+      },
+      orderBy: { transaction_date: "asc" },
+    }),
+    prisma.categories.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.payees.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.studies_and_classes.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  if (!doc) notFound();
+
+  return (
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <header>
+          <Link
+            href="/dashboard/import"
+            className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
+          >
+            ← Back to import
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">Review transactions</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            {doc.file_name}
+            {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
+          </p>
+          {(resolvedSearchParams?.confirmed || resolvedSearchParams?.error) && (
+            <div
+              className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                resolvedSearchParams.error
+                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
+                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
+              }`}
+            >
+              {resolvedSearchParams.error
+                ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
+                : "All transactions marked as confirmed."}
+            </div>
+          )}
+        </header>
+
+        <div className="flex flex-wrap gap-4">
+          <form action={confirmAllTransactionsForDocument.bind(null, documentId)} className="inline">
+            <button
+              type="submit"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              Confirm all
+            </button>
+          </form>
+        </div>
+
+        {/* Quick add category / payee */}
+        <div className="flex flex-wrap gap-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <form action={createCategory} className="flex items-end gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">New category</label>
+              <input
+                name="name"
+                placeholder="Category name"
+                className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
+              />
+            </div>
+            <button type="submit" className="rounded bg-slate-600 px-3 py-1.5 text-xs text-white hover:bg-slate-500">
+              Add
+            </button>
+          </form>
+          <form action={createPayee} className="flex items-end gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">New payee</label>
+              <input
+                name="name"
+                placeholder="Payee name"
+                className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
+              />
+            </div>
+            <button type="submit" className="rounded bg-slate-600 px-3 py-1.5 text-xs text-white hover:bg-slate-500">
+              Add
+            </button>
+          </form>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-700 bg-slate-800/80">
+                <th className="px-2 py-2 font-medium text-slate-300">Date</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Amount</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Description</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => (
+                <tr key={tx.id} className="border-b border-slate-700/80 hover:bg-slate-800/30">
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-300">
+                    {formatDate(tx.transaction_date)}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-300">
+                    {formatMoney(tx.amount)} {tx.transaction_direction}
+                  </td>
+                  <td className="max-w-[180px] truncate px-2 py-2 text-slate-400" title={tx.description ?? ""}>
+                    {tx.description ?? "—"}
+                  </td>
+                  <td colSpan={6} className="px-2 py-2">
+                    <form action={updateTransactionRow} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="transaction_id" value={tx.id} />
+                      <select
+                        name="category_id"
+                        defaultValue={tx.category_id ?? ""}
+                        className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">—</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="payee_id"
+                        defaultValue={tx.payee_id ?? ""}
+                        className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">—</option>
+                        {payees.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        name="notes"
+                        defaultValue={tx.notes ?? ""}
+                        placeholder="Notes"
+                        className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      />
+                      <select
+                        name="family_member_id"
+                        defaultValue={tx.family_member_id ?? ""}
+                        className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">—</option>
+                        {familyMembers.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.full_name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="study_or_class_id"
+                        defaultValue={tx.study_or_class_id ?? ""}
+                        className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">—</option>
+                        {studies.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500"
+                      >
+                        Save row
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {transactions.length === 0 && (
+          <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+            No transactions in this import.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
