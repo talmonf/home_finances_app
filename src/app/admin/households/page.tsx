@@ -6,15 +6,17 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     created?: string;
     updated?: string;
     error?: string;
-  };
+  }>;
 };
 
 export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
   await requireSuperAdmin();
+
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const households = await prisma.households.findMany({
     orderBy: { created_at: "desc" },
@@ -74,18 +76,18 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
             </p>
           </div>
 
-          {(searchParams?.created || searchParams?.updated || searchParams?.error) && (
+          {(resolvedSearchParams?.created || resolvedSearchParams?.updated || resolvedSearchParams?.error) && (
             <div
               className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
-                searchParams.error
+                resolvedSearchParams.error
                   ? "border-rose-600 bg-rose-950/60 text-rose-100"
                   : "border-emerald-600 bg-emerald-950/60 text-emerald-100"
               }`}
             >
               <span>
-                {searchParams.error
-                  ? decodeURIComponent(searchParams.error)
-                  : searchParams.created
+                {resolvedSearchParams.error
+                  ? decodeURIComponent(resolvedSearchParams.error)
+                  : resolvedSearchParams.created
                     ? "Household created successfully."
                     : "Household updated successfully."}
               </span>

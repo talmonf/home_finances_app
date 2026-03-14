@@ -6,12 +6,12 @@ import bcrypt from "bcryptjs";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: { id: string };
-  searchParams?: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{
     created?: string;
     updated?: string;
     error?: string;
-  };
+  }>;
 };
 
 export default async function HouseholdUsersPage({
@@ -20,12 +20,15 @@ export default async function HouseholdUsersPage({
 }: PageProps) {
   await requireSuperAdmin();
 
+  const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
   // Guard against missing or invalid route parameter to avoid Prisma errors
-  if (!params?.id) {
+  if (!resolvedParams?.id) {
     notFound();
   }
 
-  const householdId = params.id;
+  const householdId = resolvedParams.id;
 
   const household = await prisma.households.findUnique({
     where: { id: householdId },
@@ -110,18 +113,18 @@ export default async function HouseholdUsersPage({
             </div>
           </div>
 
-          {(searchParams?.created || searchParams?.updated || searchParams?.error) && (
+          {(resolvedSearchParams?.created || resolvedSearchParams?.updated || resolvedSearchParams?.error) && (
             <div
               className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
-                searchParams.error
+                resolvedSearchParams.error
                   ? "border-rose-600 bg-rose-950/60 text-rose-100"
                   : "border-emerald-600 bg-emerald-950/60 text-emerald-100"
               }`}
             >
               <span>
-                {searchParams.error
-                  ? decodeURIComponent(searchParams.error)
-                  : searchParams.created
+                {resolvedSearchParams.error
+                  ? decodeURIComponent(resolvedSearchParams.error)
+                  : resolvedSearchParams.created
                     ? "User created successfully."
                     : "User updated successfully."}
               </span>

@@ -2,13 +2,14 @@ import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
 
 type LoginPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     callbackUrl?: string;
-  };
+  }>;
 };
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
-  const callbackUrl = searchParams?.callbackUrl;
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const callbackUrl = resolvedSearchParams?.callbackUrl;
 
   return (
     <Suspense fallback={null}>
