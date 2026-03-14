@@ -2,10 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +28,8 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       return;
     }
 
-    router.push(result?.url ?? "/");
+    // Full navigation so the server sees the new session and renders the right layout
+    window.location.href = result?.url ?? "/";
   }
 
   return (
