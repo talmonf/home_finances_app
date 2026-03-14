@@ -119,7 +119,12 @@ function parseDateString(s: string): string {
 }
 
 export async function parsePdfBuffer(buffer: Buffer): Promise<ParsedTransactionRow[]> {
-  const pdfParse = (await import("pdf-parse")).default;
+  const m = (await import("pdf-parse")) as unknown as
+    | { default: (b: Buffer) => Promise<{ text?: string }> }
+    | ((b: Buffer) => Promise<{ text?: string }>);
+  const pdfParse = typeof (m as { default?: (b: Buffer) => Promise<{ text?: string }> }).default === "function"
+    ? (m as { default: (b: Buffer) => Promise<{ text?: string }> }).default
+    : (m as (b: Buffer) => Promise<{ text?: string }>);
   const data = await pdfParse(buffer);
   const text = data.text || "";
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
