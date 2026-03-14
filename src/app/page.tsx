@@ -65,6 +65,48 @@ export default async function Home() {
             <>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Family members
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Manage people in your household for studies, classes, and cards.
+                </p>
+                <Link
+                  href="/dashboard/family-members"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Family members
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Bank accounts
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Manage bank accounts for this household.
+                </p>
+                <Link
+                  href="/dashboard/bank-accounts"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Bank accounts
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Credit cards
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Manage credit cards and link to settlement accounts.
+                </p>
+                <Link
+                  href="/dashboard/credit-cards"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Credit cards
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Studies &amp; Classes
                 </h2>
                 <p className="mb-3 text-xs text-slate-400">
@@ -90,15 +132,6 @@ export default async function Home() {
                 >
                   Open Subscriptions
                 </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Accounts
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Bank accounts, cards, and wallets will be accessible from the
-                  Accounts section.
-                </p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
