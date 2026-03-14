@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   description: "Self-hosted multi-household personal finance system",
 };
 
+// Ensure layout is rendered per request so it always sees the latest session
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
