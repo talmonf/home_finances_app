@@ -65,6 +65,34 @@ export default async function Home() {
             <>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Studies &amp; Classes
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Track studies and classes per family member with expected costs.
+                </p>
+                <Link
+                  href="/dashboard/studies-and-classes"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Studies &amp; Classes
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Subscriptions
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Track recurring subscriptions, renewal dates, and payment methods.
+                </p>
+                <Link
+                  href="/dashboard/subscriptions"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Subscriptions
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Accounts
                 </h2>
                 <p className="text-xs text-slate-400">

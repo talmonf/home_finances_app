@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:check": "npx tsx prisma/check-db.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
@@ -20,6 +21,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

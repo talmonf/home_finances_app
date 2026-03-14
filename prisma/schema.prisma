@@ -21,7 +21,110 @@ model households {
   updated_at       DateTime @updatedAt
   is_active        Boolean  @default(true)
 
-  users            users[]
+  users                 users[]
+  family_members        family_members[]
+  bank_accounts         bank_accounts[]
+  credit_cards          credit_cards[]
+  studies_and_classes   studies_and_classes[]
+  subscriptions         subscriptions[]
+}
+
+model family_members {
+  id             String   @id @default(uuid())
+  household_id   String
+  full_name      String
+  date_of_birth  DateTime?
+  id_number      String?
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  household           households     @relation(fields: [household_id], references: [id])
+  credit_cards        credit_cards[]
+  studies_and_classes studies_and_classes[]
+}
+
+model bank_accounts {
+  id             String   @id @default(uuid())
+  household_id   String
+  account_name   String
+  bank_name      String
+  branch_number  String?
+  account_number String?
+  currency       String   @default("ILS")
+  country        String   @default("IL")
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  household    households   @relation(fields: [household_id], references: [id])
+  credit_cards credit_cards[]
+}
+
+model credit_cards {
+  id                         String   @id @default(uuid())
+  household_id               String
+  family_member_id           String
+  card_name                  String
+  issuer_name                String
+  card_last_four             String?
+  settlement_bank_account_id String
+  currency                   String   @default("ILS")
+  is_active                  Boolean  @default(true)
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @updatedAt
+
+  household     households    @relation(fields: [household_id], references: [id])
+  family_member family_members @relation(fields: [family_member_id], references: [id])
+  bank_account  bank_accounts  @relation(fields: [settlement_bank_account_id], references: [id])
+  subscriptions subscriptions[]
+}
+
+model studies_and_classes {
+  id                    String            @id @default(uuid())
+  household_id          String
+  family_member_id     String
+  name                  String
+  type                  StudyOrClassType
+  start_date            DateTime?
+  end_date              DateTime?
+  expected_annual_cost  Decimal?          @db.Decimal(15, 2)
+  number_of_years       Int?
+  description           String?
+  is_active             Boolean           @default(true)
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  household     households     @relation(fields: [household_id], references: [id])
+  family_member family_members @relation(fields: [family_member_id], references: [id])
+}
+
+model subscriptions {
+  id               String                     @id @default(uuid())
+  household_id     String
+  name             String
+  start_date       DateTime
+  renewal_date     DateTime
+  fee_amount       Decimal                    @db.Decimal(15, 2)
+  billing_interval SubscriptionBillingInterval
+  credit_card_id   String?
+  description      String?
+  is_active        Boolean                    @default(true)
+  created_at       DateTime                   @default(now())
+  updated_at       DateTime                   @updatedAt
+
+  household    households   @relation(fields: [household_id], references: [id])
+  credit_card  credit_cards? @relation(fields: [credit_card_id], references: [id])
+}
+
+enum StudyOrClassType {
+  study
+  class
+}
+
+enum SubscriptionBillingInterval {
+  monthly
+  annual
 }
 
 model super_admins {
@@ -54,10 +157,14 @@ model users {
 enum UserRole {
   admin
   member
+
+  @@map("user_role")
 }
 
 enum UserType {
   family_member
   financial_advisor
   other
+
+  @@map("user_type")
 }
