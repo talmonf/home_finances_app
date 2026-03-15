@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
+import { createFamilyMember, toggleFamilyMemberActive, linkUserToFamilyMember } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +31,17 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const members = await prisma.family_members.findMany({
-    where: { household_id: householdId },
-    orderBy: { full_name: "asc" },
-  });
+  const [members, householdUsers] = await Promise.all([
+    prisma.family_members.findMany({
+      where: { household_id: householdId },
+      include: { users: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.users.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -194,6 +201,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">ID number</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Phone</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Email</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Linked user</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -207,6 +215,26 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <form action={linkUserToFamilyMember} className="inline">
+                          <input type="hidden" name="family_member_id" value={m.id} />
+                          <select
+                            name="user_id"
+                            defaultValue={m.users[0]?.id ?? ""}
+                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                          >
+                            <option value="">— None —</option>
+                            {householdUsers.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.full_name} ({u.email})
+                              </option>
+                            ))}
+                          </select>
+                          <button type="submit" className="ml-1 text-xs text-sky-400 hover:text-sky-300">
+                            Save
+                          </button>
+                        </form>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={m.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {m.is_active ? "Active" : "Inactive"}

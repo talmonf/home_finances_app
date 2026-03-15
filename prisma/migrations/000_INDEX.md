@@ -20,7 +20,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 002_studies_and_subscriptions.sql
 - [x] 003_import_tables.sql
 - [x] 004_tasks.sql
-- [ ] 005_alter_family_members_phone_email_relationship.sql
+- [x] 005_alter_family_members_phone_email_relationship.sql
 
 ---
 

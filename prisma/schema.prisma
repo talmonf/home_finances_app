@@ -52,6 +52,7 @@ model family_members {
   studies_and_classes studies_and_classes[]
   transactions        transactions[]
   tasks_assigned      tasks[]
+  users               users[]
 }
 
 model bank_accounts {
@@ -289,7 +290,8 @@ model users {
   created_at           DateTime @default(now())
   last_login_at        DateTime?
 
-  household            households @relation(fields: [household_id], references: [id])
+  household            households     @relation(fields: [household_id], references: [id])
+  family_member        family_members? @relation(fields: [family_member_id], references: [id])
   tasks_assigned       tasks[]
 }
 

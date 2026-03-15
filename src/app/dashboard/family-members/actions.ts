@@ -56,3 +56,44 @@ export async function toggleFamilyMemberActive(id: string, nextActive: boolean) 
   revalidatePath("/dashboard/family-members");
   redirect("/dashboard/family-members?updated=1");
 }
+
+export async function linkUserToFamilyMember(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/dashboard/family-members?error=No+household");
+
+  const family_member_id = (formData.get("family_member_id") as string)?.trim();
+  const user_id = (formData.get("user_id") as string)?.trim() || null;
+
+  if (!family_member_id) return;
+
+  const member = await prisma.family_members.findFirst({
+    where: { id: family_member_id, household_id: householdId },
+  });
+  if (!member) return;
+
+  if (user_id) {
+    const user = await prisma.users.findFirst({
+      where: { id: user_id, household_id: householdId },
+    });
+    if (!user) return;
+  }
+
+  const updates = [
+    prisma.users.updateMany({
+      where: { household_id: householdId, family_member_id },
+      data: { family_member_id: null },
+    }),
+  ];
+  if (user_id) {
+    updates.push(
+      prisma.users.updateMany({
+        where: { id: user_id, household_id: householdId },
+        data: { family_member_id },
+      })
+    );
+  }
+  await prisma.$transaction(updates);
+
+  revalidatePath("/dashboard/family-members");
+}
