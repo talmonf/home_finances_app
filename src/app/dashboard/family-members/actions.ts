@@ -14,6 +14,9 @@ export async function createFamilyMember(formData: FormData) {
   const full_name = (formData.get("full_name") as string | null)?.trim();
   const date_of_birth_raw = (formData.get("date_of_birth") as string | null)?.trim();
   const id_number = (formData.get("id_number") as string | null)?.trim() || null;
+  const phone = (formData.get("phone") as string | null)?.trim() || null;
+  const email = (formData.get("email") as string | null)?.trim() || null;
+  const relationship = (formData.get("relationship") as string | null)?.trim() || null;
 
   if (!full_name) {
     redirect("/dashboard/family-members?error=Name+is+required");
@@ -28,6 +31,9 @@ export async function createFamilyMember(formData: FormData) {
       full_name,
       date_of_birth,
       id_number,
+      phone,
+      email,
+      relationship,
     },
   });
 

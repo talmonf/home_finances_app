@@ -40,9 +40,12 @@ model family_members {
   full_name      String
   date_of_birth  DateTime?
   id_number      String?
+  phone          String?
+  email          String?
+  relationship   String?
   is_active      Boolean  @default(true)
   created_at     DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  updated_at     DateTime @updatedAt
 
   household           households     @relation(fields: [household_id], references: [id])
   credit_cards        credit_cards[]

@@ -12,6 +12,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 002 | `002_studies_and_subscriptions.sql` | CREATE | Enums + tables: studies_and_classes, subscriptions |
 | 003 | `003_import_tables.sql` | CREATE | Enums + tables: categories, payees, documents, source_records, transactions |
 | 004 | `004_tasks.sql` | CREATE | Enums + table: task_type, task_status, task_priority, tasks |
+| 005 | `005_alter_family_members_phone_email_relationship.sql` | ALTER | family_members: add phone, email, relationship |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -19,6 +20,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 002_studies_and_subscriptions.sql
 - [x] 003_import_tables.sql
 - [x] 004_tasks.sql
+- [ ] 005_alter_family_members_phone_email_relationship.sql
 
 ---
 

@@ -118,6 +118,54 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 placeholder="Optional"
               />
             </div>
+            <div>
+              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
+                Phone
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. +1 234 567 8900"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="mb-1 block text-xs font-medium text-slate-400">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
+                Relationship
+              </label>
+              <select
+                id="relationship"
+                name="relationship"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">—</option>
+                <option value="Son">Son</option>
+                <option value="Daughter">Daughter</option>
+                <option value="Grandson">Grandson</option>
+                <option value="Granddaughter">Granddaughter</option>
+                <option value="Wife">Wife</option>
+                <option value="Husband">Husband</option>
+                <option value="Partner">Partner</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+                <option value="Brother">Brother</option>
+                <option value="Sister">Sister</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
             <div className="flex items-end sm:col-span-2">
               <button
                 type="submit"
@@ -141,8 +189,11 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Relationship</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Date of birth</th>
                     <th className="px-4 py-3 font-medium text-slate-300">ID number</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Phone</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Email</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -151,8 +202,11 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   {members.map((m) => (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(m.date_of_birth)}</td>
                       <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span className={m.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {m.is_active ? "Active" : "Inactive"}
