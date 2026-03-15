@@ -59,7 +59,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 Family members
               </h1>
               <p className="text-sm text-slate-400">
-                Manage people in your household for studies, classes, and cards.
+                Manage people in your household. Link a household user account in the &quot;Linked user&quot; column (second column in the list).
               </p>
             </div>
           </div>
@@ -196,12 +196,12 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Linked user</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Relationship</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Date of birth</th>
                     <th className="px-4 py-3 font-medium text-slate-300">ID number</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Phone</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Email</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Linked user</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -210,18 +210,13 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   {members.map((m) => (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(m.date_of_birth)}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>
                       <td className="px-4 py-3">
                         <form action={linkUserToFamilyMember} className="inline">
                           <input type="hidden" name="family_member_id" value={m.id} />
                           <select
                             name="user_id"
                             defaultValue={m.users[0]?.id ?? ""}
-                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                            className="min-w-[140px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
                           >
                             <option value="">— None —</option>
                             {householdUsers.map((u) => (
@@ -235,6 +230,11 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                           </button>
                         </form>
                       </td>
+                      <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{formatDate(m.date_of_birth)}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span className={m.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {m.is_active ? "Active" : "Inactive"}
