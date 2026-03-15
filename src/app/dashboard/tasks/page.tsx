@@ -38,13 +38,15 @@ export default async function TasksPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const statusFilter = resolvedSearchParams?.status?.trim() || null;
 
+  const taskStatus = statusFilter && ["open", "in_work", "on_hold", "closed"].includes(statusFilter)
+    ? (statusFilter as "open" | "in_work" | "on_hold" | "closed")
+    : undefined;
+
   const [tasks, familyMembers, advisors] = await Promise.all([
     prisma.tasks.findMany({
       where: {
         household_id: householdId,
-        ...(statusFilter && ["open", "in_work", "on_hold", "closed"].includes(statusFilter)
-          ? { status: statusFilter as "open" | "in_work" | "on_hold" | "closed" }
-          : {},
+        ...(taskStatus ? { status: taskStatus } : {}),
       },
       include: { family_member: true, assigned_user: true },
       orderBy: [{ priority: "asc" }, { created_at: "desc" }],

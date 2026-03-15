@@ -15,9 +15,9 @@ Run scripts in order by number. Check off each script after you run it.
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
-- [ ] 001_user_enums.sql
-- [ ] 002_studies_and_subscriptions.sql
-- [ ] 003_import_tables.sql
+- [x] 001_user_enums.sql
+- [x] 002_studies_and_subscriptions.sql
+- [x] 003_import_tables.sql
 - [x] 004_tasks.sql
 
 ---
