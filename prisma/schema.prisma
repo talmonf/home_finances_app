@@ -31,6 +31,7 @@ model households {
   payees                payees[]
   documents             documents[]
   transactions          transactions[]
+  tasks                 tasks[]
 }
 
 model family_members {
@@ -47,6 +48,7 @@ model family_members {
   credit_cards        credit_cards[]
   studies_and_classes studies_and_classes[]
   transactions        transactions[]
+  tasks_assigned      tasks[]
 }
 
 model bank_accounts {
@@ -285,6 +287,49 @@ model users {
   last_login_at        DateTime?
 
   household            households @relation(fields: [household_id], references: [id])
+  tasks_assigned       tasks[]
+}
+
+model tasks {
+  id                String       @id @default(uuid())
+  household_id      String
+  type              TaskType     @default(manual)
+  status            TaskStatus   @default(open)
+  priority          TaskPriority @default(medium)
+  subject           String
+  description       String?
+  family_member_id  String?
+  assigned_user_id  String?
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+
+  household    households     @relation(fields: [household_id], references: [id])
+  family_member family_members? @relation(fields: [family_member_id], references: [id])
+  assigned_user  users?        @relation(fields: [assigned_user_id], references: [id])
+}
+
+enum TaskType {
+  manual
+  automatic
+
+  @@map("task_type")
+}
+
+enum TaskStatus {
+  open
+  in_work
+  on_hold
+  closed
+
+  @@map("task_status")
+}
+
+enum TaskPriority {
+  high
+  medium
+  low
+
+  @@map("task_priority")
 }
 
 enum UserRole {

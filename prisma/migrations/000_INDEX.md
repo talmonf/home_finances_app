@@ -11,12 +11,14 @@ Run scripts in order by number. Check off each script after you run it.
 | 001 | `001_user_enums.sql` | CREATE | Enums: user_role, user_type (for users table) |
 | 002 | `002_studies_and_subscriptions.sql` | CREATE | Enums + tables: studies_and_classes, subscriptions |
 | 003 | `003_import_tables.sql` | CREATE | Enums + tables: categories, payees, documents, source_records, transactions |
+| 004 | `004_tasks.sql` | CREATE | Enums + table: task_type, task_status, task_priority, tasks |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
 - [ ] 001_user_enums.sql
 - [ ] 002_studies_and_subscriptions.sql
 - [ ] 003_import_tables.sql
+- [x] 004_tasks.sql
 
 ---
 
