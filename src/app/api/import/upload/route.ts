@@ -41,9 +41,10 @@ export async function POST(req: NextRequest) {
     const isExcel =
       name.endsWith(".xlsx") || name.endsWith(".xls");
     const isPdf = name.endsWith(".pdf");
-    if (!isExcel && !isPdf) {
+    const isCsv = name.endsWith(".csv");
+    if (!isExcel && !isPdf && !isCsv) {
       return NextResponse.json(
-        { error: "Only PDF and Excel (.xlsx, .xls) files are supported" },
+        { error: "Only PDF, Excel (.xlsx, .xls), and CSV (.csv) files are supported" },
         { status: 400 }
       );
     }
@@ -62,8 +63,11 @@ export async function POST(req: NextRequest) {
 
     if (isExcel) {
       rows = await parseExcelBuffer(buffer);
-    } else {
+    } else if (isPdf) {
       rows = await parsePdfBuffer(buffer);
+    } else {
+      // CSV: reuse the Excel parser which already does header-based column detection.
+      rows = await parseExcelBuffer(buffer);
     }
 
     const doc = await prisma.documents.create({

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     if (!config) {
       return NextResponse.json({
         reply:
-          "Assisted mode needs an API key. Set **OPENROUTER_API_KEY** (from [openrouter.ai](https://openrouter.ai/)) or **OPENAI_API_KEY**. " +
+          "Assisted mode needs an API key. Set **OPENROUTER_API_KEY** (from https://openrouter.ai/) or **OPENAI_API_KEY**. " +
           "Until then, use the **Review** page to edit transactions manually.",
       });
     }
@@ -114,7 +114,98 @@ ${JSON.stringify(txSummary?.slice(0, 150) ?? [])}`;
       });
     }
 
-    return NextResponse.json({ reply });
+    // Try to parse structured update instructions from the reply.
+    // Expected JSON shape (inside the model's message, either as plain JSON or within text):
+    // {
+    //   "updates": [
+    //     {
+    //       "transactionId": "uuid",
+    //       "categoryName": "Groceries",
+    //       "payeeName": "Supermarket X",
+    //       "notes": "Weekly groceries"
+    //     }
+    //   ]
+    // }
+    let appliedUpdates = 0;
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          updates?: {
+            transactionId?: string;
+            categoryName?: string;
+            payeeName?: string;
+            notes?: string;
+          }[];
+        };
+        const updates = parsed.updates ?? [];
+        if (updates.length > 0) {
+          for (const u of updates) {
+            if (!u.transactionId) continue;
+            const tx = await prisma.transactions.findFirst({
+              where: { id: u.transactionId, household_id: householdId },
+            });
+            if (!tx) continue;
+
+            let categoryId: string | null | undefined = undefined;
+            let payeeId: string | null | undefined = undefined;
+
+            if (u.categoryName) {
+              const existingCat = await prisma.categories.findFirst({
+                where: { household_id: householdId, name: u.categoryName },
+              });
+              if (existingCat) {
+                categoryId = existingCat.id;
+              } else {
+                const created = await prisma.categories.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    name: u.categoryName,
+                  },
+                });
+                categoryId = created.id;
+              }
+            }
+
+            if (u.payeeName) {
+              const existingPayee = await prisma.payees.findFirst({
+                where: { household_id: householdId, name: u.payeeName },
+              });
+              if (existingPayee) {
+                payeeId = existingPayee.id;
+              } else {
+                const createdPayee = await prisma.payees.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    name: u.payeeName,
+                  },
+                });
+                payeeId = createdPayee.id;
+              }
+            }
+
+            const updateData: Record<string, unknown> = {};
+            if (categoryId !== undefined) updateData.category_id = categoryId;
+            if (payeeId !== undefined) updateData.payee_id = payeeId;
+            if (u.notes !== undefined) updateData.notes = u.notes;
+
+            if (Object.keys(updateData).length > 0) {
+              await prisma.transactions.update({
+                where: { id: u.transactionId },
+                data: updateData,
+              });
+              appliedUpdates += 1;
+            }
+          }
+        }
+      }
+    } catch (parseErr) {
+      console.error("Failed to apply AI-suggested updates:", parseErr);
+    }
+
+    return NextResponse.json({ reply, appliedUpdates });
   } catch (e) {
     console.error("Import assist error:", e);
     return NextResponse.json(
