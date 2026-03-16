@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createFamilyMember, toggleFamilyMemberActive, linkUserToFamilyMember } from "./actions";
+import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +58,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               <h1 className="text-2xl font-semibold text-slate-50">
                 Family members
               </h1>
-              <p className="text-sm text-slate-400">
-                Manage people in your household. Link a household user account in the &quot;Linked user&quot; column (second column in the list).
-              </p>
+              <p className="text-sm text-slate-400">Manage people in your household.</p>
             </div>
           </div>
 
@@ -173,6 +171,23 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <option value="Other">Other</option>
               </select>
             </div>
+            <div>
+              <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Linked user (optional)
+              </label>
+              <select
+                id="user_id"
+                name="user_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">— None —</option>
+                {householdUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.email})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-end sm:col-span-2">
               <button
                 type="submit"
@@ -196,7 +211,6 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Linked user</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Relationship</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Date of birth</th>
                     <th className="px-4 py-3 font-medium text-slate-300">ID number</th>
@@ -210,26 +224,6 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   {members.map((m) => (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
-                      <td className="px-4 py-3">
-                        <form action={linkUserToFamilyMember} className="inline">
-                          <input type="hidden" name="family_member_id" value={m.id} />
-                          <select
-                            name="user_id"
-                            defaultValue={m.users[0]?.id ?? ""}
-                            className="min-w-[140px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                          >
-                            <option value="">— None —</option>
-                            {householdUsers.map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.full_name} ({u.email})
-                              </option>
-                            ))}
-                          </select>
-                          <button type="submit" className="ml-1 text-xs text-sky-400 hover:text-sky-300">
-                            Save
-                          </button>
-                        </form>
-                      </td>
                       <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(m.date_of_birth)}</td>
                       <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
@@ -240,14 +234,20 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                           {m.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 space-x-3">
+                        <Link
+                          href={`/dashboard/family-members/${m.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          Edit
+                        </Link>
                         <form
                           action={toggleFamilyMemberActive.bind(null, m.id, !m.is_active)}
                           className="inline"
                         >
                           <button
                             type="submit"
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                            className="text-xs font-medium text-slate-400 hover:text-slate-200"
                           >
                             {m.is_active ? "Deactivate" : "Activate"}
                           </button>
