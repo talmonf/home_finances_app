@@ -242,7 +242,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3">
                         <form
-                          action={() => toggleFamilyMemberActive(m.id, !m.is_active)}
+                          action={toggleFamilyMemberActive.bind(null, m.id, !m.is_active)}
                           className="inline"
                         >
                           <button
