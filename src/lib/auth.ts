@@ -52,6 +52,11 @@ declare module "next-auth" {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    // 2 hours of inactivity (rolling expiry)
+    maxAge: 2 * 60 * 60, // 2 hours in seconds
+    // How often to write the session back, in seconds.
+    // Keeps active users signed in while enforcing the 2-hour idle timeout.
+    updateAge: 30 * 60, // 30 minutes
   },
   providers: [
     CredentialsProvider({
