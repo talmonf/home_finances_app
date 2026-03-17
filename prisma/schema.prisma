@@ -32,6 +32,8 @@ model households {
   documents             documents[]
   transactions          transactions[]
   tasks                 tasks[]
+  properties            properties[]
+  property_utilities    property_utilities[]
 }
 
 model family_members {
@@ -136,8 +138,65 @@ model payees {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  household    households    @relation(fields: [household_id], references: [id])
-  transactions transactions[]
+  household         households         @relation(fields: [household_id], references: [id])
+  transactions      transactions[]
+  property_utilities property_utilities[]
+}
+
+model properties {
+  id                   String                @id @default(uuid())
+  household_id         String
+  name                 String
+  is_primary_residence Boolean               @default(false)
+  address_line_1       String
+  address_line_2       String?
+  city                 String
+  postal_code         String?
+  country              String                @default("IL")
+  phone                String?
+  ownership_type       PropertyOwnershipType
+  owner_name           String?
+  created_at           DateTime              @default(now())
+  updated_at           DateTime              @updatedAt
+
+  household  households         @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  utilities  property_utilities[]
+}
+
+enum PropertyOwnershipType {
+  owned
+  rental
+  other
+
+  @@map("property_ownership_type")
+}
+
+model property_utilities {
+  id             String             @id @default(uuid())
+  household_id   String
+  property_id    String
+  utility_type   PropertyUtilityType
+  provider_name  String
+  payee_id       String?
+  account_number String?
+  notes          String?
+  created_at     DateTime           @default(now())
+  updated_at     DateTime           @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  property  properties @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  payee     payees?    @relation(fields: [payee_id], references: [id])
+}
+
+enum PropertyUtilityType {
+  electricity
+  water
+  internet
+  telephone
+  gas
+  other
+
+  @@map("property_utility_type")
 }
 
 model documents {

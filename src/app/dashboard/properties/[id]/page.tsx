@@ -1,0 +1,213 @@
+import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { updateProperty, createUtility, updateUtility, deleteUtility } from "../actions";
+
+export const dynamic = "force-dynamic";
+
+const UTILITY_TYPE_LABELS: Record<string, string> = {
+  electricity: "Electricity",
+  water: "Water",
+  internet: "Internet",
+  telephone: "Telephone",
+  gas: "Gas",
+  other: "Other",
+};
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+};
+
+export default async function PropertyDetailPage({ params, searchParams }: PageProps) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
+  const [property, payees] = await Promise.all([
+    prisma.properties.findFirst({
+      where: { id, household_id: householdId },
+      include: { utilities: { include: { payee: true } } },
+    }),
+    prisma.payees.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  if (!property) redirect("/dashboard/properties?error=Not+found");
+
+  return (
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <div className="w-full max-w-4xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <header className="space-y-3">
+          <Link
+            href="/dashboard/properties"
+            className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
+          >
+            ← Back to homes &amp; properties
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">{property.name}</h1>
+          <p className="text-sm text-slate-400">
+            Update property details and manage utility companies that service this home.
+          </p>
+          {resolvedSearchParams?.error && (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
+            </div>
+          )}
+        </header>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-medium text-slate-200">Property details</h2>
+          <form action={updateProperty} className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2">
+            <input type="hidden" name="id" value={property.id} />
+            <div>
+              <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">Name</label>
+              <input id="name" name="name" required defaultValue={property.name} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="ownership_type" className="mb-1 block text-xs font-medium text-slate-400">Ownership</label>
+              <select id="ownership_type" name="ownership_type" defaultValue={property.ownership_type} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="owned">Owned</option>
+                <option value="rental">Rental</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="owner_name" className="mb-1 block text-xs font-medium text-slate-400">In whose name</label>
+              <input id="owner_name" name="owner_name" defaultValue={property.owner_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="flex items-center">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="is_primary_residence" defaultChecked={property.is_primary_residence} className="rounded border-slate-600 bg-slate-800 text-sky-500" />
+                <span className="text-sm text-slate-300">Primary residence</span>
+              </label>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="address_line_1" className="mb-1 block text-xs font-medium text-slate-400">Address line 1</label>
+              <input id="address_line_1" name="address_line_1" required defaultValue={property.address_line_1} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="address_line_2" className="mb-1 block text-xs font-medium text-slate-400">Address line 2</label>
+              <input id="address_line_2" name="address_line_2" defaultValue={property.address_line_2 ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="city" className="mb-1 block text-xs font-medium text-slate-400">City</label>
+              <input id="city" name="city" required defaultValue={property.city} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="postal_code" className="mb-1 block text-xs font-medium text-slate-400">Postal code</label>
+              <input id="postal_code" name="postal_code" defaultValue={property.postal_code ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="country" className="mb-1 block text-xs font-medium text-slate-400">Country</label>
+              <input id="country" name="country" defaultValue={property.country} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">Phone</label>
+              <input id="phone" name="phone" type="tel" defaultValue={property.phone ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="sm:col-span-2 flex justify-end">
+              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Save changes</button>
+            </div>
+          </form>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-medium text-slate-200">Utility companies</h2>
+          <form action={createUtility} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <input type="hidden" name="property_id" value={property.id} />
+            <div>
+              <label htmlFor="utility_type_new" className="mb-1 block text-xs font-medium text-slate-400">Type</label>
+              <select id="utility_type_new" name="utility_type" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="provider_name_new" className="mb-1 block text-xs font-medium text-slate-400">Provider name</label>
+              <input id="provider_name_new" name="provider_name" required placeholder="e.g. Bezeq" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div>
+              <label htmlFor="payee_id_new" className="mb-1 block text-xs font-medium text-slate-400">Link to payee (optional)</label>
+              <select id="payee_id_new" name="payee_id" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">— None —</option>
+                {payees.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="account_number_new" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
+              <input id="account_number_new" name="account_number" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="notes_new" className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
+              <input id="notes_new" name="notes" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="flex items-end">
+              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add utility</button>
+            </div>
+          </form>
+
+          {property.utilities.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              No utilities yet. Add one above (e.g. electricity, water, internet).
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Provider</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {property.utilities.map((u) => (
+                    <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                      <td colSpan={4} className="px-4 py-3">
+                        <form action={updateUtility} className="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="id" value={u.id} />
+                          <input type="hidden" name="property_id" value={property.id} />
+                          <select name="utility_type" defaultValue={u.utility_type} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
+                            {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                          <input type="text" name="provider_name" defaultValue={u.provider_name} required className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Provider" />
+                          <select name="payee_id" defaultValue={u.payee_id ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
+                            <option value="">— Payee —</option>
+                            {payees.map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                          <input type="text" name="account_number" defaultValue={u.account_number ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Account #" />
+                          <input type="text" name="notes" defaultValue={u.notes ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Notes" />
+                          <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">Save</button>
+                        </form>
+                      </td>
+                      <td className="px-4 py-3">
+                        <form action={deleteUtility.bind(null, u.id, property.id)} className="inline">
+                          <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">Delete</button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
