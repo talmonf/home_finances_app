@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
@@ -34,10 +35,10 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const sort = resolvedSearchParams?.sort ?? "name";
-  const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
+  const dir: Prisma.SortOrder = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
 
   // Map UI sort keys to Prisma column names
-  const orderBy =
+  const orderBy: Prisma.family_membersOrderByWithRelationInput =
     sort === "relationship"
       ? { relationship: dir }
       : sort === "dob"
