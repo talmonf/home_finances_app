@@ -144,31 +144,28 @@ model payees {
 }
 
 model properties {
-  id                   String                @id @default(uuid())
+  id                   String   @id @default(uuid())
   household_id         String
   name                 String
-  is_primary_residence Boolean               @default(false)
-  address_line_1       String
-  address_line_2       String?
-  city                 String
-  postal_code         String?
-  country              String                @default("IL")
-  phone                String?
-  ownership_type       PropertyOwnershipType
-  owner_name           String?
-  created_at           DateTime              @default(now())
-  updated_at           DateTime              @updatedAt
+  property_type        String?
+  address              String?
+  purchase_date        DateTime?
+  purchase_price       Decimal? @db.Decimal(15, 2)
+  purchase_currency    String?
+  current_value        Decimal? @db.Decimal(15, 2)
+  current_value_date   DateTime?
+  rental_start_date    DateTime?
+  rental_end_date      DateTime?
+  monthly_rent         Decimal? @db.Decimal(15, 2)
+  landlord_name        String?
+  landlord_contact     String?
+  notes                String?
+  is_active            Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
 
-  household  households         @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  household  households         @relation(fields: [household_id], references: [id])
   utilities  property_utilities[]
-}
-
-enum PropertyOwnershipType {
-  owned
-  rental
-  other
-
-  @@map("property_ownership_type")
 }
 
 model property_utilities {

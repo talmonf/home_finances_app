@@ -4,39 +4,20 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const OWNERSHIP_VALUES = ["owned", "rental", "other"] as const;
-type OwnershipType = (typeof OWNERSHIP_VALUES)[number];
-
-function parseOwnership(s: string | null): OwnershipType {
-  if (s && OWNERSHIP_VALUES.includes(s as OwnershipType)) return s as OwnershipType;
-  return "owned";
-}
-
 export async function createProperty(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/dashboard/properties?error=No+household");
 
   const name = (formData.get("name") as string | null)?.trim();
-  const address_line_1 = (formData.get("address_line_1") as string | null)?.trim();
-  const city = (formData.get("city") as string | null)?.trim();
-  const country = (formData.get("country") as string | null)?.trim() || "IL";
-  if (!name || !address_line_1 || !city) {
-    redirect("/dashboard/properties?error=Name,+address+and+city+required");
-  }
+  const property_type = (formData.get("property_type") as string | null)?.trim() || null;
+  const address = (formData.get("address") as string | null)?.trim() || null;
+  const landlord_name = (formData.get("landlord_name") as string | null)?.trim() || null;
+  const landlord_contact = (formData.get("landlord_contact") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
 
-  const is_primary_residence = formData.get("is_primary_residence") === "on";
-  const address_line_2 = (formData.get("address_line_2") as string | null)?.trim() || null;
-  const postal_code = (formData.get("postal_code") as string | null)?.trim() || null;
-  const phone = (formData.get("phone") as string | null)?.trim() || null;
-  const ownership_type = parseOwnership((formData.get("ownership_type") as string | null)?.trim() || null);
-  const owner_name = (formData.get("owner_name") as string | null)?.trim() || null;
-
-  if (is_primary_residence) {
-    await prisma.properties.updateMany({
-      where: { household_id: householdId },
-      data: { is_primary_residence: false },
-    });
+  if (!name) {
+    redirect("/dashboard/properties?error=Name+is+required");
   }
 
   await prisma.properties.create({
@@ -44,15 +25,12 @@ export async function createProperty(formData: FormData) {
       id: crypto.randomUUID(),
       household_id: householdId,
       name,
-      is_primary_residence,
-      address_line_1,
-      address_line_2,
-      city,
-      postal_code,
-      country,
-      phone,
-      ownership_type,
-      owner_name,
+      property_type,
+      address,
+      landlord_name,
+      landlord_contact,
+      notes,
+      is_active: true,
     },
   });
 
@@ -74,70 +52,30 @@ export async function updateProperty(formData: FormData) {
   if (!prop) redirect("/dashboard/properties?error=Not+found");
 
   const name = (formData.get("name") as string | null)?.trim();
-  const address_line_1 = (formData.get("address_line_1") as string | null)?.trim();
-  const city = (formData.get("city") as string | null)?.trim();
-  if (!name || !address_line_1 || !city) {
-    redirect(`/dashboard/properties/${id}?error=Name,+address+and+city+required`);
+  if (!name) {
+    redirect(`/dashboard/properties/${id}?error=Name+is+required`);
   }
 
-  const is_primary_residence = formData.get("is_primary_residence") === "on";
-  const address_line_2 = (formData.get("address_line_2") as string | null)?.trim() || null;
-  const postal_code = (formData.get("postal_code") as string | null)?.trim() || null;
-  const country = (formData.get("country") as string | null)?.trim() || "IL";
-  const phone = (formData.get("phone") as string | null)?.trim() || null;
-  const ownership_type = parseOwnership((formData.get("ownership_type") as string | null)?.trim() || null);
-  const owner_name = (formData.get("owner_name") as string | null)?.trim() || null;
-
-  if (is_primary_residence && !prop.is_primary_residence) {
-    await prisma.properties.updateMany({
-      where: { household_id: householdId },
-      data: { is_primary_residence: false },
-    });
-  }
+  const property_type = (formData.get("property_type") as string | null)?.trim() || null;
+  const address = (formData.get("address") as string | null)?.trim() || null;
+  const landlord_name = (formData.get("landlord_name") as string | null)?.trim() || null;
+  const landlord_contact = (formData.get("landlord_contact") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   await prisma.properties.updateMany({
     where: { id, household_id: householdId },
     data: {
       name,
-      is_primary_residence,
-      address_line_1,
-      address_line_2,
-      city,
-      postal_code,
-      country,
-      phone,
-      ownership_type,
-      owner_name,
+      property_type,
+      address,
+      landlord_name,
+      landlord_contact,
+      notes,
     },
   });
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${id}`);
-  redirect("/dashboard/properties?updated=1");
-}
-
-export async function togglePropertyPrimary(id: string) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) redirect("/dashboard/properties?error=No+household");
-
-  const prop = await prisma.properties.findFirst({
-    where: { id, household_id: householdId },
-  });
-  if (!prop) return;
-
-  await prisma.$transaction([
-    prisma.properties.updateMany({
-      where: { household_id: householdId },
-      data: { is_primary_residence: false },
-    }),
-    prisma.properties.updateMany({
-      where: { id, household_id: householdId },
-      data: { is_primary_residence: true },
-    }),
-  ]);
-
-  revalidatePath("/dashboard/properties");
   redirect("/dashboard/properties?updated=1");
 }
 

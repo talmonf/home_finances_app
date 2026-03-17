@@ -70,46 +70,43 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               <input id="name" name="name" required defaultValue={property.name} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
-              <label htmlFor="ownership_type" className="mb-1 block text-xs font-medium text-slate-400">Ownership</label>
-              <select id="ownership_type" name="ownership_type" defaultValue={property.ownership_type} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <label htmlFor="property_type" className="mb-1 block text-xs font-medium text-slate-400">Type</label>
+              <select id="property_type" name="property_type" defaultValue={property.property_type ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">—</option>
                 <option value="owned">Owned</option>
                 <option value="rental">Rental</option>
                 <option value="other">Other</option>
               </select>
             </div>
             <div>
-              <label htmlFor="owner_name" className="mb-1 block text-xs font-medium text-slate-400">In whose name</label>
-              <input id="owner_name" name="owner_name" defaultValue={property.owner_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <label htmlFor="landlord_name" className="mb-1 block text-xs font-medium text-slate-400">In whose name</label>
+              <input id="landlord_name" name="landlord_name" defaultValue={property.landlord_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
-            <div className="flex items-center">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="is_primary_residence" defaultChecked={property.is_primary_residence} className="rounded border-slate-600 bg-slate-800 text-sky-500" />
-                <span className="text-sm text-slate-300">Primary residence</span>
+            <div className="sm:col-span-2">
+              <label htmlFor="address" className="mb-1 block text-xs font-medium text-slate-400">Address</label>
+              <textarea id="address" name="address" rows={2} defaultValue={property.address ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="landlord_contact" className="mb-1 block text-xs font-medium text-slate-400">
+                Contact details (phone / email)
               </label>
+              <textarea
+                id="landlord_contact"
+                name="landlord_contact"
+                rows={2}
+                defaultValue={property.landlord_contact ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="address_line_1" className="mb-1 block text-xs font-medium text-slate-400">Address line 1</label>
-              <input id="address_line_1" name="address_line_1" required defaultValue={property.address_line_1} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="address_line_2" className="mb-1 block text-xs font-medium text-slate-400">Address line 2</label>
-              <input id="address_line_2" name="address_line_2" defaultValue={property.address_line_2 ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="city" className="mb-1 block text-xs font-medium text-slate-400">City</label>
-              <input id="city" name="city" required defaultValue={property.city} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="postal_code" className="mb-1 block text-xs font-medium text-slate-400">Postal code</label>
-              <input id="postal_code" name="postal_code" defaultValue={property.postal_code ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="country" className="mb-1 block text-xs font-medium text-slate-400">Country</label>
-              <input id="country" name="country" defaultValue={property.country} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">Phone</label>
-              <input id="phone" name="phone" type="tel" defaultValue={property.phone ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={2}
+                defaultValue={property.notes ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="sm:col-span-2 flex justify-end">
               <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Save changes</button>

@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createProperty, togglePropertyPrimary } from "./actions";
+import { createProperty } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,19 +13,6 @@ type PageProps = {
   }>;
 };
 
-function formatAddress(p: {
-  address_line_1: string;
-  address_line_2?: string | null;
-  city: string;
-  postal_code?: string | null;
-  country: string;
-}) {
-  const parts = [p.address_line_1];
-  if (p.address_line_2) parts.push(p.address_line_2);
-  parts.push([p.city, p.postal_code].filter(Boolean).join(" "), p.country);
-  return parts.filter(Boolean).join(", ");
-}
-
 export default async function PropertiesPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -36,7 +23,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const properties = await prisma.properties.findMany({
     where: { household_id: householdId },
     include: { _count: { select: { utilities: true } } },
-    orderBy: [{ is_primary_residence: "desc" }, { name: "asc" }],
+    orderBy: { name: "asc" },
   });
 
   return (
@@ -91,105 +78,65 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
-              <label htmlFor="ownership_type" className="mb-1 block text-xs font-medium text-slate-400">
-                Ownership
+              <label htmlFor="property_type" className="mb-1 block text-xs font-medium text-slate-400">
+                Type
               </label>
               <select
-                id="ownership_type"
-                name="ownership_type"
+                id="property_type"
+                name="property_type"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
+                <option value="">—</option>
                 <option value="owned">Owned</option>
                 <option value="rental">Rental</option>
                 <option value="other">Other</option>
               </select>
             </div>
             <div>
-              <label htmlFor="owner_name" className="mb-1 block text-xs font-medium text-slate-400">
+              <label htmlFor="landlord_name" className="mb-1 block text-xs font-medium text-slate-400">
                 In whose name
               </label>
               <input
-                id="owner_name"
-                name="owner_name"
+                id="landlord_name"
+                name="landlord_name"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional"
               />
             </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="is_primary_residence"
-                  className="rounded border-slate-600 bg-slate-800 text-sky-500"
-                />
-                <span className="text-sm text-slate-300">Primary residence</span>
-              </label>
-            </div>
             <div className="sm:col-span-2">
-              <label htmlFor="address_line_1" className="mb-1 block text-xs font-medium text-slate-400">
-                Address line 1
+              <label htmlFor="address" className="mb-1 block text-xs font-medium text-slate-400">
+                Address
               </label>
-              <input
-                id="address_line_1"
-                name="address_line_1"
-                required
+              <textarea
+                id="address"
+                name="address"
+                rows={2}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Street and number"
+                placeholder="Full address"
               />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="address_line_2" className="mb-1 block text-xs font-medium text-slate-400">
-                Address line 2
+              <label htmlFor="landlord_contact" className="mb-1 block text-xs font-medium text-slate-400">
+                Contact details (phone / email)
               </label>
-              <input
-                id="address_line_2"
-                name="address_line_2"
+              <textarea
+                id="landlord_contact"
+                name="landlord_contact"
+                rows={2}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional"
               />
             </div>
-            <div>
-              <label htmlFor="city" className="mb-1 block text-xs font-medium text-slate-400">
-                City
+            <div className="sm:col-span-2">
+              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                Notes
               </label>
-              <input
-                id="city"
-                name="city"
-                required
+              <textarea
+                id="notes"
+                name="notes"
+                rows={2}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="postal_code" className="mb-1 block text-xs font-medium text-slate-400">
-                Postal code
-              </label>
-              <input
-                id="postal_code"
-                name="postal_code"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="country" className="mb-1 block text-xs font-medium text-slate-400">
-                Country
-              </label>
-              <input
-                id="country"
-                name="country"
-                defaultValue="IL"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
-                Phone (optional)
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. +1 234 567 8900"
+                placeholder="Optional"
               />
             </div>
             <div className="flex items-end sm:col-span-2">
@@ -215,10 +162,10 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Address</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Ownership</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Owner name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Primary</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">In whose name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Utilities</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -227,17 +174,15 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                   {properties.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{p.name}</td>
-                      <td className="max-w-[200px] truncate px-4 py-3 text-slate-400" title={formatAddress(p)}>
-                        {formatAddress(p)}
+                      <td className="px-4 py-3 text-slate-400">{p.property_type ?? "—"}</td>
+                      <td className="max-w-[200px] truncate px-4 py-3 text-slate-400" title={p.address ?? ""}>
+                        {p.address ?? "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-400 capitalize">{p.ownership_type}</td>
-                      <td className="px-4 py-3 text-slate-400">{p.owner_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{p.landlord_name ?? "—"}</td>
                       <td className="px-4 py-3">
-                        {p.is_primary_residence ? (
-                          <span className="text-emerald-400">Primary home</span>
-                        ) : (
-                          "—"
-                        )}
+                        <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
+                          {p.is_active ? "Active" : "Inactive"}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{p._count.utilities}</td>
                       <td className="px-4 py-3 space-x-3">
@@ -247,13 +192,6 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                         >
                           Edit
                         </Link>
-                        {!p.is_primary_residence && (
-                          <form action={togglePropertyPrimary.bind(null, p.id)} className="inline">
-                            <button type="submit" className="text-xs font-medium text-slate-400 hover:text-slate-200">
-                              Set as primary
-                            </button>
-                          </form>
-                        )}
                       </td>
                     </tr>
                   ))}
