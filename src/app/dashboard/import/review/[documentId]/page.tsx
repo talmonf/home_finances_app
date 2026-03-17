@@ -62,7 +62,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
       orderBy: { name: "asc" },
     }),
     prisma.payees.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: { household_id: householdId },
       orderBy: { name: "asc" },
     }),
     prisma.family_members.findMany({

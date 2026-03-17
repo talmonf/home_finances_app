@@ -33,7 +33,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
       include: { utilities: { include: { payee: true } } },
     }),
     prisma.payees.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: { household_id: householdId },
       orderBy: { name: "asc" },
     }),
   ]);

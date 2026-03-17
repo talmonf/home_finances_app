@@ -131,12 +131,16 @@ model categories {
 }
 
 model payees {
-  id           String   @id @default(uuid())
-  household_id String
-  name         String
-  is_active    Boolean  @default(true)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  household_id       String
+  name               String
+  normalized_name    String?
+  default_category_id String?
+  default_vehicle_id  String?
+  default_property_id String?
+  is_charity         Boolean?
+  seif_46_eligible   Boolean?
+  notes              String?
 
   household         households         @relation(fields: [household_id], references: [id])
   transactions      transactions[]
