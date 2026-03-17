@@ -10,6 +10,8 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    sort?: string;
+    dir?: string;
   }>;
 };
 
@@ -31,11 +33,30 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
+  const sort = resolvedSearchParams?.sort ?? "name";
+  const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
+
+  // Map UI sort keys to Prisma column names
+  const orderBy =
+    sort === "relationship"
+      ? { relationship: dir }
+      : sort === "dob"
+        ? { date_of_birth: dir }
+        : sort === "id_number"
+          ? { id_number: dir }
+          : sort === "phone"
+            ? { phone: dir }
+            : sort === "email"
+              ? { email: dir }
+              : sort === "status"
+                ? { is_active: dir }
+                : { full_name: dir };
+
   const [members, householdUsers] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId },
       include: { users: true },
-      orderBy: { full_name: "asc" },
+      orderBy,
     }),
     prisma.users.findMany({
       where: { household_id: householdId, is_active: true },
@@ -210,13 +231,38 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Relationship</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Date of birth</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">ID number</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Phone</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Email</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    {[
+                      { key: "name", label: "Name" },
+                      { key: "relationship", label: "Relationship" },
+                      { key: "dob", label: "Date of birth" },
+                      { key: "id_number", label: "ID number" },
+                      { key: "phone", label: "Phone" },
+                      { key: "email", label: "Email" },
+                      { key: "status", label: "Status" },
+                    ].map((col) => {
+                      const isActive = sort === col.key;
+                      const nextDir = isActive && dir === "asc" ? "desc" : "asc";
+                      const arrow = !isActive ? "" : dir === "asc" ? "↑" : "↓";
+                      const query = new URLSearchParams();
+                      if (resolvedSearchParams?.created) query.set("created", resolvedSearchParams.created);
+                      if (resolvedSearchParams?.updated) query.set("updated", resolvedSearchParams.updated);
+                      if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
+                      query.set("sort", col.key);
+                      query.set("dir", nextDir);
+                      const href = `/dashboard/family-members?${query.toString()}`;
+
+                      return (
+                        <th key={col.key} className="px-4 py-3 font-medium text-slate-300">
+                          <Link
+                            href={href}
+                            className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-300 hover:text-sky-300"
+                          >
+                            <span>{col.label}</span>
+                            {arrow && <span>{arrow}</span>}
+                          </Link>
+                        </th>
+                      );
+                    })}
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
