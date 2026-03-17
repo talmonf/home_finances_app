@@ -94,6 +94,38 @@ export default async function HouseholdUsersPage({
     redirect(`/admin/households/${householdId}?updated=1`);
   }
 
+  async function updateUser(formData: FormData) {
+    "use server";
+
+    await requireSuperAdmin();
+
+    const householdId = formData.get("household_id") as string;
+    const userId = (formData.get("user_id") as string | null)?.trim();
+    const email = (formData.get("email") as string | null)?.trim();
+    const fullName = (formData.get("full_name") as string | null)?.trim();
+    const role = (formData.get("role") as string | null)?.trim();
+    const userType = (formData.get("user_type") as string | null)?.trim();
+
+    if (!userId || !email || !fullName || !role || !userType) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("All fields are required")}`,
+      );
+    }
+
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        email,
+        full_name: fullName,
+        role: role as "admin" | "member",
+        user_type: userType as any,
+      },
+    });
+
+    revalidatePath(`/admin/households/${householdId}`);
+    redirect(`/admin/households/${householdId}?updated=1`);
+  }
+
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -228,6 +260,7 @@ export default async function HouseholdUsersPage({
                     <th className="py-2 pr-4">Name</th>
                     <th className="py-2 pr-4">Role</th>
                     <th className="py-2 pr-4">User type</th>
+                    <th className="py-2 pr-4">Created</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4 text-right">Actions</th>
                   </tr>
@@ -239,14 +272,49 @@ export default async function HouseholdUsersPage({
                       className="border-b border-slate-800 last:border-0"
                     >
                       <td className="py-2 pr-4 text-xs text-slate-300">
-                        {u.email}
+                        <form
+                          action={updateUser}
+                          className="flex flex-wrap items-center gap-2"
+                        >
+                          <input type="hidden" name="household_id" value={household.id} />
+                          <input type="hidden" name="user_id" value={u.id} />
+                          <input
+                            name="email"
+                            defaultValue={u.email}
+                            className="w-40 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+                          />
+                          <input
+                            name="full_name"
+                            defaultValue={u.full_name}
+                            className="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+                          />
+                          <select
+                            name="role"
+                            defaultValue={u.role}
+                            className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="member">Member</option>
+                          </select>
+                          <select
+                            name="user_type"
+                            defaultValue={u.user_type}
+                            className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+                          >
+                            <option value="family_member">Family member</option>
+                            <option value="financial_advisor">Financial advisor</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <button
+                            type="submit"
+                            className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950 hover:bg-sky-400"
+                          >
+                            Save
+                          </button>
+                        </form>
                       </td>
-                      <td className="py-2 pr-4">{u.full_name}</td>
-                      <td className="py-2 pr-4 text-xs capitalize">
-                        {u.role}
-                      </td>
-                      <td className="py-2 pr-4 text-xs">
-                        {u.user_type.replace("_", " ")}
+                      <td className="py-2 pr-4 text-xs text-slate-400">
+                        {new Date(u.created_at).toLocaleDateString("en-CA")}
                       </td>
                       <td className="py-2 pr-4 text-xs">
                         {u.is_active ? (
