@@ -15,6 +15,9 @@ Run scripts in order by number. Check off each script after you run it.
 | 005 | `005_alter_family_members_phone_email_relationship.sql` | ALTER | family_members: add phone, email, relationship |
 | 006 | `006_automatic_tasks.sql` | NOOP | Documents that automatic tasks use existing tasks table (type = automatic) |
 | 007 | `007_properties_and_utilities.sql` | CREATE | Enums + tables: properties, property_utilities (homes & utility providers) |
+| 008 | `008_upcoming_renewals.sql` | CREATE | Upcoming renewals: add identity/insurance/donations tables + expiry/renewal columns |
+| 009 | `009_identity_type_other.sql` | ALTER | identities: add identity_type_other (free-text when type is Other) |
+| 010 | `010_identity_notes.sql` | ALTER | identities: add notes (optional) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -25,6 +28,9 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 005_alter_family_members_phone_email_relationship.sql
 - [x] 006_automatic_tasks.sql
 - [x] 007_properties_and_utilities.sql
+- [x] 008_upcoming_renewals.sql
+- [x] 009_identity_type_other.sql
+- [x] 010_identity_notes.sql
 
 ---
 

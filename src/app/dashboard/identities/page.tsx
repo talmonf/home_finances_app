@@ -149,12 +149,28 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 defaultValue="passport"
               >
-                {Object.entries(IDENTITY_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+                {Object.entries(IDENTITY_TYPE_LABELS)
+                  .filter(([value]) => value !== "car_license")
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
               </select>
+            </div>
+            <div>
+              <label
+                htmlFor="identity_type_other"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Other type (specify)
+              </label>
+              <input
+                id="identity_type_other"
+                name="identity_type_other"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Required only when Type is Other"
+              />
             </div>
             <div>
               <label htmlFor="identifier" className="mb-1 block text-xs font-medium text-slate-400">
@@ -165,6 +181,17 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 name="identifier"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="e.g. passport number"
+              />
+            </div>
+            <div>
+              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                Notes (optional)
+              </label>
+              <input
+                id="notes"
+                name="notes"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional notes"
               />
             </div>
             <div>
@@ -243,8 +270,17 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                   {sortedIdentities.map((i) => (
                     <tr key={i.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{i.family_member.full_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}</td>
-                      <td className="px-4 py-3 text-slate-400">{i.identifier ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {i.identity_type === "other"
+                          ? i.identity_type_other ?? "Other"
+                          : IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        <div>{i.identifier ?? "—"}</div>
+                        {i.notes ? (
+                          <div className="mt-1 text-xs text-slate-500">{i.notes}</div>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(i.expiry_date)}</td>
                       <td className="px-4 py-3">
                         <Link
@@ -263,6 +299,26 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
         </section>
       </div>
     </div>
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function () {
+            const typeSelect = document.getElementById('identity_type');
+            const otherInput = document.getElementById('identity_type_other');
+            if (!typeSelect || !otherInput) return;
+
+            function syncRequired() {
+              const isOther = typeSelect.value === 'other';
+              otherInput.required = isOther;
+              otherInput.setAttribute('aria-required', isOther ? 'true' : 'false');
+            }
+
+            syncRequired();
+            typeSelect.addEventListener('change', syncRequired);
+          })();
+        `,
+      }}
+    />
   );
 }
 

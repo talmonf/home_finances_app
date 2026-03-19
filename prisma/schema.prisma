@@ -202,7 +202,9 @@ model identities {
   household_id    String
   family_member_id String
   identity_type   IdentityType
+  identity_type_other String?
   identifier      String?
+  notes           String?
   expiry_date     DateTime
   is_active       Boolean      @default(true)
   created_at      DateTime     @default(now())

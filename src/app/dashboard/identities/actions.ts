@@ -30,7 +30,9 @@ export async function createIdentity(formData: FormData) {
 
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
   const identity_type_raw = (formData.get("identity_type") as string | null)?.trim();
+  const identity_type_other = (formData.get("identity_type_other") as string | null)?.trim() || null;
   const identifier = (formData.get("identifier") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
   const expiry_date_raw = (formData.get("expiry_date") as string | null)?.trim();
 
   if (!family_member_id || !identity_type_raw || !expiry_date_raw) {
@@ -38,6 +40,13 @@ export async function createIdentity(formData: FormData) {
   }
 
   const identity_type = parseIdentityType(identity_type_raw);
+  const finalIdentityTypeOther =
+    identity_type === "other" ? (identity_type_other ?? null) : null;
+
+  if (identity_type === "other" && !finalIdentityTypeOther) {
+    redirect("/dashboard/identities?error=Other+type+is+required");
+  }
+
   const expiry_date = new Date(expiry_date_raw);
   if (Number.isNaN(expiry_date.getTime())) {
     redirect("/dashboard/identities?error=Invalid+expiry+date");
@@ -56,7 +65,9 @@ export async function createIdentity(formData: FormData) {
       household_id: householdId,
       family_member_id,
       identity_type,
+      identity_type_other: finalIdentityTypeOther,
       identifier,
+      notes,
       expiry_date,
       is_active: true,
     },
@@ -76,7 +87,9 @@ export async function updateIdentity(formData: FormData) {
   const id = (formData.get("id") as string | null)?.trim();
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
   const identity_type_raw = (formData.get("identity_type") as string | null)?.trim();
+  const identity_type_other = (formData.get("identity_type_other") as string | null)?.trim() || null;
   const identifier = (formData.get("identifier") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
   const expiry_date_raw = (formData.get("expiry_date") as string | null)?.trim();
 
   if (!id || !family_member_id || !identity_type_raw || !expiry_date_raw) {
@@ -84,6 +97,13 @@ export async function updateIdentity(formData: FormData) {
   }
 
   const identity_type = parseIdentityType(identity_type_raw);
+  const finalIdentityTypeOther =
+    identity_type === "other" ? (identity_type_other ?? null) : null;
+
+  if (identity_type === "other" && !finalIdentityTypeOther) {
+    redirect("/dashboard/identities?error=Other+type+is+required");
+  }
+
   const expiry_date = new Date(expiry_date_raw);
   if (Number.isNaN(expiry_date.getTime())) {
     redirect("/dashboard/identities?error=Invalid+expiry+date");
@@ -101,7 +121,9 @@ export async function updateIdentity(formData: FormData) {
     data: {
       family_member_id,
       identity_type,
+      identity_type_other: finalIdentityTypeOther,
       identifier,
+      notes,
       expiry_date,
     },
   });

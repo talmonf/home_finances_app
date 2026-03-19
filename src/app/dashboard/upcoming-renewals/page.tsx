@@ -79,7 +79,10 @@ export default async function UpcomingRenewalsPage() {
     ...identities.map((i) => ({
       id: `identity-${i.id}`,
       category: "Identity",
-      itemName: i.identity_type.replaceAll("_", " "),
+      itemName:
+        i.identity_type === "other"
+          ? i.identity_type_other ?? "Other"
+          : i.identity_type.replaceAll("_", " "),
       owner: i.family_member.full_name,
       renewalDate: i.expiry_date,
       href: "/dashboard/identities",
