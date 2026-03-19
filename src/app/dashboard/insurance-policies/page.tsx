@@ -170,7 +170,10 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <form action={() => toggleInsurancePolicyActive(p.id, !p.is_active)} className="inline">
+                        <form
+                          action={toggleInsurancePolicyActive.bind(null, p.id, !p.is_active)}
+                          className="inline"
+                        >
                           <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
                             {p.is_active ? "Deactivate" : "Activate"}
                           </button>

@@ -168,7 +168,10 @@ export default async function DonationCommitmentsPage({ searchParams }: PageProp
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <form action={() => toggleDonationCommitmentActive(c.id, !c.is_active)} className="inline">
+                        <form
+                          action={toggleDonationCommitmentActive.bind(null, c.id, !c.is_active)}
+                          className="inline"
+                        >
                           <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
                             {c.is_active ? "Deactivate" : "Activate"}
                           </button>

@@ -194,7 +194,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <form action={() => toggleIdentityActive(i.id, !i.is_active)} className="inline">
+                        <form action={toggleIdentityActive.bind(null, i.id, !i.is_active)} className="inline">
                           <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
                             {i.is_active ? "Deactivate" : "Activate"}
                           </button>

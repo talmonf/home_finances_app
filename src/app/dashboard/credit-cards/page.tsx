@@ -243,7 +243,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3">
                         <form
-                          action={() => toggleCreditCardActive(c.id, !c.is_active)}
+                          action={toggleCreditCardActive.bind(null, c.id, !c.is_active)}
                           className="inline"
                         >
                           <button
