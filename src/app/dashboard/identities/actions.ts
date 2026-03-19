@@ -66,6 +66,50 @@ export async function createIdentity(formData: FormData) {
   redirect("/dashboard/identities?created=1");
 }
 
+export async function updateIdentity(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) {
+    redirect("/dashboard/identities?error=No+household");
+  }
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
+  const identity_type_raw = (formData.get("identity_type") as string | null)?.trim();
+  const identifier = (formData.get("identifier") as string | null)?.trim() || null;
+  const expiry_date_raw = (formData.get("expiry_date") as string | null)?.trim();
+
+  if (!id || !family_member_id || !identity_type_raw || !expiry_date_raw) {
+    redirect("/dashboard/identities?error=Required+fields+missing");
+  }
+
+  const identity_type = parseIdentityType(identity_type_raw);
+  const expiry_date = new Date(expiry_date_raw);
+  if (Number.isNaN(expiry_date.getTime())) {
+    redirect("/dashboard/identities?error=Invalid+expiry+date");
+  }
+
+  const member = await prisma.family_members.findFirst({
+    where: { id: family_member_id, household_id: householdId },
+  });
+  if (!member) {
+    redirect("/dashboard/identities?error=Invalid+family+member");
+  }
+
+  await prisma.identities.updateMany({
+    where: { id, household_id: householdId },
+    data: {
+      family_member_id,
+      identity_type,
+      identifier,
+      expiry_date,
+    },
+  });
+
+  revalidatePath("/dashboard/identities");
+  redirect("/dashboard/identities?updated=1");
+}
+
 export async function toggleIdentityActive(id: string, nextActive: boolean) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();

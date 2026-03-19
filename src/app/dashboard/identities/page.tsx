@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createIdentity, toggleIdentityActive } from "./actions";
+import { createIdentity } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +18,8 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    sort?: string;
+    dir?: string;
   }>;
 };
 
@@ -32,17 +34,50 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
+  const sort = resolvedSearchParams?.sort ?? "expiry_date";
+  const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
+
+  const sortKeys = ["family_member", "identity_type", "identifier", "expiry_date"] as const;
+  type SortKey = (typeof sortKeys)[number];
+  const activeSortKey = (sortKeys.includes(sort as SortKey) ? (sort as SortKey) : "expiry_date") as SortKey;
+
+  const nextDirFor = (key: SortKey) => {
+    if (activeSortKey !== key) return "asc";
+    return dir === "asc" ? "desc" : "asc";
+  };
+
   const [identities, familyMembers] = await Promise.all([
     prisma.identities.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, is_active: true },
       include: { family_member: true },
-      orderBy: { expiry_date: "asc" },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
   ]);
+
+  const sortedIdentities = identities
+    .slice()
+    .sort((a, b) => {
+      const multiplier = dir === "asc" ? 1 : -1;
+      if (activeSortKey === "expiry_date") {
+        return multiplier * (a.expiry_date.getTime() - b.expiry_date.getTime());
+      }
+
+      if (activeSortKey === "family_member") {
+        return multiplier * a.family_member.full_name.localeCompare(b.family_member.full_name);
+      }
+
+      if (activeSortKey === "identity_type") {
+        return multiplier * a.identity_type.localeCompare(b.identity_type);
+      }
+
+      // identifier
+      const left = a.identifier ?? "";
+      const right = b.identifier ?? "";
+      return multiplier * left.localeCompare(right);
+    });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -162,7 +197,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
 
         <section className="space-y-4">
           <h2 className="text-lg font-medium text-slate-200">List</h2>
-          {identities.length === 0 ? (
+          {sortedIdentities.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No identity items yet. Add one above.
             </p>
@@ -171,34 +206,53 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Identifier</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Expiry date</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    {(
+                      [
+                        { key: "family_member" as const, label: "Family member" },
+                        { key: "identity_type" as const, label: "Type" },
+                        { key: "identifier" as const, label: "Identifier" },
+                        { key: "expiry_date" as const, label: "Expiry date" },
+                      ] as const
+                    ).map((col) => {
+                      const isActive = activeSortKey === col.key;
+                      const arrow = !isActive ? "" : dir === "asc" ? "↑" : "↓";
+                      const query = new URLSearchParams();
+                      if (resolvedSearchParams?.created) query.set("created", resolvedSearchParams.created);
+                      if (resolvedSearchParams?.updated) query.set("updated", resolvedSearchParams.updated);
+                      if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
+                      query.set("sort", col.key);
+                      query.set("dir", nextDirFor(col.key));
+                      const href = `/dashboard/identities?${query.toString()}`;
+
+                      return (
+                        <th key={col.key} className="px-4 py-3 font-medium text-slate-300">
+                          <Link
+                            href={href}
+                            className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-300 hover:text-sky-300"
+                          >
+                            <span>{col.label}</span>
+                            {arrow && <span>{arrow}</span>}
+                          </Link>
+                        </th>
+                      );
+                    })}
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {identities.map((i) => (
+                  {sortedIdentities.map((i) => (
                     <tr key={i.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{i.family_member.full_name}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
-                      </td>
+                      <td className="px-4 py-3 text-slate-400">{IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}</td>
                       <td className="px-4 py-3 text-slate-400">{i.identifier ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(i.expiry_date)}</td>
                       <td className="px-4 py-3">
-                        <span className={i.is_active ? "text-emerald-400" : "text-slate-500"}>
-                          {i.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <form action={toggleIdentityActive.bind(null, i.id, !i.is_active)} className="inline">
-                          <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                            {i.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
+                        <Link
+                          href={`/dashboard/identities/${i.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}
