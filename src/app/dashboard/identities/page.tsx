@@ -243,7 +243,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                       [
                         { key: "family_member" as const, label: "Family member" },
                         { key: "identity_type" as const, label: "Type" },
-                        { key: "identity_type_other" as const, label: "Other type" },
+                        { key: "identity_type_other" as const, label: "Additional Info" },
                         { key: "identifier" as const, label: "Identifier" },
                         { key: "expiry_date" as const, label: "Expiry date" },
                       ] as const
@@ -283,7 +283,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                           : IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {i.identity_type === "other" ? i.identity_type_other ?? "—" : "—"}
+                        {i.identity_type_other ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         <div>{i.identifier ?? "—"}</div>
