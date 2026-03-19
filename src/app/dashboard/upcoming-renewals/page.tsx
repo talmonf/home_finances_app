@@ -80,9 +80,12 @@ export default async function UpcomingRenewalsPage() {
       id: `identity-${i.id}`,
       category: "Identity",
       itemName:
-        i.identity_type === "other"
-          ? `Other — ${i.identity_type_other ?? "—"}`
-          : i.identity_type.replaceAll("_", " "),
+        (() => {
+          const other = i.identity_type_other?.trim() || null;
+          const typeLabel =
+            i.identity_type === "other" ? "Other" : i.identity_type.replaceAll("_", " ");
+          return other ? `${typeLabel} - ${other}` : typeLabel;
+        })(),
       owner: i.family_member.full_name,
       renewalDate: i.expiry_date,
       href: `/dashboard/identities/${i.id}`,

@@ -40,10 +40,7 @@ export async function createIdentity(formData: FormData) {
   }
 
   const identity_type = parseIdentityType(identity_type_raw);
-  const finalIdentityTypeOther =
-    identity_type === "other" ? (identity_type_other ?? null) : null;
-
-  if (identity_type === "other" && !finalIdentityTypeOther) {
+  if (identity_type === "other" && !identity_type_other) {
     redirect("/dashboard/identities?error=Other+type+is+required");
   }
 
@@ -65,7 +62,7 @@ export async function createIdentity(formData: FormData) {
       household_id: householdId,
       family_member_id,
       identity_type,
-      identity_type_other: finalIdentityTypeOther,
+      identity_type_other,
       identifier,
       notes,
       expiry_date,
@@ -97,10 +94,7 @@ export async function updateIdentity(formData: FormData) {
   }
 
   const identity_type = parseIdentityType(identity_type_raw);
-  const finalIdentityTypeOther =
-    identity_type === "other" ? (identity_type_other ?? null) : null;
-
-  if (identity_type === "other" && !finalIdentityTypeOther) {
+  if (identity_type === "other" && !identity_type_other) {
     redirect("/dashboard/identities?error=Other+type+is+required");
   }
 
@@ -121,7 +115,7 @@ export async function updateIdentity(formData: FormData) {
     data: {
       family_member_id,
       identity_type,
-      identity_type_other: finalIdentityTypeOther,
+      identity_type_other,
       identifier,
       notes,
       expiry_date,

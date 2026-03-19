@@ -279,7 +279,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-100">{i.family_member.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">
                         {i.identity_type === "other"
-                          ? i.identity_type_other ?? "Other"
+                          ? "Other"
                           : IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
