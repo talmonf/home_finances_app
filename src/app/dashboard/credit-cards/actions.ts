@@ -16,10 +16,16 @@ export async function createCreditCard(formData: FormData) {
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
   const settlement_bank_account_id = (formData.get("settlement_bank_account_id") as string | null)?.trim();
   const card_last_four = (formData.get("card_last_four") as string | null)?.trim() || null;
+  const expiry_date_raw = (formData.get("expiry_date") as string | null)?.trim() || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
 
   if (!card_name || !issuer_name || !family_member_id || !settlement_bank_account_id) {
     redirect("/dashboard/credit-cards?error=Card+name,+issuer,+member+and+settlement+account+required");
+  }
+
+  const expiry_date = expiry_date_raw ? new Date(expiry_date_raw) : null;
+  if (expiry_date_raw && Number.isNaN(expiry_date?.getTime())) {
+    redirect("/dashboard/credit-cards?error=Invalid+expiry+date");
   }
 
   const [member, bankAccount] = await Promise.all([
@@ -45,6 +51,7 @@ export async function createCreditCard(formData: FormData) {
       card_name,
       issuer_name,
       card_last_four,
+      expiry_date,
       settlement_bank_account_id,
       currency,
     },

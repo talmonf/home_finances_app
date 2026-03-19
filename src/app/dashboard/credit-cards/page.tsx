@@ -5,6 +5,11 @@ import { createCreditCard, toggleCreditCardActive } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+function formatDate(d: Date | null) {
+  if (!d) return "—";
+  return d.toISOString().slice(0, 10);
+}
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -134,6 +139,17 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
+              <label htmlFor="expiry_date" className="mb-1 block text-xs font-medium text-slate-400">
+                Expiry date (optional)
+              </label>
+              <input
+                id="expiry_date"
+                name="expiry_date"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
               <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
                 Family member
               </label>
@@ -204,6 +220,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Card name</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Issuer</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Last 4</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Expiry</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Settlement account</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
@@ -216,6 +233,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-100">{c.card_name}</td>
                       <td className="px-4 py-3 text-slate-300">{c.issuer_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.card_last_four ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{formatDate(c.expiry_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.bank_account.account_name}</td>
                       <td className="px-4 py-3">

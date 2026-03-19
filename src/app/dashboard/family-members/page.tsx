@@ -288,6 +288,12 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                         >
                           Edit
                         </Link>
+                        <Link
+                          href="/dashboard/identities"
+                          className="text-xs font-medium text-violet-400 hover:text-violet-300"
+                        >
+                          Identity
+                        </Link>
                         <form
                           action={toggleFamilyMemberActive.bind(null, m.id, !m.is_active)}
                           className="inline"

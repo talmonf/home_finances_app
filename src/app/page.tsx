@@ -177,6 +177,21 @@ export default async function Home() {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Upcoming Renewals
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  See all upcoming renewals and expirations across subscriptions, identity, cards,
+                  insurance, utilities, and donations.
+                </p>
+                <Link
+                  href="/dashboard/upcoming-renewals"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Upcoming Renewals
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Reports
                 </h2>
                 <p className="text-xs text-slate-400">

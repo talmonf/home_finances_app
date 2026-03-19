@@ -25,6 +25,7 @@ model households {
   family_members        family_members[]
   bank_accounts         bank_accounts[]
   credit_cards          credit_cards[]
+  identities            identities[]
   studies_and_classes   studies_and_classes[]
   subscriptions         subscriptions[]
   categories            categories[]
@@ -34,6 +35,8 @@ model households {
   tasks                 tasks[]
   properties            properties[]
   property_utilities    property_utilities[]
+  insurance_policies    insurance_policies[]
+  donation_commitments  donation_commitments[]
 }
 
 model family_members {
@@ -51,7 +54,9 @@ model family_members {
 
   household           households     @relation(fields: [household_id], references: [id])
   credit_cards        credit_cards[]
+  identities          identities[]
   studies_and_classes studies_and_classes[]
+  insurance_policies  insurance_policies[]
   transactions        transactions[]
   tasks_assigned      tasks[]
   users               users[]
@@ -83,6 +88,7 @@ model credit_cards {
   card_name                  String
   issuer_name                String
   card_last_four             String?
+  expiry_date                DateTime?
   settlement_bank_account_id String
   currency                   String   @default("ILS")
   is_active                  Boolean  @default(true)
@@ -144,6 +150,7 @@ model payees {
 
   household         households         @relation(fields: [household_id], references: [id])
   transactions      transactions[]
+  donation_commitments donation_commitments[]
   property_utilities property_utilities[]
 }
 
@@ -180,6 +187,7 @@ model property_utilities {
   provider_name  String
   payee_id       String?
   account_number String?
+  renewal_date   DateTime?
   notes          String?
   created_at     DateTime           @default(now())
   updated_at     DateTime           @updatedAt
@@ -187,6 +195,60 @@ model property_utilities {
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   property  properties @relation(fields: [property_id], references: [id], onDelete: Cascade)
   payee     payees?    @relation(fields: [payee_id], references: [id])
+}
+
+model identities {
+  id              String       @id @default(uuid())
+  household_id    String
+  family_member_id String
+  identity_type   IdentityType
+  identifier      String?
+  expiry_date     DateTime
+  is_active       Boolean      @default(true)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  household      households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member  family_members @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
+}
+
+enum IdentityType {
+  passport
+  national_id
+  driver_license
+  car_license
+  other
+
+  @@map("identity_type")
+}
+
+model insurance_policies {
+  id               String    @id @default(uuid())
+  household_id     String
+  family_member_id String?
+  provider_name    String
+  policy_name      String
+  expiration_date  DateTime
+  is_active        Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  household     households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+}
+
+model donation_commitments {
+  id           String   @id @default(uuid())
+  household_id String
+  payee_id     String
+  renewal_date DateTime
+  notes        String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  payee     payees     @relation(fields: [payee_id], references: [id], onDelete: Cascade)
 }
 
 enum PropertyUtilityType {

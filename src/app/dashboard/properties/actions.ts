@@ -106,6 +106,7 @@ export async function createUtility(formData: FormData) {
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
+  const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   if (payee_id) {
@@ -114,6 +115,9 @@ export async function createUtility(formData: FormData) {
     });
     if (!payee) return;
   }
+
+  const renewal_date = renewal_date_raw ? new Date(renewal_date_raw) : null;
+  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) return;
 
   await prisma.property_utilities.create({
     data: {
@@ -124,6 +128,7 @@ export async function createUtility(formData: FormData) {
       provider_name,
       payee_id: payee_id || null,
       account_number,
+      renewal_date,
       notes,
     },
   });
@@ -152,6 +157,7 @@ export async function updateUtility(formData: FormData) {
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
+  const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   let finalPayeeId: string | null = null;
@@ -162,6 +168,9 @@ export async function updateUtility(formData: FormData) {
     if (payee) finalPayeeId = payee_id;
   }
 
+  const renewal_date = renewal_date_raw ? new Date(renewal_date_raw) : null;
+  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) return;
+
   await prisma.property_utilities.updateMany({
     where: { id, household_id: householdId },
     data: {
@@ -169,6 +178,7 @@ export async function updateUtility(formData: FormData) {
       provider_name,
       payee_id: finalPayeeId,
       account_number,
+      renewal_date,
       notes,
     },
   });

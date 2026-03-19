@@ -143,6 +143,17 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               <label htmlFor="account_number_new" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
               <input id="account_number_new" name="account_number" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
+            <div>
+              <label htmlFor="renewal_date_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Renewal date (optional)
+              </label>
+              <input
+                id="renewal_date_new"
+                name="renewal_date"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
             <div className="sm:col-span-2">
               <label htmlFor="notes_new" className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
               <input id="notes_new" name="notes" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -164,6 +175,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                     <th className="px-4 py-3 font-medium text-slate-300">Type</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Provider</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -171,7 +183,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                 <tbody>
                   {property.utilities.map((u) => (
                     <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td colSpan={4} className="px-4 py-3">
+                      <td colSpan={5} className="px-4 py-3">
                         <form action={updateUtility} className="flex flex-wrap items-center gap-2">
                           <input type="hidden" name="id" value={u.id} />
                           <input type="hidden" name="property_id" value={property.id} />
@@ -188,6 +200,13 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                             ))}
                           </select>
                           <input type="text" name="account_number" defaultValue={u.account_number ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Account #" />
+                          <input
+                            type="date"
+                            name="renewal_date"
+                            defaultValue={u.renewal_date ? u.renewal_date.toISOString().slice(0, 10) : ""}
+                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                            aria-label="Renewal date"
+                          />
                           <input type="text" name="notes" defaultValue={u.notes ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Notes" />
                           <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">Save</button>
                         </form>
