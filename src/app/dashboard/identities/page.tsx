@@ -37,7 +37,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
   const sort = resolvedSearchParams?.sort ?? "expiry_date";
   const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
 
-  const sortKeys = ["family_member", "identity_type", "identifier", "expiry_date"] as const;
+  const sortKeys = ["family_member", "identity_type", "identity_type_other", "identifier", "expiry_date"] as const;
   type SortKey = (typeof sortKeys)[number];
   const activeSortKey = (sortKeys.includes(sort as SortKey) ? (sort as SortKey) : "expiry_date") as SortKey;
 
@@ -71,6 +71,12 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
 
       if (activeSortKey === "identity_type") {
         return multiplier * a.identity_type.localeCompare(b.identity_type);
+      }
+
+      if (activeSortKey === "identity_type_other") {
+        const left = a.identity_type_other ?? "";
+        const right = b.identity_type_other ?? "";
+        return multiplier * left.localeCompare(right);
       }
 
       // identifier
@@ -237,6 +243,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                       [
                         { key: "family_member" as const, label: "Family member" },
                         { key: "identity_type" as const, label: "Type" },
+                        { key: "identity_type_other" as const, label: "Other type" },
                         { key: "identifier" as const, label: "Identifier" },
                         { key: "expiry_date" as const, label: "Expiry date" },
                       ] as const
@@ -274,6 +281,9 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                         {i.identity_type === "other"
                           ? i.identity_type_other ?? "Other"
                           : IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {i.identity_type === "other" ? i.identity_type_other ?? "—" : "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         <div>{i.identifier ?? "—"}</div>

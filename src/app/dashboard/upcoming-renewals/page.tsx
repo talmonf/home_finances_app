@@ -81,11 +81,11 @@ export default async function UpcomingRenewalsPage() {
       category: "Identity",
       itemName:
         i.identity_type === "other"
-          ? i.identity_type_other ?? "Other"
+          ? `Other — ${i.identity_type_other ?? "—"}`
           : i.identity_type.replaceAll("_", " "),
       owner: i.family_member.full_name,
       renewalDate: i.expiry_date,
-      href: "/dashboard/identities",
+      href: `/dashboard/identities/${i.id}`,
     })),
     ...creditCards
       .filter((c) => c.expiry_date)
