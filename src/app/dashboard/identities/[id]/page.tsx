@@ -192,26 +192,6 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
         </form>
       </div>
     </div>
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function () {
-            const typeSelect = document.getElementById('identity_type');
-            const otherInput = document.getElementById('identity_type_other');
-            if (!typeSelect || !otherInput) return;
-
-            function syncRequired() {
-              const isOther = typeSelect.value === 'other';
-              otherInput.required = isOther;
-              otherInput.setAttribute('aria-required', isOther ? 'true' : 'false');
-            }
-
-            syncRequired();
-            typeSelect.addEventListener('change', syncRequired);
-          })();
-        `,
-      }}
-    />
   );
 }
 
