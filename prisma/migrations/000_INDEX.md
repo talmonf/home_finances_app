@@ -19,6 +19,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 009 | `009_identity_type_other.sql` | ALTER | identities: add identity_type_other (free-text when type is Other) |
 | 010 | `010_identity_notes.sql` | ALTER | identities: add notes (optional) |
 | 011 | `011_significant_purchases.sql` | CREATE | Significant purchases: warranty expiry + transaction linking |
+| 012 | `012_bank_accounts_fields.sql` | ALTER | bank_accounts: add branch_name, sort_code, notes |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -33,6 +34,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 009_identity_type_other.sql
 - [x] 010_identity_notes.sql
 - [x] 011_significant_purchases.sql
+- [ ] 012_bank_accounts_fields.sql
 
 ---
 

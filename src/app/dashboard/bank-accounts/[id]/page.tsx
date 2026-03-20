@@ -1,15 +1,15 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createBankAccount } from "./actions";
+import { updateBankAccount, toggleBankAccountActive } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
+  params: Promise<{ id: string }>;
   searchParams?: Promise<{
-    created?: string;
-    updated?: string;
     error?: string;
+    updated?: string;
   }>;
 };
 
@@ -20,68 +20,61 @@ function formatSortCode(value: string | null) {
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}`;
 }
 
-export default async function BankAccountsPage({ searchParams }: PageProps) {
+export default async function BankAccountDetailPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) {
-    redirect("/");
-  }
+  if (!householdId) redirect("/");
 
+  const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const accounts = await prisma.bank_accounts.findMany({
-    where: { household_id: householdId },
-    orderBy: { account_name: "asc" },
+  const account = await prisma.bank_accounts.findFirst({
+    where: { id, household_id: householdId },
   });
+
+  if (!account) redirect("/dashboard/bank-accounts?error=Not+found");
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                ← Back to dashboard
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">
-                Bank accounts
-              </h1>
-              <p className="text-sm text-slate-400">
-                Manage bank accounts for this household. Add accounts before linking credit cards.
-              </p>
-            </div>
-          </div>
+          <Link
+            href="/dashboard/bank-accounts"
+            className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
+          >
+            ← Back to bank accounts
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">Edit bank account</h1>
 
-          {(resolvedSearchParams?.created ||
-            resolvedSearchParams?.updated ||
-            resolvedSearchParams?.error) && (
-            <div
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
-                resolvedSearchParams.error
-                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
-                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
-              }`}
-            >
-              <span>
-                {resolvedSearchParams.error
-                  ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                  : resolvedSearchParams.created
-                    ? "Bank account added."
-                    : "Updated."}
-              </span>
+          {resolvedSearchParams?.error && (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
+            </div>
+          )}
+          {resolvedSearchParams?.updated && (
+            <div className="rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
+              Bank account updated.
             </div>
           )}
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-medium text-slate-200">Account details</h2>
+            <div className="text-xs text-slate-400">
+              Status:{" "}
+              <span className={account.is_active ? "text-emerald-400" : "text-slate-500"}>
+                {account.is_active ? "Active" : "Inactive"}
+              </span>
+            </div>
+          </div>
+
           <form
-            action={createBankAccount}
+            action={updateBankAccount}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
           >
+            <input type="hidden" name="id" value={account.id} />
+
             <div>
               <label htmlFor="account_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Account name
@@ -90,10 +83,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 id="account_name"
                 name="account_name"
                 required
+                defaultValue={account.account_name}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Main checking"
               />
             </div>
+
             <div>
               <label htmlFor="bank_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Bank name
@@ -102,10 +96,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 id="bank_name"
                 name="bank_name"
                 required
+                defaultValue={account.bank_name}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Bank Hapoalim"
               />
             </div>
+
             <div>
               <label htmlFor="branch_number" className="mb-1 block text-xs font-medium text-slate-400">
                 Branch number
@@ -113,10 +108,12 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <input
                 id="branch_number"
                 name="branch_number"
+                defaultValue={account.branch_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional"
               />
             </div>
+
             <div>
               <label htmlFor="branch_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Branch name
@@ -124,21 +121,12 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <input
                 id="branch_name"
                 name="branch_name"
+                defaultValue={account.branch_name ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional"
               />
             </div>
-            <div>
-              <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">
-                Account number
-              </label>
-              <input
-                id="account_number"
-                name="account_number"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
+
             <div>
               <label htmlFor="sort_code" className="mb-1 block text-xs font-medium text-slate-400">
                 Sort code (12-34-56)
@@ -148,10 +136,25 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 name="sort_code"
                 maxLength={8}
                 inputMode="text"
+                defaultValue={formatSortCode(account.sort_code ?? null) ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional (e.g. 12-34-56)"
               />
             </div>
+
+            <div>
+              <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">
+                Account number
+              </label>
+              <input
+                id="account_number"
+                name="account_number"
+                defaultValue={account.account_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional"
+              />
+            </div>
+
             <div>
               <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
                 Currency
@@ -159,10 +162,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <input
                 id="currency"
                 name="currency"
-                defaultValue="ILS"
+                defaultValue={account.currency}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
+
             <div>
               <label htmlFor="country" className="mb-1 block text-xs font-medium text-slate-400">
                 Country
@@ -170,10 +174,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <input
                 id="country"
                 name="country"
-                defaultValue="IL"
+                defaultValue={account.country}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
+
             <div className="sm:col-span-2 lg:col-span-4">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
@@ -181,67 +186,38 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <textarea
                 id="notes"
                 name="notes"
-                rows={2}
+                rows={3}
+                defaultValue={account.notes ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
               />
             </div>
-            <div className="flex items-end">
+
+            <div className="flex items-end sm:col-span-2 lg:col-span-2">
               <button
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add bank account
+                Save changes
               </button>
             </div>
           </form>
-        </section>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
-          {accounts.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No bank accounts yet. Add one above; you need at least one to add credit cards.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Account name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Bank</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Branch / Account</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{a.account_name}</td>
-                      <td className="px-4 py-3 text-slate-300">{a.bank_name}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {[a.branch_name ?? a.branch_number, formatSortCode(a.sort_code), a.account_number]
-                          .filter(Boolean)
-                          .join(" / ") || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{a.currency}</td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/dashboard/bank-accounts/${a.id}`}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="flex items-end sm:col-span-2 lg:col-span-2">
+            <form
+              action={toggleBankAccountActive.bind(null, account.id, !account.is_active)}
+              className="inline"
+            >
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-slate-600"
+              >
+                {account.is_active ? "Deactivate" : "Activate"}
+              </button>
+            </form>
+          </div>
         </section>
       </div>
     </div>
   );
 }
+

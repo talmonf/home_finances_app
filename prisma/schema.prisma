@@ -70,7 +70,10 @@ model bank_accounts {
   account_name   String
   bank_name      String
   branch_number  String?
+  branch_name    String?
+  sort_code      String?
   account_number String?
+  notes          String?
   currency       String   @default("ILS")
   country        String   @default("IL")
   is_active      Boolean  @default(true)
