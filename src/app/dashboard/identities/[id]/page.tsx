@@ -5,9 +5,25 @@ import { updateIdentity } from "../actions";
 
 export const dynamic = "force-dynamic";
 
+const LIST_FILTER_IDENTITY_TYPES = ["passport", "national_id", "driver_license", "other"] as const;
+const LIST_SORT_KEYS = [
+  "family_member",
+  "identity_type",
+  "identity_type_other",
+  "identifier",
+  "expiry_date",
+] as const;
+
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string; updated?: string }>;
+  searchParams?: Promise<{
+    error?: string;
+    updated?: string;
+    family_member_id?: string;
+    identity_type?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 };
 
 const IDENTITY_TYPE_LABELS: Record<string, string> = {
@@ -30,6 +46,29 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
+  const sp = resolvedSearchParams;
+  let redirectFamilyMemberId = "all";
+  const rawFm = sp?.family_member_id?.trim();
+  if (rawFm && rawFm !== "all" && /^[0-9a-f-]{36}$/i.test(rawFm)) {
+    redirectFamilyMemberId = rawFm;
+  }
+  let redirectIdentityType = "all";
+  const rawIt = sp?.identity_type?.trim();
+  if (rawIt && rawIt !== "all" && (LIST_FILTER_IDENTITY_TYPES as readonly string[]).includes(rawIt)) {
+    redirectIdentityType = rawIt;
+  }
+  const sortRaw = sp?.sort?.trim();
+  const redirectSort =
+    sortRaw && (LIST_SORT_KEYS as readonly string[]).includes(sortRaw) ? sortRaw : "expiry_date";
+  const redirectDir = sp?.dir === "desc" ? "desc" : "asc";
+
+  const listReturnSearch = new URLSearchParams();
+  if (redirectFamilyMemberId !== "all") listReturnSearch.set("family_member_id", redirectFamilyMemberId);
+  if (redirectIdentityType !== "all") listReturnSearch.set("identity_type", redirectIdentityType);
+  listReturnSearch.set("sort", redirectSort);
+  listReturnSearch.set("dir", redirectDir);
+  const listReturnQuery = listReturnSearch.toString();
+
   const [identity, familyMembers] = await Promise.all([
     prisma.identities.findFirst({
       where: { id, household_id: householdId },
@@ -50,7 +89,7 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
       <div className="w-full max-w-3xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <Link
-            href="/dashboard/identities"
+            href={listReturnQuery ? `/dashboard/identities?${listReturnQuery}` : "/dashboard/identities"}
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
             ← Back to identities
@@ -79,6 +118,10 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
           className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
         >
           <input type="hidden" name="id" value={identity.id} />
+          <input type="hidden" name="redirect_family_member_id" value={redirectFamilyMemberId} />
+          <input type="hidden" name="redirect_identity_type" value={redirectIdentityType} />
+          <input type="hidden" name="redirect_sort" value={redirectSort} />
+          <input type="hidden" name="redirect_dir" value={redirectDir} />
 
           <div>
             <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
@@ -177,7 +220,7 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
 
           <div className="flex justify-end gap-3 pt-2">
             <Link
-              href="/dashboard/identities"
+              href={listReturnQuery ? `/dashboard/identities?${listReturnQuery}` : "/dashboard/identities"}
               className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
             >
               Cancel

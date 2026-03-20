@@ -63,6 +63,15 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
     return dir === "asc" ? "desc" : "asc";
   };
 
+  const editListContextQuery = (() => {
+    const q = new URLSearchParams();
+    if (filterFamilyMemberId) q.set("family_member_id", filterFamilyMemberId);
+    if (filterIdentityType) q.set("identity_type", filterIdentityType);
+    q.set("sort", activeSortKey);
+    q.set("dir", dir);
+    return q.toString();
+  })();
+
   const [identities, familyMembers] = await Promise.all([
     prisma.identities.findMany({
       where: {
@@ -203,6 +212,10 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
             action={createIdentity}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
           >
+            <input type="hidden" name="redirect_family_member_id" value={filterFamilyMemberId ?? "all"} />
+            <input type="hidden" name="redirect_identity_type" value={filterIdentityType ?? "all"} />
+            <input type="hidden" name="redirect_sort" value={activeSortKey} />
+            <input type="hidden" name="redirect_dir" value={dir} />
             <div>
               <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
                 Family member
@@ -374,7 +387,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">{formatDate(i.expiry_date)}</td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/dashboard/identities/${i.id}`}
+                          href={`/dashboard/identities/${i.id}?${editListContextQuery}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
                           Edit
