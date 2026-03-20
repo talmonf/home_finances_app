@@ -13,6 +13,13 @@ type RenewalRow = {
   href: string;
 };
 
+const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
+  electronics: "Electronics",
+  appliances: "Appliances",
+  tools: "Tools",
+  other: "Other",
+};
+
 function formatDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -36,6 +43,7 @@ export default async function UpcomingRenewalsPage() {
     insurancePolicies,
     utilities,
     donationCommitments,
+    significantPurchases,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
       where: { household_id: householdId, is_active: true, renewal_date: { gte: today } },
@@ -64,6 +72,14 @@ export default async function UpcomingRenewalsPage() {
     prisma.donation_commitments.findMany({
       where: { household_id: householdId, is_active: true, renewal_date: { gte: today } },
       include: { payee: true },
+    }),
+    prisma.significant_purchases.findMany({
+      where: {
+        household_id: householdId,
+        is_active: true,
+        warranty_expiry_date: { not: null, gte: today },
+      },
+      include: { family_member: true, credit_card: { include: { family_member: true } } },
     }),
   ]);
 
@@ -126,6 +142,14 @@ export default async function UpcomingRenewalsPage() {
       renewalDate: d.renewal_date,
       href: "/dashboard/donation-commitments",
     })),
+    ...significantPurchases.map((p) => ({
+      id: `purchase-${p.id}`,
+      category: "Warranty",
+      itemName: `${PURCHASE_CATEGORY_LABELS[p.purchase_category] ?? p.purchase_category} — ${p.item_name}`,
+      owner: p.family_member?.full_name ?? p.credit_card?.family_member?.full_name ?? "Household",
+      renewalDate: p.warranty_expiry_date as Date,
+      href: "/dashboard/significant-purchases",
+    })),
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
 
   return (
@@ -138,7 +162,7 @@ export default async function UpcomingRenewalsPage() {
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals</h1>
           <p className="text-sm text-slate-400">
             All active upcoming renewal and expiration dates across subscriptions, identity, cards,
-            insurance, utilities, and donations.
+            insurance, utilities, donations, and warranty-bearing significant purchases.
           </p>
         </header>
 

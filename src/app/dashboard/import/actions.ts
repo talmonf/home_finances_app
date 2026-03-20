@@ -23,12 +23,23 @@ export async function updateTransactionRow(formData: FormData) {
   const family_member_id = (formData.get("family_member_id") as string)?.trim() || null;
   const study_or_class_id = (formData.get("study_or_class_id") as string)?.trim() || null;
 
-  const data: Record<string, string | null> = {
+  const significant_purchase_id = (formData.get("significant_purchase_id") as string)?.trim() || null;
+  const purchase_category_raw = (formData.get("purchase_category") as string)?.trim() || null;
+
+  const PURCHASE_CATEGORIES = ["electronics", "appliances", "tools", "other"] as const;
+  type PurchaseCategory = (typeof PURCHASE_CATEGORIES)[number];
+  const purchase_category =
+    purchase_category_raw && (PURCHASE_CATEGORIES as readonly string[]).includes(purchase_category_raw)
+      ? (purchase_category_raw as PurchaseCategory)
+      : null;
+
+  const data: Record<string, string | null> & { significant_purchase_id?: string | null } = {
     notes,
     category_id: category_id || null,
     payee_id: payee_id || null,
     family_member_id: family_member_id || null,
     study_or_class_id: study_or_class_id || null,
+    significant_purchase_id,
   };
 
   if (category_id) {
@@ -56,13 +67,29 @@ export async function updateTransactionRow(formData: FormData) {
     if (!sc) data.study_or_class_id = null;
   }
 
+  if (significant_purchase_id) {
+    const sp = await prisma.significant_purchases.findFirst({
+      where: { id: significant_purchase_id, household_id: householdId },
+    });
+    if (!sp) data.significant_purchase_id = null;
+  }
+
   await prisma.transactions.update({
     where: { id: transactionId },
     data,
   });
 
+  // Optionally update purchase category on the linked significant purchase.
+  if (significant_purchase_id && purchase_category) {
+    await prisma.significant_purchases.updateMany({
+      where: { id: significant_purchase_id, household_id: householdId },
+      data: { purchase_category },
+    });
+  }
+
   revalidatePath("/dashboard/import");
   revalidatePath("/dashboard/import/review");
+  revalidatePath("/dashboard/significant-purchases");
 }
 
 export async function confirmAllTransactionsForDocument(documentId: string) {

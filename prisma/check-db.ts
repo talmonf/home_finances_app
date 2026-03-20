@@ -71,6 +71,12 @@ const checks: Check[] = [
       await prisma.subscriptions.findFirst();
     },
   },
+  {
+    name: "significant_purchases",
+    run: async () => {
+      await prisma.significant_purchases.findFirst();
+    },
+  },
 ];
 
 async function main() {

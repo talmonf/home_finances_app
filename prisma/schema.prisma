@@ -37,6 +37,7 @@ model households {
   property_utilities    property_utilities[]
   insurance_policies    insurance_policies[]
   donation_commitments  donation_commitments[]
+  significant_purchases significant_purchases[]
 }
 
 model family_members {
@@ -58,6 +59,7 @@ model family_members {
   studies_and_classes studies_and_classes[]
   insurance_policies  insurance_policies[]
   transactions        transactions[]
+  significant_purchases significant_purchases[]
   tasks_assigned      tasks[]
   users               users[]
 }
@@ -99,6 +101,7 @@ model credit_cards {
   family_member family_members @relation(fields: [family_member_id], references: [id])
   bank_account  bank_accounts  @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
+  significant_purchases significant_purchases[]
 }
 
 model studies_and_classes {
@@ -253,6 +256,44 @@ model donation_commitments {
   payee     payees     @relation(fields: [payee_id], references: [id], onDelete: Cascade)
 }
 
+enum PurchaseCategory {
+  electronics
+  appliances
+  tools
+  other
+
+  @@map("purchase_category")
+}
+
+enum SignificantPurchaseSourceType {
+  credit_card
+  present
+  other
+
+  @@map("significant_purchase_source_type")
+}
+
+model significant_purchases {
+  id                  String   @id @default(uuid())
+  household_id        String
+  family_member_id    String?
+  credit_card_id      String?
+  purchase_date       DateTime
+  warranty_expiry_date DateTime?
+  purchase_category   PurchaseCategory
+  purchase_source_type SignificantPurchaseSourceType
+  item_name           String
+  notes               String?
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  household        households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member    family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+  credit_card      credit_cards?   @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  transactions      transactions[]
+}
+
 enum PropertyUtilityType {
   electricity
   water
@@ -314,6 +355,7 @@ model transactions {
   notes                 String?
   family_member_id      String?
   study_or_class_id     String?
+  significant_purchase_id String?
   import_status         TransactionImportStatus @default(pending_review)
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
@@ -326,6 +368,7 @@ model transactions {
   payee          payees?        @relation(fields: [payee_id], references: [id])
   family_member  family_members? @relation(fields: [family_member_id], references: [id])
   study_or_class studies_and_classes? @relation(fields: [study_or_class_id], references: [id])
+  significant_purchase significant_purchases? @relation(fields: [significant_purchase_id], references: [id], onDelete: SetNull)
 }
 
 enum DocumentProcessingStatus {

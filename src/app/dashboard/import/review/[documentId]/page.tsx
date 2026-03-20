@@ -34,6 +34,13 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
+  electronics: "Electronics",
+  appliances: "Appliances",
+  tools: "Tools",
+  other: "Other",
+};
+
 export default async function ImportReviewPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -42,7 +49,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [doc, transactions, categories, payees, familyMembers, studies] = await Promise.all([
+  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases] = await Promise.all([
     prisma.documents.findFirst({
       where: { id: documentId, household_id: householdId },
       include: { bank_account: true },
@@ -73,9 +80,16 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
       where: { household_id: householdId, is_active: true },
       orderBy: { name: "asc" },
     }),
+    prisma.significant_purchases.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { warranty_expiry_date: "asc" },
+      select: { id: true, item_name: true, warranty_expiry_date: true, purchase_category: true },
+    }),
   ]);
 
   if (!doc) notFound();
+
+  const significantPurchaseById = new Map(significantPurchases.map((sp) => [sp.id, sp]));
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -155,7 +169,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                 <th className="px-2 py-2 font-medium text-slate-300">Date</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Amount</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Description</th>
-                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase</th>
               </tr>
             </thead>
             <tbody>
@@ -228,6 +242,42 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                           </option>
                         ))}
                       </select>
+
+                      {/*
+                        Warranty-bearing purchases can be linked to this transaction.
+                        Purchase category is used to update the linked purchase's category when set.
+                      */}
+                      <select
+                        name="purchase_category"
+                        defaultValue={
+                          tx.significant_purchase_id
+                            ? significantPurchaseById.get(tx.significant_purchase_id)?.purchase_category ?? ""
+                            : ""
+                        }
+                        className="min-w-[120px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">—</option>
+                        {Object.entries(PURCHASE_CATEGORY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        name="significant_purchase_id"
+                        defaultValue={tx.significant_purchase_id ?? ""}
+                        className="min-w-[180px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">— None —</option>
+                        {significantPurchases.map((sp) => (
+                          <option key={sp.id} value={sp.id}>
+                            {sp.item_name}
+                            {sp.warranty_expiry_date ? ` (${formatDate(sp.warranty_expiry_date)})` : ""}
+                          </option>
+                        ))}
+                      </select>
+
                       <button
                         type="submit"
                         className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500"

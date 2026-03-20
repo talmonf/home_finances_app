@@ -18,6 +18,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 008 | `008_upcoming_renewals.sql` | CREATE | Upcoming renewals: add identity/insurance/donations tables + expiry/renewal columns |
 | 009 | `009_identity_type_other.sql` | ALTER | identities: add identity_type_other (free-text when type is Other) |
 | 010 | `010_identity_notes.sql` | ALTER | identities: add notes (optional) |
+| 011 | `011_significant_purchases.sql` | CREATE | Significant purchases: warranty expiry + transaction linking |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -31,6 +32,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 008_upcoming_renewals.sql
 - [x] 009_identity_type_other.sql
 - [x] 010_identity_notes.sql
+- [x] 011_significant_purchases.sql
 
 ---
 
