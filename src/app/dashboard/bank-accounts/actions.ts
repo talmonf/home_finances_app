@@ -85,12 +85,28 @@ export async function updateBankAccount(formData: FormData) {
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const country = (formData.get("country") as string | null)?.trim() || "IL";
 
+  const isActiveRaw = (formData.get("is_active") as string | null)?.trim();
+  const isActive =
+    isActiveRaw === "false" ? false : true; // default to active for backwards-compat
+
+  const dateClosedRaw = (formData.get("date_closed") as string | null)?.trim() || null;
+  const dateClosed = dateClosedRaw ? new Date(dateClosedRaw) : null;
+
   if (!account_name || !bank_name) {
     redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Account+name+and+bank+required`);
   }
 
   if (sort_code && !/^\d{6}$/.test(sort_code)) {
     redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Sort+code+must+be+exactly+6+digits`);
+  }
+
+  if (!isActive) {
+    if (!dateClosedRaw) {
+      redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Date+closed+is+required+when+deactivated`);
+    }
+    if (!dateClosed || Number.isNaN(dateClosed.getTime())) {
+      redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Invalid+date+closed`);
+    }
   }
 
   await prisma.bank_accounts.updateMany({
@@ -105,9 +121,11 @@ export async function updateBankAccount(formData: FormData) {
       notes,
       currency,
       country,
+      is_active: isActive,
+      date_closed: isActive ? null : dateClosed,
     },
   });
 
-  revalidatePath(`/dashboard/bank-accounts/${id}`);
-  redirect(`/dashboard/bank-accounts/${id}?updated=1`);
+  revalidatePath(`/dashboard/bank-accounts`);
+  redirect(`/dashboard/bank-accounts?updated=1`);
 }

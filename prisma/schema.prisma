@@ -74,6 +74,7 @@ model bank_accounts {
   sort_code      String?
   account_number String?
   notes          String?
+  date_closed    DateTime?
   currency       String   @default("ILS")
   country        String   @default("IL")
   is_active      Boolean  @default(true)

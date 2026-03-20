@@ -20,6 +20,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 010 | `010_identity_notes.sql` | ALTER | identities: add notes (optional) |
 | 011 | `011_significant_purchases.sql` | CREATE | Significant purchases: warranty expiry + transaction linking |
 | 012 | `012_bank_accounts_fields.sql` | ALTER | bank_accounts: add branch_name, sort_code, notes |
+| 013 | `013_bank_accounts_date_closed.sql` | ALTER | bank_accounts: add date_closed |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -34,7 +35,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 009_identity_type_other.sql
 - [x] 010_identity_notes.sql
 - [x] 011_significant_purchases.sql
-- [ ] 012_bank_accounts_fields.sql
+- [x] 012_bank_accounts_fields.sql
+- [x] 013_bank_accounts_date_closed.sql
 
 ---
 

@@ -1,7 +1,9 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { updateBankAccount, toggleBankAccountActive } from "../actions";
+import { updateBankAccount } from "../actions";
+import SortCodeInput from "../SortCodeInput";
+import BankAccountStatusFields from "../BankAccountStatusFields";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +14,6 @@ type PageProps = {
     updated?: string;
   }>;
 };
-
-function formatSortCode(value: string | null) {
-  if (!value) return null;
-  const digits = value.replace(/\D/g, "");
-  if (digits.length !== 6) return value;
-  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}`;
-}
 
 export default async function BankAccountDetailPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -59,21 +54,15 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
         </header>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-medium text-slate-200">Account details</h2>
-            <div className="text-xs text-slate-400">
-              Status:{" "}
-              <span className={account.is_active ? "text-emerald-400" : "text-slate-500"}>
-                {account.is_active ? "Active" : "Inactive"}
-              </span>
-            </div>
-          </div>
-
           <form
             action={updateBankAccount}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <input type="hidden" name="id" value={account.id} />
+
+            <div className="sm:col-span-2 lg:col-span-4">
+              <h2 className="text-lg font-medium text-slate-200">Account details</h2>
+            </div>
 
             <div>
               <label htmlFor="account_name" className="mb-1 block text-xs font-medium text-slate-400">
@@ -131,14 +120,12 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="sort_code" className="mb-1 block text-xs font-medium text-slate-400">
                 Sort code (12-34-56)
               </label>
-              <input
+              <SortCodeInput
                 id="sort_code"
                 name="sort_code"
-                maxLength={8}
-                inputMode="text"
-                defaultValue={formatSortCode(account.sort_code ?? null) ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={account.sort_code}
                 placeholder="Optional (e.g. 12-34-56)"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
 
@@ -180,6 +167,13 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4">
+              <BankAccountStatusFields
+                initialIsActive={account.is_active}
+                initialDateClosed={account.date_closed ? account.date_closed.toISOString().slice(0, 10) : null}
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-4">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
@@ -201,20 +195,6 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               </button>
             </div>
           </form>
-
-          <div className="flex items-end sm:col-span-2 lg:col-span-2">
-            <form
-              action={toggleBankAccountActive.bind(null, account.id, !account.is_active)}
-              className="inline"
-            >
-              <button
-                type="submit"
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-slate-600"
-              >
-                {account.is_active ? "Deactivate" : "Activate"}
-              </button>
-            </form>
-          </div>
         </section>
       </div>
     </div>

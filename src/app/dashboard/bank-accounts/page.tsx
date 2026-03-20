@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createBankAccount } from "./actions";
+import SortCodeInput from "./SortCodeInput";
 
 export const dynamic = "force-dynamic";
 
@@ -143,13 +144,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <label htmlFor="sort_code" className="mb-1 block text-xs font-medium text-slate-400">
                 Sort code (12-34-56)
               </label>
-              <input
+              <SortCodeInput
                 id="sort_code"
                 name="sort_code"
-                maxLength={8}
-                inputMode="text"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional (e.g. 12-34-56)"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
             <div>
@@ -210,7 +209,8 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Account name</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Bank</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Branch / Account</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Account</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -221,10 +221,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-100">{a.account_name}</td>
                       <td className="px-4 py-3 text-slate-300">{a.bank_name}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {[a.branch_name ?? a.branch_number, formatSortCode(a.sort_code), a.account_number]
+                        {[a.branch_number, a.branch_name, formatSortCode(a.sort_code)]
                           .filter(Boolean)
-                          .join(" / ") || "—"}
+                          .join(" ") || "—"}
                       </td>
+                      <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{a.currency}</td>
                       <td className="px-4 py-3">
                         <Link
