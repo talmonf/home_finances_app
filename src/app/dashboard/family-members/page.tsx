@@ -289,7 +289,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                           Edit
                         </Link>
                         <Link
-                          href="/dashboard/identities"
+                          href={`/dashboard/identities?family_member_id=${m.id}`}
                           className="text-xs font-medium text-violet-400 hover:text-violet-300"
                         >
                           Identity

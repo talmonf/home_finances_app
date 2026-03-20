@@ -20,6 +20,8 @@ type PageProps = {
     error?: string;
     sort?: string;
     dir?: string;
+    family_member_id?: string;
+    identity_type?: string;
   }>;
 };
 
@@ -41,6 +43,21 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
   type SortKey = (typeof sortKeys)[number];
   const activeSortKey = (sortKeys.includes(sort as SortKey) ? (sort as SortKey) : "expiry_date") as SortKey;
 
+  const filterFamilyMemberId =
+    resolvedSearchParams?.family_member_id &&
+    resolvedSearchParams.family_member_id !== "all"
+      ? resolvedSearchParams.family_member_id
+      : null;
+
+  const IDENTITY_TYPE_FILTER_VALUES = ["passport", "national_id", "driver_license", "other"] as const;
+  type IdentityTypeFilter = (typeof IDENTITY_TYPE_FILTER_VALUES)[number];
+  const filterIdentityType = (() => {
+    const v = resolvedSearchParams?.identity_type;
+    if (!v || v === "all") return null;
+    const asStringArray = IDENTITY_TYPE_FILTER_VALUES as readonly string[];
+    return asStringArray.includes(v) ? (v as IdentityTypeFilter) : null;
+  })();
+
   const nextDirFor = (key: SortKey) => {
     if (activeSortKey !== key) return "asc";
     return dir === "asc" ? "desc" : "asc";
@@ -48,11 +65,18 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
 
   const [identities, familyMembers] = await Promise.all([
     prisma.identities.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        ...(filterFamilyMemberId ? { family_member_id: filterFamilyMemberId } : {}),
+        ...(filterIdentityType ? { identity_type: filterIdentityType } : {}),
+      },
       include: { family_member: true },
     }),
     prisma.family_members.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: filterFamilyMemberId
+        ? { household_id: householdId, OR: [{ is_active: true }, { id: filterFamilyMemberId }] }
+        : { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
   ]);
@@ -121,6 +145,59 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
+          <h2 className="text-lg font-medium text-slate-200">Filters</h2>
+          <form method="get" className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label htmlFor="family_member_id_filter" className="mb-1 block text-xs font-medium text-slate-400">
+                Family Member
+              </label>
+              <select
+                id="family_member_id_filter"
+                name="family_member_id"
+                defaultValue={filterFamilyMemberId ?? "all"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">All</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="identity_type_filter" className="mb-1 block text-xs font-medium text-slate-400">
+                Document Type
+              </label>
+              <select
+                id="identity_type_filter"
+                name="identity_type"
+                defaultValue={filterIdentityType ?? "all"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">All</option>
+                <option value="passport">Passport</option>
+                <option value="national_id">National ID</option>
+                <option value="driver_license">Driver license</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <input type="hidden" name="sort" value={sort} />
+              <input type="hidden" name="dir" value={dir} />
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+              >
+                Apply filters
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="space-y-4">
           <h2 className="text-lg font-medium text-slate-200">Add new</h2>
           <form
             action={createIdentity}
@@ -134,6 +211,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 id="family_member_id"
                 name="family_member_id"
                 required
+                defaultValue={filterFamilyMemberId ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">Select…</option>
@@ -153,7 +231,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 name="identity_type"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue="passport"
+                defaultValue={filterIdentityType ?? "passport"}
               >
                 {Object.entries(IDENTITY_TYPE_LABELS)
                   .filter(([value]) => value !== "car_license")
@@ -254,6 +332,8 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                       if (resolvedSearchParams?.created) query.set("created", resolvedSearchParams.created);
                       if (resolvedSearchParams?.updated) query.set("updated", resolvedSearchParams.updated);
                       if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
+                      if (filterFamilyMemberId) query.set("family_member_id", filterFamilyMemberId);
+                      if (filterIdentityType) query.set("identity_type", filterIdentityType);
                       query.set("sort", col.key);
                       query.set("dir", nextDirFor(col.key));
                       const href = `/dashboard/identities?${query.toString()}`;
@@ -286,7 +366,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                         {i.identity_type_other ?? ""}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        <div>{i.identifier ?? "—"}</div>
+                        <div>{i.identifier ?? ""}</div>
                         {i.notes ? (
                           <div className="mt-1 text-xs text-slate-500">{i.notes}</div>
                         ) : null}
