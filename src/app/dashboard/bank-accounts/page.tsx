@@ -189,7 +189,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3">
                         <form
-                          action={() => toggleBankAccountActive(a.id, !a.is_active)}
+                          action={toggleBankAccountActive.bind(null, a.id, !a.is_active)}
                           className="inline"
                         >
                           <button

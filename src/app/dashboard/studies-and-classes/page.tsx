@@ -294,7 +294,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                       </td>
                       <td className="px-4 py-3">
                         <form
-                          action={() => toggleStudyOrClassActive(s.id, !s.is_active)}
+                          action={toggleStudyOrClassActive.bind(null, s.id, !s.is_active)}
                           className="inline"
                         >
                           <button

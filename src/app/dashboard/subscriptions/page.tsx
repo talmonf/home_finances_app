@@ -292,9 +292,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3">
                         <form
-                          action={() =>
-                            toggleSubscriptionActive(s.id, !s.is_active)
-                          }
+                          action={toggleSubscriptionActive.bind(null, s.id, !s.is_active)}
                           className="inline"
                         >
                           <button
