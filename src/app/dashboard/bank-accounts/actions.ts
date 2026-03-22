@@ -3,6 +3,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { parseFamilyMemberIdsForHousehold } from "./bankAccountMemberIds";
 
 export async function createBankAccount(formData: FormData) {
   await requireHouseholdMember();
@@ -30,20 +31,33 @@ export async function createBankAccount(formData: FormData) {
     redirect("/dashboard/bank-accounts?error=Sort+code+must+be+exactly+6+digits");
   }
 
-  await prisma.bank_accounts.create({
-    data: {
-      id: crypto.randomUUID(),
-      household_id: householdId,
-      account_name,
-      bank_name,
-      branch_number,
-      branch_name,
-      account_number,
-      sort_code,
-      notes,
-      currency,
-      country,
-    },
+  const memberIds = await parseFamilyMemberIdsForHousehold(formData, householdId);
+
+  await prisma.$transaction(async (tx) => {
+    const acc = await tx.bank_accounts.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        account_name,
+        bank_name,
+        branch_number,
+        branch_name,
+        account_number,
+        sort_code,
+        notes,
+        currency,
+        country,
+      },
+    });
+    if (memberIds.length > 0) {
+      await tx.bank_account_members.createMany({
+        data: memberIds.map((family_member_id) => ({
+          id: crypto.randomUUID(),
+          bank_account_id: acc.id,
+          family_member_id,
+        })),
+      });
+    }
   });
 
   revalidatePath("/dashboard/bank-accounts");
@@ -109,21 +123,49 @@ export async function updateBankAccount(formData: FormData) {
     }
   }
 
-  await prisma.bank_accounts.updateMany({
+  const memberIds = await parseFamilyMemberIdsForHousehold(formData, householdId);
+
+  const existing = await prisma.bank_accounts.findFirst({
     where: { id, household_id: householdId },
-    data: {
-      account_name,
-      bank_name,
-      branch_number,
-      branch_name,
-      account_number,
-      sort_code,
-      notes,
-      currency,
-      country,
-      is_active: isActive,
-      date_closed: isActive ? null : dateClosed,
-    },
+    select: { id: true },
+  });
+  if (!existing) {
+    redirect("/dashboard/bank-accounts?error=Not+found");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.bank_accounts.updateMany({
+      where: { id, household_id: householdId },
+      data: {
+        account_name,
+        bank_name,
+        branch_number,
+        branch_name,
+        account_number,
+        sort_code,
+        notes,
+        currency,
+        country,
+        is_active: isActive,
+        date_closed: isActive ? null : dateClosed,
+      },
+    });
+
+    await tx.bank_account_members.deleteMany({
+      where: {
+        bank_account_id: id,
+        bank_account: { household_id: householdId },
+      },
+    });
+    if (memberIds.length > 0) {
+      await tx.bank_account_members.createMany({
+        data: memberIds.map((family_member_id) => ({
+          id: crypto.randomUUID(),
+          bank_account_id: id,
+          family_member_id,
+        })),
+      });
+    }
   });
 
   revalidatePath(`/dashboard/bank-accounts`);

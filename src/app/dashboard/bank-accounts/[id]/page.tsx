@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateBankAccount } from "../actions";
+import BankAccountMemberFields from "../BankAccountMemberFields";
 import SortCodeInput from "../SortCodeInput";
 import BankAccountStatusFields from "../BankAccountStatusFields";
 
@@ -23,11 +24,21 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const account = await prisma.bank_accounts.findFirst({
-    where: { id, household_id: householdId },
-  });
+  const [account, familyMembers] = await Promise.all([
+    prisma.bank_accounts.findFirst({
+      where: { id, household_id: householdId },
+      include: { bank_account_members: true },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+      select: { id: true, full_name: true },
+    }),
+  ]);
 
   if (!account) redirect("/dashboard/bank-accounts?error=Not+found");
+
+  const linkedMemberIds = account.bank_account_members.map((m) => m.family_member_id);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -172,6 +183,8 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
                 initialDateClosed={account.date_closed ? account.date_closed.toISOString().slice(0, 10) : null}
               />
             </div>
+
+            <BankAccountMemberFields familyMembers={familyMembers} selectedIds={linkedMemberIds} />
 
             <div className="sm:col-span-2 lg:col-span-4">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">

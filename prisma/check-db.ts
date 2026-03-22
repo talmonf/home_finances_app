@@ -77,6 +77,18 @@ const checks: Check[] = [
       await prisma.significant_purchases.findFirst();
     },
   },
+  {
+    name: "digital_payment_methods",
+    run: async () => {
+      await prisma.digital_payment_methods.findFirst();
+    },
+  },
+  {
+    name: "bank_account_members",
+    run: async () => {
+      await prisma.bank_account_members.findFirst();
+    },
+  },
 ];
 
 async function main() {

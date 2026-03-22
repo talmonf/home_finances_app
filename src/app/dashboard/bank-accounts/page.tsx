@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createBankAccount } from "./actions";
+import BankAccountMemberFields from "./BankAccountMemberFields";
 import SortCodeInput from "./SortCodeInput";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +31,22 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const accounts = await prisma.bank_accounts.findMany({
-    where: { household_id: householdId },
-    orderBy: { account_name: "asc" },
-  });
+  const [accounts, familyMembers] = await Promise.all([
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId },
+      orderBy: { account_name: "asc" },
+      include: {
+        bank_account_members: {
+          include: { family_member: true },
+        },
+      },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+      select: { id: true, full_name: true },
+    }),
+  ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -51,7 +64,8 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 Bank accounts
               </h1>
               <p className="text-sm text-slate-400">
-                Manage bank accounts for this household. Add accounts before linking credit cards.
+                Manage bank accounts for this household. Link family members to each account if needed;
+                add accounts before linking credit cards.
               </p>
             </div>
           </div>
@@ -185,6 +199,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 placeholder="Optional"
               />
             </div>
+            <BankAccountMemberFields familyMembers={familyMembers} />
             <div className="flex items-end">
               <button
                 type="submit"
@@ -212,6 +227,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Members</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -227,6 +243,11 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{a.currency}</td>
+                      <td className="max-w-[12rem] px-4 py-3 text-slate-400">
+                        {a.bank_account_members.length === 0
+                          ? "—"
+                          : a.bank_account_members.map((m) => m.family_member.full_name).join(", ")}
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/bank-accounts/${a.id}`}

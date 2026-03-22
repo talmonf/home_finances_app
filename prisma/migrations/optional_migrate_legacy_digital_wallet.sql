@@ -1,0 +1,42 @@
+-- OPTIONAL: one-time migration from a legacy `digital_wallet` (or `digital_wallets`) table
+-- into `digital_payment_methods`. Edit column names and type mapping to match YOUR legacy table.
+-- Run manually only after backing up the database. Do not add this file to 000_INDEX.md unless
+-- you intend every environment to run it.
+--
+-- Example (adjust table/column names):
+--
+-- INSERT INTO "digital_payment_methods" (
+--   "id",
+--   "household_id",
+--   "name",
+--   "method_type",
+--   "linked_bank_account_id",
+--   "notes",
+--   "is_active",
+--   "created_at",
+--   "updated_at"
+-- )
+-- SELECT
+--   gen_random_uuid(),
+--   dw."household_id",
+--   COALESCE(dw."display_name", dw."name", 'Wallet'),
+--   CASE lower(dw."provider"::text)
+--     WHEN 'bit' THEN 'bit'::digital_payment_method_type
+--     WHEN 'paybox' THEN 'paybox'::digital_payment_method_type
+--     WHEN 'paypal' THEN 'paypal'::digital_payment_method_type
+--     ELSE 'other'::digital_payment_method_type
+--   END,
+--   dw."linked_bank_account_id",
+--   dw."notes",
+--   COALESCE(dw."is_active", true),
+--   COALESCE(dw."created_at", CURRENT_TIMESTAMP),
+--   COALESCE(dw."updated_at", CURRENT_TIMESTAMP)
+-- FROM "digital_wallet" dw
+-- WHERE NOT EXISTS (
+--   SELECT 1 FROM "digital_payment_methods" dpm
+--   WHERE dpm."household_id" = dw."household_id" AND dpm."name" = COALESCE(dw."display_name", dw."name")
+-- );
+--
+-- DROP TABLE IF EXISTS "digital_wallet";
+
+SELECT 1; -- no-op placeholder; replace with your migration or delete this line when editing

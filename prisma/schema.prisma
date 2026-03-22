@@ -38,6 +38,7 @@ model households {
   insurance_policies    insurance_policies[]
   donation_commitments  donation_commitments[]
   significant_purchases significant_purchases[]
+  digital_payment_methods digital_payment_methods[]
 }
 
 model family_members {
@@ -62,6 +63,7 @@ model family_members {
   significant_purchases significant_purchases[]
   tasks_assigned      tasks[]
   users               users[]
+  bank_account_members bank_account_members[]
 }
 
 model bank_accounts {
@@ -85,6 +87,8 @@ model bank_accounts {
   credit_cards credit_cards[]
   documents    documents[]
   transactions transactions[]
+  bank_account_members bank_account_members[]
+  linked_digital_payment_methods digital_payment_methods[]
 }
 
 model credit_cards {
@@ -269,6 +273,15 @@ enum PurchaseCategory {
   @@map("purchase_category")
 }
 
+enum DigitalPaymentMethodType {
+  bit
+  paybox
+  paypal
+  other
+
+  @@map("digital_payment_method_type")
+}
+
 enum SignificantPurchaseSourceType {
   credit_card
   present
@@ -296,6 +309,33 @@ model significant_purchases {
   family_member    family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
   credit_card      credit_cards?   @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
   transactions      transactions[]
+}
+
+model digital_payment_methods {
+  id                     String                   @id @default(uuid())
+  household_id           String
+  name                   String
+  method_type            DigitalPaymentMethodType
+  linked_bank_account_id String?
+  notes                  String?
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
+
+  household           households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  linked_bank_account bank_accounts? @relation(fields: [linked_bank_account_id], references: [id], onDelete: SetNull)
+}
+
+model bank_account_members {
+  id               String   @id @default(uuid())
+  bank_account_id  String
+  family_member_id String
+  created_at       DateTime @default(now())
+
+  bank_account  bank_accounts  @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
+  family_member family_members @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([bank_account_id, family_member_id])
 }
 
 enum PropertyUtilityType {
