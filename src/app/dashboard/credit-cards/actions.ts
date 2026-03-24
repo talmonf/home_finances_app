@@ -60,8 +60,12 @@ export async function createCreditCard(formData: FormData) {
     redirect("/dashboard/credit-cards?error=Invalid+monthly+cost");
   }
 
+  if (!expiry_month_year_raw) {
+    redirect("/dashboard/credit-cards?error=Expiry+date+is+required+(MM/YY)");
+  }
+
   const expiry_date = parseExpiryMonthYear(expiry_month_year_raw);
-  if (expiry_month_year_raw && !expiry_date) {
+  if (!expiry_date) {
     redirect("/dashboard/credit-cards?error=Invalid+expiry+date.+Use+MM/YY");
   }
 
@@ -210,8 +214,12 @@ export async function updateCreditCard(formData: FormData) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+monthly+cost`);
   }
 
+  if (!expiry_month_year_raw) {
+    redirect(`/dashboard/credit-cards/${id}?error=Expiry+date+is+required+(MM/YY)`);
+  }
+
   const expiry_date = parseExpiryMonthYear(expiry_month_year_raw);
-  if (expiry_month_year_raw && !expiry_date) {
+  if (!expiry_date) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+expiry+date.+Use+MM/YY`);
   }
 

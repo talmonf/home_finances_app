@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateCreditCard } from "../actions";
+import ExpiryMonthYearInput from "../ExpiryMonthYearInput";
 
 export const dynamic = "force-dynamic";
 
@@ -182,13 +183,12 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
           </div>
           <div>
             <label htmlFor="expiry_month_year" className="mb-1 block text-xs font-medium text-slate-400">
-              Expiry (MM/YY, optional)
+              Expiry (MM/YY)
             </label>
-            <input
+            <ExpiryMonthYearInput
               id="expiry_month_year"
               name="expiry_month_year"
-              inputMode="numeric"
-              pattern="(0[1-9]|1[0-2])\/\d{2}"
+              required
               placeholder="MM/YY"
               defaultValue={formatExpiryMonthYear(card.expiry_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
