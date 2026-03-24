@@ -56,7 +56,7 @@ export async function createCreditCard(formData: FormData) {
   }
 
   const monthly_cost = monthly_cost_raw === null ? null : Number.parseFloat(monthly_cost_raw);
-  if (monthly_cost_raw !== null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
+  if (monthly_cost != null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
     redirect("/dashboard/credit-cards?error=Invalid+monthly+cost");
   }
 
@@ -206,7 +206,7 @@ export async function updateCreditCard(formData: FormData) {
   }
 
   const monthly_cost = monthly_cost_raw === null ? null : Number.parseFloat(monthly_cost_raw);
-  if (monthly_cost_raw !== null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
+  if (monthly_cost != null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+monthly+cost`);
   }
 
