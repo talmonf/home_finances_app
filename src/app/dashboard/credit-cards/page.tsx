@@ -357,7 +357,6 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                                   On {formatDate(c.cancelled_at)}
                                 </p>
                               )}
-                              {c.notes && <p className="text-xs text-slate-500">{c.notes}</p>}
                             </div>
                           );
                         })()}
