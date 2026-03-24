@@ -1,13 +1,20 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createCreditCard, updateCreditCardStatus } from "./actions";
+import { createCreditCard } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 function formatDate(d: Date | null) {
   if (!d) return "—";
   return d.toISOString().slice(0, 10);
+}
+
+function formatExpiryMonthYear(d: Date | null) {
+  if (!d) return "—";
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  const year = `${d.getFullYear()}`.slice(-2);
+  return `${month}/${year}`;
 }
 
 function formatScheme(scheme: string) {
@@ -192,9 +199,8 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 type="number"
                 min="0"
                 step="0.01"
-                required
-                defaultValue="0"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Leave blank if unknown"
               />
             </div>
             <div>
@@ -209,13 +215,15 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
-              <label htmlFor="expiry_date" className="mb-1 block text-xs font-medium text-slate-400">
-                Expiry date (optional)
+              <label htmlFor="expiry_month_year" className="mb-1 block text-xs font-medium text-slate-400">
+                Expiry (MM/YY, optional)
               </label>
               <input
-                id="expiry_date"
-                name="expiry_date"
-                type="date"
+                id="expiry_month_year"
+                name="expiry_month_year"
+                inputMode="numeric"
+                pattern="(0[1-9]|1[0-2])\/\d{2}"
+                placeholder="MM/YY"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -322,12 +330,14 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">{c.product_name ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {Number(c.monthly_cost).toLocaleString("en", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {c.monthly_cost == null
+                          ? "—"
+                          : Number(c.monthly_cost).toLocaleString("en", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(c.expiry_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.bank_account.account_name}</td>
                       <td className="px-4 py-3">
@@ -353,41 +363,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        {c.cancelled_at ? (
-                          <form action={updateCreditCardStatus} className="inline">
-                            <input type="hidden" name="id" value={c.id} />
-                            <input type="hidden" name="status" value="active" />
-                            <button
-                              type="submit"
-                              className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              Set Active
-                            </button>
-                          </form>
-                        ) : (
-                          <form action={updateCreditCardStatus} className="space-y-2">
-                            <input type="hidden" name="id" value={c.id} />
-                            <input type="hidden" name="status" value="cancelled" />
-                            <input
-                              type="date"
-                              name="cancelled_at"
-                              defaultValue={new Date().toISOString().slice(0, 10)}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                            />
-                            <input
-                              type="text"
-                              name="notes"
-                              placeholder={c.notes ?? "Notes (e.g. fraud replacement)"}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                            />
-                            <button
-                              type="submit"
-                              className="text-xs font-medium text-rose-300 hover:text-rose-200"
-                            >
-                              Mark Cancelled
-                            </button>
-                          </form>
-                        )}
+                        <Link href={`/dashboard/credit-cards/${c.id}`} className="text-xs font-medium text-sky-400 hover:text-sky-300">
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}

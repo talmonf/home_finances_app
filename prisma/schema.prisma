@@ -101,7 +101,7 @@ model credit_cards {
   co_brand                   String?
   product_name               String?
   card_last_four             String
-  monthly_cost               Decimal  @default(0) @db.Decimal(15, 2)
+  monthly_cost               Decimal? @db.Decimal(15, 2)
   expiry_date                DateTime?
   cancelled_at               DateTime?
   notes                      String?
