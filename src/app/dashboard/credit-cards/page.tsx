@@ -1,13 +1,26 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createCreditCard, toggleCreditCardActive } from "./actions";
+import { createCreditCard, updateCreditCardStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 function formatDate(d: Date | null) {
   if (!d) return "—";
   return d.toISOString().slice(0, 10);
+}
+
+function formatScheme(scheme: string) {
+  if (scheme === "amex") return "Amex";
+  if (scheme === "mastercard") return "Mastercard";
+  if (scheme === "visa") return "Visa";
+  return "Other";
+}
+
+function getCreditCardStatus(card: { cancelled_at: Date | null; expiry_date: Date | null }) {
+  if (card.cancelled_at) return "Cancelled";
+  if (card.expiry_date && card.expiry_date < new Date()) return "Expired";
+  return "Active";
 }
 
 type PageProps = {
@@ -93,26 +106,65 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
           >
             <div>
               <label htmlFor="card_name" className="mb-1 block text-xs font-medium text-slate-400">
-                Card name
+                Card
               </label>
               <input
                 id="card_name"
                 name="card_name"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Visa main"
+                placeholder="e.g. Bank Mizrachi Visa / SuperPharm card"
               />
             </div>
             <div>
+              <label htmlFor="scheme" className="mb-1 block text-xs font-medium text-slate-400">
+                Scheme
+              </label>
+              <select
+                id="scheme"
+                name="scheme"
+                required
+                defaultValue="visa"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="visa">Visa</option>
+                <option value="mastercard">Mastercard</option>
+                <option value="amex">Amex</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
               <label htmlFor="issuer_name" className="mb-1 block text-xs font-medium text-slate-400">
-                Issuer name
+                Issuer
               </label>
               <input
                 id="issuer_name"
                 name="issuer_name"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Leumi Card"
+                placeholder="e.g. Bank Mizrachi / Chase / Citi / Amex"
+              />
+            </div>
+            <div>
+              <label htmlFor="co_brand" className="mb-1 block text-xs font-medium text-slate-400">
+                Co-brand (optional)
+              </label>
+              <input
+                id="co_brand"
+                name="co_brand"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. SuperPharm / Amazon / Delta"
+              />
+            </div>
+            <div>
+              <label htmlFor="product_name" className="mb-1 block text-xs font-medium text-slate-400">
+                Product name (optional)
+              </label>
+              <input
+                id="product_name"
+                name="product_name"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. Lifestyle / Sapphire Preferred"
               />
             </div>
             <div>
@@ -122,9 +174,27 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               <input
                 id="card_last_four"
                 name="card_last_four"
+                required
+                inputMode="numeric"
+                pattern="\d{4}"
                 maxLength={4}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
+                placeholder="1234"
+              />
+            </div>
+            <div>
+              <label htmlFor="monthly_cost" className="mb-1 block text-xs font-medium text-slate-400">
+                Monthly cost
+              </label>
+              <input
+                id="monthly_cost"
+                name="monthly_cost"
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                defaultValue="0"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
             <div>
@@ -147,6 +217,17 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 name="expiry_date"
                 type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                Notes (optional)
+              </label>
+              <input
+                id="notes"
+                name="notes"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Any notes about this card"
               />
             </div>
             <div>
@@ -217,9 +298,13 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Card name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Card</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Scheme</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Issuer</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Co-brand</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Product name</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Last 4</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Monthly cost</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Expiry</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Settlement account</th>
@@ -231,28 +316,78 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   {cards.map((c) => (
                     <tr key={c.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{c.card_name}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatScheme(c.scheme)}</td>
                       <td className="px-4 py-3 text-slate-300">{c.issuer_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.card_last_four ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.co_brand ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.product_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {Number(c.monthly_cost).toLocaleString("en", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(c.expiry_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.bank_account.account_name}</td>
                       <td className="px-4 py-3">
-                        <span className={c.is_active ? "text-emerald-400" : "text-slate-500"}>
-                          {c.is_active ? "Active" : "Inactive"}
-                        </span>
+                        {(() => {
+                          const status = getCreditCardStatus(c);
+                          const colorClass =
+                            status === "Active"
+                              ? "text-emerald-400"
+                              : status === "Expired"
+                                ? "text-amber-400"
+                                : "text-rose-300";
+                          return (
+                            <div className="space-y-1">
+                              <p className={colorClass}>{status}</p>
+                              {c.cancelled_at && (
+                                <p className="text-xs text-slate-500">
+                                  On {formatDate(c.cancelled_at)}
+                                </p>
+                              )}
+                              {c.notes && <p className="text-xs text-slate-500">{c.notes}</p>}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3">
-                        <form
-                          action={toggleCreditCardActive.bind(null, c.id, !c.is_active)}
-                          className="inline"
-                        >
-                          <button
-                            type="submit"
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {c.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
+                        {c.cancelled_at ? (
+                          <form action={updateCreditCardStatus} className="inline">
+                            <input type="hidden" name="id" value={c.id} />
+                            <input type="hidden" name="status" value="active" />
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              Set Active
+                            </button>
+                          </form>
+                        ) : (
+                          <form action={updateCreditCardStatus} className="space-y-2">
+                            <input type="hidden" name="id" value={c.id} />
+                            <input type="hidden" name="status" value="cancelled" />
+                            <input
+                              type="date"
+                              name="cancelled_at"
+                              defaultValue={new Date().toISOString().slice(0, 10)}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                            />
+                            <input
+                              type="text"
+                              name="notes"
+                              placeholder={c.notes ?? "Notes (e.g. fraud replacement)"}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                            />
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-rose-300 hover:text-rose-200"
+                            >
+                              Mark Cancelled
+                            </button>
+                          </form>
+                        )}
                       </td>
                     </tr>
                   ))}

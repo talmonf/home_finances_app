@@ -5,6 +5,11 @@ import { createSubscription, toggleSubscriptionActive } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -34,6 +39,26 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatScheme(scheme: string) {
+  if (scheme === "amex") return "Amex";
+  if (scheme === "mastercard") return "Mastercard";
+  if (scheme === "visa") return "Visa";
+  return "Other";
+}
+
+function buildCreditCardLabel(card: {
+  card_name: string;
+  scheme: string;
+  issuer_name: string;
+  co_brand: string | null;
+  product_name: string | null;
+  card_last_four: string;
+}) {
+  const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
+  const productPart = card.product_name ? ` / ${card.product_name}` : "";
+  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four}`;
+}
+
 export default async function SubscriptionsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -42,6 +67,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const today = startOfToday();
 
   const [subscriptions, creditCards] = await Promise.all([
     prisma.subscriptions.findMany({
@@ -50,7 +76,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
       orderBy: { renewal_date: "asc" },
     }),
     prisma.credit_cards.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
       orderBy: { card_name: "asc" },
     }),
   ]);
@@ -200,7 +230,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name}
+                    {buildCreditCardLabel(c)}
                   </option>
                 ))}
               </select>

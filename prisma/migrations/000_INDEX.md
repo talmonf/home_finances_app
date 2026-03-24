@@ -25,6 +25,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 015 | `015_digital_payment_method_linked_bank.sql` | ALTER | digital_payment_methods: linked_bank_account_id → bank_accounts |
 | 016 | `016_bank_account_members.sql` | CREATE | bank_account_members (bank account ↔ family member) |
 | 017 | `017_align_database_to_app_repo.sql` | ALTER | Align legacy/broad schema to app repo (transactions, source_records, categories, …) |
+| 018 | `018_credit_card_cancellation_fields.sql` | ALTER | credit_cards: consolidated migration (cancelled_at, notes, card_last_four required, monthly_cost, scheme, co_brand, product_name) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -45,6 +46,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 015_digital_payment_method_linked_bank.sql
 - [x] 016_bank_account_members.sql
 - [x] 017_align_database_to_app_repo.sql
+- [x] 018_credit_card_cancellation_fields.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

@@ -10,6 +10,11 @@ type PurchaseCategory = (typeof PURCHASE_CATEGORIES)[number];
 const PURCHASE_SOURCE_TYPES = ["credit_card", "present", "other"] as const;
 type SignificantPurchaseSourceType = (typeof PURCHASE_SOURCE_TYPES)[number];
 
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 function parsePurchaseCategory(raw: string | null): PurchaseCategory | null {
   if (!raw) return null;
   const v = raw.trim();
@@ -71,10 +76,18 @@ export async function createSignificantPurchase(formData: FormData) {
   }
 
   if (final_credit_card_id) {
+    const today = startOfToday();
     const card = await prisma.credit_cards.findFirst({
-      where: { id: final_credit_card_id, household_id: householdId },
+      where: {
+        id: final_credit_card_id,
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
     });
-    if (!card) redirect("/dashboard/significant-purchases?error=Invalid+credit+card");
+    if (!card) {
+      redirect("/dashboard/significant-purchases?error=Credit+card+must+be+active+and+not+expired");
+    }
   }
 
   await prisma.significant_purchases.create({

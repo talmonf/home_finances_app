@@ -96,9 +96,15 @@ model credit_cards {
   household_id               String
   family_member_id           String
   card_name                  String
+  scheme                     CardScheme
   issuer_name                String
-  card_last_four             String?
+  co_brand                   String?
+  product_name               String?
+  card_last_four             String
+  monthly_cost               Decimal  @default(0) @db.Decimal(15, 2)
   expiry_date                DateTime?
+  cancelled_at               DateTime?
+  notes                      String?
   settlement_bank_account_id String
   currency                   String   @default("ILS")
   is_active                  Boolean  @default(true)
@@ -110,6 +116,15 @@ model credit_cards {
   bank_account  bank_accounts  @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
   significant_purchases significant_purchases[]
+}
+
+enum CardScheme {
+  visa
+  mastercard
+  amex
+  other
+
+  @@map("card_scheme")
 }
 
 model studies_and_classes {

@@ -56,7 +56,7 @@ export default async function UpcomingRenewalsPage() {
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
-        is_active: true,
+        cancelled_at: null,
         expiry_date: { not: null, gte: today },
       },
       include: { family_member: true },
@@ -161,7 +161,7 @@ export default async function UpcomingRenewalsPage() {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals</h1>
           <p className="text-sm text-slate-400">
-            All active upcoming renewal and expiration dates across subscriptions, identity, cards,
+            All upcoming renewal and expiration dates across subscriptions, identity, cards,
             insurance, utilities, donations, and warranty-bearing significant purchases.
           </p>
         </header>

@@ -5,6 +5,11 @@ import { createSignificantPurchase, toggleSignificantPurchaseActive } from "./ac
 
 export const dynamic = "force-dynamic";
 
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
   electronics: "Electronics",
   appliances: "Appliances",
@@ -23,6 +28,27 @@ function formatDate(d: Date | null) {
   return d.toISOString().slice(0, 10);
 }
 
+function formatScheme(scheme: string) {
+  if (scheme === "amex") return "Amex";
+  if (scheme === "mastercard") return "Mastercard";
+  if (scheme === "visa") return "Visa";
+  return "Other";
+}
+
+function buildCreditCardLabel(card: {
+  card_name: string;
+  scheme: string;
+  issuer_name: string;
+  co_brand: string | null;
+  product_name: string | null;
+  card_last_four: string;
+  family_member: { full_name: string };
+}) {
+  const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
+  const productPart = card.product_name ? ` / ${card.product_name}` : "";
+  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four} (${card.family_member.full_name})`;
+}
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -37,6 +63,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
   if (!householdId) redirect("/");
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const today = startOfToday();
 
   const [purchases, familyMembers, creditCards] = await Promise.all([
     prisma.significant_purchases.findMany({
@@ -49,7 +76,11 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
       orderBy: { full_name: "asc" },
     }),
     prisma.credit_cards.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
       include: { family_member: true },
       orderBy: { card_name: "asc" },
     }),
@@ -201,7 +232,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 <option value="">— None —</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} ({c.family_member.full_name})
+                    {buildCreditCardLabel(c)}
                   </option>
                 ))}
               </select>

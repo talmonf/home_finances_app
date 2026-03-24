@@ -4,6 +4,11 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 export async function createSubscription(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -32,11 +37,17 @@ export async function createSubscription(formData: FormData) {
   }
 
   if (credit_card_id) {
+    const today = startOfToday();
     const card = await prisma.credit_cards.findFirst({
-      where: { id: credit_card_id, household_id: householdId },
+      where: {
+        id: credit_card_id,
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
     });
     if (!card) {
-      redirect("/dashboard/subscriptions?error=Invalid+credit+card");
+      redirect("/dashboard/subscriptions?error=Credit+card+must+be+active+and+not+expired");
     }
   }
 
