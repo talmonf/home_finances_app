@@ -84,24 +84,31 @@ export async function createCreditCard(formData: FormData) {
     redirect("/dashboard/credit-cards?error=Invalid+settlement+account");
   }
 
-  await prisma.credit_cards.create({
-    data: {
-      id: crypto.randomUUID(),
-      household_id: householdId,
-      family_member_id,
-      card_name,
-      scheme: scheme as "visa" | "mastercard" | "amex" | "other",
-      issuer_name,
-      co_brand,
-      product_name,
-      card_last_four,
-      ...(monthly_cost != null ? { monthly_cost } : {}),
-      expiry_date,
-      notes,
-      settlement_bank_account_id,
-      currency,
-    },
-  });
+  try {
+    await prisma.credit_cards.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        family_member_id,
+        card_name,
+        scheme: scheme as "visa" | "mastercard" | "amex" | "other",
+        issuer_name,
+        co_brand,
+        product_name,
+        card_last_four,
+        monthly_cost,
+        expiry_date,
+        notes,
+        settlement_bank_account_id,
+        currency,
+      },
+    });
+  } catch {
+    if (monthly_cost === null) {
+      redirect("/dashboard/credit-cards?error=Monthly+cost+blank+requires+latest+credit+card+migration");
+    }
+    throw new Error("Failed to create credit card");
+  }
 
   revalidatePath("/dashboard/credit-cards");
   redirect("/dashboard/credit-cards?created=1");
@@ -251,25 +258,32 @@ export async function updateCreditCard(formData: FormData) {
   if (!member) redirect(`/dashboard/credit-cards/${id}?error=Invalid+family+member`);
   if (!bankAccount) redirect(`/dashboard/credit-cards/${id}?error=Invalid+settlement+account`);
 
-  await prisma.credit_cards.updateMany({
-    where: { id, household_id: householdId },
-    data: {
-      card_name,
-      scheme: scheme as "visa" | "mastercard" | "amex" | "other",
-      issuer_name,
-      co_brand,
-      product_name,
-      card_last_four,
-      ...(monthly_cost != null ? { monthly_cost } : {}),
-      expiry_date,
-      family_member_id,
-      settlement_bank_account_id,
-      currency,
-      notes,
-      cancelled_at: status === "cancelled" ? cancelled_at : null,
-      is_active: status !== "cancelled",
-    },
-  });
+  try {
+    await prisma.credit_cards.updateMany({
+      where: { id, household_id: householdId },
+      data: {
+        card_name,
+        scheme: scheme as "visa" | "mastercard" | "amex" | "other",
+        issuer_name,
+        co_brand,
+        product_name,
+        card_last_four,
+        monthly_cost,
+        expiry_date,
+        family_member_id,
+        settlement_bank_account_id,
+        currency,
+        notes,
+        cancelled_at: status === "cancelled" ? cancelled_at : null,
+        is_active: status !== "cancelled",
+      },
+    });
+  } catch {
+    if (monthly_cost === null) {
+      redirect(`/dashboard/credit-cards/${id}?error=Monthly+cost+blank+requires+latest+credit+card+migration`);
+    }
+    throw new Error("Failed to update credit card");
+  }
 
   revalidatePath("/dashboard/credit-cards");
   revalidatePath(`/dashboard/credit-cards/${id}`);
