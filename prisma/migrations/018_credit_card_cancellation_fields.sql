@@ -18,6 +18,11 @@ ALTER TABLE "credit_cards"
   ADD COLUMN IF NOT EXISTS "co_brand" TEXT,
   ADD COLUMN IF NOT EXISTS "product_name" TEXT;
 
+-- Ensure monthly_cost is optional even if it was created NOT NULL in an earlier iteration.
+ALTER TABLE "credit_cards"
+  ALTER COLUMN "monthly_cost" DROP NOT NULL,
+  ALTER COLUMN "monthly_cost" DROP DEFAULT;
+
 -- If old cancellation_notes exists, preserve data into notes then drop old column.
 DO $$
 BEGIN
