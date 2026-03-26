@@ -175,7 +175,6 @@ export async function updateCreditCardStatus(formData: FormData) {
   const nextStatus = (formData.get("status") as string | null)?.trim();
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
-  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!id || (nextStatus !== "active" && nextStatus !== "cancelled")) {
     redirect("/dashboard/credit-cards?error=Invalid+status+update+request");
@@ -235,6 +234,7 @@ export async function updateCreditCard(formData: FormData) {
   const status = (formData.get("status") as string | null)?.trim();
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (
     !id ||
