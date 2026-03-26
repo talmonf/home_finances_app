@@ -188,6 +188,17 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               />
             </div>
             <div className="sm:col-span-2 lg:col-span-4">
+              <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                Website / URL
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional (e.g. bank.example.com)"
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
@@ -227,6 +238,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Members</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -243,6 +255,20 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{a.currency}</td>
+                      <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={a.website_url ?? undefined}>
+                        {a.website_url ? (
+                          <a
+                            href={a.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {a.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="max-w-[12rem] px-4 py-3 text-slate-400">
                         {a.bank_account_members.length === 0
                           ? "—"

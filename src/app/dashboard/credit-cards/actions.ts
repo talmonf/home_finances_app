@@ -14,6 +14,18 @@ function parseExpiryMonthYear(raw: string | null): Date | null {
   return new Date(year, month, 0);
 }
 
+function normalizeWebsiteUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withScheme);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Invalid protocol");
+  }
+  return parsed.toString();
+}
+
 export async function createCreditCard(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -29,9 +41,14 @@ export async function createCreditCard(formData: FormData) {
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
   const settlement_bank_account_id = (formData.get("settlement_bank_account_id") as string | null)?.trim();
   const card_last_four = (formData.get("card_last_four") as string | null)?.trim();
+  const digital_wallet_identifier =
+    (formData.get("digital_wallet_identifier") as string | null)?.trim() || null;
+  const charge_day_of_month_raw =
+    (formData.get("charge_day_of_month") as string | null)?.trim() || null;
   const monthly_cost_raw = (formData.get("monthly_cost") as string | null)?.trim() || null;
   const expiry_month_year_raw = (formData.get("expiry_month_year") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
 
   if (
@@ -59,6 +76,14 @@ export async function createCreditCard(formData: FormData) {
   if (monthly_cost != null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
     redirect("/dashboard/credit-cards?error=Invalid+monthly+cost");
   }
+  const charge_day_of_month =
+    charge_day_of_month_raw === null ? null : Number.parseInt(charge_day_of_month_raw, 10);
+  if (
+    charge_day_of_month_raw !== null &&
+    (Number.isNaN(charge_day_of_month) || charge_day_of_month < 1 || charge_day_of_month > 31)
+  ) {
+    redirect("/dashboard/credit-cards?error=Charge+day+must+be+between+1+and+31");
+  }
 
   if (!expiry_month_year_raw) {
     redirect("/dashboard/credit-cards?error=Expiry+date+is+required+(MM/YY)");
@@ -67,6 +92,12 @@ export async function createCreditCard(formData: FormData) {
   const expiry_date = parseExpiryMonthYear(expiry_month_year_raw);
   if (!expiry_date) {
     redirect("/dashboard/credit-cards?error=Invalid+expiry+date.+Use+MM/YY");
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect("/dashboard/credit-cards?error=Invalid+website+URL");
   }
 
   const [member, bankAccount] = await Promise.all([
@@ -96,9 +127,12 @@ export async function createCreditCard(formData: FormData) {
         co_brand,
         product_name,
         card_last_four,
+        digital_wallet_identifier,
+        charge_day_of_month,
         monthly_cost,
         expiry_date,
         notes,
+        website_url,
         settlement_bank_account_id,
         currency,
       },
@@ -141,6 +175,7 @@ export async function updateCreditCardStatus(formData: FormData) {
   const nextStatus = (formData.get("status") as string | null)?.trim();
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!id || (nextStatus !== "active" && nextStatus !== "cancelled")) {
     redirect("/dashboard/credit-cards?error=Invalid+status+update+request");
@@ -188,6 +223,10 @@ export async function updateCreditCard(formData: FormData) {
   const co_brand = (formData.get("co_brand") as string | null)?.trim() || null;
   const product_name = (formData.get("product_name") as string | null)?.trim() || null;
   const card_last_four = (formData.get("card_last_four") as string | null)?.trim();
+  const digital_wallet_identifier =
+    (formData.get("digital_wallet_identifier") as string | null)?.trim() || null;
+  const charge_day_of_month_raw =
+    (formData.get("charge_day_of_month") as string | null)?.trim() || null;
   const monthly_cost_raw = (formData.get("monthly_cost") as string | null)?.trim() || null;
   const expiry_month_year_raw = (formData.get("expiry_month_year") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
@@ -220,6 +259,14 @@ export async function updateCreditCard(formData: FormData) {
   if (monthly_cost != null && (Number.isNaN(monthly_cost) || monthly_cost < 0)) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+monthly+cost`);
   }
+  const charge_day_of_month =
+    charge_day_of_month_raw === null ? null : Number.parseInt(charge_day_of_month_raw, 10);
+  if (
+    charge_day_of_month_raw !== null &&
+    (Number.isNaN(charge_day_of_month) || charge_day_of_month < 1 || charge_day_of_month > 31)
+  ) {
+    redirect(`/dashboard/credit-cards/${id}?error=Charge+day+must+be+between+1+and+31`);
+  }
 
   if (!expiry_month_year_raw) {
     redirect(`/dashboard/credit-cards/${id}?error=Expiry+date+is+required+(MM/YY)`);
@@ -228,6 +275,12 @@ export async function updateCreditCard(formData: FormData) {
   const expiry_date = parseExpiryMonthYear(expiry_month_year_raw);
   if (!expiry_date) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+expiry+date.+Use+MM/YY`);
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect(`/dashboard/credit-cards/${id}?error=Invalid+website+URL`);
   }
 
   if (status !== "active" && status !== "cancelled") {
@@ -268,12 +321,15 @@ export async function updateCreditCard(formData: FormData) {
         co_brand,
         product_name,
         card_last_four,
+        digital_wallet_identifier,
+        charge_day_of_month,
         monthly_cost,
         expiry_date,
         family_member_id,
         settlement_bank_account_id,
         currency,
         notes,
+        website_url,
         cancelled_at: status === "cancelled" ? cancelled_at : null,
         is_active: status !== "cancelled",
       },

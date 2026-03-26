@@ -140,6 +140,17 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
               </p>
             </div>
             <div className="sm:col-span-2">
+              <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                Website / URL
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional (e.g. paypal.com)"
+              />
+            </div>
+            <div className="sm:col-span-2">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
@@ -176,6 +187,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                     <th className="px-4 py-3 font-medium text-slate-300">Name</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Type</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Linked bank</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
@@ -192,6 +204,20 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                         {m.linked_bank_account
                           ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
                           : "—"}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={m.website_url ?? undefined}>
+                        {m.website_url ? (
+                          <a
+                            href={m.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {m.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={m.notes ?? undefined}>
                         {m.notes?.trim() ? m.notes : "—"}

@@ -191,6 +191,35 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
+              <label
+                htmlFor="digital_wallet_identifier"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Digital Wallet identifier (optional)
+              </label>
+              <input
+                id="digital_wallet_identifier"
+                name="digital_wallet_identifier"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. GooglePay 9952"
+              />
+            </div>
+            <div>
+              <label htmlFor="charge_day_of_month" className="mb-1 block text-xs font-medium text-slate-400">
+                Charge day of month (optional)
+              </label>
+              <input
+                id="charge_day_of_month"
+                name="charge_day_of_month"
+                type="number"
+                min="1"
+                max="31"
+                step="1"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. 2"
+              />
+            </div>
+            <div>
               <label htmlFor="monthly_cost" className="mb-1 block text-xs font-medium text-slate-400">
                 Monthly cost
               </label>
@@ -225,6 +254,17 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 required
                 placeholder="MM/YY"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                Website / URL
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional"
               />
             </div>
             <div className="sm:col-span-2">
@@ -312,7 +352,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Co-brand</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Product name</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Last 4</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Charge day</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Monthly cost</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Expiry</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Settlement account</th>
@@ -329,6 +371,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">{c.co_brand ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{c.product_name ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.charge_day_of_month ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">
                         {c.monthly_cost == null
                           ? "—"
@@ -336,6 +379,20 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={c.website_url ?? undefined}>
+                        {c.website_url ? (
+                          <a
+                            href={c.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {c.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>

@@ -5,6 +5,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { parseFamilyMemberIdsForHousehold } from "./bankAccountMemberIds";
 
+function normalizeWebsiteUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withScheme);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Invalid protocol");
+  }
+  return parsed.toString();
+}
+
 export async function createBankAccount(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -20,6 +32,7 @@ export async function createBankAccount(formData: FormData) {
   const sort_code_raw = (formData.get("sort_code") as string | null)?.trim() || null;
   const sort_code = sort_code_raw ? sort_code_raw.replace(/\D/g, "") : null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const country = (formData.get("country") as string | null)?.trim() || "IL";
 
@@ -29,6 +42,12 @@ export async function createBankAccount(formData: FormData) {
 
   if (sort_code && !/^\d{6}$/.test(sort_code)) {
     redirect("/dashboard/bank-accounts?error=Sort+code+must+be+exactly+6+digits");
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect("/dashboard/bank-accounts?error=Invalid+website+URL");
   }
 
   const memberIds = await parseFamilyMemberIdsForHousehold(formData, householdId);
@@ -45,6 +64,7 @@ export async function createBankAccount(formData: FormData) {
         account_number,
         sort_code,
         notes,
+        website_url,
         currency,
         country,
       },
@@ -96,6 +116,7 @@ export async function updateBankAccount(formData: FormData) {
   const sort_code_raw = (formData.get("sort_code") as string | null)?.trim() || null;
   const sort_code = sort_code_raw ? sort_code_raw.replace(/\D/g, "") : null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const country = (formData.get("country") as string | null)?.trim() || "IL";
 
@@ -112,6 +133,12 @@ export async function updateBankAccount(formData: FormData) {
 
   if (sort_code && !/^\d{6}$/.test(sort_code)) {
     redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Sort+code+must+be+exactly+6+digits`);
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Invalid+website+URL`);
   }
 
   if (!isActive) {
@@ -144,6 +171,7 @@ export async function updateBankAccount(formData: FormData) {
         account_number,
         sort_code,
         notes,
+        website_url,
         currency,
         country,
         is_active: isActive,

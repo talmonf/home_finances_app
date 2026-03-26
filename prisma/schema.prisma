@@ -76,6 +76,7 @@ model bank_accounts {
   sort_code      String?
   account_number String?
   notes          String?
+  website_url    String?
   date_closed    DateTime?
   currency       String   @default("ILS")
   country        String   @default("IL")
@@ -101,10 +102,13 @@ model credit_cards {
   co_brand                   String?
   product_name               String?
   card_last_four             String
+  digital_wallet_identifier  String?
+  charge_day_of_month        Int?
   monthly_cost               Decimal? @db.Decimal(15, 2)
   expiry_date                DateTime?
   cancelled_at               DateTime?
   notes                      String?
+  website_url                String?
   settlement_bank_account_id String
   currency                   String   @default("ILS")
   is_active                  Boolean  @default(true)
@@ -333,6 +337,7 @@ model digital_payment_methods {
   method_type            DigitalPaymentMethodType
   linked_bank_account_id String?
   notes                  String?
+  website_url            String?
   is_active              Boolean                  @default(true)
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
@@ -474,6 +479,7 @@ model subscriptions {
   billing_interval SubscriptionBillingInterval
   credit_card_id   String?
   description      String?
+  website_url      String?
   is_active        Boolean                    @default(true)
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt

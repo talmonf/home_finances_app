@@ -9,6 +9,18 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function normalizeWebsiteUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withScheme);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Invalid protocol");
+  }
+  return parsed.toString();
+}
+
 export async function createSubscription(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -23,6 +35,7 @@ export async function createSubscription(formData: FormData) {
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!name || !start_date_raw || !renewal_date_raw || !fee_amount_raw || !billing_interval) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
@@ -34,6 +47,12 @@ export async function createSubscription(formData: FormData) {
   const fee_amount = parseFloat(fee_amount_raw);
   if (Number.isNaN(fee_amount) || fee_amount < 0) {
     redirect("/dashboard/subscriptions?error=Invalid+fee+amount");
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect("/dashboard/subscriptions?error=Invalid+website+URL");
   }
 
   if (credit_card_id) {
@@ -65,6 +84,7 @@ export async function createSubscription(formData: FormData) {
       billing_interval: billing_interval as "monthly" | "annual",
       credit_card_id,
       description,
+      website_url,
     },
   });
 

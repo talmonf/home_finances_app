@@ -7,6 +7,18 @@ import { redirect } from "next/navigation";
 const METHOD_TYPES = ["bit", "paybox", "paypal", "other"] as const;
 type MethodType = (typeof METHOD_TYPES)[number];
 
+function normalizeWebsiteUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withScheme);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Invalid protocol");
+  }
+  return parsed.toString();
+}
+
 function parseMethodType(raw: string | null): MethodType | null {
   if (!raw) return null;
   const v = raw.trim();
@@ -40,6 +52,7 @@ export async function createDigitalPaymentMethod(formData: FormData) {
   const name = (formData.get("name") as string | null)?.trim() || "";
   const method_type_raw = (formData.get("method_type") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!name) {
     redirect("/dashboard/digital-payment-methods?error=Name+is+required");
@@ -48,6 +61,12 @@ export async function createDigitalPaymentMethod(formData: FormData) {
   const method_type = parseMethodType(method_type_raw);
   if (!method_type) {
     redirect("/dashboard/digital-payment-methods?error=Invalid+method+type");
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect("/dashboard/digital-payment-methods?error=Invalid+website+URL");
   }
 
   const linked_bank_account_id = await parseLinkedBankAccountId(
@@ -64,6 +83,7 @@ export async function createDigitalPaymentMethod(formData: FormData) {
       method_type,
       linked_bank_account_id,
       notes,
+      website_url,
     },
   });
 
@@ -100,6 +120,7 @@ export async function updateDigitalPaymentMethod(formData: FormData) {
   const name = (formData.get("name") as string | null)?.trim() || "";
   const method_type_raw = (formData.get("method_type") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!name) {
     redirect(`/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Name+is+required`);
@@ -108,6 +129,12 @@ export async function updateDigitalPaymentMethod(formData: FormData) {
   const method_type = parseMethodType(method_type_raw);
   if (!method_type) {
     redirect(`/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+method+type`);
+  }
+  let website_url: string | null = null;
+  try {
+    website_url = normalizeWebsiteUrl(website_url_raw);
+  } catch {
+    redirect(`/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+website+URL`);
   }
 
   const linked_bank_account_id = await parseLinkedBankAccountId(
@@ -118,7 +145,7 @@ export async function updateDigitalPaymentMethod(formData: FormData) {
 
   await prisma.digital_payment_methods.updateMany({
     where: { id, household_id: householdId },
-    data: { name, method_type, notes, linked_bank_account_id },
+    data: { name, method_type, notes, website_url, linked_bank_account_id },
   });
 
   revalidatePath("/dashboard/digital-payment-methods");

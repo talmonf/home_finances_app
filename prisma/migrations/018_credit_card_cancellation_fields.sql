@@ -3,6 +3,8 @@
 -- - cancellation date support
 -- - generic notes field
 -- - required last 4 digits
+-- - optional digital wallet identifier
+-- - charge day of month
 -- - monthly cost
 -- - scheme/issuer/co-brand/product structure
 --
@@ -14,9 +16,26 @@
 ALTER TABLE "credit_cards"
   ADD COLUMN IF NOT EXISTS "cancelled_at" TIMESTAMP(3),
   ADD COLUMN IF NOT EXISTS "notes" TEXT,
+  ADD COLUMN IF NOT EXISTS "website_url" TEXT,
   ADD COLUMN IF NOT EXISTS "monthly_cost" DECIMAL(15, 2),
+  ADD COLUMN IF NOT EXISTS "charge_day_of_month" INTEGER,
+  ADD COLUMN IF NOT EXISTS "digital_wallet_identifier" TEXT,
   ADD COLUMN IF NOT EXISTS "co_brand" TEXT,
   ADD COLUMN IF NOT EXISTS "product_name" TEXT;
+
+ALTER TABLE "bank_accounts"
+  ADD COLUMN IF NOT EXISTS "website_url" TEXT;
+
+ALTER TABLE "digital_payment_methods"
+  ADD COLUMN IF NOT EXISTS "website_url" TEXT;
+
+ALTER TABLE "subscriptions"
+  ADD COLUMN IF NOT EXISTS "website_url" TEXT;
+
+-- Keep charge day values in a valid month-day range.
+UPDATE "credit_cards"
+SET "charge_day_of_month" = NULL
+WHERE "charge_day_of_month" < 1 OR "charge_day_of_month" > 31;
 
 -- Ensure monthly_cost is optional even if it was created NOT NULL in an earlier iteration.
 ALTER TABLE "credit_cards"

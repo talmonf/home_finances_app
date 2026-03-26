@@ -156,6 +156,37 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             />
           </div>
           <div>
+            <label
+              htmlFor="digital_wallet_identifier"
+              className="mb-1 block text-xs font-medium text-slate-400"
+            >
+              Digital Wallet identifier (optional)
+            </label>
+            <input
+              id="digital_wallet_identifier"
+              name="digital_wallet_identifier"
+              defaultValue={card.digital_wallet_identifier ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="e.g. GooglePay 9952"
+            />
+          </div>
+          <div>
+            <label htmlFor="charge_day_of_month" className="mb-1 block text-xs font-medium text-slate-400">
+              Charge day of month (optional)
+            </label>
+            <input
+              id="charge_day_of_month"
+              name="charge_day_of_month"
+              type="number"
+              min="1"
+              max="31"
+              step="1"
+              defaultValue={card.charge_day_of_month ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="e.g. 2"
+            />
+          </div>
+          <div>
             <label htmlFor="monthly_cost" className="mb-1 block text-xs font-medium text-slate-400">
               Monthly cost
             </label>
@@ -255,6 +286,18 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               type="date"
               defaultValue={card.cancelled_at ? card.cancelled_at.toISOString().slice(0, 10) : ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-4">
+            <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+              Website / URL
+            </label>
+            <input
+              id="website_url"
+              name="website_url"
+              defaultValue={card.website_url ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="Optional"
             />
           </div>
           <div className="sm:col-span-2 lg:col-span-4">

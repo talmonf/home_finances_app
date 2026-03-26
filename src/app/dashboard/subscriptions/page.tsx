@@ -237,6 +237,20 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             </div>
             <div className="sm:col-span-2">
               <label
+                htmlFor="website_url"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Website / URL
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional (e.g. netflix.com)"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label
                 htmlFor="description"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
@@ -282,6 +296,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">
                       Payment method
                     </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">
                       Status
                     </th>
@@ -308,6 +323,20 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {s.credit_card?.card_name ?? "—"}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={s.website_url ?? undefined}>
+                        {s.website_url ? (
+                          <a
+                            href={s.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {s.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span

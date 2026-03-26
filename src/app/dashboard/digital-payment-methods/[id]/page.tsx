@@ -122,6 +122,18 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               </select>
             </div>
             <div className="sm:col-span-2">
+              <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                Website / URL
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                defaultValue={method.website_url ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="Optional"
+              />
+            </div>
+            <div className="sm:col-span-2">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
