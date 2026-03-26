@@ -79,7 +79,7 @@ export async function createCreditCard(formData: FormData) {
   const charge_day_of_month =
     charge_day_of_month_raw === null ? null : Number.parseInt(charge_day_of_month_raw, 10);
   if (
-    charge_day_of_month_raw !== null &&
+    charge_day_of_month != null &&
     (Number.isNaN(charge_day_of_month) || charge_day_of_month < 1 || charge_day_of_month > 31)
   ) {
     redirect("/dashboard/credit-cards?error=Charge+day+must+be+between+1+and+31");
@@ -262,7 +262,7 @@ export async function updateCreditCard(formData: FormData) {
   const charge_day_of_month =
     charge_day_of_month_raw === null ? null : Number.parseInt(charge_day_of_month_raw, 10);
   if (
-    charge_day_of_month_raw !== null &&
+    charge_day_of_month != null &&
     (Number.isNaN(charge_day_of_month) || charge_day_of_month < 1 || charge_day_of_month > 31)
   ) {
     redirect(`/dashboard/credit-cards/${id}?error=Charge+day+must+be+between+1+and+31`);
