@@ -36,6 +36,8 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    sort?: string;
+    dir?: string;
   }>;
 };
 
@@ -47,6 +49,8 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const sort = resolvedSearchParams?.sort ?? "card";
+  const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
 
   const [cards, familyMembers, bankAccounts] = await Promise.all([
     prisma.credit_cards.findMany({
@@ -63,6 +67,54 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
       orderBy: { account_name: "asc" },
     }),
   ]);
+
+  const cardsSorted = [...cards].sort((a, b) => {
+    const compare = (av: string | number | Date | null, bv: string | number | Date | null) => {
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (av instanceof Date && bv instanceof Date) return av.getTime() - bv.getTime();
+      if (typeof av === "number" && typeof bv === "number") return av - bv;
+      return String(av).localeCompare(String(bv), undefined, { sensitivity: "base" });
+    };
+
+    const statusRank = (card: { cancelled_at: Date | null; expiry_date: Date | null }) => {
+      const status = getCreditCardStatus(card);
+      return status === "Active" ? 0 : status === "Expired" ? 1 : 2;
+    };
+
+    const result =
+      sort === "scheme"
+        ? compare(a.scheme, b.scheme)
+        : sort === "issuer"
+          ? compare(a.issuer_name, b.issuer_name)
+          : sort === "co_brand"
+            ? compare(a.co_brand, b.co_brand)
+            : sort === "product"
+              ? compare(a.product_name, b.product_name)
+              : sort === "last4"
+                ? compare(a.card_last_four, b.card_last_four)
+                : sort === "charge_day"
+                  ? compare(a.charge_day_of_month, b.charge_day_of_month)
+                  : sort === "monthly_cost"
+                    ? compare(
+                        a.monthly_cost == null ? null : Number(a.monthly_cost),
+                        b.monthly_cost == null ? null : Number(b.monthly_cost),
+                      )
+                    : sort === "website"
+                      ? compare(a.website_url, b.website_url)
+                      : sort === "expiry"
+                        ? compare(a.expiry_date, b.expiry_date)
+                        : sort === "family_member"
+                          ? compare(a.family_member.full_name, b.family_member.full_name)
+                          : sort === "settlement_account"
+                            ? compare(a.bank_account.account_name, b.bank_account.account_name)
+                            : sort === "status"
+                              ? compare(statusRank(a), statusRank(b))
+                              : compare(a.card_name, b.card_name);
+
+    return dir === "asc" ? result : -result;
+  });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -346,31 +398,83 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Card</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Scheme</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Issuer</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Co-brand</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Product name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Last 4</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Charge day</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Monthly cost</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Expiry</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Settlement account</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
+                    {[
+                      { key: "card", label: "Card" },
+                      { key: "last4", label: "Last 4" },
+                      { key: "expiry", label: "Expiry" },
+                      { key: "family_member", label: "Family member" },
+                      { key: "status", label: "Status" },
+                      { key: "scheme", label: "Scheme" },
+                      { key: "issuer", label: "Issuer" },
+                      { key: "co_brand", label: "Co-brand" },
+                      { key: "product", label: "Product name" },
+                      { key: "charge_day", label: "Charge day" },
+                      { key: "monthly_cost", label: "Monthly cost" },
+                      { key: "website", label: "Website" },
+                      { key: "settlement_account", label: "Settlement account" },
+                    ].map((col) => {
+                      const isActive = sort === col.key;
+                      const nextDir = isActive && dir === "asc" ? "desc" : "asc";
+                      const arrow = !isActive ? "" : dir === "asc" ? "↑" : "↓";
+                      const query = new URLSearchParams();
+                      if (resolvedSearchParams?.created) query.set("created", resolvedSearchParams.created);
+                      if (resolvedSearchParams?.updated) query.set("updated", resolvedSearchParams.updated);
+                      if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
+                      query.set("sort", col.key);
+                      query.set("dir", nextDir);
+                      return (
+                        <th key={col.key} className="px-4 py-3 font-medium text-slate-300">
+                          <Link
+                            href={`/dashboard/credit-cards?${query.toString()}`}
+                            className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-300 hover:text-sky-300"
+                          >
+                            <span>{col.label}</span>
+                            {arrow && <span>{arrow}</span>}
+                          </Link>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
-                  {cards.map((c) => (
+                  {cardsSorted.map((c) => (
                     <tr key={c.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{c.card_name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        <Link
+                          href={`/dashboard/credit-cards/${c.id}`}
+                          className="text-sky-400 hover:text-sky-300"
+                        >
+                          {c.card_name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
+                      <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const status = getCreditCardStatus(c);
+                          const colorClass =
+                            status === "Active"
+                              ? "text-emerald-400"
+                              : status === "Expired"
+                                ? "text-amber-400"
+                                : "text-rose-300";
+                          return (
+                            <div className="space-y-1">
+                              <p className={colorClass}>{status}</p>
+                              {c.cancelled_at && (
+                                <p className="text-xs text-slate-500">
+                                  On {formatDate(c.cancelled_at)}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{formatScheme(c.scheme)}</td>
                       <td className="px-4 py-3 text-slate-300">{c.issuer_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.co_brand ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{c.product_name ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
                       <td className="px-4 py-3 text-slate-400">{c.charge_day_of_month ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">
                         {c.monthly_cost == null
@@ -394,35 +498,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">{c.bank_account.account_name}</td>
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const status = getCreditCardStatus(c);
-                          const colorClass =
-                            status === "Active"
-                              ? "text-emerald-400"
-                              : status === "Expired"
-                                ? "text-amber-400"
-                                : "text-rose-300";
-                          return (
-                            <div className="space-y-1">
-                              <p className={colorClass}>{status}</p>
-                              {c.cancelled_at && (
-                                <p className="text-xs text-slate-500">
-                                  On {formatDate(c.cancelled_at)}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/dashboard/credit-cards/${c.id}`} className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                          Edit
-                        </Link>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
