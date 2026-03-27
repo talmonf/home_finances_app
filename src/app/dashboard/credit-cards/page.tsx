@@ -20,6 +20,8 @@ function formatExpiryMonthYear(d: Date | null) {
 
 function formatScheme(scheme: string) {
   if (scheme === "amex") return "Amex";
+  if (scheme === "diners_club") return "Diners Club";
+  if (scheme === "isracard") return "Isracard";
   if (scheme === "mastercard") return "Mastercard";
   if (scheme === "visa") return "Visa";
   return "Other";
@@ -108,7 +110,10 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                         : sort === "family_member"
                           ? compare(a.family_member.full_name, b.family_member.full_name)
                           : sort === "settlement_account"
-                            ? compare(a.bank_account.account_name, b.bank_account.account_name)
+                            ? compare(
+                                a.bank_account?.account_name ?? null,
+                                b.bank_account?.account_name ?? null,
+                              )
                             : sort === "status"
                               ? compare(statusRank(a), statusRank(b))
                               : compare(a.card_name, b.card_name);
@@ -190,6 +195,8 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 <option value="visa">Visa</option>
                 <option value="mastercard">Mastercard</option>
                 <option value="amex">Amex</option>
+                <option value="diners_club">Diners Club</option>
+                <option value="isracard">Isracard</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -355,10 +362,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               <select
                 id="settlement_bank_account_id"
                 name="settlement_bank_account_id"
-                required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
-                <option value="">Select…</option>
+                <option value="">None</option>
                 {bankAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.account_name} ({a.bank_name})
@@ -377,12 +383,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
           </form>
           {familyMembers.length === 0 && (
             <p className="text-xs text-amber-400">
-              Add at least one family member and one bank account first.
-            </p>
-          )}
-          {familyMembers.length > 0 && bankAccounts.length === 0 && (
-            <p className="text-xs text-amber-400">
-              Add at least one bank account to link as settlement account.
+              Add at least one family member first.
             </p>
           )}
         </section>
@@ -498,7 +499,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{c.bank_account.account_name}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.bank_account?.account_name ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

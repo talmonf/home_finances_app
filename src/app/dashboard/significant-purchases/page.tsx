@@ -30,6 +30,8 @@ function formatDate(d: Date | null) {
 
 function formatScheme(scheme: string) {
   if (scheme === "amex") return "Amex";
+  if (scheme === "diners_club") return "Diners Club";
+  if (scheme === "isracard") return "Isracard";
   if (scheme === "mastercard") return "Mastercard";
   if (scheme === "visa") return "Visa";
   return "Other";

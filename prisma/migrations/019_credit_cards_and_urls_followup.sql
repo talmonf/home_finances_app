@@ -17,3 +17,11 @@ ALTER TABLE "digital_payment_methods"
 
 ALTER TABLE "subscriptions"
   ADD COLUMN IF NOT EXISTS "website_url" TEXT;
+
+-- Extend card scheme enum with additional supported options.
+ALTER TYPE "card_scheme" ADD VALUE IF NOT EXISTS 'diners_club';
+ALTER TYPE "card_scheme" ADD VALUE IF NOT EXISTS 'isracard';
+
+-- Allow credit cards without a settlement bank account (for DBs where 018 already ran).
+ALTER TABLE "credit_cards"
+  ALTER COLUMN "settlement_bank_account_id" DROP NOT NULL;

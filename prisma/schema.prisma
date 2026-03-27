@@ -109,7 +109,7 @@ model credit_cards {
   cancelled_at               DateTime?
   notes                      String?
   website_url                String?
-  settlement_bank_account_id String
+  settlement_bank_account_id String?
   currency                   String   @default("ILS")
   is_active                  Boolean  @default(true)
   created_at                 DateTime @default(now())
@@ -117,7 +117,7 @@ model credit_cards {
 
   household     households    @relation(fields: [household_id], references: [id])
   family_member family_members @relation(fields: [family_member_id], references: [id])
-  bank_account  bank_accounts  @relation(fields: [settlement_bank_account_id], references: [id])
+  bank_account  bank_accounts? @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
   significant_purchases significant_purchases[]
 }
@@ -126,6 +126,8 @@ enum CardScheme {
   visa
   mastercard
   amex
+  diners_club
+  isracard
   other
 
   @@map("card_scheme")

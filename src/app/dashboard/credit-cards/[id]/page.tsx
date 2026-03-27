@@ -103,6 +103,8 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               <option value="visa">Visa</option>
               <option value="mastercard">Mastercard</option>
               <option value="amex">Amex</option>
+              <option value="diners_club">Diners Club</option>
+              <option value="isracard">Isracard</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -250,10 +252,10 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <select
               id="settlement_bank_account_id"
               name="settlement_bank_account_id"
-              required
-              defaultValue={card.settlement_bank_account_id}
+              defaultValue={card.settlement_bank_account_id ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
+              <option value="">None</option>
               {bankAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.account_name} ({a.bank_name})

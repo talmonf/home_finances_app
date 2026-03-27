@@ -32,6 +32,10 @@ ALTER TABLE "digital_payment_methods"
 ALTER TABLE "subscriptions"
   ADD COLUMN IF NOT EXISTS "website_url" TEXT;
 
+-- Allow credit cards without a settlement bank account.
+ALTER TABLE "credit_cards"
+  ALTER COLUMN "settlement_bank_account_id" DROP NOT NULL;
+
 -- Keep charge day values in a valid month-day range.
 UPDATE "credit_cards"
 SET "charge_day_of_month" = NULL
@@ -72,9 +76,12 @@ ALTER TABLE "credit_cards"
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'card_scheme') THEN
-    CREATE TYPE "card_scheme" AS ENUM ('visa', 'mastercard', 'amex', 'other');
+    CREATE TYPE "card_scheme" AS ENUM ('visa', 'mastercard', 'amex', 'diners_club', 'isracard', 'other');
   END IF;
 END $$;
+
+ALTER TYPE "card_scheme" ADD VALUE IF NOT EXISTS 'diners_club';
+ALTER TYPE "card_scheme" ADD VALUE IF NOT EXISTS 'isracard';
 
 ALTER TABLE "credit_cards"
   ADD COLUMN IF NOT EXISTS "scheme" "card_scheme";

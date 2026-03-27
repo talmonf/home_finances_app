@@ -39,7 +39,8 @@ export async function createCreditCard(formData: FormData) {
   const co_brand = (formData.get("co_brand") as string | null)?.trim() || null;
   const product_name = (formData.get("product_name") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
-  const settlement_bank_account_id = (formData.get("settlement_bank_account_id") as string | null)?.trim();
+  const settlement_bank_account_id =
+    (formData.get("settlement_bank_account_id") as string | null)?.trim() || null;
   const card_last_four = (formData.get("card_last_four") as string | null)?.trim();
   const digital_wallet_identifier =
     (formData.get("digital_wallet_identifier") as string | null)?.trim() || null;
@@ -56,15 +57,14 @@ export async function createCreditCard(formData: FormData) {
     !scheme ||
     !issuer_name ||
     !family_member_id ||
-    !settlement_bank_account_id ||
     !card_last_four
   ) {
     redirect(
-      "/dashboard/credit-cards?error=Card,+scheme,+issuer,+last+4,+member+and+settlement+account+required",
+      "/dashboard/credit-cards?error=Card,+scheme,+issuer,+last+4+and+member+required",
     );
   }
 
-  if (!["visa", "mastercard", "amex", "other"].includes(scheme)) {
+  if (!["visa", "mastercard", "amex", "diners_club", "isracard", "other"].includes(scheme)) {
     redirect("/dashboard/credit-cards?error=Invalid+scheme");
   }
 
@@ -104,14 +104,16 @@ export async function createCreditCard(formData: FormData) {
     prisma.family_members.findFirst({
       where: { id: family_member_id, household_id: householdId },
     }),
-    prisma.bank_accounts.findFirst({
-      where: { id: settlement_bank_account_id, household_id: householdId },
-    }),
+    settlement_bank_account_id
+      ? prisma.bank_accounts.findFirst({
+          where: { id: settlement_bank_account_id, household_id: householdId },
+        })
+      : Promise.resolve(null),
   ]);
   if (!member) {
     redirect("/dashboard/credit-cards?error=Invalid+family+member");
   }
-  if (!bankAccount) {
+  if (settlement_bank_account_id && !bankAccount) {
     redirect("/dashboard/credit-cards?error=Invalid+settlement+account");
   }
 
@@ -122,7 +124,7 @@ export async function createCreditCard(formData: FormData) {
         household_id: householdId,
         family_member_id,
         card_name,
-        scheme: scheme as "visa" | "mastercard" | "amex" | "other",
+        scheme: scheme as "visa" | "mastercard" | "amex" | "diners_club" | "isracard" | "other",
         issuer_name,
         co_brand,
         product_name,
@@ -229,7 +231,8 @@ export async function updateCreditCard(formData: FormData) {
   const monthly_cost_raw = (formData.get("monthly_cost") as string | null)?.trim() || null;
   const expiry_month_year_raw = (formData.get("expiry_month_year") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
-  const settlement_bank_account_id = (formData.get("settlement_bank_account_id") as string | null)?.trim();
+  const settlement_bank_account_id =
+    (formData.get("settlement_bank_account_id") as string | null)?.trim() || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const status = (formData.get("status") as string | null)?.trim();
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
@@ -242,13 +245,12 @@ export async function updateCreditCard(formData: FormData) {
     !scheme ||
     !issuer_name ||
     !card_last_four ||
-    !family_member_id ||
-    !settlement_bank_account_id
+    !family_member_id
   ) {
     redirect("/dashboard/credit-cards?error=Missing+required+fields");
   }
 
-  if (!["visa", "mastercard", "amex", "other"].includes(scheme)) {
+  if (!["visa", "mastercard", "amex", "diners_club", "isracard", "other"].includes(scheme)) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+scheme`);
   }
   if (!/^\d{4}$/.test(card_last_four)) {
@@ -303,20 +305,24 @@ export async function updateCreditCard(formData: FormData) {
       where: { id: family_member_id, household_id: householdId },
       select: { id: true },
     }),
-    prisma.bank_accounts.findFirst({
-      where: { id: settlement_bank_account_id, household_id: householdId },
-      select: { id: true },
-    }),
+    settlement_bank_account_id
+      ? prisma.bank_accounts.findFirst({
+          where: { id: settlement_bank_account_id, household_id: householdId },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
   ]);
   if (!member) redirect(`/dashboard/credit-cards/${id}?error=Invalid+family+member`);
-  if (!bankAccount) redirect(`/dashboard/credit-cards/${id}?error=Invalid+settlement+account`);
+  if (settlement_bank_account_id && !bankAccount) {
+    redirect(`/dashboard/credit-cards/${id}?error=Invalid+settlement+account`);
+  }
 
   try {
     await prisma.credit_cards.updateMany({
       where: { id, household_id: householdId },
       data: {
         card_name,
-        scheme: scheme as "visa" | "mastercard" | "amex" | "other",
+        scheme: scheme as "visa" | "mastercard" | "amex" | "diners_club" | "isracard" | "other",
         issuer_name,
         co_brand,
         product_name,
