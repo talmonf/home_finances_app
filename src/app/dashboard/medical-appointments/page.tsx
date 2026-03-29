@@ -75,7 +75,7 @@ function formatScheme(scheme: string) {
 }
 
 function formatPaymentDetail(
-  method: MedicalAppointmentPaymentMethod,
+  method: MedicalAppointmentPaymentMethod | null,
   row: {
     credit_card: {
       card_name: string;
@@ -87,6 +87,9 @@ function formatPaymentDetail(
     digital_payment_method: { name: string } | null;
   },
 ) {
+  if (!method) {
+    return "Not specified yet";
+  }
   const base = PAYMENT_LABELS[method];
   if (method === "credit_card" && row.credit_card) {
     const c = row.credit_card;
@@ -101,20 +104,13 @@ function formatPaymentDetail(
   return base;
 }
 
-function formatReimbursementBlock(
-  submittedAt: Date | null,
-  scope: "full" | "partial" | null,
-  notes: string | null,
-) {
-  if (!submittedAt && !scope && !notes?.trim()) {
+function formatReimbursementBlock(submittedAt: Date | null, notes: string | null) {
+  if (!submittedAt && !notes?.trim()) {
     return <span className="text-slate-500">—</span>;
   }
   const parts: string[] = [];
   if (submittedAt) {
     parts.push(`Request filed ${formatDate(submittedAt)}`);
-  }
-  if (scope) {
-    parts.push(scope === "full" ? "Full reimbursement requested" : "Partial reimbursement requested");
   }
   if (notes?.trim()) {
     parts.push(notes.trim());
@@ -317,9 +313,10 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
-                    How you paid
+                    How you paid (optional)
                   </label>
-                  <select id="payment_method" name="payment_method" required className={inputClass}>
+                  <select id="payment_method" name="payment_method" className={inputClass} defaultValue="">
+                    <option value="">Not specified yet</option>
                     {Object.values(PaymentMethodValues).map((value) => (
                       <option key={value} value={value}>
                         {PAYMENT_LABELS[value]}
@@ -389,19 +386,6 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     className={inputClass}
                   />
                 </div>
-                <div>
-                  <label
-                    htmlFor="kupat_holim_request_scope"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request scope
-                  </label>
-                  <select id="kupat_holim_request_scope" name="kupat_holim_request_scope" className={inputClass}>
-                    <option value="">—</option>
-                    <option value="full">Full reimbursement</option>
-                    <option value="partial">Partial reimbursement</option>
-                  </select>
-                </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
@@ -427,23 +411,6 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     type="date"
                     className={inputClass}
                   />
-                </div>
-                <div>
-                  <label
-                    htmlFor="private_insurance_request_scope"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request scope
-                  </label>
-                  <select
-                    id="private_insurance_request_scope"
-                    name="private_insurance_request_scope"
-                    className={inputClass}
-                  >
-                    <option value="">—</option>
-                    <option value="full">Full reimbursement</option>
-                    <option value="partial">Partial reimbursement</option>
-                  </select>
                 </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
@@ -567,16 +534,11 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                         {formatPaymentDetail(row.payment_method, row)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
-                        {formatReimbursementBlock(
-                          row.kupat_holim_request_submitted_at,
-                          row.kupat_holim_request_scope,
-                          row.kupat_holim_notes,
-                        )}
+                        {formatReimbursementBlock(row.kupat_holim_request_submitted_at, row.kupat_holim_notes)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
                           row.private_insurance_request_submitted_at,
-                          row.private_insurance_request_scope,
                           row.private_insurance_notes,
                         )}
                       </td>

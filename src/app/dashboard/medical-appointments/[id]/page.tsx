@@ -234,15 +234,15 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
-                    How you paid
+                    How you paid (optional)
                   </label>
                   <select
                     id="payment_method"
                     name="payment_method"
-                    required
-                    defaultValue={appointment.payment_method}
+                    defaultValue={appointment.payment_method ?? ""}
                     className={inputClass}
                   >
+                    <option value="">Not specified yet</option>
                     {Object.values(PaymentMethodValues).map((value) => (
                       <option key={value} value={value}>
                         {PAYMENT_LABELS[value]}
@@ -335,24 +335,6 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     className={inputClass}
                   />
                 </div>
-                <div>
-                  <label
-                    htmlFor="kupat_holim_request_scope"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request scope
-                  </label>
-                  <select
-                    id="kupat_holim_request_scope"
-                    name="kupat_holim_request_scope"
-                    defaultValue={appointment.kupat_holim_request_scope ?? ""}
-                    className={inputClass}
-                  >
-                    <option value="">—</option>
-                    <option value="full">Full reimbursement</option>
-                    <option value="partial">Partial reimbursement</option>
-                  </select>
-                </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
@@ -388,24 +370,6 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     }
                     className={inputClass}
                   />
-                </div>
-                <div>
-                  <label
-                    htmlFor="private_insurance_request_scope"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request scope
-                  </label>
-                  <select
-                    id="private_insurance_request_scope"
-                    name="private_insurance_request_scope"
-                    defaultValue={appointment.private_insurance_request_scope ?? ""}
-                    className={inputClass}
-                  >
-                    <option value="">—</option>
-                    <option value="full">Full reimbursement</option>
-                    <option value="partial">Partial reimbursement</option>
-                  </select>
                 </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">

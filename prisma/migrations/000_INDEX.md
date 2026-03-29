@@ -32,6 +32,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 020 | `020_subscriptions_optional_dates_currency_family_member.sql` | ALTER | subscriptions: optional dates, currency, optional family_member_id (UUID FK; repairs TEXT column if present) |
 | 021 | `021_medical_appointments.sql` | CREATE | Enums + table: medical_appointment_payment_method, medical_reimbursement_request_scope, medical_appointments |
 | 022 | `022_medical_appointments_reimbursement_received.sql` | ALTER | medical_appointments: single reimbursement amount/date/source; drop per-channel amount_received |
+| 023 | `023_medical_appointments_drop_request_scope.sql` | ALTER | medical_appointments: drop request scope columns + enum medical_reimbursement_request_scope |
+| 024 | `024_medical_appointments_payment_method_nullable.sql` | ALTER | medical_appointments: payment_method nullable (unknown at booking) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -57,6 +59,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 020_subscriptions_optional_dates_currency_family_member.sql
 - [x] 021_medical_appointments.sql
 - [x] 022_medical_appointments_reimbursement_received.sql
+- [x] 023_medical_appointments_drop_request_scope.sql
+- [x] 024_medical_appointments_payment_method_nullable.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

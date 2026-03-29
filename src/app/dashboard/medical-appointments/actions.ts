@@ -1,11 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
-import type {
-  MedicalAppointmentPaymentMethod,
-  MedicalReimbursementRequestScope,
-  MedicalReimbursementSource,
-} from "@/generated/prisma/enums";
+import type { MedicalAppointmentPaymentMethod, MedicalReimbursementSource } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -31,12 +27,6 @@ function parseOptionalAmount(raw: string | null): { ok: true; value: number | nu
   return { ok: true, value: n };
 }
 
-function parseOptionalScope(raw: string | null): MedicalReimbursementRequestScope | null {
-  const t = raw?.trim();
-  if (t === "full" || t === "partial") return t;
-  return null;
-}
-
 function parseOptionalReimbursementSource(raw: string | null): MedicalReimbursementSource | null {
   const t = raw?.trim();
   if (t === "kupat_holim" || t === "private_insurance") return t;
@@ -49,17 +39,15 @@ type ParsedMedicalPayload = {
   appointment_date: Date;
   family_member_id: string | null;
   currency: string;
-  payment_method: MedicalAppointmentPaymentMethod;
+  payment_method: MedicalAppointmentPaymentMethod | null;
   credit_card_id: string | null;
   bank_account_id: string | null;
   digital_payment_method_id: string | null;
   amount_out_of_pocket: number | null;
   notes: string | null;
   kupat_holim_request_submitted_at: Date | null;
-  kupat_holim_request_scope: MedicalReimbursementRequestScope | null;
   kupat_holim_notes: string | null;
   private_insurance_request_submitted_at: Date | null;
-  private_insurance_request_scope: MedicalReimbursementRequestScope | null;
   private_insurance_notes: string | null;
   reimbursement_received_at: Date | null;
   reimbursement_source: MedicalReimbursementSource | null;
@@ -100,17 +88,11 @@ async function parseMedicalAppointmentForm(
   const kupat_holim_request_submitted_raw = (
     formData.get("kupat_holim_request_submitted_at") as string | null
   )?.trim();
-  const kupat_holim_request_scope = parseOptionalScope(
-    formData.get("kupat_holim_request_scope") as string | null,
-  );
   const kupat_holim_notes = (formData.get("kupat_holim_notes") as string | null)?.trim() || null;
 
   const private_insurance_request_submitted_raw = (
     formData.get("private_insurance_request_submitted_at") as string | null
   )?.trim();
-  const private_insurance_request_scope = parseOptionalScope(
-    formData.get("private_insurance_request_scope") as string | null,
-  );
   const private_insurance_notes =
     (formData.get("private_insurance_notes") as string | null)?.trim() || null;
 
@@ -150,9 +132,9 @@ async function parseMedicalAppointmentForm(
     }
   }
 
-  if (payment_method !== "credit_card") credit_card_id = null;
-  if (payment_method !== "bank_account") bank_account_id = null;
-  if (payment_method !== "digital_wallet") digital_payment_method_id = null;
+  if (!payment_method || payment_method !== "credit_card") credit_card_id = null;
+  if (!payment_method || payment_method !== "bank_account") bank_account_id = null;
+  if (!payment_method || payment_method !== "digital_wallet") digital_payment_method_id = null;
 
   if (credit_card_id) {
     const today = startOfToday();
@@ -248,10 +230,8 @@ async function parseMedicalAppointmentForm(
     amount_out_of_pocket,
     notes,
     kupat_holim_request_submitted_at,
-    kupat_holim_request_scope,
     kupat_holim_notes,
     private_insurance_request_submitted_at,
-    private_insurance_request_scope,
     private_insurance_notes,
     reimbursement_received_at,
     reimbursement_source,

@@ -363,15 +363,13 @@ model medical_appointments {
   visit_description                   String?
   amount_out_of_pocket                Decimal?                       @db.Decimal(15, 2)
   currency                            String                         @default("ILS")
-  payment_method                      MedicalAppointmentPaymentMethod
+  payment_method                      MedicalAppointmentPaymentMethod?
   credit_card_id                      String?
   bank_account_id                     String?
   digital_payment_method_id           String?
   kupat_holim_request_submitted_at    DateTime?
-  kupat_holim_request_scope           MedicalReimbursementRequestScope?
   kupat_holim_notes                   String?
   private_insurance_request_submitted_at   DateTime?
-  private_insurance_request_scope     MedicalReimbursementRequestScope?
   private_insurance_notes             String?
   reimbursement_received_at           DateTime?
   reimbursement_source                MedicalReimbursementSource?
@@ -397,13 +395,6 @@ enum MedicalAppointmentPaymentMethod {
   other
 
   @@map("medical_appointment_payment_method")
-}
-
-enum MedicalReimbursementRequestScope {
-  full
-  partial
-
-  @@map("medical_reimbursement_request_scope")
 }
 
 enum MedicalReimbursementSource {
