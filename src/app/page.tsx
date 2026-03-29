@@ -220,6 +220,20 @@ export default async function Home() {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Medical appointments
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Log visits, payment method, and reimbursement requests to kupat holim or private insurance.
+                </p>
+                <Link
+                  href="/dashboard/medical-appointments"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Medical appointments
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Reports
                 </h2>
                 <p className="text-xs text-slate-400">

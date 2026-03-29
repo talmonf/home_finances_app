@@ -30,6 +30,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 018 | `018_credit_card_cancellation_fields.sql` | ALTER | credit_cards: consolidated migration (cancelled_at, notes, card_last_four required, monthly_cost, scheme, co_brand, product_name) |
 | 019 | `019_credit_cards_and_urls_followup.sql` | ALTER | Follow-up after 018: digital_wallet_identifier, charge_day_of_month, website_url fields + monthly_cost nullable + scheme enum values + settlement nullable |
 | 020 | `020_subscriptions_optional_dates_currency_family_member.sql` | ALTER | subscriptions: optional dates, currency, optional family_member_id (UUID FK; repairs TEXT column if present) |
+| 021 | `021_medical_appointments.sql` | CREATE | Enums + table: medical_appointment_payment_method, medical_reimbursement_request_scope, medical_appointments |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -53,6 +54,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 018_credit_card_cancellation_fields.sql
 - [x] 019_credit_cards_and_urls_followup.sql
 - [x] 020_subscriptions_optional_dates_currency_family_member.sql
+- [x] 021_medical_appointments.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

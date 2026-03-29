@@ -39,6 +39,7 @@ model households {
   donation_commitments  donation_commitments[]
   significant_purchases significant_purchases[]
   digital_payment_methods digital_payment_methods[]
+  medical_appointments    medical_appointments[]
 }
 
 model family_members {
@@ -65,6 +66,7 @@ model family_members {
   users               users[]
   bank_account_members bank_account_members[]
   subscriptions         subscriptions[]
+  medical_appointments  medical_appointments[]
 }
 
 model bank_accounts {
@@ -91,6 +93,7 @@ model bank_accounts {
   transactions transactions[]
   bank_account_members bank_account_members[]
   linked_digital_payment_methods digital_payment_methods[]
+  medical_appointments            medical_appointments[]
 }
 
 model credit_cards {
@@ -121,6 +124,7 @@ model credit_cards {
   bank_account  bank_accounts? @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
   significant_purchases significant_purchases[]
+  medical_appointments  medical_appointments[]
 }
 
 enum CardScheme {
@@ -347,6 +351,58 @@ model digital_payment_methods {
 
   household           households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
   linked_bank_account bank_accounts? @relation(fields: [linked_bank_account_id], references: [id], onDelete: SetNull)
+  medical_appointments medical_appointments[]
+}
+
+model medical_appointments {
+  id                                  String                         @id @default(uuid())
+  household_id                        String
+  family_member_id                    String?
+  appointment_date                    DateTime
+  provider_name                       String
+  visit_description                   String?
+  amount_out_of_pocket                Decimal?                       @db.Decimal(15, 2)
+  currency                            String                         @default("ILS")
+  payment_method                      MedicalAppointmentPaymentMethod
+  credit_card_id                      String?
+  bank_account_id                     String?
+  digital_payment_method_id           String?
+  kupat_holim_request_submitted_at    DateTime?
+  kupat_holim_request_scope           MedicalReimbursementRequestScope?
+  kupat_holim_amount_received         Decimal?                       @db.Decimal(15, 2)
+  kupat_holim_notes                   String?
+  private_insurance_request_submitted_at   DateTime?
+  private_insurance_request_scope     MedicalReimbursementRequestScope?
+  private_insurance_amount_received   Decimal?                       @db.Decimal(15, 2)
+  private_insurance_notes             String?
+  notes                               String?
+  is_active                           Boolean                        @default(true)
+  created_at                          DateTime                       @default(now())
+  updated_at                          DateTime                       @updatedAt
+
+  household              households              @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member          family_members?         @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+  credit_card            credit_cards?           @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  bank_account           bank_accounts?          @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+  digital_payment_method digital_payment_methods? @relation(fields: [digital_payment_method_id], references: [id], onDelete: SetNull)
+}
+
+enum MedicalAppointmentPaymentMethod {
+  cash
+  credit_card
+  bank_account
+  digital_wallet
+  kupat_holim_benefit
+  other
+
+  @@map("medical_appointment_payment_method")
+}
+
+enum MedicalReimbursementRequestScope {
+  full
+  partial
+
+  @@map("medical_reimbursement_request_scope")
 }
 
 model bank_account_members {
