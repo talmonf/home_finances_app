@@ -29,6 +29,10 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function dateOnlyLocal(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export default async function UpcomingRenewalsPage() {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -46,8 +50,12 @@ export default async function UpcomingRenewalsPage() {
     significantPurchases,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
-      where: { household_id: householdId, is_active: true, renewal_date: { gte: today } },
-      include: { credit_card: { include: { family_member: true } } },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        renewal_date: { not: null },
+      },
+      include: { credit_card: { include: { family_member: true } }, family_member: true },
     }),
     prisma.identities.findMany({
       where: { household_id: householdId, is_active: true, expiry_date: { gte: today } },
@@ -88,8 +96,8 @@ export default async function UpcomingRenewalsPage() {
       id: `sub-${s.id}`,
       category: "Subscription",
       itemName: s.name,
-      owner: s.credit_card?.family_member?.full_name ?? "Household",
-      renewalDate: s.renewal_date,
+      owner: s.family_member?.full_name ?? s.credit_card?.family_member?.full_name ?? "Household",
+      renewalDate: s.renewal_date as Date,
       href: "/dashboard/subscriptions",
     })),
     ...identities.map((i) => ({
@@ -161,8 +169,9 @@ export default async function UpcomingRenewalsPage() {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals</h1>
           <p className="text-sm text-slate-400">
-            All upcoming renewal and expiration dates across subscriptions, identity, cards,
-            insurance, utilities, donations, and warranty-bearing significant purchases.
+            Renewal and expiration dates across subscriptions (including past subscription renewal
+            dates you may have missed), identity, cards, insurance, utilities, donations, and
+            warranty-bearing significant purchases.
           </p>
         </header>
 
@@ -183,9 +192,20 @@ export default async function UpcomingRenewalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {rows.map((row) => {
+                  const overdue =
+                    row.category === "Subscription" && dateOnlyLocal(row.renewalDate) < today;
+                  return (
                   <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                    <td className="px-4 py-3 text-slate-200">{formatDate(row.renewalDate)}</td>
+                    <td
+                      className={`px-4 py-3 ${overdue ? "text-rose-300" : "text-slate-200"}`}
+                      title={overdue ? "Renewal date has passed" : undefined}
+                    >
+                      {formatDate(row.renewalDate)}
+                      {overdue ? (
+                        <span className="ml-2 text-xs font-medium text-rose-400/90">Overdue</span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 text-slate-300">{row.category}</td>
                     <td className="px-4 py-3 text-slate-100">{row.itemName}</td>
                     <td className="px-4 py-3 text-slate-400">{row.owner}</td>
@@ -195,7 +215,8 @@ export default async function UpcomingRenewalsPage() {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

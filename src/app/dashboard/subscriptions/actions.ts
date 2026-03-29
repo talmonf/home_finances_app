@@ -29,15 +29,17 @@ export async function createSubscription(formData: FormData) {
   }
 
   const name = (formData.get("name") as string | null)?.trim();
-  const start_date_raw = (formData.get("start_date") as string | null)?.trim();
-  const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim();
+  const start_date_raw = (formData.get("start_date") as string | null)?.trim() || null;
+  const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const fee_amount_raw = (formData.get("fee_amount") as string | null)?.trim();
+  const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
 
-  if (!name || !start_date_raw || !renewal_date_raw || !fee_amount_raw || !billing_interval) {
+  if (!name || !fee_amount_raw || !billing_interval) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
@@ -70,8 +72,31 @@ export async function createSubscription(formData: FormData) {
     }
   }
 
-  const start_date = new Date(start_date_raw);
-  const renewal_date = new Date(renewal_date_raw);
+  if (family_member_id) {
+    const member = await prisma.family_members.findFirst({
+      where: { id: family_member_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!member) {
+      redirect("/dashboard/subscriptions?error=Invalid+family+member");
+    }
+  }
+
+  let start_date: Date | null = null;
+  if (start_date_raw) {
+    start_date = new Date(start_date_raw);
+    if (Number.isNaN(start_date.getTime())) {
+      redirect("/dashboard/subscriptions?error=Invalid+start+date");
+    }
+  }
+
+  let renewal_date: Date | null = null;
+  if (renewal_date_raw) {
+    renewal_date = new Date(renewal_date_raw);
+    if (Number.isNaN(renewal_date.getTime())) {
+      redirect("/dashboard/subscriptions?error=Invalid+renewal+date");
+    }
+  }
 
   await prisma.subscriptions.create({
     data: {
@@ -81,8 +106,10 @@ export async function createSubscription(formData: FormData) {
       start_date,
       renewal_date,
       fee_amount,
+      currency,
       billing_interval: billing_interval as "monthly" | "annual",
       credit_card_id,
+      family_member_id,
       description,
       website_url,
     },

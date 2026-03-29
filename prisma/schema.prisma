@@ -64,6 +64,7 @@ model family_members {
   tasks_assigned      tasks[]
   users               users[]
   bank_account_members bank_account_members[]
+  subscriptions         subscriptions[]
 }
 
 model bank_accounts {
@@ -475,19 +476,22 @@ model subscriptions {
   id               String                     @id @default(uuid())
   household_id     String
   name             String
-  start_date       DateTime
-  renewal_date     DateTime
+  start_date       DateTime?
+  renewal_date     DateTime?
   fee_amount       Decimal                    @db.Decimal(15, 2)
+  currency         String                     @default("ILS")
   billing_interval SubscriptionBillingInterval
   credit_card_id   String?
+  family_member_id String?
   description      String?
   website_url      String?
   is_active        Boolean                    @default(true)
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt
 
-  household    households   @relation(fields: [household_id], references: [id])
-  credit_card  credit_cards? @relation(fields: [credit_card_id], references: [id])
+  household     households     @relation(fields: [household_id], references: [id])
+  credit_card   credit_cards?  @relation(fields: [credit_card_id], references: [id])
+  family_member family_members? @relation(fields: [family_member_id], references: [id])
 }
 
 enum StudyOrClassType {

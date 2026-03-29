@@ -26,6 +26,11 @@ function formatDate(d: Date) {
   });
 }
 
+function formatDateOptional(d: Date | null) {
+  if (!d) return "—";
+  return formatDate(d);
+}
+
 function formatMoney(value: unknown) {
   if (value == null) return "—";
   const n =
@@ -37,6 +42,12 @@ function formatMoney(value: unknown) {
   return Number.isNaN(n)
     ? "—"
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMoneyWithCurrency(value: unknown, currency: string) {
+  const amount = formatMoney(value);
+  if (amount === "—") return "—";
+  return `${amount} ${currency}`;
 }
 
 function formatScheme(scheme: string) {
@@ -71,11 +82,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
-  const [subscriptions, creditCards] = await Promise.all([
+  const [subscriptions, creditCards, familyMembers] = await Promise.all([
     prisma.subscriptions.findMany({
       where: { household_id: householdId },
-      include: { credit_card: true },
-      orderBy: { renewal_date: "asc" },
+      include: { credit_card: true, family_member: true },
+      orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.credit_cards.findMany({
       where: {
@@ -84,6 +95,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
       orderBy: { card_name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
     }),
   ]);
 
@@ -157,13 +172,12 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 htmlFor="start_date"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
-                Start date
+                Start date (optional)
               </label>
               <input
                 id="start_date"
                 name="start_date"
                 type="date"
-                required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -172,13 +186,12 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 htmlFor="renewal_date"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
-                Renewal date
+                Renewal date (optional)
               </label>
               <input
                 id="renewal_date"
                 name="renewal_date"
                 type="date"
-                required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -202,6 +215,21 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label
+                htmlFor="currency"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Currency
+              </label>
+              <input
+                id="currency"
+                name="currency"
+                defaultValue="ILS"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. ILS, USD"
+              />
+            </div>
+            <div>
+              <label
                 htmlFor="billing_interval"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
@@ -215,6 +243,27 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               >
                 <option value="monthly">Monthly</option>
                 <option value="annual">Annual</option>
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="family_member_id"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Family member (optional)
+              </label>
+              <select
+                id="family_member_id"
+                name="family_member_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="">None</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -296,6 +345,9 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                       Interval
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
+                      Family member
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
                       Payment method
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">Website</th>
@@ -315,13 +367,25 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     >
                       <td className="px-4 py-3 text-slate-100">{s.name}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatDate(s.start_date)} / {formatDate(s.renewal_date)}
+                        {formatDateOptional(s.start_date)} / {formatDateOptional(s.renewal_date)}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
-                        {formatMoney(s.fee_amount)}
+                        {formatMoneyWithCurrency(s.fee_amount, s.currency)}
                       </td>
                       <td className="px-4 py-3 text-slate-300 capitalize">
                         {s.billing_interval}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {s.family_member ? (
+                          <Link
+                            href={`/dashboard/family-members/${s.family_member.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {s.family_member.full_name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {s.credit_card?.card_name ?? "—"}
