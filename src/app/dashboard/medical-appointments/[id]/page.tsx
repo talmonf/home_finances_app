@@ -5,7 +5,7 @@ import {
 } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createMedicalAppointment } from "./actions";
+import { updateMedicalAppointment } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,40 +14,17 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
 type PageProps = {
+  params: Promise<{ id: string }>;
   searchParams?: Promise<{
-    created?: string;
-    updated?: string;
     error?: string;
+    updated?: string;
   }>;
 };
-
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatMoney(value: unknown) {
-  if (value == null) return "—";
-  const n =
-    typeof value === "object" &&
-    value !== null &&
-    "toNumber" in value
-      ? (value as { toNumber(): number }).toNumber()
-      : Number(value);
-  return Number.isNaN(n)
-    ? "—"
-    : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatMoneyWithCurrency(value: unknown, currency: string) {
-  const amount = formatMoney(value);
-  if (amount === "—") return "—";
-  return `${amount} ${currency}`;
-}
 
 const PAYMENT_LABELS: Record<MedicalAppointmentPaymentMethod, string> = {
   cash: "Cash",
@@ -58,91 +35,22 @@ const PAYMENT_LABELS: Record<MedicalAppointmentPaymentMethod, string> = {
   other: "Other",
 };
 
-function formatScheme(scheme: string) {
-  if (scheme === "amex") return "Amex";
-  if (scheme === "diners_club") return "Diners Club";
-  if (scheme === "isracard") return "Isracard";
-  if (scheme === "mastercard") return "Mastercard";
-  if (scheme === "visa") return "Visa";
-  return "Other";
-}
-
-function formatPaymentDetail(
-  method: MedicalAppointmentPaymentMethod,
-  row: {
-    credit_card: {
-      card_name: string;
-      scheme: string;
-      issuer_name: string;
-      card_last_four: string;
-    } | null;
-    bank_account: { account_name: string; bank_name: string } | null;
-    digital_payment_method: { name: string } | null;
-  },
-) {
-  const base = PAYMENT_LABELS[method];
-  if (method === "credit_card" && row.credit_card) {
-    const c = row.credit_card;
-    return `${base}: ${c.card_name} (${formatScheme(c.scheme)}) · ****${c.card_last_four}`;
-  }
-  if (method === "bank_account" && row.bank_account) {
-    return `${base}: ${row.bank_account.account_name} · ${row.bank_account.bank_name}`;
-  }
-  if (method === "digital_wallet" && row.digital_payment_method) {
-    return `${base}: ${row.digital_payment_method.name}`;
-  }
-  return base;
-}
-
-function formatReimbursementBlock(
-  currency: string,
-  submittedAt: Date | null,
-  scope: "full" | "partial" | null,
-  amountReceived: unknown,
-  notes: string | null,
-) {
-  if (!submittedAt && !scope && amountReceived == null && !notes?.trim()) {
-    return <span className="text-slate-500">—</span>;
-  }
-  const parts: string[] = [];
-  if (submittedAt) {
-    parts.push(`Request filed ${formatDate(submittedAt)}`);
-  }
-  if (scope) {
-    parts.push(scope === "full" ? "Full reimbursement requested" : "Partial reimbursement requested");
-  }
-  if (amountReceived != null) {
-    parts.push(`Received ${formatMoneyWithCurrency(amountReceived, currency)}`);
-  }
-  if (notes?.trim()) {
-    parts.push(notes.trim());
-  }
-  return (
-    <span className="whitespace-pre-wrap text-slate-300">
-      {parts.join(" · ")}
-    </span>
-  );
-}
-
-export default async function MedicalAppointmentsPage({ searchParams }: PageProps) {
+export default async function EditMedicalAppointmentPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
-  const [appointments, familyMembers, creditCards, bankAccounts, digitalMethods] = await Promise.all([
-    prisma.medical_appointments.findMany({
-      where: { household_id: householdId },
-      include: {
-        family_member: true,
-        credit_card: true,
-        bank_account: true,
-        digital_payment_method: true,
-      },
-      orderBy: { appointment_date: "desc" },
-    }),
+  const appointment = await prisma.medical_appointments.findFirst({
+    where: { id, household_id: householdId },
+  });
+
+  if (!appointment) redirect("/dashboard/medical-appointments?error=Not+found");
+
+  const [familyMembers, creditCards, bankAccounts, digitalMethods] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
@@ -150,17 +58,36 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
-        cancelled_at: null,
-        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+        OR: [
+          ...(appointment.credit_card_id ? [{ id: appointment.credit_card_id }] : []),
+          {
+            cancelled_at: null,
+            OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+          },
+        ],
       },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        OR: [
+          ...(appointment.bank_account_id ? [{ id: appointment.bank_account_id }] : []),
+          { is_active: true },
+        ],
+      },
       orderBy: { account_name: "asc" },
     }),
     prisma.digital_payment_methods.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        OR: [
+          ...(appointment.digital_payment_method_id
+            ? [{ id: appointment.digital_payment_method_id }]
+            : []),
+          { is_active: true },
+        ],
+      },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -168,47 +95,50 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
   const inputClass =
     "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
 
+  const amountOop =
+    appointment.amount_out_of_pocket != null ? String(appointment.amount_out_of_pocket) : "";
+  const kupatReceived =
+    appointment.kupat_holim_amount_received != null
+      ? String(appointment.kupat_holim_amount_received)
+      : "";
+  const privateReceived =
+    appointment.private_insurance_amount_received != null
+      ? String(appointment.private_insurance_amount_received)
+      : "";
+
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-6xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <div>
-            <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to dashboard
-            </Link>
-            <h1 className="text-2xl font-semibold text-slate-50">Medical appointments</h1>
-            <p className="text-sm text-slate-400">
-              Log visits, how you paid, and reimbursement requests to your kupat holim or private medical
-              insurance.
-            </p>
-          </div>
-          {(resolvedSearchParams?.created ||
-            resolvedSearchParams?.updated ||
-            resolvedSearchParams?.error) && (
-            <div
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
-                resolvedSearchParams?.error
-                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
-                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
-              }`}
-            >
-              <span>
-                {resolvedSearchParams?.error
-                  ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                  : resolvedSearchParams?.created
-                    ? "Appointment added."
-                    : "Updated."}
-              </span>
+          <Link
+            href="/dashboard/medical-appointments"
+            className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
+          >
+            ← Back to medical appointments
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">Edit appointment</h1>
+          <p className="text-sm text-slate-400">
+            {appointment.provider_name} · {isoDate(appointment.appointment_date)}
+          </p>
+          {resolvedSearchParams?.error && (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
+            </div>
+          )}
+          {resolvedSearchParams?.updated && (
+            <div className="rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
+              Appointment updated.
             </div>
           )}
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add appointment</h2>
           <form
-            action={createMedicalAppointment}
+            action={updateMedicalAppointment}
             className="space-y-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           >
+            <input type="hidden" name="id" value={appointment.id} />
+
             <div>
               <h3 className="mb-3 text-sm font-medium text-slate-300">Visit</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -216,7 +146,14 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="appointment_date" className="mb-1 block text-xs font-medium text-slate-400">
                     Appointment date
                   </label>
-                  <input id="appointment_date" name="appointment_date" type="date" required className={inputClass} />
+                  <input
+                    id="appointment_date"
+                    name="appointment_date"
+                    type="date"
+                    required
+                    defaultValue={isoDate(appointment.appointment_date)}
+                    className={inputClass}
+                  />
                 </div>
                 <div>
                   <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
@@ -226,15 +163,20 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     id="provider_name"
                     name="provider_name"
                     required
+                    defaultValue={appointment.provider_name}
                     className={inputClass}
-                    placeholder="e.g. Dr. Cohen, Ichilov outpatient"
                   />
                 </div>
                 <div>
                   <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
                     Family member (optional)
                   </label>
-                  <select id="family_member_id" name="family_member_id" className={inputClass}>
+                  <select
+                    id="family_member_id"
+                    name="family_member_id"
+                    defaultValue={appointment.family_member_id ?? ""}
+                    className={inputClass}
+                  >
                     <option value="">—</option>
                     {familyMembers.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -250,8 +192,8 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <input
                     id="visit_description"
                     name="visit_description"
+                    defaultValue={appointment.visit_description ?? ""}
                     className={inputClass}
-                    placeholder="e.g. Dermatology follow-up, MRI referral"
                   />
                 </div>
                 <div className="sm:col-span-2 lg:col-span-3">
@@ -262,6 +204,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     id="visit_notes"
                     name="visit_notes"
                     rows={3}
+                    defaultValue={appointment.notes ?? ""}
                     className={inputClass}
                     placeholder="Anything to remember about this visit"
                   />
@@ -282,6 +225,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     type="number"
                     min={0}
                     step="0.01"
+                    defaultValue={amountOop}
                     className={inputClass}
                   />
                 </div>
@@ -289,13 +233,19 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
                     Currency
                   </label>
-                  <input id="currency" name="currency" defaultValue="ILS" className={inputClass} />
+                  <input id="currency" name="currency" defaultValue={appointment.currency} className={inputClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
                     How you paid
                   </label>
-                  <select id="payment_method" name="payment_method" required className={inputClass}>
+                  <select
+                    id="payment_method"
+                    name="payment_method"
+                    required
+                    defaultValue={appointment.payment_method}
+                    className={inputClass}
+                  >
                     {Object.values(PaymentMethodValues).map((value) => (
                       <option key={value} value={value}>
                         {PAYMENT_LABELS[value]}
@@ -307,11 +257,17 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
                     Credit card (if paid by card)
                   </label>
-                  <select id="credit_card_id" name="credit_card_id" className={inputClass}>
+                  <select
+                    id="credit_card_id"
+                    name="credit_card_id"
+                    defaultValue={appointment.credit_card_id ?? ""}
+                    className={inputClass}
+                  >
                     <option value="">—</option>
                     {creditCards.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.card_name} · ****{c.card_last_four}
+                        {c.cancelled_at ? " (cancelled)" : ""}
                       </option>
                     ))}
                   </select>
@@ -320,11 +276,17 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="bank_account_id" className="mb-1 block text-xs font-medium text-slate-400">
                     Bank account (if transfer / debit)
                   </label>
-                  <select id="bank_account_id" name="bank_account_id" className={inputClass}>
+                  <select
+                    id="bank_account_id"
+                    name="bank_account_id"
+                    defaultValue={appointment.bank_account_id ?? ""}
+                    className={inputClass}
+                  >
                     <option value="">—</option>
                     {bankAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.account_name} · {a.bank_name}
+                        {!a.is_active ? " (inactive)" : ""}
                       </option>
                     ))}
                   </select>
@@ -336,11 +298,17 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   >
                     Digital wallet (if Bit, PayBox, etc.)
                   </label>
-                  <select id="digital_payment_method_id" name="digital_payment_method_id" className={inputClass}>
+                  <select
+                    id="digital_payment_method_id"
+                    name="digital_payment_method_id"
+                    defaultValue={appointment.digital_payment_method_id ?? ""}
+                    className={inputClass}
+                  >
                     <option value="">—</option>
                     {digitalMethods.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
+                        {!d.is_active ? " (inactive)" : ""}
                       </option>
                     ))}
                   </select>
@@ -362,6 +330,11 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     id="kupat_holim_request_submitted_at"
                     name="kupat_holim_request_submitted_at"
                     type="date"
+                    defaultValue={
+                      appointment.kupat_holim_request_submitted_at
+                        ? isoDate(appointment.kupat_holim_request_submitted_at)
+                        : ""
+                    }
                     className={inputClass}
                   />
                 </div>
@@ -372,7 +345,12 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   >
                     Request scope
                   </label>
-                  <select id="kupat_holim_request_scope" name="kupat_holim_request_scope" className={inputClass}>
+                  <select
+                    id="kupat_holim_request_scope"
+                    name="kupat_holim_request_scope"
+                    defaultValue={appointment.kupat_holim_request_scope ?? ""}
+                    className={inputClass}
+                  >
                     <option value="">—</option>
                     <option value="full">Full reimbursement</option>
                     <option value="partial">Partial reimbursement</option>
@@ -391,6 +369,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     type="number"
                     min={0}
                     step="0.01"
+                    defaultValue={kupatReceived}
                     className={inputClass}
                   />
                 </div>
@@ -398,7 +377,12 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
                   </label>
-                  <input id="kupat_holim_notes" name="kupat_holim_notes" className={inputClass} />
+                  <input
+                    id="kupat_holim_notes"
+                    name="kupat_holim_notes"
+                    defaultValue={appointment.kupat_holim_notes ?? ""}
+                    className={inputClass}
+                  />
                 </div>
               </div>
             </div>
@@ -417,6 +401,11 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     id="private_insurance_request_submitted_at"
                     name="private_insurance_request_submitted_at"
                     type="date"
+                    defaultValue={
+                      appointment.private_insurance_request_submitted_at
+                        ? isoDate(appointment.private_insurance_request_submitted_at)
+                        : ""
+                    }
                     className={inputClass}
                   />
                 </div>
@@ -430,6 +419,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <select
                     id="private_insurance_request_scope"
                     name="private_insurance_request_scope"
+                    defaultValue={appointment.private_insurance_request_scope ?? ""}
                     className={inputClass}
                   >
                     <option value="">—</option>
@@ -450,6 +440,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     type="number"
                     min={0}
                     step="0.01"
+                    defaultValue={privateReceived}
                     className={inputClass}
                   />
                 </div>
@@ -457,7 +448,12 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes
                   </label>
-                  <input id="private_insurance_notes" name="private_insurance_notes" className={inputClass} />
+                  <input
+                    id="private_insurance_notes"
+                    name="private_insurance_notes"
+                    defaultValue={appointment.private_insurance_notes ?? ""}
+                    className={inputClass}
+                  />
                 </div>
               </div>
             </div>
@@ -467,92 +463,10 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add appointment
+                Save changes
               </button>
             </div>
           </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">History</h2>
-          {appointments.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No appointments yet. Add one above.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full min-w-[960px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Date</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Provider</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Member</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Visit notes</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Out of pocket</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Payment</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Kupat holim</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Private insurance</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Edit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-700/80 align-top hover:bg-slate-800/40">
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-200">
-                        {formatDate(row.appointment_date)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-100">
-                        <div className="font-medium">{row.provider_name}</div>
-                        {row.visit_description ? (
-                          <div className="text-xs text-slate-400">{row.visit_description}</div>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{row.family_member?.full_name ?? "—"}</td>
-                      <td className="max-w-[200px] px-4 py-3 text-xs text-slate-400">
-                        {row.notes?.trim() ? (
-                          <span className="whitespace-pre-wrap">{row.notes}</span>
-                        ) : (
-                          <span className="text-slate-500">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-300">
-                        {formatMoneyWithCurrency(row.amount_out_of_pocket, row.currency)}
-                      </td>
-                      <td className="max-w-[220px] px-4 py-3 text-xs text-slate-300">
-                        {formatPaymentDetail(row.payment_method, row)}
-                      </td>
-                      <td className="max-w-[240px] px-4 py-3 text-xs">
-                        {formatReimbursementBlock(
-                          row.currency,
-                          row.kupat_holim_request_submitted_at,
-                          row.kupat_holim_request_scope,
-                          row.kupat_holim_amount_received,
-                          row.kupat_holim_notes,
-                        )}
-                      </td>
-                      <td className="max-w-[240px] px-4 py-3 text-xs">
-                        {formatReimbursementBlock(
-                          row.currency,
-                          row.private_insurance_request_submitted_at,
-                          row.private_insurance_request_scope,
-                          row.private_insurance_amount_received,
-                          row.private_insurance_notes,
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Link
-                          href={`/dashboard/medical-appointments/${row.id}`}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
       </div>
     </div>
