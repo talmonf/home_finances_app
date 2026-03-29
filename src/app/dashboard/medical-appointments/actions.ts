@@ -112,10 +112,13 @@ async function parseMedicalAppointmentForm(
     redirect(`${errorPath}?error=Provider+and+appointment+date+required`);
   }
 
-  if (!payment_method_raw || !PAYMENT_METHODS.includes(payment_method_raw as MedicalAppointmentPaymentMethod)) {
-    redirect(`${errorPath}?error=Invalid+payment+method`);
+  let payment_method: MedicalAppointmentPaymentMethod | null = null;
+  if (payment_method_raw) {
+    if (!PAYMENT_METHODS.includes(payment_method_raw as MedicalAppointmentPaymentMethod)) {
+      redirect(`${errorPath}?error=Invalid+payment+method`);
+    }
+    payment_method = payment_method_raw as MedicalAppointmentPaymentMethod;
   }
-  const payment_method = payment_method_raw as MedicalAppointmentPaymentMethod;
 
   const appointment_date = new Date(appointment_date_raw);
   if (Number.isNaN(appointment_date.getTime())) {
