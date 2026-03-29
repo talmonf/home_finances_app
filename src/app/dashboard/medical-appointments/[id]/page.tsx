@@ -1,7 +1,9 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
+  MedicalReimbursementSource as ReimbursementSourceValues,
   type MedicalAppointmentPaymentMethod,
+  type MedicalReimbursementSource,
 } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -23,6 +25,11 @@ type PageProps = {
   searchParams?: Promise<{
     error?: string;
   }>;
+};
+
+const REIMBURSEMENT_SOURCE_LABELS: Record<MedicalReimbursementSource, string> = {
+  kupat_holim: "Kupat holim",
+  private_insurance: "Private insurance",
 };
 
 const PAYMENT_LABELS: Record<MedicalAppointmentPaymentMethod, string> = {
@@ -96,13 +103,9 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
 
   const amountOop =
     appointment.amount_out_of_pocket != null ? String(appointment.amount_out_of_pocket) : "";
-  const kupatReceived =
-    appointment.kupat_holim_amount_received != null
-      ? String(appointment.kupat_holim_amount_received)
-      : "";
-  const privateReceived =
-    appointment.private_insurance_amount_received != null
-      ? String(appointment.private_insurance_amount_received)
+  const reimbursementAmount =
+    appointment.reimbursement_amount_received != null
+      ? String(appointment.reimbursement_amount_received)
       : "";
 
   return (
@@ -350,23 +353,6 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="partial">Partial reimbursement</option>
                   </select>
                 </div>
-                <div>
-                  <label
-                    htmlFor="kupat_holim_amount_received"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Amount received back (optional)
-                  </label>
-                  <input
-                    id="kupat_holim_amount_received"
-                    name="kupat_holim_amount_received"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    defaultValue={kupatReceived}
-                    className={inputClass}
-                  />
-                </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
@@ -421,23 +407,6 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="partial">Partial reimbursement</option>
                   </select>
                 </div>
-                <div>
-                  <label
-                    htmlFor="private_insurance_amount_received"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Amount received back (optional)
-                  </label>
-                  <input
-                    id="private_insurance_amount_received"
-                    name="private_insurance_amount_received"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    defaultValue={privateReceived}
-                    className={inputClass}
-                  />
-                </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes
@@ -448,6 +417,69 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     defaultValue={appointment.private_insurance_notes ?? ""}
                     className={inputClass}
                   />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-sm font-medium text-slate-300">Reimbursement received</h3>
+              <p className="mb-3 text-xs text-slate-500">
+                When money is paid back, record it once here (usually either kupat holim or private insurance).
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label
+                    htmlFor="reimbursement_amount_received"
+                    className="mb-1 block text-xs font-medium text-slate-400"
+                  >
+                    Amount received (optional)
+                  </label>
+                  <input
+                    id="reimbursement_amount_received"
+                    name="reimbursement_amount_received"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    defaultValue={reimbursementAmount}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="reimbursement_received_at"
+                    className="mb-1 block text-xs font-medium text-slate-400"
+                  >
+                    Date received (optional)
+                  </label>
+                  <input
+                    id="reimbursement_received_at"
+                    name="reimbursement_received_at"
+                    type="date"
+                    defaultValue={
+                      appointment.reimbursement_received_at
+                        ? isoDate(appointment.reimbursement_received_at)
+                        : ""
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="reimbursement_source" className="mb-1 block text-xs font-medium text-slate-400">
+                    Paid by (required if amount or date is set)
+                  </label>
+                  <select
+                    id="reimbursement_source"
+                    name="reimbursement_source"
+                    defaultValue={appointment.reimbursement_source ?? ""}
+                    className={inputClass}
+                  >
+                    <option value="">—</option>
+                    {Object.values(ReimbursementSourceValues).map((value) => (
+                      <option key={value} value={value}>
+                        {REIMBURSEMENT_SOURCE_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>

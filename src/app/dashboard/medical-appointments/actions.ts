@@ -1,7 +1,11 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
-import type { MedicalAppointmentPaymentMethod, MedicalReimbursementRequestScope } from "@/generated/prisma/enums";
+import type {
+  MedicalAppointmentPaymentMethod,
+  MedicalReimbursementRequestScope,
+  MedicalReimbursementSource,
+} from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -33,6 +37,12 @@ function parseOptionalScope(raw: string | null): MedicalReimbursementRequestScop
   return null;
 }
 
+function parseOptionalReimbursementSource(raw: string | null): MedicalReimbursementSource | null {
+  const t = raw?.trim();
+  if (t === "kupat_holim" || t === "private_insurance") return t;
+  return null;
+}
+
 type ParsedMedicalPayload = {
   provider_name: string;
   visit_description: string | null;
@@ -47,12 +57,13 @@ type ParsedMedicalPayload = {
   notes: string | null;
   kupat_holim_request_submitted_at: Date | null;
   kupat_holim_request_scope: MedicalReimbursementRequestScope | null;
-  kupat_holim_amount_received: number | null;
   kupat_holim_notes: string | null;
   private_insurance_request_submitted_at: Date | null;
   private_insurance_request_scope: MedicalReimbursementRequestScope | null;
-  private_insurance_amount_received: number | null;
   private_insurance_notes: string | null;
+  reimbursement_received_at: Date | null;
+  reimbursement_source: MedicalReimbursementSource | null;
+  reimbursement_amount_received: number | null;
 };
 
 type ParseMedicalOptions = {
@@ -92,11 +103,6 @@ async function parseMedicalAppointmentForm(
   const kupat_holim_request_scope = parseOptionalScope(
     formData.get("kupat_holim_request_scope") as string | null,
   );
-  const kupatReceivedParsed = parseOptionalAmount(formData.get("kupat_holim_amount_received") as string | null);
-  if (!kupatReceivedParsed.ok) {
-    redirect(`${errorPath}?error=Invalid+kupat+holim+amount+received`);
-  }
-  const kupat_holim_amount_received = kupatReceivedParsed.value;
   const kupat_holim_notes = (formData.get("kupat_holim_notes") as string | null)?.trim() || null;
 
   const private_insurance_request_submitted_raw = (
@@ -105,15 +111,20 @@ async function parseMedicalAppointmentForm(
   const private_insurance_request_scope = parseOptionalScope(
     formData.get("private_insurance_request_scope") as string | null,
   );
-  const privateReceivedParsed = parseOptionalAmount(
-    formData.get("private_insurance_amount_received") as string | null,
-  );
-  if (!privateReceivedParsed.ok) {
-    redirect(`${errorPath}?error=Invalid+private+insurance+amount+received`);
-  }
-  const private_insurance_amount_received = privateReceivedParsed.value;
   const private_insurance_notes =
     (formData.get("private_insurance_notes") as string | null)?.trim() || null;
+
+  const reimbursement_received_raw = (formData.get("reimbursement_received_at") as string | null)?.trim();
+  const reimbursement_source = parseOptionalReimbursementSource(
+    formData.get("reimbursement_source") as string | null,
+  );
+  const reimbursementAmountParsed = parseOptionalAmount(
+    formData.get("reimbursement_amount_received") as string | null,
+  );
+  if (!reimbursementAmountParsed.ok) {
+    redirect(`${errorPath}?error=Invalid+reimbursement+amount`);
+  }
+  const reimbursement_amount_received = reimbursementAmountParsed.value;
 
   if (!provider_name || !appointment_date_raw) {
     redirect(`${errorPath}?error=Provider+and+appointment+date+required`);
@@ -210,6 +221,20 @@ async function parseMedicalAppointmentForm(
     }
   }
 
+  let reimbursement_received_at: Date | null = null;
+  if (reimbursement_received_raw) {
+    reimbursement_received_at = new Date(reimbursement_received_raw);
+    if (Number.isNaN(reimbursement_received_at.getTime())) {
+      redirect(`${errorPath}?error=Invalid+reimbursement+received+date`);
+    }
+  }
+
+  const hasReimbursementPayment =
+    reimbursement_amount_received != null || reimbursement_received_at != null;
+  if (hasReimbursementPayment && !reimbursement_source) {
+    redirect(`${errorPath}?error=Reimbursement+source+required+when+amount+or+date+is+set`);
+  }
+
   return {
     provider_name,
     visit_description,
@@ -224,12 +249,13 @@ async function parseMedicalAppointmentForm(
     notes,
     kupat_holim_request_submitted_at,
     kupat_holim_request_scope,
-    kupat_holim_amount_received,
     kupat_holim_notes,
     private_insurance_request_submitted_at,
     private_insurance_request_scope,
-    private_insurance_amount_received,
     private_insurance_notes,
+    reimbursement_received_at,
+    reimbursement_source,
+    reimbursement_amount_received,
   };
 }
 

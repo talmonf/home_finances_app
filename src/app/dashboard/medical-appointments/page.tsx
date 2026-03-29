@@ -1,7 +1,9 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
+  MedicalReimbursementSource as ReimbursementSourceValues,
   type MedicalAppointmentPaymentMethod,
+  type MedicalReimbursementSource,
 } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -49,6 +51,11 @@ function formatMoneyWithCurrency(value: unknown, currency: string) {
   return `${amount} ${currency}`;
 }
 
+const REIMBURSEMENT_SOURCE_LABELS: Record<MedicalReimbursementSource, string> = {
+  kupat_holim: "Kupat holim",
+  private_insurance: "Private insurance",
+};
+
 const PAYMENT_LABELS: Record<MedicalAppointmentPaymentMethod, string> = {
   cash: "Cash",
   credit_card: "Credit card",
@@ -95,13 +102,11 @@ function formatPaymentDetail(
 }
 
 function formatReimbursementBlock(
-  currency: string,
   submittedAt: Date | null,
   scope: "full" | "partial" | null,
-  amountReceived: unknown,
   notes: string | null,
 ) {
-  if (!submittedAt && !scope && amountReceived == null && !notes?.trim()) {
+  if (!submittedAt && !scope && !notes?.trim()) {
     return <span className="text-slate-500">—</span>;
   }
   const parts: string[] = [];
@@ -111,9 +116,6 @@ function formatReimbursementBlock(
   if (scope) {
     parts.push(scope === "full" ? "Full reimbursement requested" : "Partial reimbursement requested");
   }
-  if (amountReceived != null) {
-    parts.push(`Received ${formatMoneyWithCurrency(amountReceived, currency)}`);
-  }
   if (notes?.trim()) {
     parts.push(notes.trim());
   }
@@ -122,6 +124,28 @@ function formatReimbursementBlock(
       {parts.join(" · ")}
     </span>
   );
+}
+
+function formatReimbursementPaid(
+  currency: string,
+  receivedAt: Date | null,
+  source: MedicalReimbursementSource | null,
+  amount: unknown,
+) {
+  if (receivedAt == null && source == null && amount == null) {
+    return <span className="text-slate-500">—</span>;
+  }
+  const parts: string[] = [];
+  if (amount != null) {
+    parts.push(formatMoneyWithCurrency(amount, currency));
+  }
+  if (receivedAt) {
+    parts.push(`received ${formatDate(receivedAt)}`);
+  }
+  if (source) {
+    parts.push(`via ${REIMBURSEMENT_SOURCE_LABELS[source]}`);
+  }
+  return <span className="whitespace-pre-wrap text-slate-300">{parts.join(" · ")}</span>;
 }
 
 export default async function MedicalAppointmentsPage({ searchParams }: PageProps) {
@@ -378,22 +402,6 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     <option value="partial">Partial reimbursement</option>
                   </select>
                 </div>
-                <div>
-                  <label
-                    htmlFor="kupat_holim_amount_received"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Amount received back (optional)
-                  </label>
-                  <input
-                    id="kupat_holim_amount_received"
-                    name="kupat_holim_amount_received"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className={inputClass}
-                  />
-                </div>
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
@@ -437,27 +445,63 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     <option value="partial">Partial reimbursement</option>
                   </select>
                 </div>
+                <div className="sm:col-span-2 lg:col-span-4">
+                  <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
+                    Notes
+                  </label>
+                  <input id="private_insurance_notes" name="private_insurance_notes" className={inputClass} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-sm font-medium text-slate-300">Reimbursement received</h3>
+              <p className="mb-3 text-xs text-slate-500">
+                When money is paid back, record it once here (usually either kupat holim or private insurance).
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label
-                    htmlFor="private_insurance_amount_received"
+                    htmlFor="reimbursement_amount_received"
                     className="mb-1 block text-xs font-medium text-slate-400"
                   >
-                    Amount received back (optional)
+                    Amount received (optional)
                   </label>
                   <input
-                    id="private_insurance_amount_received"
-                    name="private_insurance_amount_received"
+                    id="reimbursement_amount_received"
+                    name="reimbursement_amount_received"
                     type="number"
                     min={0}
                     step="0.01"
                     className={inputClass}
                   />
                 </div>
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
-                    Notes
+                <div>
+                  <label
+                    htmlFor="reimbursement_received_at"
+                    className="mb-1 block text-xs font-medium text-slate-400"
+                  >
+                    Date received (optional)
                   </label>
-                  <input id="private_insurance_notes" name="private_insurance_notes" className={inputClass} />
+                  <input
+                    id="reimbursement_received_at"
+                    name="reimbursement_received_at"
+                    type="date"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="reimbursement_source" className="mb-1 block text-xs font-medium text-slate-400">
+                    Paid by (required if amount or date is set)
+                  </label>
+                  <select id="reimbursement_source" name="reimbursement_source" className={inputClass}>
+                    <option value="">—</option>
+                    {Object.values(ReimbursementSourceValues).map((value) => (
+                      <option key={value} value={value}>
+                        {REIMBURSEMENT_SOURCE_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -481,7 +525,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full min-w-[960px] text-left text-sm">
+              <table className="w-full min-w-[1040px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Date</th>
@@ -490,8 +534,9 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     <th className="px-4 py-3 font-medium text-slate-300">Visit notes</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Out of pocket</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Payment</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Kupat holim</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Private insurance</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Kupat holim (claim)</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Private insurance (claim)</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Reimbursement paid</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Edit</th>
                   </tr>
                 </thead>
@@ -521,22 +566,26 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                       <td className="max-w-[220px] px-4 py-3 text-xs text-slate-300">
                         {formatPaymentDetail(row.payment_method, row)}
                       </td>
-                      <td className="max-w-[240px] px-4 py-3 text-xs">
+                      <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
-                          row.currency,
                           row.kupat_holim_request_submitted_at,
                           row.kupat_holim_request_scope,
-                          row.kupat_holim_amount_received,
                           row.kupat_holim_notes,
                         )}
                       </td>
-                      <td className="max-w-[240px] px-4 py-3 text-xs">
+                      <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
-                          row.currency,
                           row.private_insurance_request_submitted_at,
                           row.private_insurance_request_scope,
-                          row.private_insurance_amount_received,
                           row.private_insurance_notes,
+                        )}
+                      </td>
+                      <td className="max-w-[200px] px-4 py-3 text-xs">
+                        {formatReimbursementPaid(
+                          row.currency,
+                          row.reimbursement_received_at,
+                          row.reimbursement_source,
+                          row.reimbursement_amount_received,
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
