@@ -18,7 +18,6 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{
     error?: string;
-    updated?: string;
     family_member_id?: string;
     identity_type?: string;
     sort?: string;
@@ -98,17 +97,9 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
           <p className="text-sm text-slate-400">
             Update expiry details for this identity item.
           </p>
-          {(resolvedSearchParams?.error || resolvedSearchParams?.updated) && (
-            <div
-              className={`rounded-lg border px-3 py-2 text-xs ${
-                resolvedSearchParams.error
-                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
-                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
-              }`}
-            >
-              {resolvedSearchParams.error
-                ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                : "Identity updated."}
+          {resolvedSearchParams?.error && (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
             </div>
           )}
         </header>

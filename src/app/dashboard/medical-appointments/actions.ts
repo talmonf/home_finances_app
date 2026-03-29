@@ -297,5 +297,5 @@ export async function updateMedicalAppointment(formData: FormData) {
 
   revalidatePath("/dashboard/medical-appointments");
   revalidatePath(`/dashboard/medical-appointments/${id}`);
-  redirect(`/dashboard/medical-appointments/${id}?updated=1`);
+  redirect("/dashboard/medical-appointments?updated=1");
 }

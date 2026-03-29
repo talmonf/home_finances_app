@@ -349,5 +349,5 @@ export async function updateCreditCard(formData: FormData) {
 
   revalidatePath("/dashboard/credit-cards");
   revalidatePath(`/dashboard/credit-cards/${id}`);
-  redirect(`/dashboard/credit-cards/${id}?updated=1`);
+  redirect("/dashboard/credit-cards?updated=1");
 }

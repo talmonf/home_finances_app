@@ -10,7 +10,6 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{
     error?: string;
-    updated?: string;
   }>;
 };
 
@@ -62,11 +61,6 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
               {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
-            </div>
-          )}
-          {resolvedSearchParams?.updated && (
-            <div className="rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
-              Credit card updated.
             </div>
           )}
         </header>
