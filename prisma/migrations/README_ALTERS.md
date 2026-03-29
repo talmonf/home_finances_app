@@ -2,6 +2,8 @@
 
 When the app adds or changes columns or enums, new **numbered ALTER** scripts will be added here (e.g. `004_alter_transactions_add_xyz.sql`). Run only the ALTER scripts you have not run yet, in order.
 
+**Important:** If a script has already been executed on any database (especially production), **do not change that file** to add more DDL. Add the next numbered script instead (`021_…`, `022_…`, …) and record it in `000_INDEX.md`. That keeps already-migrated databases reproducible.
+
 **Example pattern for future scripts:**
 
 ```sql

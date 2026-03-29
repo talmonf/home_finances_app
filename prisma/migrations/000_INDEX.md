@@ -2,6 +2,8 @@
 
 Run scripts in order by number. Check off each script after you run it.
 
+**Do not edit scripts you have already run** (e.g. on production). New schema changes belong in the **next numbered** script only (`021_…`, `022_…`, …).
+
 **If your database already has the full schema** (e.g. you see tables like `categories`, `payees`, `documents`, `source_records`, `transactions`, `studies_and_classes`, `subscriptions` and the related enums): **skip 001–003**. You only need to run **new ALTER scripts** (004, 005, …) when they are added for schema changes.
 
 ---
@@ -26,8 +28,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 016 | `016_bank_account_members.sql` | CREATE | bank_account_members (bank account ↔ family member) |
 | 017 | `017_align_database_to_app_repo.sql` | ALTER | Align legacy/broad schema to app repo (transactions, source_records, categories, …) |
 | 018 | `018_credit_card_cancellation_fields.sql` | ALTER | credit_cards: consolidated migration (cancelled_at, notes, card_last_four required, monthly_cost, scheme, co_brand, product_name) |
-| 019 | `019_credit_cards_and_urls_followup.sql` | ALTER | Follow-up after 018: digital_wallet_identifier, charge_day_of_month, website_url fields + monthly_cost nullable |
-| 020 | `020_subscriptions_optional_dates_currency_family_member.sql` | ALTER | subscriptions: optional start_date/renewal_date, currency, optional family_member_id |
+| 019 | `019_credit_cards_and_urls_followup.sql` | ALTER | Follow-up after 018: digital_wallet_identifier, charge_day_of_month, website_url fields + monthly_cost nullable + scheme enum values + settlement nullable |
+| 020 | `020_subscriptions_optional_dates_currency_family_member.sql` | ALTER | subscriptions: optional dates, currency, optional family_member_id (UUID FK; repairs TEXT column if present) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -50,10 +52,10 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 017_align_database_to_app_repo.sql
 - [x] 018_credit_card_cancellation_fields.sql
 - [x] 019_credit_cards_and_urls_followup.sql
-- [ ] 020_subscriptions_optional_dates_currency_family_member.sql
+- [x] 020_subscriptions_optional_dates_currency_family_member.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
 ---
 
-**Future scripts:** When table structures change, new scripts will be added with the next number and **Type: ALTER** (e.g. `004_alter_transactions_add_foo.sql`). Run only those new ALTER scripts you haven’t run yet.
+**Future scripts:** When table structures change, add a **new** numbered script only; do not modify older scripts that may already be applied. Run only those new ALTER scripts you haven’t run yet.
