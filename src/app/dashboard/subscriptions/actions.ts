@@ -251,6 +251,6 @@ export async function updateSubscription(formData: FormData) {
 
   revalidatePath("/dashboard/subscriptions");
   revalidatePath(`/dashboard/subscriptions/${id}`);
-  redirect(`/dashboard/subscriptions/${id}?updated=1`);
+  redirect("/dashboard/subscriptions?updated=1");
 }
 
