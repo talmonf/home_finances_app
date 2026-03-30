@@ -13,6 +13,8 @@ type PageProps = {
     categoryId?: string;
     payeeId?: string;
     memberId?: string;
+    rentalId?: string;
+    tripId?: string;
   }>;
 };
 
@@ -47,11 +49,24 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const categoryId = resolved.categoryId || "";
   const payeeId = resolved.payeeId || "";
   const memberId = resolved.memberId || "";
+  const rentalId = resolved.rentalId || "";
+  const tripId = resolved.tripId || "";
   const direction = resolved.direction && resolved.direction !== "all" ? resolved.direction : undefined;
   const from = resolved.from ? new Date(resolved.from) : undefined;
   const to = resolved.to ? new Date(resolved.to) : undefined;
 
-  const where: any = {
+  const where: {
+    household_id: string;
+    import_status: "confirmed";
+    bank_account_id?: string;
+    category_id?: string;
+    payee_id?: string;
+    family_member_id?: string;
+    rental_id?: string;
+    trip_id?: string;
+    transaction_direction?: "debit" | "credit";
+    transaction_date?: { gte?: Date; lte?: Date };
+  } = {
     household_id: householdId,
     import_status: "confirmed",
   };
@@ -60,6 +75,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   if (categoryId) where.category_id = categoryId;
   if (payeeId) where.payee_id = payeeId;
   if (memberId) where.family_member_id = memberId;
+  if (rentalId) where.rental_id = rentalId;
+  if (tripId) where.trip_id = tripId;
   if (direction) where.transaction_direction = direction;
   if (from || to) {
     where.transaction_date = {};
@@ -67,7 +84,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     if (to) where.transaction_date.lte = to;
   }
 
-  const [transactions, accounts, categories, payees, members] = await Promise.all([
+  const [transactions, accounts, categories, payees, members, rentals, trips] = await Promise.all([
     prisma.transactions.findMany({
       where,
       include: {
@@ -75,6 +92,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         category: true,
         payee: true,
         family_member: true,
+        rental: { include: { property: true } },
+        trip: true,
       },
       orderBy: { transaction_date: "desc" },
       take: 500,
@@ -94,6 +113,15 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.rentals.findMany({
+      where: { household_id: householdId, is_active: true },
+      include: { property: true },
+      orderBy: { created_at: "desc" },
+    }),
+    prisma.trips.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ start_date: "desc" }, { name: "asc" }],
     }),
   ]);
 
@@ -182,6 +210,36 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
               </select>
             </div>
             <div>
+              <label className="mb-1 block text-xs text-slate-400">Rental</label>
+              <select
+                name="rentalId"
+                defaultValue={rentalId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All</option>
+                {rentals.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.property.name} · {r.rental_type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Trip</label>
+              <select
+                name="tripId"
+                defaultValue={tripId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All</option>
+                {trips.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="mb-1 block text-xs text-slate-400">From date</label>
               <input
                 type="date"
@@ -238,6 +296,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                     <th className="px-3 py-2 font-medium text-slate-300">Category</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Payee</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Family member</th>
+                    <th className="px-3 py-2 font-medium text-slate-300">Rental</th>
+                    <th className="px-3 py-2 font-medium text-slate-300">Trip</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Description</th>
                   </tr>
                 </thead>
@@ -264,6 +324,12 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.family_member?.full_name ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                        {tx.rental ? `${tx.rental.property.name}` : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                        {tx.trip?.name ?? "—"}
                       </td>
                       <td className="max-w-[240px] truncate px-3 py-2 text-slate-400" title={tx.description ?? ""}>
                         {tx.description ?? "—"}

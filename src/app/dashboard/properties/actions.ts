@@ -199,3 +199,265 @@ export async function deleteUtility(id: string, property_id: string) {
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
 }
+
+const RENTAL_TYPES = ["long_term", "short_term"] as const;
+const RENTAL_PAYMENT_METHODS = ["cash", "credit_card", "bank_account", "other"] as const;
+type RentalType = (typeof RENTAL_TYPES)[number];
+type RentalPaymentMethod = (typeof RENTAL_PAYMENT_METHODS)[number];
+
+function parseDateInput(raw: string | null): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function parseRentalType(raw: string | null): RentalType {
+  if (raw && RENTAL_TYPES.includes(raw as RentalType)) return raw as RentalType;
+  return "long_term";
+}
+
+function parseRentalPaymentMethod(raw: string | null): RentalPaymentMethod | null {
+  if (!raw) return null;
+  if (RENTAL_PAYMENT_METHODS.includes(raw as RentalPaymentMethod)) return raw as RentalPaymentMethod;
+  return null;
+}
+
+function parseMoney(raw: string | null): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  const n = Number(t.replace(",", "."));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n.toFixed(2);
+}
+
+export async function createRental(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const property_id = (formData.get("property_id") as string | null)?.trim();
+  if (!property_id) return;
+
+  const property = await prisma.properties.findFirst({
+    where: { id: property_id, household_id: householdId },
+    select: { id: true },
+  });
+  if (!property) return;
+
+  const rental_type = parseRentalType((formData.get("rental_type") as string | null)?.trim() || null);
+  const start_date = parseDateInput((formData.get("start_date") as string | null)?.trim() || null);
+  const end_date = parseDateInput((formData.get("end_date") as string | null)?.trim() || null);
+  const monthly_payment = parseMoney((formData.get("monthly_payment") as string | null) ?? null);
+  const short_term_total_payment = parseMoney((formData.get("short_term_total_payment") as string | null) ?? null);
+  const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
+  const payment_method = parseRentalPaymentMethod((formData.get("payment_method") as string | null)?.trim() || null);
+  let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
+
+  if (rental_type === "long_term" && !monthly_payment) return;
+  if (rental_type === "short_term" && !short_term_total_payment) return;
+  if (payment_method !== "credit_card") credit_card_id = null;
+  if (payment_method !== "bank_account") bank_account_id = null;
+
+  if (credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) return;
+  }
+
+  if (bank_account_id) {
+    const account = await prisma.bank_accounts.findFirst({
+      where: { id: bank_account_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!account) return;
+  }
+
+  await prisma.rentals.create({
+    data: {
+      id: crypto.randomUUID(),
+      household_id: householdId,
+      property_id,
+      rental_type,
+      start_date,
+      end_date,
+      monthly_payment,
+      short_term_total_payment,
+      currency,
+      payment_method,
+      credit_card_id,
+      bank_account_id,
+      notes,
+    },
+  });
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${property_id}`);
+}
+
+export async function updateRental(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const property_id = (formData.get("property_id") as string | null)?.trim();
+  if (!id || !property_id) return;
+
+  const existing = await prisma.rentals.findFirst({
+    where: { id, household_id: householdId, property_id },
+    select: { id: true },
+  });
+  if (!existing) return;
+
+  const rental_type = parseRentalType((formData.get("rental_type") as string | null)?.trim() || null);
+  const start_date = parseDateInput((formData.get("start_date") as string | null)?.trim() || null);
+  const end_date = parseDateInput((formData.get("end_date") as string | null)?.trim() || null);
+  const monthly_payment = parseMoney((formData.get("monthly_payment") as string | null) ?? null);
+  const short_term_total_payment = parseMoney((formData.get("short_term_total_payment") as string | null) ?? null);
+  const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
+  const payment_method = parseRentalPaymentMethod((formData.get("payment_method") as string | null)?.trim() || null);
+  let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
+
+  if (rental_type === "long_term" && !monthly_payment) return;
+  if (rental_type === "short_term" && !short_term_total_payment) return;
+  if (payment_method !== "credit_card") credit_card_id = null;
+  if (payment_method !== "bank_account") bank_account_id = null;
+
+  if (credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) return;
+  }
+
+  if (bank_account_id) {
+    const account = await prisma.bank_accounts.findFirst({
+      where: { id: bank_account_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!account) return;
+  }
+
+  await prisma.rentals.updateMany({
+    where: { id, household_id: householdId },
+    data: {
+      rental_type,
+      start_date,
+      end_date,
+      monthly_payment,
+      short_term_total_payment,
+      currency,
+      payment_method,
+      credit_card_id,
+      bank_account_id,
+      notes,
+    },
+  });
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${property_id}`);
+}
+
+export async function deleteRental(id: string, property_id: string) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  await prisma.rentals.deleteMany({
+    where: { id, household_id: householdId, property_id },
+  });
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${property_id}`);
+}
+
+export async function createRentalTenant(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const rental_id = (formData.get("rental_id") as string | null)?.trim();
+  const full_name = (formData.get("full_name") as string | null)?.trim();
+  if (!rental_id || !full_name) return;
+
+  const rental = await prisma.rentals.findFirst({
+    where: { id: rental_id, household_id: householdId },
+    select: { property_id: true },
+  });
+  if (!rental) return;
+
+  await prisma.rental_tenants.create({
+    data: {
+      id: crypto.randomUUID(),
+      rental_id,
+      full_name,
+      email: (formData.get("email") as string | null)?.trim() || null,
+      phone: (formData.get("phone") as string | null)?.trim() || null,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`/dashboard/properties/${rental.property_id}`);
+}
+
+export async function updateRentalTenant(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const full_name = (formData.get("full_name") as string | null)?.trim();
+  if (!id || !full_name) return;
+
+  const tenant = await prisma.rental_tenants.findFirst({
+    where: { id, rental: { household_id: householdId } },
+    select: { rental: { select: { property_id: true } } },
+  });
+  if (!tenant) return;
+
+  await prisma.rental_tenants.update({
+    where: { id },
+    data: {
+      full_name,
+      email: (formData.get("email") as string | null)?.trim() || null,
+      phone: (formData.get("phone") as string | null)?.trim() || null,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`/dashboard/properties/${tenant.rental.property_id}`);
+}
+
+export async function deleteRentalTenant(id: string, property_id: string) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const tenant = await prisma.rental_tenants.findFirst({
+    where: { id, rental: { household_id: householdId } },
+    select: { id: true },
+  });
+  if (!tenant) return;
+
+  await prisma.rental_tenants.delete({ where: { id } });
+  revalidatePath(`/dashboard/properties/${property_id}`);
+}
+
+export async function deleteRentalContract(id: string, property_id: string) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  await prisma.rental_contracts.deleteMany({
+    where: { id, household_id: householdId },
+  });
+  revalidatePath(`/dashboard/properties/${property_id}`);
+}

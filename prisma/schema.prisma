@@ -40,6 +40,9 @@ model households {
   significant_purchases significant_purchases[]
   digital_payment_methods digital_payment_methods[]
   medical_appointments    medical_appointments[]
+  rentals                 rentals[]
+  rental_contracts        rental_contracts[]
+  trips                   trips[]
 }
 
 model family_members {
@@ -68,6 +71,7 @@ model family_members {
   subscriptions         subscriptions[]
   medical_appointments  medical_appointments[]
   donations            donations[]
+  trip_family_members  trip_family_members[]
 }
 
 model bank_accounts {
@@ -96,6 +100,7 @@ model bank_accounts {
   linked_digital_payment_methods digital_payment_methods[]
   medical_appointments            medical_appointments[]
   donations                       donations[]
+  rentals                         rentals[]
 }
 
 model credit_cards {
@@ -128,6 +133,7 @@ model credit_cards {
   significant_purchases significant_purchases[]
   medical_appointments  medical_appointments[]
   donations             donations[]
+  rentals               rentals[]
 }
 
 enum CardScheme {
@@ -217,6 +223,111 @@ model properties {
 
   household  households         @relation(fields: [household_id], references: [id])
   utilities  property_utilities[]
+  rentals    rentals[]
+}
+
+enum RentalType {
+  long_term
+  short_term
+
+  @@map("rental_type")
+}
+
+enum RentalPaymentMethod {
+  cash
+  credit_card
+  bank_account
+  other
+
+  @@map("rental_payment_method")
+}
+
+model rentals {
+  id                       String              @id @default(uuid())
+  household_id             String
+  property_id              String
+  rental_type              RentalType
+  start_date               DateTime?
+  end_date                 DateTime?
+  monthly_payment          Decimal?            @db.Decimal(15, 2)
+  short_term_total_payment Decimal?            @db.Decimal(15, 2)
+  currency                 String              @default("ILS")
+  payment_method           RentalPaymentMethod?
+  credit_card_id           String?
+  bank_account_id          String?
+  notes                    String?
+  is_active                Boolean             @default(true)
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @updatedAt
+
+  household  households   @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  property   properties   @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  credit_card credit_cards? @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  bank_account bank_accounts? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+  tenants    rental_tenants[]
+  contracts  rental_contracts[]
+  transactions transactions[]
+}
+
+model rental_tenants {
+  id         String   @id @default(uuid())
+  rental_id  String
+  full_name  String
+  email      String?
+  phone      String?
+  notes      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  rental rentals @relation(fields: [rental_id], references: [id], onDelete: Cascade)
+}
+
+model rental_contracts {
+  id             String   @id @default(uuid())
+  household_id   String
+  rental_id      String
+  file_name      String
+  mime_type      String?
+  storage_bucket String?
+  storage_key    String
+  storage_url    String?
+  uploaded_at    DateTime @default(now())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  rental    rentals    @relation(fields: [rental_id], references: [id], onDelete: Cascade)
+}
+
+model trips {
+  id         String   @id @default(uuid())
+  household_id String
+  name       String
+  trip_type  String?
+  city       String?
+  country    String?
+  start_date DateTime?
+  end_date   DateTime?
+  notes      String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  participants trip_family_members[]
+  transactions transactions[]
+}
+
+model trip_family_members {
+  id               String   @id @default(uuid())
+  trip_id          String
+  family_member_id String
+  created_at       DateTime @default(now())
+
+  trip          trips          @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  family_member family_members @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([trip_id, family_member_id])
 }
 
 model property_utilities {
@@ -521,6 +632,8 @@ model transactions {
   family_member_id      String?
   study_or_class_id     String?
   significant_purchase_id String?
+  rental_id             String?
+  trip_id               String?
   import_status         TransactionImportStatus @default(pending_review)
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
@@ -534,6 +647,8 @@ model transactions {
   family_member  family_members? @relation(fields: [family_member_id], references: [id])
   study_or_class studies_and_classes? @relation(fields: [study_or_class_id], references: [id])
   significant_purchase significant_purchases? @relation(fields: [significant_purchase_id], references: [id], onDelete: SetNull)
+  rental         rentals?         @relation(fields: [rental_id], references: [id], onDelete: SetNull)
+  trip           trips?           @relation(fields: [trip_id], references: [id], onDelete: SetNull)
 }
 
 enum DocumentProcessingStatus {

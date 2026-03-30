@@ -49,7 +49,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases] = await Promise.all([
+  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases, rentals, trips] = await Promise.all([
     prisma.documents.findFirst({
       where: { id: documentId, household_id: householdId },
       include: { bank_account: true },
@@ -61,6 +61,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
         payee: true,
         family_member: true,
         study_or_class: true,
+        rental: true,
+        trip: true,
       },
       orderBy: { transaction_date: "asc" },
     }),
@@ -84,6 +86,15 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
       where: { household_id: householdId, is_active: true },
       orderBy: { warranty_expiry_date: "asc" },
       select: { id: true, item_name: true, warranty_expiry_date: true, purchase_category: true },
+    }),
+    prisma.rentals.findMany({
+      where: { household_id: householdId, is_active: true },
+      include: { property: true },
+      orderBy: { created_at: "desc" },
+    }),
+    prisma.trips.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ start_date: "desc" }, { name: "asc" }],
     }),
   ]);
 
@@ -169,7 +180,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                 <th className="px-2 py-2 font-medium text-slate-300">Date</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Amount</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Description</th>
-                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase · Rental · Trip</th>
               </tr>
             </thead>
             <tbody>
@@ -274,6 +285,31 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                           <option key={sp.id} value={sp.id}>
                             {sp.item_name}
                             {sp.warranty_expiry_date ? ` (${formatDate(sp.warranty_expiry_date)})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="rental_id"
+                        defaultValue={tx.rental_id ?? ""}
+                        className="min-w-[180px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">— Rental —</option>
+                        {rentals.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.property.name} · {r.rental_type}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="trip_id"
+                        defaultValue={tx.trip_id ?? ""}
+                        className="min-w-[160px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">— Trip —</option>
+                        {trips.map((trip) => (
+                          <option key={trip.id} value={trip.id}>
+                            {trip.name}
+                            {trip.city ? ` · ${trip.city}` : ""}
                           </option>
                         ))}
                       </select>

@@ -40,6 +40,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 028 | `028_donations_payment_and_family_member.sql` | ALTER | donations: add family_member + payment method linkage |
 | 029 | `029_subscriptions_cancelled_at.sql` | ALTER | subscriptions: add cancelled_at for Cancelled status |
 | 030 | `030_subscriptions_monthly_day_of_month.sql` | ALTER | subscriptions: add monthly_day_of_month (1-31) |
+| 031 | `031_rentals_and_trips.sql` | CREATE | Enums rental_type, rental_payment_method; tables rentals, rental_tenants, rental_contracts, trips, trip_family_members; transactions: rental_id, trip_id (FKs + indexes) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -73,6 +74,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 028_donations_payment_and_family_member.sql
 - [x] 029_subscriptions_cancelled_at.sql
 - [x] 030_subscriptions_monthly_day_of_month.sql
+- [x] 031_rentals_and_trips.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
