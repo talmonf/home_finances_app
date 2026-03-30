@@ -152,7 +152,7 @@ export default async function UpcomingRenewalsPage() {
       itemName: `${d.organization_name} (${d.category})`,
       owner: d.family_member ? d.family_member.full_name : "Household",
       renewalDate: d.renewal_date as Date,
-      href: "/dashboard/donations",
+      href: `/dashboard/donations/${d.id}`,
     })),
     ...significantPurchases.map((p) => ({
       id: `purchase-${p.id}`,
