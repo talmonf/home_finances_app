@@ -2,23 +2,32 @@
 
 import { useEffect } from "react";
 
-export function ScrollToHash() {
+type ScrollToTargetProps = {
+  targetId: string | null;
+};
+
+export function ScrollToTarget({ targetId }: ScrollToTargetProps) {
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash) return;
+    if (!targetId) return;
 
-    // Decode in case the browser encoded the hash
-    const id = decodeURIComponent(hash.replace(/^#/, ""));
-    if (!id) return;
+    let attempts = 0;
+    const maxAttempts = 8;
+    const intervalMs = 150;
 
-    const el = document.getElementById(id);
-    if (!el) return;
+    const tryScroll = () => {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, intervalMs);
+      }
+    };
 
-    // Give the browser a tick to finish layout before scrolling.
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
-  }, []);
+    requestAnimationFrame(tryScroll);
+  }, [targetId]);
 
   return null;
 }
