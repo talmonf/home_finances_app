@@ -26,12 +26,36 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [donation, payees] = await Promise.all([
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [donation, payees, familyMembers, creditCards, bankAccounts, digitalPaymentMethods] =
+    await Promise.all([
     prisma.donations.findFirst({
       where: { id, household_id: householdId },
     }),
     prisma.payees.findMany({
       where: { household_id: householdId },
+      orderBy: { name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.credit_cards.findMany({
+      where: {
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
+      orderBy: { card_name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { account_name: "asc" },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: householdId, is_active: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -40,8 +64,45 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
     redirect("/dashboard/donations?error=Not+found");
   }
 
+  // Preserve any currently-linked payment instruments even if they aren't in the active pick lists.
+  if (donation.credit_card_id) {
+    const found = creditCards.some((c) => c.id === donation.credit_card_id);
+    if (!found) {
+      const preserved = await prisma.credit_cards.findFirst({
+        where: { id: donation.credit_card_id, household_id: householdId },
+      });
+      if (preserved) creditCards.push(preserved);
+    }
+  }
+
+  if (donation.bank_account_id) {
+    const found = bankAccounts.some((a) => a.id === donation.bank_account_id);
+    if (!found) {
+      const preserved = await prisma.bank_accounts.findFirst({
+        where: { id: donation.bank_account_id, household_id: householdId },
+      });
+      if (preserved) bankAccounts.push(preserved);
+    }
+  }
+
+  if (donation.digital_payment_method_id) {
+    const found = digitalPaymentMethods.some((d) => d.id === donation.digital_payment_method_id);
+    if (!found) {
+      const preserved = await prisma.digital_payment_methods.findFirst({
+        where: { id: donation.digital_payment_method_id, household_id: householdId },
+      });
+      if (preserved) digitalPaymentMethods.push(preserved);
+    }
+  }
+
   const initial = {
     kind: donation.kind,
+    category: donation.category,
+    family_member_id: donation.family_member_id,
+    payment_method: donation.payment_method,
+    credit_card_id: donation.credit_card_id,
+    bank_account_id: donation.bank_account_id,
+    digital_payment_method_id: donation.digital_payment_method_id,
     one_time_amount: donation.one_time_amount ? donation.one_time_amount.toFixed(2) : null,
     donation_date: donation.donation_date ? formatDateInput(donation.donation_date) : null,
     monthly_amount: donation.monthly_amount ? donation.monthly_amount.toFixed(2) : null,
@@ -85,6 +146,16 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
           donationId={donation.id}
           initial={initial}
           payees={payees.map((p) => ({ id: p.id, name: p.name }))}
+          familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
+          creditCards={creditCards.map((c) => ({
+            id: c.id,
+            label: `${c.card_name} · ****${c.card_last_four}`,
+          }))}
+          bankAccounts={bankAccounts.map((a) => ({
+            id: a.id,
+            label: `${a.account_name} · ${a.bank_name}`,
+          }))}
+          digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
         />
       </div>
     </div>

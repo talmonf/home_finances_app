@@ -5,6 +5,8 @@ import { useState } from "react";
 
 type PayeeOption = { id: string; name: string };
 
+type LabeledOption = { id: string; label: string };
+
 type DonationFormInitialValues = {
   kind: string;
   one_time_amount?: string | null;
@@ -12,6 +14,8 @@ type DonationFormInitialValues = {
   monthly_amount?: string | null;
   commitment_months?: number | null;
   commitment_start_date?: string | null;
+  category?: string | null;
+  family_member_id?: string | null;
   organization_name: string;
   organization_tax_number?: string | null;
   provides_seif_46_receipts?: boolean;
@@ -22,16 +26,28 @@ type DonationFormInitialValues = {
   renewal_date?: string | null;
   notes?: string | null;
   is_active?: boolean;
+  payment_method?: string | null;
+  credit_card_id?: string | null;
+  bank_account_id?: string | null;
+  digital_payment_method_id?: string | null;
 };
 
 export function DonationForm({
   action,
   payees,
+  familyMembers,
+  creditCards,
+  bankAccounts,
+  digitalPaymentMethods,
   donationId,
   initial,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   payees: PayeeOption[];
+  familyMembers: Array<{ id: string; full_name: string }>;
+  creditCards: LabeledOption[];
+  bankAccounts: LabeledOption[];
+  digitalPaymentMethods: LabeledOption[];
   donationId?: string;
   initial?: DonationFormInitialValues;
 }) {
@@ -39,6 +55,9 @@ export function DonationForm({
   const [kind, setKind] = useState<string>(initialKind);
   const initialStatus = initial?.is_active === false ? "historic" : "active";
   const [status, setStatus] = useState<"active" | "historic">(initialStatus);
+
+  const initialPaymentMethod = initial?.payment_method ?? "cash";
+  const [paymentMethod, setPaymentMethod] = useState<string>(initialPaymentMethod);
 
   return (
     <form
@@ -230,6 +249,121 @@ export function DonationForm({
           <option value="EUR">EUR</option>
         </select>
       </div>
+
+      <div>
+        <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+          Family member (required)
+        </label>
+        <select
+          id="family_member_id"
+          name="family_member_id"
+          defaultValue={initial?.family_member_id ?? ""}
+          required
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="">Select family member…</option>
+          {familyMembers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.full_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="lg:col-span-2 border-t border-slate-700/80 pt-4">
+        <h3 className="mb-3 text-sm font-medium text-slate-300">Payment</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="sm:col-span-2">
+            <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
+              Payment type
+            </label>
+            <select
+              id="payment_method"
+              name="payment_method"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="cash">Cash</option>
+              <option value="credit_card">Credit card</option>
+              <option value="bank_account">Bank account</option>
+              <option value="digital_wallet">Digital wallet</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          {paymentMethod === "credit_card" ? (
+            <div>
+              <label htmlFor="credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Credit card
+              </label>
+              <select
+                id="credit_card_id"
+                name="credit_card_id"
+                defaultValue={initial?.credit_card_id ?? ""}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">Select card…</option>
+                {creditCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {paymentMethod === "bank_account" ? (
+            <div>
+              <label htmlFor="bank_account_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Bank account
+              </label>
+              <select
+                id="bank_account_id"
+                name="bank_account_id"
+                defaultValue={initial?.bank_account_id ?? ""}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">Select account…</option>
+                {bankAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {paymentMethod === "digital_wallet" ? (
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="digital_payment_method_id"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Digital wallet
+              </label>
+              <select
+                id="digital_payment_method_id"
+                name="digital_payment_method_id"
+                defaultValue={initial?.digital_payment_method_id ?? ""}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">Select wallet…</option>
+                {digitalPaymentMethods.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       <div>
         <label htmlFor="payee_id" className="mb-1 block text-xs font-medium text-slate-400">
           Link to payee (optional)
@@ -246,6 +380,23 @@ export function DonationForm({
               {p.name}
             </option>
           ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="category" className="mb-1 block text-xs font-medium text-slate-400">
+          Category
+        </label>
+        <select
+          id="category"
+          name="category"
+          defaultValue={initial?.category ?? "Other"}
+          required
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="Yeshiva">Yeshiva</option>
+          <option value="Cancer patients">Cancer patients</option>
+          <option value="Food packages">Food packages</option>
+          <option value="Other">Other</option>
         </select>
       </div>
       <div>

@@ -36,6 +36,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 024 | `024_medical_appointments_payment_method_nullable.sql` | ALTER | medical_appointments: payment_method nullable (unknown at booking) |
 | 025 | `025_donations.sql` | CREATE | Enum donation_kind + table donations (one-time / monthly commitment, org & Seif 46 fields) |
 | 026 | `026_drop_donation_commitments.sql` | ALTER | Drop donation_commitments; add donations.renewal_date (optional reminder) |
+| 027 | `027_donations_add_category.sql` | ALTER | donations: add category field |
+| 028 | `028_donations_payment_and_family_member.sql` | ALTER | donations: add family_member + payment method linkage |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -65,6 +67,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 024_medical_appointments_payment_method_nullable.sql
 - [x] 025_donations.sql
 - [x] 026_drop_donation_commitments.sql
+- [x] 027_donations_add_category.sql
+- [x] 028_donations_payment_and_family_member.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

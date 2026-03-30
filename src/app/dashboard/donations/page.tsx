@@ -33,6 +33,45 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatPaymentMethod(paymentMethod: string | null | undefined) {
+  switch (paymentMethod) {
+    case "cash":
+      return "Cash";
+    case "credit_card":
+      return "Credit card";
+    case "bank_account":
+      return "Bank account";
+    case "digital_wallet":
+      return "Digital wallet";
+    case "other":
+      return "Other";
+    default:
+      return "—";
+  }
+}
+
+function formatPaymentDetail(d: {
+  payment_method: string | null;
+  credit_card?: { card_name: string; card_last_four: string } | null;
+  bank_account?: { account_name: string; bank_name: string } | null;
+  digital_payment_method?: { name: string } | null;
+}) {
+  switch (d.payment_method) {
+    case "cash":
+      return "Cash";
+    case "credit_card":
+      return d.credit_card ? `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}` : "Credit card";
+    case "bank_account":
+      return d.bank_account ? `${d.bank_account.account_name} · ${d.bank_account.bank_name}` : "Bank account";
+    case "digital_wallet":
+      return d.digital_payment_method ? d.digital_payment_method.name : "Digital wallet";
+    case "other":
+      return "Other";
+    default:
+      return "—";
+  }
+}
+
 export default async function DonationsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -40,14 +79,43 @@ export default async function DonationsPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [rows, payees] = await Promise.all([
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [rows, payees, familyMembers, creditCards, bankAccounts, digitalPaymentMethods] = await Promise.all([
     prisma.donations.findMany({
       where: { household_id: householdId },
-      include: { payee: true },
+      include: {
+        payee: true,
+        family_member: true,
+        credit_card: true,
+        bank_account: true,
+        digital_payment_method: true,
+      },
       orderBy: [{ created_at: "desc" }],
     }),
     prisma.payees.findMany({
       where: { household_id: householdId },
+      orderBy: { name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.credit_cards.findMany({
+      where: {
+        household_id: householdId,
+        cancelled_at: null,
+        OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+      },
+      orderBy: { card_name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { account_name: "asc" },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: householdId, is_active: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -90,7 +158,14 @@ export default async function DonationsPage({ searchParams }: PageProps) {
 
         <section className="space-y-4">
           <h2 className="text-lg font-medium text-slate-200">Add donation</h2>
-          <DonationForm action={createDonation} payees={payees.map((p) => ({ id: p.id, name: p.name }))} />
+          <DonationForm
+            action={createDonation}
+            payees={payees.map((p) => ({ id: p.id, name: p.name }))}
+            familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
+            creditCards={creditCards.map((c) => ({ id: c.id, label: `${c.card_name} · ****${c.card_last_four}` }))}
+            bankAccounts={bankAccounts.map((a) => ({ id: a.id, label: `${a.account_name} · ${a.bank_name}` }))}
+            digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
+          />
         </section>
 
         <section className="space-y-4">
@@ -106,12 +181,14 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Type</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Organization</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Category</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Amount</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Tax / Seif 46</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Contact</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Family / Payment</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -136,6 +213,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                             <span className="block text-xs text-slate-500">Payee: {d.payee.name}</span>
                           ) : null}
                         </td>
+                        <td className="px-4 py-3 text-slate-400">{d.category}</td>
                         <td className="px-4 py-3 text-slate-400">{amountSummary}</td>
                         <td className="px-4 py-3 text-slate-400">
                           <div>{d.organization_tax_number ?? "—"}</div>
@@ -155,6 +233,10 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                           <span className={d.is_active ? "text-emerald-400" : "text-slate-500"}>
                             {d.is_active ? "Active" : "Historic"}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-400">
+                          <div>{d.family_member?.full_name ?? "—"}</div>
+                          <div className="text-xs text-slate-500">{formatPaymentDetail(d)}</div>
                         </td>
                         <td className="px-4 py-3">
                           <Link

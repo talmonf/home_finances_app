@@ -67,6 +67,7 @@ model family_members {
   bank_account_members bank_account_members[]
   subscriptions         subscriptions[]
   medical_appointments  medical_appointments[]
+  donations            donations[]
 }
 
 model bank_accounts {
@@ -94,6 +95,7 @@ model bank_accounts {
   bank_account_members bank_account_members[]
   linked_digital_payment_methods digital_payment_methods[]
   medical_appointments            medical_appointments[]
+  donations                       donations[]
 }
 
 model credit_cards {
@@ -125,6 +127,7 @@ model credit_cards {
   subscriptions subscriptions[]
   significant_purchases significant_purchases[]
   medical_appointments  medical_appointments[]
+  donations             donations[]
 }
 
 enum CardScheme {
@@ -283,15 +286,31 @@ enum DonationKind {
   @@map("donation_kind")
 }
 
+enum DonationPaymentMethod {
+  cash
+  credit_card
+  bank_account
+  digital_wallet
+  other
+
+  @@map("donation_payment_method")
+}
+
 model donations {
   id                      String       @id @default(uuid())
   household_id            String
   kind                    DonationKind
+  category                String       @default("Other")
   one_time_amount         Decimal?     @db.Decimal(15, 2)
   donation_date           DateTime?
   monthly_amount          Decimal?     @db.Decimal(15, 2)
   commitment_months       Int?
   commitment_start_date   DateTime?
+  family_member_id       String?
+  payment_method         DonationPaymentMethod
+  credit_card_id         String?
+  bank_account_id        String?
+  digital_payment_method_id String?
   organization_name       String
   organization_tax_number String?
   provides_seif_46_receipts Boolean    @default(false)
@@ -306,6 +325,10 @@ model donations {
   updated_at              DateTime     @updatedAt
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+  credit_card credit_cards? @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  bank_account bank_accounts? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+  digital_payment_method digital_payment_methods? @relation(fields: [digital_payment_method_id], references: [id], onDelete: SetNull)
   payee     payees?    @relation(fields: [payee_id], references: [id], onDelete: SetNull)
 }
 
@@ -371,6 +394,7 @@ model digital_payment_methods {
   household           households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
   linked_bank_account bank_accounts? @relation(fields: [linked_bank_account_id], references: [id], onDelete: SetNull)
   medical_appointments medical_appointments[]
+  donations             donations[]
 }
 
 model medical_appointments {

@@ -81,9 +81,9 @@ export default async function UpcomingRenewalsPage() {
       where: {
         household_id: householdId,
         is_active: true,
-        renewal_date: { not: null, gte: today },
+        renewal_date: { not: null },
       },
-      include: { payee: true },
+      include: { payee: true, family_member: true },
     }),
     prisma.significant_purchases.findMany({
       where: {
@@ -149,8 +149,8 @@ export default async function UpcomingRenewalsPage() {
     ...donationRenewals.map((d) => ({
       id: `donation-${d.id}`,
       category: "Donation",
-      itemName: d.organization_name,
-      owner: d.payee ? `Payee: ${d.payee.name}` : "Household",
+      itemName: `${d.organization_name} (${d.category})`,
+      owner: d.family_member ? d.family_member.full_name : "Household",
       renewalDate: d.renewal_date as Date,
       href: "/dashboard/donations",
     })),
@@ -197,17 +197,23 @@ export default async function UpcomingRenewalsPage() {
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const overdue =
-                    row.category === "Subscription" && dateOnlyLocal(row.renewalDate) < today;
+                  const isPassed = dateOnlyLocal(row.renewalDate) < today;
+                  const isDonation = row.category === "Donation";
+                  const isSubscription = row.category === "Subscription";
+                  const overdue = (isSubscription || isDonation) && isPassed;
                   return (
                   <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                     <td
-                      className={`px-4 py-3 ${overdue ? "text-rose-300" : "text-slate-200"}`}
+                      className={`px-4 py-3 ${
+                        overdue ? "text-rose-300" : "text-slate-200"
+                      }`}
                       title={overdue ? "Renewal date has passed" : undefined}
                     >
                       {formatDate(row.renewalDate)}
                       {overdue ? (
-                        <span className="ml-2 text-xs font-medium text-rose-400/90">Overdue</span>
+                        <span className="ml-2 text-xs font-medium text-rose-400/90">
+                          {isDonation ? "Passed" : "Overdue"}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-4 py-3 text-slate-300">{row.category}</td>
