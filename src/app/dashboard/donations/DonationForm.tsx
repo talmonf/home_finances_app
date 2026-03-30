@@ -5,20 +5,48 @@ import { useState } from "react";
 
 type PayeeOption = { id: string; name: string };
 
+type DonationFormInitialValues = {
+  kind: string;
+  one_time_amount?: string | null;
+  donation_date?: string | null;
+  monthly_amount?: string | null;
+  commitment_months?: number | null;
+  commitment_start_date?: string | null;
+  organization_name: string;
+  organization_tax_number?: string | null;
+  provides_seif_46_receipts?: boolean;
+  organization_phone?: string | null;
+  organization_email?: string | null;
+  currency?: string | null;
+  payee_id?: string | null;
+  renewal_date?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+};
+
 export function DonationForm({
   action,
   payees,
+  donationId,
+  initial,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   payees: PayeeOption[];
+  donationId?: string;
+  initial?: DonationFormInitialValues;
 }) {
-  const [kind, setKind] = useState<string>(DonationKind.one_time);
+  const initialKind = initial?.kind ?? DonationKind.one_time;
+  const [kind, setKind] = useState<string>(initialKind);
+  const initialStatus = initial?.is_active === false ? "historic" : "active";
+  const [status, setStatus] = useState<"active" | "historic">(initialStatus);
 
   return (
     <form
       action={action}
       className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 lg:grid-cols-2"
     >
+      {donationId ? <input type="hidden" name="id" value={donationId} /> : null}
+
       <div className="lg:col-span-2">
         <label htmlFor="kind" className="mb-1 block text-xs font-medium text-slate-400">
           Donation type
@@ -48,6 +76,7 @@ export function DonationForm({
               type="text"
               inputMode="decimal"
               required
+              defaultValue={initial?.one_time_amount ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="0.00"
             />
@@ -61,6 +90,7 @@ export function DonationForm({
               name="donation_date"
               type="date"
               required
+              defaultValue={initial?.donation_date ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -77,6 +107,7 @@ export function DonationForm({
               type="text"
               inputMode="decimal"
               required
+              defaultValue={initial?.monthly_amount ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="0.00"
             />
@@ -92,6 +123,7 @@ export function DonationForm({
               min={1}
               step={1}
               required
+              defaultValue={initial?.commitment_months ?? undefined}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="12"
             />
@@ -107,6 +139,7 @@ export function DonationForm({
               id="commitment_start_date"
               name="commitment_start_date"
               type="date"
+              defaultValue={initial?.commitment_start_date ?? ""}
               className="w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -125,6 +158,7 @@ export function DonationForm({
               name="organization_name"
               type="text"
               required
+              defaultValue={initial?.organization_name ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -139,6 +173,7 @@ export function DonationForm({
               id="organization_tax_number"
               name="organization_tax_number"
               type="text"
+              defaultValue={initial?.organization_tax_number ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -147,6 +182,7 @@ export function DonationForm({
               <input
                 type="checkbox"
                 name="provides_seif_46_receipts"
+                defaultChecked={initial?.provides_seif_46_receipts ?? false}
                 className="rounded border-slate-600 bg-slate-800 text-sky-500"
               />
               Provides tax-deductible receipts (Seif 46)
@@ -160,6 +196,7 @@ export function DonationForm({
               id="organization_phone"
               name="organization_phone"
               type="tel"
+              defaultValue={initial?.organization_phone ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -171,6 +208,7 @@ export function DonationForm({
               id="organization_email"
               name="organization_email"
               type="email"
+              defaultValue={initial?.organization_email ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -184,7 +222,7 @@ export function DonationForm({
         <select
           id="currency"
           name="currency"
-          defaultValue="ILS"
+          defaultValue={initial?.currency ?? "ILS"}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="ILS">ILS</option>
@@ -199,6 +237,7 @@ export function DonationForm({
         <select
           id="payee_id"
           name="payee_id"
+          defaultValue={initial?.payee_id ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="">—</option>
@@ -210,6 +249,21 @@ export function DonationForm({
         </select>
       </div>
       <div>
+        <label htmlFor="status" className="mb-1 block text-xs font-medium text-slate-400">
+          Status
+        </label>
+        <select
+          id="status"
+          name="status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as "active" | "historic")}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="active">Active</option>
+          <option value="historic">Historic</option>
+        </select>
+      </div>
+      <div>
         <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
           Next renewal / reminder (optional)
         </label>
@@ -217,6 +271,7 @@ export function DonationForm({
           id="renewal_date"
           name="renewal_date"
           type="date"
+          defaultValue={initial?.renewal_date ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
         <p className="mt-1 text-xs text-slate-500">Shown on Upcoming renewals when set.</p>
@@ -228,6 +283,7 @@ export function DonationForm({
         <input
           id="notes"
           name="notes"
+          defaultValue={initial?.notes ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>

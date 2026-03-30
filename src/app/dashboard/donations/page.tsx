@@ -2,7 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { DonationKind } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createDonation, toggleDonationActive } from "./actions";
+import { createDonation } from "./actions";
 import { DonationForm } from "./DonationForm";
 
 export const dynamic = "force-dynamic";
@@ -153,21 +153,16 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                         </td>
                         <td className="px-4 py-3">
                           <span className={d.is_active ? "text-emerald-400" : "text-slate-500"}>
-                            {d.is_active ? "Active" : "Inactive"}
+                            {d.is_active ? "Active" : "Historic"}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <form
-                            action={toggleDonationActive.bind(null, d.id, !d.is_active)}
-                            className="inline"
+                          <Link
+                            href={`/dashboard/donations/${d.id}`}
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
                           >
-                            <button
-                              type="submit"
-                              className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {d.is_active ? "Deactivate" : "Activate"}
-                            </button>
-                          </form>
+                            Edit
+                          </Link>
                         </td>
                       </tr>
                     );
