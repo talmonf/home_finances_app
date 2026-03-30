@@ -120,7 +120,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       owner: s.family_member?.full_name ?? s.credit_card?.family_member?.full_name ?? "Household",
       ownerId: s.family_member?.id ?? s.credit_card?.family_member?.id ?? null,
       renewalDate: s.renewal_date as Date,
-      href: `/dashboard/subscriptions?edit=${encodeURIComponent(s.id)}&focus=${encodeURIComponent(s.id)}`,
+      href: `/dashboard/subscriptions/${encodeURIComponent(s.id)}`,
     })),
     ...identities.map((i) => ({
       id: `identity-${i.id}`,

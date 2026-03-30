@@ -162,21 +162,21 @@ export async function updateSubscription(formData: FormData) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
   }
   if (status !== "active" && status !== "cancelled") {
-    redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+status`);
+    redirect(`/dashboard/subscriptions/${id}?error=Invalid+status`);
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
-    redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+billing+interval`);
+    redirect(`/dashboard/subscriptions/${id}?error=Invalid+billing+interval`);
   }
 
   const fee_amount = parseFloat(fee_amount_raw);
   if (Number.isNaN(fee_amount) || fee_amount < 0) {
-    redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+fee+amount`);
+    redirect(`/dashboard/subscriptions/${id}?error=Invalid+fee+amount`);
   }
   let website_url: string | null = null;
   try {
     website_url = normalizeWebsiteUrl(website_url_raw);
   } catch {
-    redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+website+URL`);
+    redirect(`/dashboard/subscriptions/${id}?error=Invalid+website+URL`);
   }
 
   if (credit_card_id) {
@@ -190,7 +190,7 @@ export async function updateSubscription(formData: FormData) {
       },
     });
     if (!card) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Credit+card+must+be+active+and+not+expired`);
+      redirect(`/dashboard/subscriptions/${id}?error=Credit+card+must+be+active+and+not+expired`);
     }
   }
 
@@ -200,7 +200,7 @@ export async function updateSubscription(formData: FormData) {
       select: { id: true },
     });
     if (!member) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+family+member`);
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+family+member`);
     }
   }
 
@@ -208,7 +208,7 @@ export async function updateSubscription(formData: FormData) {
   if (start_date_raw) {
     start_date = new Date(start_date_raw);
     if (Number.isNaN(start_date.getTime())) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+start+date`);
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+start+date`);
     }
   }
 
@@ -216,18 +216,18 @@ export async function updateSubscription(formData: FormData) {
   if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+renewal+date`);
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+renewal+date`);
     }
   }
 
   let cancelled_at: Date | null = null;
   if (status === "cancelled") {
     if (!cancelled_at_raw) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Cancellation+date+required`);
+      redirect(`/dashboard/subscriptions/${id}?error=Cancellation+date+required`);
     }
     cancelled_at = new Date(cancelled_at_raw);
     if (Number.isNaN(cancelled_at.getTime())) {
-      redirect(`/dashboard/subscriptions?edit=${id}&focus=${id}&error=Invalid+cancelled+date`);
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+cancelled+date`);
     }
   }
 
@@ -250,24 +250,7 @@ export async function updateSubscription(formData: FormData) {
   });
 
   revalidatePath("/dashboard/subscriptions");
-  redirect(`/dashboard/subscriptions?updated=1&focus=${id}`);
+  revalidatePath(`/dashboard/subscriptions/${id}`);
+  redirect(`/dashboard/subscriptions/${id}?updated=1`);
 }
 
-export async function toggleSubscriptionActive(id: string, nextActive: boolean) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) {
-    redirect("/dashboard/subscriptions?error=No+household");
-  }
-
-  const cancelledAt = startOfToday();
-  await prisma.subscriptions.updateMany({
-    where: { id, household_id: householdId },
-    data: nextActive
-      ? { is_active: true, cancelled_at: null }
-      : { is_active: false, cancelled_at: cancelledAt },
-  });
-
-  revalidatePath("/dashboard/subscriptions");
-  redirect("/dashboard/subscriptions?updated=1");
-}
