@@ -166,7 +166,13 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Rentals</h2>
+          <div>
+            <h2 className="text-lg font-medium text-slate-200">Rentals</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Add a rental with <strong className="font-medium text-slate-300">Add rental</strong> below. After it appears in the list, open that rental’s card — you’ll find{" "}
+              <strong className="font-medium text-slate-300">Tenants</strong> there (name, email, phone, notes). You can add more than one tenant per rental.
+            </p>
+          </div>
           <form action={createRental} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <input type="hidden" name="property_id" value={property.id} />
             <div>
@@ -178,7 +184,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Monthly payment (long-term)</label>
+              <label className="mb-1 block text-xs font-medium text-slate-400">Monthly rent (lease)</label>
               <input name="monthly_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
@@ -235,7 +241,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
 
           {property.rentals.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No rentals yet for this property.
+              No rentals yet. Use the form above, then add <span className="text-slate-300">tenants</span>, contracts, and transaction links inside each rental.
             </p>
           ) : (
             <div className="space-y-4">
@@ -312,7 +318,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                   </form>
 
                   <div className="rounded border border-slate-700 p-3">
-                    <p className="mb-2 text-xs text-slate-400">Tenants</p>
+                    <p className="mb-1 text-sm font-medium text-slate-200">Tenants</p>
+                    <p className="mb-3 text-xs text-slate-500">Who is renting (you can add several).</p>
                     <form action={createRentalTenant} className="mb-2 grid gap-2 sm:grid-cols-4">
                       <input type="hidden" name="rental_id" value={rental.id} />
                       <input name="full_name" required placeholder="Full name" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
