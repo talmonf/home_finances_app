@@ -584,6 +584,7 @@ model subscriptions {
   description      String?
   website_url      String?
   is_active        Boolean                    @default(true)
+  cancelled_at    DateTime?
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt
 

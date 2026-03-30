@@ -38,6 +38,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 026 | `026_drop_donation_commitments.sql` | ALTER | Drop donation_commitments; add donations.renewal_date (optional reminder) |
 | 027 | `027_donations_add_category.sql` | ALTER | donations: add category field |
 | 028 | `028_donations_payment_and_family_member.sql` | ALTER | donations: add family_member + payment method linkage |
+| 029 | `029_subscriptions_cancelled_at.sql` | ALTER | subscriptions: add cancelled_at for Cancelled status |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -69,6 +70,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 026_drop_donation_commitments.sql
 - [x] 027_donations_add_category.sql
 - [x] 028_donations_payment_and_family_member.sql
+- [x] 029_subscriptions_cancelled_at.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

@@ -247,6 +247,38 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label
+                htmlFor="status"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Status
+              </label>
+              <select
+                id="status"
+                name="status"
+                required
+                defaultValue="active"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="active">Active</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="cancelled_at"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Cancellation date (required if Cancelled)
+              </label>
+              <input
+                id="cancelled_at"
+                name="cancelled_at"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label
                 htmlFor="family_member_id"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
@@ -363,6 +395,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                   {subscriptions.map((s) => (
                     <tr
                       key={s.id}
+                      id={`subscription-${s.id}`}
                       className="border-b border-slate-700/80 hover:bg-slate-800/40"
                     >
                       <td className="px-4 py-3 text-slate-100">{s.name}</td>
@@ -409,10 +442,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                           className={
                             s.is_active
                               ? "text-emerald-400"
-                              : "text-slate-500"
+                              : "text-rose-400"
                           }
                         >
-                          {s.is_active ? "Active" : "Inactive"}
+                          {s.is_active ? "Active" : "Cancelled"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -424,7 +457,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                             type="submit"
                             className="text-xs font-medium text-sky-400 hover:text-sky-300"
                           >
-                            {s.is_active ? "Deactivate" : "Activate"}
+                            {s.is_active ? "Edit" : "Activate"}
                           </button>
                         </form>
                       </td>

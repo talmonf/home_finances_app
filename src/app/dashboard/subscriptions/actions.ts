@@ -36,11 +36,16 @@ export async function createSubscription(formData: FormData) {
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
+  const status = (formData.get("status") as string | null)?.trim() || "active";
+  const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!name || !fee_amount_raw || !billing_interval) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
+  }
+  if (status !== "active" && status !== "cancelled") {
+    redirect("/dashboard/subscriptions?error=Invalid+status");
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
     redirect("/dashboard/subscriptions?error=Invalid+billing+interval");
@@ -98,6 +103,17 @@ export async function createSubscription(formData: FormData) {
     }
   }
 
+  let cancelled_at: Date | null = null;
+  if (status === "cancelled") {
+    if (!cancelled_at_raw) {
+      redirect("/dashboard/subscriptions?error=Cancellation+date+required");
+    }
+    cancelled_at = new Date(cancelled_at_raw);
+    if (Number.isNaN(cancelled_at.getTime())) {
+      redirect("/dashboard/subscriptions?error=Invalid+cancelled+date");
+    }
+  }
+
   await prisma.subscriptions.create({
     data: {
       id: crypto.randomUUID(),
@@ -112,6 +128,8 @@ export async function createSubscription(formData: FormData) {
       family_member_id,
       description,
       website_url,
+      is_active: status === "active",
+      cancelled_at,
     },
   });
 
@@ -126,9 +144,12 @@ export async function toggleSubscriptionActive(id: string, nextActive: boolean) 
     redirect("/dashboard/subscriptions?error=No+household");
   }
 
+  const cancelledAt = startOfToday();
   await prisma.subscriptions.updateMany({
     where: { id, household_id: householdId },
-    data: { is_active: nextActive },
+    data: nextActive
+      ? { is_active: true, cancelled_at: null }
+      : { is_active: false, cancelled_at: cancelledAt },
   });
 
   revalidatePath("/dashboard/subscriptions");

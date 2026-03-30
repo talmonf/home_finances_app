@@ -9,6 +9,7 @@ type RenewalRow = {
   category: string;
   itemName: string;
   owner: string;
+  ownerId: string | null;
   renewalDate: Date;
   href: string;
 };
@@ -33,12 +34,22 @@ function dateOnlyLocal(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export default async function UpcomingRenewalsPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    category?: string;
+    owner?: string;
+  }>;
+};
+
+export default async function UpcomingRenewalsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
   const today = startOfToday();
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const categoryFilter = resolvedSearchParams?.category ?? "all";
+  const ownerFilter = resolvedSearchParams?.owner ?? "all";
 
   const [
     subscriptions,
@@ -48,6 +59,7 @@ export default async function UpcomingRenewalsPage() {
     utilities,
     donationRenewals,
     significantPurchases,
+    familyMembers,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
       where: {
@@ -93,6 +105,11 @@ export default async function UpcomingRenewalsPage() {
       },
       include: { family_member: true, credit_card: { include: { family_member: true } } },
     }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      select: { id: true, full_name: true },
+      orderBy: { full_name: "asc" },
+    }),
   ]);
 
   const rows: RenewalRow[] = [
@@ -101,8 +118,9 @@ export default async function UpcomingRenewalsPage() {
       category: "Subscription",
       itemName: s.name,
       owner: s.family_member?.full_name ?? s.credit_card?.family_member?.full_name ?? "Household",
+      ownerId: s.family_member?.id ?? s.credit_card?.family_member?.id ?? null,
       renewalDate: s.renewal_date as Date,
-      href: "/dashboard/subscriptions",
+      href: `/dashboard/subscriptions#subscription-${s.id}`,
     })),
     ...identities.map((i) => ({
       id: `identity-${i.id}`,
@@ -115,6 +133,7 @@ export default async function UpcomingRenewalsPage() {
           return other ? `${typeLabel} - ${other}` : typeLabel;
         })(),
       owner: i.family_member.full_name,
+      ownerId: i.family_member.id,
       renewalDate: i.expiry_date,
       href: `/dashboard/identities/${i.id}`,
     })),
@@ -125,6 +144,7 @@ export default async function UpcomingRenewalsPage() {
         category: "Credit card",
         itemName: c.card_name,
         owner: c.family_member.full_name,
+        ownerId: c.family_member.id,
         renewalDate: c.expiry_date as Date,
         href: "/dashboard/credit-cards",
       })),
@@ -133,6 +153,7 @@ export default async function UpcomingRenewalsPage() {
       category: "Insurance",
       itemName: `${p.provider_name} — ${p.policy_name}`,
       owner: p.family_member?.full_name ?? "Household",
+      ownerId: p.family_member?.id ?? null,
       renewalDate: p.expiration_date,
       href: "/dashboard/insurance-policies",
     })),
@@ -143,6 +164,7 @@ export default async function UpcomingRenewalsPage() {
         category: "Utility",
         itemName: `${u.provider_name} (${u.utility_type})`,
         owner: u.property.name,
+        ownerId: null,
         renewalDate: u.renewal_date as Date,
         href: `/dashboard/properties/${u.property_id}`,
       })),
@@ -151,6 +173,7 @@ export default async function UpcomingRenewalsPage() {
       category: "Donation",
       itemName: `${d.organization_name} (${d.category})`,
       owner: d.family_member ? d.family_member.full_name : "Household",
+      ownerId: d.family_member?.id ?? null,
       renewalDate: d.renewal_date as Date,
       href: `/dashboard/donations/${d.id}`,
     })),
@@ -159,10 +182,37 @@ export default async function UpcomingRenewalsPage() {
       category: "Warranty",
       itemName: `${PURCHASE_CATEGORY_LABELS[p.purchase_category] ?? p.purchase_category} — ${p.item_name}`,
       owner: p.family_member?.full_name ?? p.credit_card?.family_member?.full_name ?? "Household",
+      ownerId: p.family_member?.id ?? p.credit_card?.family_member?.id ?? null,
       renewalDate: p.warranty_expiry_date as Date,
       href: "/dashboard/significant-purchases",
     })),
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
+
+  const effectiveCategoryFilter =
+    categoryFilter === "all" || rows.some((r) => r.category === categoryFilter)
+      ? categoryFilter
+      : "all";
+  const familyMemberIdSet = new Set(familyMembers.map((m) => m.id));
+  const effectiveOwnerFilter =
+    ownerFilter === "all" || familyMemberIdSet.has(ownerFilter) ? ownerFilter : "all";
+
+  const filteredRows = rows.filter((r) => {
+    const categoryOk = effectiveCategoryFilter === "all" ? true : r.category === effectiveCategoryFilter;
+    const ownerOk = effectiveOwnerFilter === "all" ? true : r.ownerId === effectiveOwnerFilter;
+    return categoryOk && ownerOk;
+  });
+
+  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Utility", "Donation", "Warranty"];
+  const categories = Array.from(
+    new Set(rows.map((r) => r.category)),
+  ).sort((a, b) => {
+    const ia = categoryOrder.indexOf(a);
+    const ib = categoryOrder.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -179,7 +229,54 @@ export default async function UpcomingRenewalsPage() {
           </p>
         </header>
 
-        {rows.length === 0 ? (
+        <form method="get" className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col">
+            <label htmlFor="category" className="mb-1 text-xs font-medium text-slate-400">
+              Category
+            </label>
+            <select
+              id="category"
+              name="category"
+              defaultValue={effectiveCategoryFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">All</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label htmlFor="owner" className="mb-1 text-xs font-medium text-slate-400">
+              Owner (= Family Member)
+            </label>
+            <select
+              id="owner"
+              name="owner"
+              defaultValue={effectiveOwnerFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">All</option>
+              {familyMembers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+          >
+            Apply
+          </button>
+        </form>
+
+        {filteredRows.length === 0 ? (
           <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-8 text-center text-sm text-slate-400">
             No upcoming renewals found.
           </p>
@@ -196,7 +293,7 @@ export default async function UpcomingRenewalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {filteredRows.map((row) => {
                   const isPassed = dateOnlyLocal(row.renewalDate) < today;
                   const isDonation = row.category === "Donation";
                   const isSubscription = row.category === "Subscription";
