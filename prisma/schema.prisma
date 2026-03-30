@@ -595,11 +595,15 @@ model subscriptions {
 enum StudyOrClassType {
   study
   class
+
+  @@map("study_or_class_type")
 }
 
 enum SubscriptionBillingInterval {
   monthly
   annual
+
+  @@map("subscription_billing_interval")
 }
 
 model super_admins {
