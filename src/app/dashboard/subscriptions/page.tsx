@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createSubscription, toggleSubscriptionActive } from "./actions";
+import { createSubscription, updateSubscription } from "./actions";
 import { ScrollToTarget } from "./scroll-to-hash";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     focus?: string;
+    edit?: string;
   }>;
 };
 
@@ -31,6 +32,15 @@ function formatDate(d: Date) {
 function formatDateOptional(d: Date | null) {
   if (!d) return "—";
   return formatDate(d);
+}
+
+function formatDateInput(d: Date | null) {
+  if (!d) return "";
+  const date = new Date(d);
+  const yyyy = date.getFullYear();
+  const mm = `${date.getMonth() + 1}`.padStart(2, "0");
+  const dd = `${date.getDate()}`.padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function formatMoney(value: unknown) {
@@ -84,6 +94,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const focusId = resolvedSearchParams?.focus?.trim() || null;
   const focusTargetId = focusId ? `subscription-${focusId}` : null;
+  const editId = resolvedSearchParams?.edit?.trim() || null;
   const today = startOfToday();
 
   const [subscriptions, creditCards, familyMembers] = await Promise.all([
@@ -105,6 +116,9 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
       orderBy: { full_name: "asc" },
     }),
   ]);
+  const editingSubscription = editId ? subscriptions.find((s) => s.id === editId) ?? null : null;
+  const formAction = editingSubscription ? updateSubscription : createSubscription;
+  const formTitle = editingSubscription ? "Edit subscription" : "Add new";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -152,11 +166,14 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{formTitle}</h2>
           <form
-            action={createSubscription}
+            action={formAction}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
           >
+            {editingSubscription ? (
+              <input type="hidden" name="id" value={editingSubscription.id} />
+            ) : null}
             <div>
               <label
                 htmlFor="name"
@@ -168,6 +185,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="name"
                 name="name"
                 required
+                defaultValue={editingSubscription?.name ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
                 placeholder="e.g. Netflix"
               />
@@ -183,6 +201,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="start_date"
                 name="start_date"
                 type="date"
+                defaultValue={formatDateInput(editingSubscription?.start_date ?? null)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -197,6 +216,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="renewal_date"
                 name="renewal_date"
                 type="date"
+                defaultValue={formatDateInput(editingSubscription?.renewal_date ?? null)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -214,6 +234,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 step="0.01"
                 min="0"
                 required
+                defaultValue={editingSubscription?.fee_amount.toString() ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="0.00"
               />
@@ -228,7 +249,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <input
                 id="currency"
                 name="currency"
-                defaultValue="ILS"
+                defaultValue={editingSubscription?.currency ?? "ILS"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="e.g. ILS, USD"
               />
@@ -244,6 +265,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="billing_interval"
                 name="billing_interval"
                 required
+                defaultValue={editingSubscription?.billing_interval ?? "monthly"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="monthly">Monthly</option>
@@ -261,7 +283,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="status"
                 name="status"
                 required
-                defaultValue="active"
+                defaultValue={editingSubscription ? (editingSubscription.is_active ? "active" : "cancelled") : "active"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="active">Active</option>
@@ -279,6 +301,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="cancelled_at"
                 name="cancelled_at"
                 type="date"
+                defaultValue={formatDateInput(editingSubscription?.cancelled_at ?? null)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -293,7 +316,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="family_member_id"
                 name="family_member_id"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
+                defaultValue={editingSubscription?.family_member_id ?? ""}
               >
                 <option value="">None</option>
                 {familyMembers.map((m) => (
@@ -314,6 +337,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="credit_card_id"
                 name="credit_card_id"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={editingSubscription?.credit_card_id ?? ""}
               >
                 <option value="">None</option>
                 {creditCards.map((c) => (
@@ -333,6 +357,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <input
                 id="website_url"
                 name="website_url"
+                defaultValue={editingSubscription?.website_url ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional (e.g. netflix.com)"
               />
@@ -347,6 +372,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <input
                 id="description"
                 name="description"
+                defaultValue={editingSubscription?.description ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional notes"
               />
@@ -356,8 +382,16 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add subscription
+                {editingSubscription ? "Save changes" : "Add subscription"}
               </button>
+              {editingSubscription ? (
+                <Link
+                  href={`/dashboard/subscriptions?focus=${editingSubscription.id}`}
+                  className="ml-3 text-sm text-slate-300 hover:text-slate-100"
+                >
+                  Cancel
+                </Link>
+              ) : null}
             </div>
           </form>
         </section>
@@ -454,17 +488,12 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <form
-                          action={toggleSubscriptionActive.bind(null, s.id, !s.is_active)}
-                          className="inline"
+                        <Link
+                          href={`/dashboard/subscriptions?edit=${s.id}&focus=${s.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          <button
-                            type="submit"
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {s.is_active ? "Edit" : "Activate"}
-                          </button>
-                        </form>
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}
