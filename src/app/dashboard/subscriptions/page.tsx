@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription, toggleSubscriptionActive } from "./actions";
+import { ScrollToHash } from "./scroll-to-hash";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <ScrollToHash />
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <div className="flex items-center justify-between gap-4">
