@@ -200,7 +200,7 @@ export async function deleteUtility(id: string, property_id: string) {
   revalidatePath(`/dashboard/properties/${property_id}`);
 }
 
-const RENTAL_TYPES = ["long_term", "short_term"] as const;
+const RENTAL_TYPES = ["lease_monthly", "short_stay"] as const;
 const RENTAL_PAYMENT_METHODS = ["cash", "credit_card", "bank_account", "other"] as const;
 type RentalType = (typeof RENTAL_TYPES)[number];
 type RentalPaymentMethod = (typeof RENTAL_PAYMENT_METHODS)[number];
@@ -213,8 +213,10 @@ function parseDateInput(raw: string | null): Date | null {
 }
 
 function parseRentalType(raw: string | null): RentalType {
+  if (raw === "long_term") return "lease_monthly";
+  if (raw === "short_term") return "short_stay";
   if (raw && RENTAL_TYPES.includes(raw as RentalType)) return raw as RentalType;
-  return "long_term";
+  return "lease_monthly";
 }
 
 function parseRentalPaymentMethod(raw: string | null): RentalPaymentMethod | null {
@@ -249,15 +251,15 @@ export async function createRental(formData: FormData) {
   const start_date = parseDateInput((formData.get("start_date") as string | null)?.trim() || null);
   const end_date = parseDateInput((formData.get("end_date") as string | null)?.trim() || null);
   const monthly_payment = parseMoney((formData.get("monthly_payment") as string | null) ?? null);
-  const short_term_total_payment = parseMoney((formData.get("short_term_total_payment") as string | null) ?? null);
+  const period_total_payment = parseMoney((formData.get("period_total_payment") as string | null) ?? null);
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const payment_method = parseRentalPaymentMethod((formData.get("payment_method") as string | null)?.trim() || null);
   let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
-  if (rental_type === "long_term" && !monthly_payment) return;
-  if (rental_type === "short_term" && !short_term_total_payment) return;
+  if (rental_type === "lease_monthly" && !monthly_payment) return;
+  if (rental_type === "short_stay" && !period_total_payment) return;
   if (payment_method !== "credit_card") credit_card_id = null;
   if (payment_method !== "bank_account") bank_account_id = null;
 
@@ -286,7 +288,7 @@ export async function createRental(formData: FormData) {
       start_date,
       end_date,
       monthly_payment,
-      short_term_total_payment,
+      period_total_payment,
       currency,
       payment_method,
       credit_card_id,
@@ -318,15 +320,15 @@ export async function updateRental(formData: FormData) {
   const start_date = parseDateInput((formData.get("start_date") as string | null)?.trim() || null);
   const end_date = parseDateInput((formData.get("end_date") as string | null)?.trim() || null);
   const monthly_payment = parseMoney((formData.get("monthly_payment") as string | null) ?? null);
-  const short_term_total_payment = parseMoney((formData.get("short_term_total_payment") as string | null) ?? null);
+  const period_total_payment = parseMoney((formData.get("period_total_payment") as string | null) ?? null);
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const payment_method = parseRentalPaymentMethod((formData.get("payment_method") as string | null)?.trim() || null);
   let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
-  if (rental_type === "long_term" && !monthly_payment) return;
-  if (rental_type === "short_term" && !short_term_total_payment) return;
+  if (rental_type === "lease_monthly" && !monthly_payment) return;
+  if (rental_type === "short_stay" && !period_total_payment) return;
   if (payment_method !== "credit_card") credit_card_id = null;
   if (payment_method !== "bank_account") bank_account_id = null;
 
@@ -353,7 +355,7 @@ export async function updateRental(formData: FormData) {
       start_date,
       end_date,
       monthly_payment,
-      short_term_total_payment,
+      period_total_payment,
       currency,
       payment_method,
       credit_card_id,

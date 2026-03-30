@@ -226,9 +226,11 @@ model properties {
   rentals    rentals[]
 }
 
+/// Monthly rent under a lease/contract (any duration, e.g. 5 months or years). DB value: long_term.
 enum RentalType {
-  long_term
-  short_term
+  lease_monthly @map("long_term")
+  /// One stay priced as a total (e.g. nightly platforms). DB value: short_term.
+  short_stay @map("short_term")
 
   @@map("rental_type")
 }
@@ -250,7 +252,8 @@ model rentals {
   start_date               DateTime?
   end_date                 DateTime?
   monthly_payment          Decimal?            @db.Decimal(15, 2)
-  short_term_total_payment Decimal?            @db.Decimal(15, 2)
+  /// Total for the stay when rental_type is short_stay (DB column unchanged).
+  period_total_payment     Decimal?            @map("short_term_total_payment") @db.Decimal(15, 2)
   currency                 String              @default("ILS")
   payment_method           RentalPaymentMethod?
   credit_card_id           String?

@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -219,7 +220,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {rentals.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.property.name} · {r.rental_type}
+                    {r.property.name} · {formatRentalTypeLabel(r.rental_type)}
                   </option>
                 ))}
               </select>
@@ -326,7 +327,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                         {tx.family_member?.full_name ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.rental ? `${tx.rental.property.name}` : "—"}
+                        {tx.rental ? `${tx.rental.property.name} · ${formatRentalTypeLabel(tx.rental.rental_type)}` : "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.trip?.name ?? "—"}

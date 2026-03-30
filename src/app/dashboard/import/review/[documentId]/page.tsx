@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import {
@@ -296,7 +297,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">— Rental —</option>
                         {rentals.map((r) => (
                           <option key={r.id} value={r.id}>
-                            {r.property.name} · {r.rental_type}
+                            {r.property.name} · {formatRentalTypeLabel(r.rental_type)}
                           </option>
                         ))}
                       </select>

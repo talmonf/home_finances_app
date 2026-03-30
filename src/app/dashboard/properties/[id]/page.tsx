@@ -28,8 +28,8 @@ const UTILITY_TYPE_LABELS: Record<string, string> = {
 };
 
 const RENTAL_TYPES: Record<string, string> = {
-  long_term: "Long-term",
-  short_term: "Short-term",
+  lease_monthly: "Lease (monthly rent)",
+  short_stay: "Short stay (total for period)",
 };
 
 const RENTAL_PAYMENT_METHODS: Record<string, string> = {
@@ -171,7 +171,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
             <input type="hidden" name="property_id" value={property.id} />
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">Rental type</label>
-              <select name="rental_type" defaultValue="long_term" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <select name="rental_type" defaultValue="lease_monthly" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 {Object.entries(RENTAL_TYPES).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
@@ -182,8 +182,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               <input name="monthly_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Period payment (short-term)</label>
-              <input name="short_term_total_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <label className="mb-1 block text-xs font-medium text-slate-400">Total for stay (short stay)</label>
+              <input name="period_total_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">Currency</label>
@@ -257,8 +257,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                       <input type="number" name="monthly_payment" step="0.01" min="0" defaultValue={rental.monthly_payment?.toString() ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-slate-400">Period payment</label>
-                      <input type="number" name="short_term_total_payment" step="0.01" min="0" defaultValue={rental.short_term_total_payment?.toString() ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                      <label className="mb-1 block text-xs text-slate-400">Total for stay</label>
+                      <input type="number" name="period_total_payment" step="0.01" min="0" defaultValue={rental.period_total_payment?.toString() ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs text-slate-400">Currency</label>
