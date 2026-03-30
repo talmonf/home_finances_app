@@ -46,7 +46,7 @@ export default async function UpcomingRenewalsPage() {
     creditCards,
     insurancePolicies,
     utilities,
-    donationCommitments,
+    donationRenewals,
     significantPurchases,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
@@ -77,8 +77,12 @@ export default async function UpcomingRenewalsPage() {
       where: { household_id: householdId, renewal_date: { not: null, gte: today } },
       include: { property: true },
     }),
-    prisma.donation_commitments.findMany({
-      where: { household_id: householdId, is_active: true, renewal_date: { gte: today } },
+    prisma.donations.findMany({
+      where: {
+        household_id: householdId,
+        is_active: true,
+        renewal_date: { not: null, gte: today },
+      },
       include: { payee: true },
     }),
     prisma.significant_purchases.findMany({
@@ -142,13 +146,13 @@ export default async function UpcomingRenewalsPage() {
         renewalDate: u.renewal_date as Date,
         href: `/dashboard/properties/${u.property_id}`,
       })),
-    ...donationCommitments.map((d) => ({
+    ...donationRenewals.map((d) => ({
       id: `donation-${d.id}`,
       category: "Donation",
-      itemName: d.payee.name,
-      owner: "Household",
-      renewalDate: d.renewal_date,
-      href: "/dashboard/donation-commitments",
+      itemName: d.organization_name,
+      owner: d.payee ? `Payee: ${d.payee.name}` : "Household",
+      renewalDate: d.renewal_date as Date,
+      href: "/dashboard/donations",
     })),
     ...significantPurchases.map((p) => ({
       id: `purchase-${p.id}`,

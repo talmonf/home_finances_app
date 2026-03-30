@@ -34,6 +34,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 022 | `022_medical_appointments_reimbursement_received.sql` | ALTER | medical_appointments: single reimbursement amount/date/source; drop per-channel amount_received |
 | 023 | `023_medical_appointments_drop_request_scope.sql` | ALTER | medical_appointments: drop request scope columns + enum medical_reimbursement_request_scope |
 | 024 | `024_medical_appointments_payment_method_nullable.sql` | ALTER | medical_appointments: payment_method nullable (unknown at booking) |
+| 025 | `025_donations.sql` | CREATE | Enum donation_kind + table donations (one-time / monthly commitment, org & Seif 46 fields) |
+| 026 | `026_drop_donation_commitments.sql` | ALTER | Drop donation_commitments; add donations.renewal_date (optional reminder) |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -61,6 +63,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 022_medical_appointments_reimbursement_received.sql
 - [x] 023_medical_appointments_drop_request_scope.sql
 - [x] 024_medical_appointments_payment_method_nullable.sql
+- [x] 025_donations.sql
+- [x] 026_drop_donation_commitments.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

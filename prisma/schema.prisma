@@ -36,7 +36,7 @@ model households {
   properties            properties[]
   property_utilities    property_utilities[]
   insurance_policies    insurance_policies[]
-  donation_commitments  donation_commitments[]
+  donations             donations[]
   significant_purchases significant_purchases[]
   digital_payment_methods digital_payment_methods[]
   medical_appointments    medical_appointments[]
@@ -187,7 +187,7 @@ model payees {
 
   household         households         @relation(fields: [household_id], references: [id])
   transactions      transactions[]
-  donation_commitments donation_commitments[]
+  donations            donations[]
   property_utilities property_utilities[]
 }
 
@@ -276,18 +276,37 @@ model insurance_policies {
   family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
 }
 
-model donation_commitments {
-  id           String   @id @default(uuid())
-  household_id String
-  payee_id     String
-  renewal_date DateTime
-  notes        String?
-  is_active    Boolean  @default(true)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+enum DonationKind {
+  one_time
+  monthly_commitment
+
+  @@map("donation_kind")
+}
+
+model donations {
+  id                      String       @id @default(uuid())
+  household_id            String
+  kind                    DonationKind
+  one_time_amount         Decimal?     @db.Decimal(15, 2)
+  donation_date           DateTime?
+  monthly_amount          Decimal?     @db.Decimal(15, 2)
+  commitment_months       Int?
+  commitment_start_date   DateTime?
+  organization_name       String
+  organization_tax_number String?
+  provides_seif_46_receipts Boolean    @default(false)
+  organization_phone      String?
+  organization_email      String?
+  currency                String       @default("ILS")
+  payee_id                String?
+  renewal_date            DateTime?
+  notes                   String?
+  is_active               Boolean      @default(true)
+  created_at              DateTime     @default(now())
+  updated_at              DateTime     @updatedAt
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
-  payee     payees     @relation(fields: [payee_id], references: [id], onDelete: Cascade)
+  payee     payees?    @relation(fields: [payee_id], references: [id], onDelete: SetNull)
 }
 
 enum PurchaseCategory {
