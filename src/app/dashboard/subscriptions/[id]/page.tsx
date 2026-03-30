@@ -142,7 +142,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
             </div>
             <div>
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
-                Renewal date (optional)
+                Renewal date (annual, optional)
               </label>
               <input
                 id="renewal_date"
@@ -150,6 +150,21 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 type="date"
                 defaultValue={formatDateInput(subscription.renewal_date)}
                 className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="monthly_day_of_month" className="mb-1 block text-xs font-medium text-slate-400">
+                Monthly renewal day (1-31)
+              </label>
+              <input
+                id="monthly_day_of_month"
+                name="monthly_day_of_month"
+                type="number"
+                min="1"
+                max="31"
+                defaultValue={subscription.monthly_day_of_month ?? ""}
+                className={inputClass}
+                placeholder="Required for monthly interval"
               />
             </div>
             <div>

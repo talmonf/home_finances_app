@@ -9,6 +9,27 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function getDaysInMonth(year: number, monthZeroBased: number) {
+  return new Date(year, monthZeroBased + 1, 0).getDate();
+}
+
+function computeNextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+
+  const thisMonthDay = Math.min(dayOfMonth, getDaysInMonth(year, month));
+  const candidateThisMonth = new Date(year, month, thisMonthDay);
+  if (candidateThisMonth >= baseDate) {
+    return candidateThisMonth;
+  }
+
+  const nextMonthDate = new Date(year, month + 1, 1);
+  const nextYear = nextMonthDate.getFullYear();
+  const nextMonth = nextMonthDate.getMonth();
+  const nextMonthDay = Math.min(dayOfMonth, getDaysInMonth(nextYear, nextMonth));
+  return new Date(nextYear, nextMonth, nextMonthDay);
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -34,6 +55,7 @@ export async function createSubscription(formData: FormData) {
   const fee_amount_raw = (formData.get("fee_amount") as string | null)?.trim();
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
+  const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
@@ -49,6 +71,18 @@ export async function createSubscription(formData: FormData) {
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
     redirect("/dashboard/subscriptions?error=Invalid+billing+interval");
+  }
+
+  let monthly_day_of_month: number | null = null;
+  if (billing_interval === "monthly") {
+    if (!monthly_day_of_month_raw) {
+      redirect("/dashboard/subscriptions?error=Monthly+day+is+required");
+    }
+    const parsedDay = Number.parseInt(monthly_day_of_month_raw, 10);
+    if (Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 31) {
+      redirect("/dashboard/subscriptions?error=Monthly+day+must+be+between+1+and+31");
+    }
+    monthly_day_of_month = parsedDay;
   }
 
   const fee_amount = parseFloat(fee_amount_raw);
@@ -96,7 +130,9 @@ export async function createSubscription(formData: FormData) {
   }
 
   let renewal_date: Date | null = null;
-  if (renewal_date_raw) {
+  if (billing_interval === "monthly" && monthly_day_of_month != null) {
+    renewal_date = computeNextMonthlyRenewal(monthly_day_of_month, startOfToday());
+  } else if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
       redirect("/dashboard/subscriptions?error=Invalid+renewal+date");
@@ -124,6 +160,7 @@ export async function createSubscription(formData: FormData) {
       fee_amount,
       currency,
       billing_interval: billing_interval as "monthly" | "annual",
+      monthly_day_of_month,
       credit_card_id,
       family_member_id,
       description,
@@ -151,6 +188,7 @@ export async function updateSubscription(formData: FormData) {
   const fee_amount_raw = (formData.get("fee_amount") as string | null)?.trim();
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
+  const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
@@ -166,6 +204,18 @@ export async function updateSubscription(formData: FormData) {
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
     redirect(`/dashboard/subscriptions/${id}?error=Invalid+billing+interval`);
+  }
+
+  let monthly_day_of_month: number | null = null;
+  if (billing_interval === "monthly") {
+    if (!monthly_day_of_month_raw) {
+      redirect(`/dashboard/subscriptions/${id}?error=Monthly+day+is+required`);
+    }
+    const parsedDay = Number.parseInt(monthly_day_of_month_raw, 10);
+    if (Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 31) {
+      redirect(`/dashboard/subscriptions/${id}?error=Monthly+day+must+be+between+1+and+31`);
+    }
+    monthly_day_of_month = parsedDay;
   }
 
   const fee_amount = parseFloat(fee_amount_raw);
@@ -213,7 +263,9 @@ export async function updateSubscription(formData: FormData) {
   }
 
   let renewal_date: Date | null = null;
-  if (renewal_date_raw) {
+  if (billing_interval === "monthly" && monthly_day_of_month != null) {
+    renewal_date = computeNextMonthlyRenewal(monthly_day_of_month, startOfToday());
+  } else if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
       redirect(`/dashboard/subscriptions/${id}?error=Invalid+renewal+date`);
@@ -240,6 +292,7 @@ export async function updateSubscription(formData: FormData) {
       fee_amount,
       currency,
       billing_interval: billing_interval as "monthly" | "annual",
+      monthly_day_of_month,
       credit_card_id,
       family_member_id,
       description,

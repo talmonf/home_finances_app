@@ -11,6 +11,7 @@ type RenewalRow = {
   owner: string;
   ownerId: string | null;
   renewalDate: Date;
+  renewalType: string;
   href: string;
 };
 
@@ -32,6 +33,25 @@ function startOfToday() {
 
 function dateOnlyLocal(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function getDaysInMonth(year: number, monthZeroBased: number) {
+  return new Date(year, monthZeroBased + 1, 0).getDate();
+}
+
+function nextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const thisMonthDay = Math.min(dayOfMonth, getDaysInMonth(year, month));
+  const candidateThisMonth = new Date(year, month, thisMonthDay);
+  if (candidateThisMonth >= baseDate) {
+    return candidateThisMonth;
+  }
+  const nextMonthDate = new Date(year, month + 1, 1);
+  const nextYear = nextMonthDate.getFullYear();
+  const nextMonth = nextMonthDate.getMonth();
+  const nextMonthDay = Math.min(dayOfMonth, getDaysInMonth(nextYear, nextMonth));
+  return new Date(nextYear, nextMonth, nextMonthDay);
 }
 
 type PageProps = {
@@ -65,7 +85,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       where: {
         household_id: householdId,
         is_active: true,
-        renewal_date: { not: null },
+        OR: [
+          { billing_interval: "monthly", monthly_day_of_month: { not: null } },
+          { billing_interval: "annual", renewal_date: { not: null } },
+        ],
       },
       include: { credit_card: { include: { family_member: true } }, family_member: true },
     }),
@@ -119,7 +142,11 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       itemName: s.name,
       owner: s.family_member?.full_name ?? s.credit_card?.family_member?.full_name ?? "Household",
       ownerId: s.family_member?.id ?? s.credit_card?.family_member?.id ?? null,
-      renewalDate: s.renewal_date as Date,
+      renewalDate:
+        s.billing_interval === "monthly" && s.monthly_day_of_month
+          ? nextMonthlyRenewal(s.monthly_day_of_month, today)
+          : (s.renewal_date as Date),
+      renewalType: s.billing_interval === "monthly" ? "Monthly" : "Annual",
       href: `/dashboard/subscriptions/${encodeURIComponent(s.id)}`,
     })),
     ...identities.map((i) => ({
@@ -135,6 +162,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       owner: i.family_member.full_name,
       ownerId: i.family_member.id,
       renewalDate: i.expiry_date,
+      renewalType: "—",
       href: `/dashboard/identities/${i.id}`,
     })),
     ...creditCards
@@ -146,6 +174,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         owner: c.family_member.full_name,
         ownerId: c.family_member.id,
         renewalDate: c.expiry_date as Date,
+        renewalType: "—",
         href: "/dashboard/credit-cards",
       })),
     ...insurancePolicies.map((p) => ({
@@ -155,6 +184,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       owner: p.family_member?.full_name ?? "Household",
       ownerId: p.family_member?.id ?? null,
       renewalDate: p.expiration_date,
+      renewalType: "—",
       href: "/dashboard/insurance-policies",
     })),
     ...utilities
@@ -166,6 +196,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         owner: u.property.name,
         ownerId: null,
         renewalDate: u.renewal_date as Date,
+        renewalType: "—",
         href: `/dashboard/properties/${u.property_id}`,
       })),
     ...donationRenewals.map((d) => ({
@@ -175,6 +206,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       owner: d.family_member ? d.family_member.full_name : "Household",
       ownerId: d.family_member?.id ?? null,
       renewalDate: d.renewal_date as Date,
+      renewalType: "—",
       href: `/dashboard/donations/${d.id}`,
     })),
     ...significantPurchases.map((p) => ({
@@ -184,6 +216,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       owner: p.family_member?.full_name ?? p.credit_card?.family_member?.full_name ?? "Household",
       ownerId: p.family_member?.id ?? p.credit_card?.family_member?.id ?? null,
       renewalDate: p.warranty_expiry_date as Date,
+      renewalType: "—",
       href: "/dashboard/significant-purchases",
     })),
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
@@ -287,6 +320,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                 <tr className="border-b border-slate-700 bg-slate-800/80">
                   <th className="px-4 py-3 font-medium text-slate-300">Date</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Category</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Renewal Type</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Item</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Owner / Context</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Manage</th>
@@ -314,6 +348,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                       ) : null}
                     </td>
                     <td className="px-4 py-3 text-slate-300">{row.category}</td>
+                    <td className="px-4 py-3 text-slate-300">{row.renewalType}</td>
                     <td className="px-4 py-3 text-slate-100">{row.itemName}</td>
                     <td className="px-4 py-3 text-slate-400">{row.owner}</td>
                     <td className="px-4 py-3">
