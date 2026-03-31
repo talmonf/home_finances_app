@@ -5,12 +5,28 @@ import { createTask } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+const SORT_COLUMNS = [
+  "subject",
+  "type",
+  "status",
+  "priority",
+  "schedule_date",
+  "due_date",
+  "assignee",
+  "links",
+  "created",
+] as const;
+
+type SortColumn = (typeof SORT_COLUMNS)[number];
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
     updated?: string;
     error?: string;
     status?: string;
+    sort?: string;
+    dir?: string;
   }>;
 };
 
@@ -40,6 +56,106 @@ function assigneeLabel(task: {
   return "—";
 }
 
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+function linksSortKey(task: {
+  link_1_title: string | null;
+  link_2_title: string | null;
+}) {
+  const a = (task.link_1_title ?? "").trim();
+  const b = (task.link_2_title ?? "").trim();
+  return a || b || "";
+}
+
+function compareTasks(
+  a: {
+    subject: string;
+    type: string;
+    status: string;
+    priority: string;
+    schedule_date: Date | null;
+    due_date: Date | null;
+    created_at: Date;
+    family_member: { full_name: string } | null;
+    assigned_user: { full_name: string } | null;
+    link_1_title: string | null;
+    link_2_title: string | null;
+  },
+  b: typeof a,
+  sortKey: SortColumn,
+  dir: "asc" | "desc",
+) {
+  const mult = dir === "desc" ? -1 : 1;
+  const nullsLast = (x: Date | null) => (x ? x.getTime() : Number.POSITIVE_INFINITY);
+
+  switch (sortKey) {
+    case "subject":
+      return mult * a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
+    case "type":
+      return mult * a.type.localeCompare(b.type);
+    case "status":
+      return mult * a.status.localeCompare(b.status);
+    case "priority": {
+      const ra = PRIORITY_RANK[a.priority] ?? 99;
+      const rb = PRIORITY_RANK[b.priority] ?? 99;
+      return mult * (ra - rb);
+    }
+    case "schedule_date": {
+      const na = nullsLast(a.schedule_date);
+      const nb = nullsLast(b.schedule_date);
+      if (na !== nb) return mult * (na - nb);
+      return a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
+    }
+    case "due_date": {
+      const na = nullsLast(a.due_date);
+      const nb = nullsLast(b.due_date);
+      if (na !== nb) return mult * (na - nb);
+      return a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
+    }
+    case "assignee":
+      return mult * assigneeLabel(a).localeCompare(assigneeLabel(b), undefined, { sensitivity: "base" });
+    case "links":
+      return mult * linksSortKey(a).localeCompare(linksSortKey(b), undefined, { sensitivity: "base" });
+    case "created":
+      return mult * (a.created_at.getTime() - b.created_at.getTime());
+    default:
+      return 0;
+  }
+}
+
+function buildTasksQueryString(params: {
+  status?: string | null;
+  sort?: string | null;
+  dir?: "asc" | "desc" | null;
+  created?: string | null;
+  updated?: string | null;
+  error?: string | null;
+}) {
+  const sp = new URLSearchParams();
+  if (params.status) sp.set("status", params.status);
+  if (params.sort) sp.set("sort", params.sort);
+  if (params.dir && params.sort) sp.set("dir", params.dir);
+  if (params.created) sp.set("created", params.created);
+  if (params.updated) sp.set("updated", params.updated);
+  if (params.error) sp.set("error", params.error);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
+}
+
+function nextSortHref(
+  column: SortColumn,
+  currentSort: SortColumn | undefined,
+  currentDir: "asc" | "desc",
+  base: { status?: string | null; created?: string | null; updated?: string | null; error?: string | null },
+) {
+  const nextDir = currentSort === column && currentDir === "asc" ? "desc" : "asc";
+  return `/dashboard/tasks${buildTasksQueryString({
+    ...base,
+    sort: column,
+    dir: nextDir,
+  })}`;
+}
+
 export default async function TasksPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -48,18 +164,22 @@ export default async function TasksPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const statusFilter = resolvedSearchParams?.status?.trim() || null;
 
+  const rawSort = resolvedSearchParams?.sort?.trim();
+  const sortKey = SORT_COLUMNS.includes(rawSort as SortColumn) ? (rawSort as SortColumn) : undefined;
+  const sortDir: "asc" | "desc" = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
+
   const taskStatus = statusFilter && ["open", "in_work", "on_hold", "closed"].includes(statusFilter)
     ? (statusFilter as "open" | "in_work" | "on_hold" | "closed")
     : undefined;
 
-  const [tasks, familyMembers, advisors] = await Promise.all([
+  const [tasksRaw, familyMembers, advisors] = await Promise.all([
     prisma.tasks.findMany({
       where: {
         household_id: householdId,
         ...(taskStatus ? { status: taskStatus } : {}),
       },
       include: { family_member: true, assigned_user: true },
-      orderBy: [{ priority: "asc" }, { created_at: "desc" }],
+      orderBy: sortKey ? { id: "asc" } : [{ priority: "asc" }, { created_at: "desc" }],
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -70,6 +190,28 @@ export default async function TasksPage({ searchParams }: PageProps) {
       orderBy: { full_name: "asc" },
     }),
   ]);
+
+  const tasks = sortKey
+    ? [...tasksRaw].sort((a, b) => compareTasks(a, b, sortKey, sortDir))
+    : tasksRaw;
+
+  const queryBase = {
+    status: statusFilter,
+    created: resolvedSearchParams?.created ?? null,
+    updated: resolvedSearchParams?.updated ?? null,
+    error: resolvedSearchParams?.error ?? null,
+  };
+
+  const statusFilterHref = (value: string) =>
+    `/dashboard/tasks${buildTasksQueryString({
+      ...queryBase,
+      status: value || null,
+      sort: sortKey ?? null,
+      dir: sortKey ? sortDir : null,
+    })}`;
+
+  const sortHeaderClass =
+    "inline-flex items-center gap-1 rounded px-1 py-0.5 text-left font-medium text-slate-300 hover:bg-slate-700/80 hover:text-slate-100";
 
   const statusOptions = [
     { value: "", label: "All" },
@@ -283,7 +425,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
               {statusOptions.map((opt) => (
                 <Link
                   key={opt.value || "all"}
-                  href={opt.value ? `/dashboard/tasks?status=${opt.value}` : "/dashboard/tasks"}
+                  href={statusFilterHref(opt.value)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
                     (statusFilter ?? "") === opt.value
                       ? "bg-sky-600 text-white"
@@ -305,15 +447,60 @@ export default async function TasksPage({ searchParams }: PageProps) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Subject</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Priority</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Schedule</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Due</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Assignee</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Links</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Created</th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "subject" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("subject", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Subject
+                        {sortKey === "subject" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "type" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("type", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Type
+                        {sortKey === "type" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "status" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("status", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Status
+                        {sortKey === "status" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "priority" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("priority", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Priority
+                        {sortKey === "priority" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "schedule_date" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("schedule_date", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Schedule
+                        {sortKey === "schedule_date" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "due_date" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("due_date", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Due
+                        {sortKey === "due_date" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "assignee" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("assignee", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Assignee
+                        {sortKey === "assignee" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "links" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("links", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Links
+                        {sortKey === "links" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
+                    <th className="px-4 py-3" aria-sort={sortKey === "created" ? (sortDir === "asc" ? "ascending" : "descending") : undefined}>
+                      <Link href={nextSortHref("created", sortKey, sortDir, queryBase)} className={sortHeaderClass}>
+                        Created
+                        {sortKey === "created" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                      </Link>
+                    </th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>

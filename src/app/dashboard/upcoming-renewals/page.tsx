@@ -76,6 +76,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     identities,
     creditCards,
     insurancePolicies,
+    rentals,
     utilities,
     tasks,
     donationRenewals,
@@ -108,6 +109,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
       include: { family_member: true },
+    }),
+    prisma.rentals.findMany({
+      where: { household_id: householdId, end_date: { not: null, gte: today } },
+      include: { property: true },
     }),
     prisma.property_utilities.findMany({
       where: { household_id: householdId, renewal_date: { not: null, gte: today } },
@@ -196,6 +201,18 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       renewalType: "—",
       href: "/dashboard/insurance-policies",
     })),
+    ...rentals
+      .filter((r) => r.end_date)
+      .map((r) => ({
+        id: `rental-${r.id}`,
+        category: "Rental",
+        itemName: `${r.property.name} rental`,
+        owner: r.property.name,
+        ownerId: null,
+        renewalDate: r.end_date as Date,
+        renewalType: "End Date",
+        href: `/dashboard/properties/${r.property_id}`,
+      })),
     ...utilities
       .filter((u) => u.renewal_date)
       .map((u) => ({
@@ -256,7 +273,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     return categoryOk && ownerOk;
   });
 
-  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Utility", "Task", "Donation", "Warranty"];
+  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Rental", "Utility", "Task", "Donation", "Warranty"];
   const categories = Array.from(
     new Set(rows.map((r) => r.category)),
   ).sort((a, b) => {
@@ -278,8 +295,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
           <p className="text-sm text-slate-400">
             Renewal and expiration dates across subscriptions (including past subscription renewal
-            dates you may have missed), identity, cards, insurance, utilities, task due dates,
-            donations, and warranty-bearing significant purchases.
+            dates you may have missed), identity, cards, insurance, rental end dates, utilities,
+            task due dates, donations, and warranty-bearing significant purchases.
           </p>
         </header>
 
