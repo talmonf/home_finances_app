@@ -5,7 +5,6 @@ import RentalContractUpload from "./RentalContractUpload";
 import {
   updateProperty,
   createUtility,
-  updateUtility,
   deleteUtility,
   createRental,
   updateRental,
@@ -41,7 +40,7 @@ const RENTAL_PAYMENT_METHODS: Record<string, string> = {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; updated?: string }>;
 };
 
 export default async function PropertyDetailPage({ params, searchParams }: PageProps) {
@@ -105,9 +104,19 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
           <p className="text-sm text-slate-400">
             Update property details and manage utility companies that service this home.
           </p>
-          {resolvedSearchParams?.error && (
-            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
-              {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
+          {(resolvedSearchParams?.error || resolvedSearchParams?.updated) && (
+            <div
+              className={`rounded-lg border px-3 py-2 text-xs ${
+                resolvedSearchParams.error
+                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
+                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
+              }`}
+            >
+              {resolvedSearchParams.error
+                ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
+                : resolvedSearchParams.updated === "utility"
+                  ? "Utility updated."
+                  : "Saved."}
             </div>
           )}
         </header>
@@ -464,38 +473,27 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                 <tbody>
                   {property.utilities.map((u) => (
                     <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td colSpan={5} className="px-4 py-3">
-                        <form action={updateUtility} className="flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="id" value={u.id} />
-                          <input type="hidden" name="property_id" value={property.id} />
-                          <select name="utility_type" defaultValue={u.utility_type} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                            {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>{label}</option>
-                            ))}
-                          </select>
-                          <input type="text" name="provider_name" defaultValue={u.provider_name} required className="min-w-[100px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Provider" />
-                          <select name="payee_id" defaultValue={u.payee_id ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                            <option value="">— Payee —</option>
-                            {payees.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                          <input type="text" name="account_number" defaultValue={u.account_number ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Account #" />
-                          <input
-                            type="date"
-                            name="renewal_date"
-                            defaultValue={u.renewal_date ? u.renewal_date.toISOString().slice(0, 10) : ""}
-                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                            aria-label="Renewal date"
-                          />
-                          <input type="text" name="notes" defaultValue={u.notes ?? ""} className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" placeholder="Notes" />
-                          <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">Save</button>
-                        </form>
+                      <td className="px-4 py-3 text-slate-300">
+                        {UTILITY_TYPE_LABELS[u.utility_type] ?? u.utility_type}
                       </td>
+                      <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
+                      <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {u.renewal_date ? u.renewal_date.toISOString().slice(0, 10) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{u.notes || "—"}</td>
                       <td className="px-4 py-3">
-                        <form action={deleteUtility.bind(null, u.id, property.id)} className="inline">
-                          <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">Delete</button>
-                        </form>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/dashboard/properties/${property.id}/utilities/${u.id}/edit`}
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            Edit
+                          </Link>
+                          <form action={deleteUtility.bind(null, u.id, property.id)} className="inline">
+                            <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">Delete</button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   ))}

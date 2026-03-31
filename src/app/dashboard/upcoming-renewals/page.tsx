@@ -197,7 +197,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         ownerId: null,
         renewalDate: u.renewal_date as Date,
         renewalType: "—",
-        href: `/dashboard/properties/${u.property_id}`,
+        href: `/dashboard/properties/${u.property_id}/utilities/${u.id}/edit`,
       })),
     ...donationRenewals.map((d) => ({
       id: `donation-${d.id}`,

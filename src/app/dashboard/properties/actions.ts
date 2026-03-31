@@ -140,20 +140,20 @@ export async function createUtility(formData: FormData) {
 export async function updateUtility(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
+  if (!householdId) redirect("/dashboard/properties?error=No+household");
 
   const id = (formData.get("id") as string | null)?.trim();
   const property_id = (formData.get("property_id") as string | null)?.trim();
-  if (!id || !property_id) return;
+  if (!id || !property_id) redirect("/dashboard/properties?error=Missing+utility+id");
 
   const util = await prisma.property_utilities.findFirst({
     where: { id, household_id: householdId, property_id },
   });
-  if (!util) return;
+  if (!util) redirect("/dashboard/properties?error=Utility+not+found");
 
   const utility_type = parseUtilityType((formData.get("utility_type") as string | null)?.trim() || null);
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
-  if (!provider_name) return;
+  if (!provider_name) redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Provider+name+is+required`);
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
@@ -165,11 +165,14 @@ export async function updateUtility(formData: FormData) {
     const payee = await prisma.payees.findFirst({
       where: { id: payee_id, household_id: householdId },
     });
-    if (payee) finalPayeeId = payee_id;
+    if (!payee) redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Invalid+payee`);
+    finalPayeeId = payee_id;
   }
 
   const renewal_date = renewal_date_raw ? new Date(renewal_date_raw) : null;
-  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) return;
+  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) {
+    redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Invalid+renewal+date`);
+  }
 
   await prisma.property_utilities.updateMany({
     where: { id, household_id: householdId },
@@ -185,6 +188,8 @@ export async function updateUtility(formData: FormData) {
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/utilities/${id}/edit`);
+  redirect(`/dashboard/properties/${property_id}?updated=utility`);
 }
 
 export async function deleteUtility(id: string, property_id: string) {
