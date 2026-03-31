@@ -763,6 +763,8 @@ model tasks {
   priority          TaskPriority @default(medium)
   subject           String
   description       String?
+  schedule_date     DateTime?
+  due_date          DateTime?
   link_1_title      String?
   link_1_url        String?
   link_2_title      String?

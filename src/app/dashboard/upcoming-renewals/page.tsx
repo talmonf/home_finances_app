@@ -77,6 +77,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     creditCards,
     insurancePolicies,
     utilities,
+    tasks,
     donationRenewals,
     significantPurchases,
     familyMembers,
@@ -111,6 +112,14 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     prisma.property_utilities.findMany({
       where: { household_id: householdId, renewal_date: { not: null, gte: today } },
       include: { property: true },
+    }),
+    prisma.tasks.findMany({
+      where: {
+        household_id: householdId,
+        due_date: { not: null },
+        status: { not: "closed" },
+      },
+      include: { family_member: true, assigned_user: true },
     }),
     prisma.donations.findMany({
       where: {
@@ -199,6 +208,18 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         renewalType: "—",
         href: `/dashboard/properties/${u.property_id}/utilities/${u.id}/edit`,
       })),
+    ...tasks
+      .filter((t) => t.due_date)
+      .map((t) => ({
+        id: `task-${t.id}`,
+        category: "Task",
+        itemName: t.subject,
+        owner: t.family_member?.full_name ?? t.assigned_user?.full_name ?? "Household",
+        ownerId: t.family_member?.id ?? null,
+        renewalDate: t.due_date as Date,
+        renewalType: "Due Date",
+        href: `/dashboard/tasks/${t.id}/edit`,
+      })),
     ...donationRenewals.map((d) => ({
       id: `donation-${d.id}`,
       category: "Donation",
@@ -235,7 +256,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     return categoryOk && ownerOk;
   });
 
-  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Utility", "Donation", "Warranty"];
+  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Utility", "Task", "Donation", "Warranty"];
   const categories = Array.from(
     new Set(rows.map((r) => r.category)),
   ).sort((a, b) => {
@@ -254,11 +275,11 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
             ← Back to dashboard
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
           <p className="text-sm text-slate-400">
             Renewal and expiration dates across subscriptions (including past subscription renewal
-            dates you may have missed), identity, cards, insurance, utilities, donations, and
-            warranty-bearing significant purchases.
+            dates you may have missed), identity, cards, insurance, utilities, task due dates,
+            donations, and warranty-bearing significant purchases.
           </p>
         </header>
 

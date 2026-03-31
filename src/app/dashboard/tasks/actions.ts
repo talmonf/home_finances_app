@@ -18,6 +18,16 @@ function normalizeUrl(raw: string | null | undefined) {
   }
 }
 
+function parseDateInput(raw: string | null | undefined) {
+  const value = raw?.trim();
+  if (!value) return { date: null as Date | null, valid: true };
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: null as Date | null, valid: false };
+  }
+  return { date: parsed, valid: true };
+}
+
 export async function createTask(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -33,6 +43,8 @@ export async function createTask(formData: FormData) {
   const link2Title = (formData.get("link_2_title") as string | null)?.trim() || null;
   const link1UrlInput = (formData.get("link_1_url") as string | null) ?? null;
   const link2UrlInput = (formData.get("link_2_url") as string | null) ?? null;
+  const scheduleDateInput = (formData.get("schedule_date") as string | null) ?? null;
+  const dueDateInput = (formData.get("due_date") as string | null) ?? null;
 
   if (!subject) redirect("/dashboard/tasks?error=Subject+is+required");
   if (family_member_id && assigned_user_id) {
@@ -41,8 +53,13 @@ export async function createTask(formData: FormData) {
 
   const normalizedLink1 = normalizeUrl(link1UrlInput);
   const normalizedLink2 = normalizeUrl(link2UrlInput);
+  const scheduleDate = parseDateInput(scheduleDateInput);
+  const dueDate = parseDateInput(dueDateInput);
   if (!normalizedLink1.valid || !normalizedLink2.valid) {
     redirect("/dashboard/tasks?error=Links+must+use+valid+http(s)+URLs");
+  }
+  if (!scheduleDate.valid || !dueDate.valid) {
+    redirect("/dashboard/tasks?error=Schedule+Date+and+Due+Date+must+be+valid+dates");
   }
   if ((link1Title && !normalizedLink1.url) || (!link1Title && normalizedLink1.url)) {
     redirect("/dashboard/tasks?error=Link+1+requires+both+title+and+URL");
@@ -76,6 +93,8 @@ export async function createTask(formData: FormData) {
       priority,
       subject,
       description: description || null,
+      schedule_date: scheduleDate.date,
+      due_date: dueDate.date,
       link_1_title: link1Title,
       link_1_url: normalizedLink1.url,
       link_2_title: link2Title,
@@ -112,14 +131,21 @@ export async function updateTask(formData: FormData) {
   const link2Title = (formData.get("link_2_title") as string | null)?.trim() || null;
   const link1UrlInput = (formData.get("link_1_url") as string | null) ?? null;
   const link2UrlInput = (formData.get("link_2_url") as string | null) ?? null;
+  const scheduleDateInput = (formData.get("schedule_date") as string | null) ?? null;
+  const dueDateInput = (formData.get("due_date") as string | null) ?? null;
 
   if (family_member_id && assigned_user_id) {
     redirect("/dashboard/tasks?error=Select+only+one+assignee");
   }
   const normalizedLink1 = normalizeUrl(link1UrlInput);
   const normalizedLink2 = normalizeUrl(link2UrlInput);
+  const scheduleDate = parseDateInput(scheduleDateInput);
+  const dueDate = parseDateInput(dueDateInput);
   if (!normalizedLink1.valid || !normalizedLink2.valid) {
     redirect("/dashboard/tasks?error=Links+must+use+valid+http(s)+URLs");
+  }
+  if (!scheduleDate.valid || !dueDate.valid) {
+    redirect("/dashboard/tasks?error=Schedule+Date+and+Due+Date+must+be+valid+dates");
   }
   if ((link1Title && !normalizedLink1.url) || (!link1Title && normalizedLink1.url)) {
     redirect("/dashboard/tasks?error=Link+1+requires+both+title+and+URL");
@@ -147,6 +173,8 @@ export async function updateTask(formData: FormData) {
   const data: Record<string, unknown> = {};
   if (subject !== undefined && subject !== null) data.subject = subject;
   if (description !== undefined) data.description = description || null;
+  data.schedule_date = scheduleDate.date;
+  data.due_date = dueDate.date;
   data.link_1_title = link1Title;
   data.link_1_url = normalizedLink1.url;
   data.link_2_title = link2Title;

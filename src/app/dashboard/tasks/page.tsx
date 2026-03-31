@@ -22,6 +22,15 @@ function formatDate(d: Date) {
   });
 }
 
+function formatDateInput(d: Date | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function assigneeLabel(task: {
   family_member: { full_name: string } | null;
   assigned_user: { full_name: string } | null;
@@ -159,6 +168,28 @@ export default async function TasksPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
+              <label htmlFor="schedule_date" className="mb-1 block text-xs font-medium text-slate-400">
+                Schedule Date
+              </label>
+              <input
+                id="schedule_date"
+                name="schedule_date"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="due_date" className="mb-1 block text-xs font-medium text-slate-400">
+                Due Date
+              </label>
+              <input
+                id="due_date"
+                name="due_date"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
               <label htmlFor="family_member_id_new" className="mb-1 block text-xs font-medium text-slate-400">
                 Family member assignee
               </label>
@@ -278,6 +309,8 @@ export default async function TasksPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Type</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Priority</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Schedule</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Due</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Assignee</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Links</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Created</th>
@@ -312,6 +345,8 @@ export default async function TasksPage({ searchParams }: PageProps) {
                           {task.priority}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-slate-400">{formatDateInput(task.schedule_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">{formatDateInput(task.due_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{assigneeLabel(task)}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">

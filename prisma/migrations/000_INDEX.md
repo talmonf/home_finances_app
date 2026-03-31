@@ -42,6 +42,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 030 | `030_subscriptions_monthly_day_of_month.sql` | ALTER | subscriptions: add monthly_day_of_month (1-31) |
 | 031 | `031_rentals_and_trips.sql` | CREATE | Enums rental_type (`long_term`, `short_term`), rental_payment_method; tables rentals, rental_tenants, rental_contracts, trips, trip_family_members; transactions: rental_id, trip_id (FKs + indexes). In the app, these are labeled **Lease (monthly rent)** and **Short stay (total for period)** via Prisma `@map` (`lease_monthly` / `short_stay`). |
 | 032 | `032_tasks_links_and_assignee_validation.sql` | ALTER | tasks: add two title+URL link pairs; add DB check to prevent selecting both family_member_id and assigned_user_id simultaneously. |
+| 033 | `033_tasks_schedule_and_due_dates.sql` | ALTER | tasks: add schedule_date (planned work date) and due_date (deadline). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -77,6 +78,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 030_subscriptions_monthly_day_of_month.sql
 - [x] 031_rentals_and_trips.sql
 - [x] 032_tasks_links_and_assignee_validation.sql
+- [x] 033_tasks_schedule_and_due_dates.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
