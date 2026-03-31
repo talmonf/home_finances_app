@@ -135,6 +135,7 @@ export async function createUtility(formData: FormData) {
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
 }
 
 export async function updateUtility(formData: FormData) {
@@ -203,6 +204,7 @@ export async function deleteUtility(id: string, property_id: string) {
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
 }
 
 const RENTAL_TYPES = ["lease_monthly", "short_stay"] as const;
@@ -304,6 +306,7 @@ export async function createRental(formData: FormData) {
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
 }
 
 export async function updateRental(formData: FormData) {
@@ -413,6 +416,7 @@ export async function createRentalTenant(formData: FormData) {
   });
 
   revalidatePath(`/dashboard/properties/${rental.property_id}`);
+  revalidatePath(`/dashboard/properties/${rental.property_id}/rentals`);
 }
 
 export async function updateRentalTenant(formData: FormData) {
@@ -441,6 +445,7 @@ export async function updateRentalTenant(formData: FormData) {
   });
 
   revalidatePath(`/dashboard/properties/${tenant.rental.property_id}`);
+  revalidatePath(`/dashboard/properties/${tenant.rental.property_id}/rentals`);
 }
 
 export async function deleteRentalTenant(id: string, property_id: string) {
@@ -456,6 +461,7 @@ export async function deleteRentalTenant(id: string, property_id: string) {
 
   await prisma.rental_tenants.delete({ where: { id } });
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
 }
 
 export async function deleteRentalContract(id: string, property_id: string) {
@@ -467,4 +473,5 @@ export async function deleteRentalContract(id: string, property_id: string) {
     where: { id, household_id: householdId },
   });
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
 }
