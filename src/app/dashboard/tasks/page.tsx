@@ -159,18 +159,9 @@ export default async function TasksPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">
-                Assignee
+              <label htmlFor="family_member_id_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Family member assignee
               </label>
-              <select
-                name="assignee_kind"
-                id="assignee_kind_new"
-                className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">None</option>
-                <option value="family_member">Family member</option>
-                <option value="advisor">Financial advisor</option>
-              </select>
               <select
                 name="family_member_id"
                 id="family_member_id_new"
@@ -184,10 +175,13 @@ export default async function TasksPage({ searchParams }: PageProps) {
                   </option>
                 ))}
               </select>
+              <label htmlFor="assigned_user_id_new" className="mb-1 mt-2 block text-xs font-medium text-slate-400">
+                Advisor assignee
+              </label>
               <select
                 name="assigned_user_id"
                 id="assigned_user_id_new"
-                className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label="Advisor"
               >
                 <option value="">Select advisor</option>
@@ -205,6 +199,48 @@ export default async function TasksPage({ searchParams }: PageProps) {
               >
                 Add task
               </button>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="link_1_title_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Link 1 title
+              </label>
+              <input
+                id="link_1_title_new"
+                name="link_1_title"
+                className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. Vendor portal"
+              />
+              <label htmlFor="link_1_url_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Link 1 URL
+              </label>
+              <input
+                id="link_1_url_new"
+                name="link_1_url"
+                type="url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="https://..."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="link_2_title_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Link 2 title
+              </label>
+              <input
+                id="link_2_title_new"
+                name="link_2_title"
+                className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="e.g. Reference doc"
+              />
+              <label htmlFor="link_2_url_new" className="mb-1 block text-xs font-medium text-slate-400">
+                Link 2 URL
+              </label>
+              <input
+                id="link_2_url_new"
+                name="link_2_url"
+                type="url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="https://..."
+              />
             </div>
           </form>
         </section>
@@ -243,6 +279,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Priority</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Assignee</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Links</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Created</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -276,6 +313,33 @@ export default async function TasksPage({ searchParams }: PageProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{assigneeLabel(task)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {task.link_1_title && task.link_1_url && (
+                            <a
+                              href={task.link_1_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300 hover:underline"
+                            >
+                              {task.link_1_title}
+                            </a>
+                          )}
+                          {task.link_2_title && task.link_2_url && (
+                            <a
+                              href={task.link_2_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300 hover:underline"
+                            >
+                              {task.link_2_title}
+                            </a>
+                          )}
+                          {!task.link_1_title && !task.link_2_title && (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(task.created_at)}</td>
                       <td className="px-4 py-3">
                         <Link

@@ -763,6 +763,10 @@ model tasks {
   priority          TaskPriority @default(medium)
   subject           String
   description       String?
+  link_1_title      String?
+  link_1_url        String?
+  link_2_title      String?
+  link_2_url        String?
   family_member_id  String?
   assigned_user_id  String?
   created_at        DateTime     @default(now())

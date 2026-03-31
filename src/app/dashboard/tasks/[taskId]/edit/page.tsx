@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { updateTask } from "../../../actions";
+import { updateTask } from "../../actions";
 
 type PageProps = {
   params: Promise<{
@@ -33,12 +33,6 @@ export default async function EditTaskPage({ params }: PageProps) {
   ]);
 
   if (!task) notFound();
-
-  const selectedAssigneeKind = task.family_member_id
-    ? "family_member"
-    : task.assigned_user_id
-      ? "advisor"
-      : "";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -117,24 +111,14 @@ export default async function EditTaskPage({ params }: PageProps) {
           </div>
 
           <div className="sm:col-span-2">
-            <label htmlFor="assignee_kind" className="mb-1 block text-xs font-medium text-slate-400">
-              Assignee
+            <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+              Family member assignee
             </label>
             <select
-              id="assignee_kind"
-              name="assignee_kind"
-              defaultValue={selectedAssigneeKind}
-              className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">None</option>
-              <option value="family_member">Family member</option>
-              <option value="advisor">Financial advisor</option>
-            </select>
-
-            <select
+              id="family_member_id"
               name="family_member_id"
               defaultValue={task.family_member_id ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">Select family member</option>
               {familyMembers.map((member) => (
@@ -144,10 +128,14 @@ export default async function EditTaskPage({ params }: PageProps) {
               ))}
             </select>
 
+            <label htmlFor="assigned_user_id" className="mb-1 mt-2 block text-xs font-medium text-slate-400">
+              Advisor assignee
+            </label>
             <select
+              id="assigned_user_id"
               name="assigned_user_id"
               defaultValue={task.assigned_user_id ?? ""}
-              className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">Select advisor</option>
               {advisors.map((advisor) => (
@@ -156,6 +144,54 @@ export default async function EditTaskPage({ params }: PageProps) {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="link_1_title" className="mb-1 block text-xs font-medium text-slate-400">
+              Link 1 title
+            </label>
+            <input
+              id="link_1_title"
+              name="link_1_title"
+              defaultValue={task.link_1_title ?? ""}
+              className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="e.g. Vendor portal"
+            />
+            <label htmlFor="link_1_url" className="mb-1 block text-xs font-medium text-slate-400">
+              Link 1 URL
+            </label>
+            <input
+              id="link_1_url"
+              name="link_1_url"
+              type="url"
+              defaultValue={task.link_1_url ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="link_2_title" className="mb-1 block text-xs font-medium text-slate-400">
+              Link 2 title
+            </label>
+            <input
+              id="link_2_title"
+              name="link_2_title"
+              defaultValue={task.link_2_title ?? ""}
+              className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="e.g. Reference doc"
+            />
+            <label htmlFor="link_2_url" className="mb-1 block text-xs font-medium text-slate-400">
+              Link 2 URL
+            </label>
+            <input
+              id="link_2_url"
+              name="link_2_url"
+              type="url"
+              defaultValue={task.link_2_url ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="https://..."
+            />
           </div>
 
           <div className="sm:col-span-2 flex items-center gap-2 pt-2">
