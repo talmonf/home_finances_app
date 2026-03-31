@@ -1,13 +1,14 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createTask, updateTask } from "./actions";
+import { createTask } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
+    updated?: string;
     error?: string;
     status?: string;
   }>;
@@ -83,7 +84,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
           <p className="text-sm text-slate-400">
             Create and track tasks. Assign to a family member or a financial advisor. Automatic tasks will be added by the system later.
           </p>
-          {(resolvedSearchParams?.created || resolvedSearchParams?.error) && (
+          {(resolvedSearchParams?.created || resolvedSearchParams?.updated || resolvedSearchParams?.error) && (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${
                 resolvedSearchParams.error
@@ -93,7 +94,9 @@ export default async function TasksPage({ searchParams }: PageProps) {
             >
               {resolvedSearchParams.error
                 ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                : "Task created."}
+                : resolvedSearchParams.updated
+                  ? "Task updated."
+                  : "Task created."}
             </div>
           )}
         </header>
@@ -241,7 +244,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Priority</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Assignee</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Created</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Update</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -257,32 +260,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-300 capitalize">{task.type}</td>
                       <td className="px-4 py-3">
-                        <form action={updateTask} className="inline">
-                          <input type="hidden" name="task_id" value={task.id} />
-                          <input type="hidden" name="subject" value={task.subject} />
-                          <input type="hidden" name="description" value={task.description ?? ""} />
-                          <input type="hidden" name="priority" value={task.priority} />
-                          <input
-                            type="hidden"
-                            name="assignee_kind"
-                            value={task.family_member_id ? "family_member" : task.assigned_user_id ? "advisor" : ""}
-                          />
-                          <input type="hidden" name="family_member_id" value={task.family_member_id ?? ""} />
-                          <input type="hidden" name="assigned_user_id" value={task.assigned_user_id ?? ""} />
-                          <select
-                            name="status"
-                            defaultValue={task.status}
-                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100 capitalize"
-                          >
-                            <option value="open">Open</option>
-                            <option value="in_work">In Work</option>
-                            <option value="on_hold">On Hold</option>
-                            <option value="closed">Closed</option>
-                          </select>
-                          <button type="submit" className="ml-1 text-xs text-sky-400 hover:text-sky-300">
-                            Save
-                          </button>
-                        </form>
+                        <span className="text-slate-300 capitalize">{task.status.replace("_", " ")}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -300,45 +278,12 @@ export default async function TasksPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">{assigneeLabel(task)}</td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(task.created_at)}</td>
                       <td className="px-4 py-3">
-                        <form action={updateTask} className="flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="task_id" value={task.id} />
-                          <input type="hidden" name="subject" value={task.subject} />
-                          <input type="hidden" name="description" value={task.description ?? ""} />
-                          <input type="hidden" name="status" value={task.status} />
-                          <select name="priority" defaultValue={task.priority} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100">
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                          </select>
-                          <select
-                            name="assignee_kind"
-                            defaultValue={task.family_member_id ? "family_member" : task.assigned_user_id ? "advisor" : ""}
-                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
-                          >
-                            <option value="">None</option>
-                            <option value="family_member">Family member</option>
-                            <option value="advisor">Advisor</option>
-                          </select>
-                          <select name="family_member_id" defaultValue={task.family_member_id ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100">
-                            <option value="">—</option>
-                            {familyMembers.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.full_name}
-                              </option>
-                            ))}
-                          </select>
-                          <select name="assigned_user_id" defaultValue={task.assigned_user_id ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100">
-                            <option value="">—</option>
-                            {advisors.map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.full_name}
-                              </option>
-                            ))}
-                          </select>
-                          <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500">
-                            Save
-                          </button>
-                        </form>
+                        <Link
+                          href={`/dashboard/tasks/${task.id}/edit`}
+                          className="inline-flex rounded bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-500"
+                        >
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}

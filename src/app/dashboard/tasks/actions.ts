@@ -57,12 +57,12 @@ export async function updateTask(formData: FormData) {
   if (!householdId) redirect("/dashboard/tasks");
 
   const taskId = (formData.get("task_id") as string)?.trim();
-  if (!taskId) return;
+  if (!taskId) redirect("/dashboard/tasks?error=Task+not+found");
 
   const task = await prisma.tasks.findFirst({
     where: { id: taskId, household_id: householdId },
   });
-  if (!task) return;
+  if (!task) redirect("/dashboard/tasks?error=Task+not+found");
 
   const subject = (formData.get("subject") as string | null)?.trim();
   const description = (formData.get("description") as string | null)?.trim() ?? undefined;
@@ -100,4 +100,6 @@ export async function updateTask(formData: FormData) {
   });
 
   revalidatePath("/dashboard/tasks");
+  revalidatePath(`/dashboard/tasks/${taskId}/edit`);
+  redirect("/dashboard/tasks?updated=1");
 }
