@@ -155,8 +155,6 @@ export default async function CarsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2">
                         <Link
                           href={`/dashboard/cars/${car.id}`}
-                          target="_blank"
-                          rel="noreferrer"
                           className="text-xs text-sky-400 hover:text-sky-300"
                         >
                           Edit
