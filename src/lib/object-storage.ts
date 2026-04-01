@@ -29,6 +29,12 @@ export type UploadRentalContractResult = {
   publicUrl: string | null;
 };
 
+export type UploadJobDocumentResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
 export async function uploadRentalContractObject(
   householdId: string,
   rentalId: string,
@@ -50,6 +56,46 @@ export async function uploadRentalContractObject(
   );
 
   const publicBase = process.env.RENTAL_STORAGE_PUBLIC_BASE_URL?.trim();
+  const publicUrl = publicBase ? `${publicBase.replace(/\/$/, "")}/${key}` : null;
+  return { bucket, key, publicUrl };
+}
+
+function buildJobS3Client() {
+  const region = requiredEnv("JOB_STORAGE_REGION");
+  const endpoint = process.env.JOB_STORAGE_ENDPOINT || undefined;
+  const forcePathStyle = process.env.JOB_STORAGE_FORCE_PATH_STYLE === "true";
+  return new S3Client({
+    region,
+    endpoint,
+    forcePathStyle,
+    credentials: {
+      accessKeyId: requiredEnv("JOB_STORAGE_ACCESS_KEY_ID"),
+      secretAccessKey: requiredEnv("JOB_STORAGE_SECRET_ACCESS_KEY"),
+    },
+  });
+}
+
+export async function uploadJobDocumentObject(
+  householdId: string,
+  jobId: string,
+  fileName: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadJobDocumentResult> {
+  const bucket = requiredEnv("JOB_STORAGE_BUCKET");
+  const key = `${householdId}/jobs/${jobId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const client = buildJobS3Client();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/octet-stream",
+    }),
+  );
+
+  const publicBase = process.env.JOB_STORAGE_PUBLIC_BASE_URL?.trim();
   const publicUrl = publicBase ? `${publicBase.replace(/\/$/, "")}/${key}` : null;
   return { bucket, key, publicUrl };
 }

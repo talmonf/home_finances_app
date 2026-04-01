@@ -233,6 +233,20 @@ export default async function Home() {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Jobs
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Track employment history per family member, including benefits, payroll changes, and job documents.
+                </p>
+                <Link
+                  href="/dashboard/jobs"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open Jobs
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Upcoming Renewals &amp; Deadlines
                 </h2>
                 <p className="mb-3 text-xs text-slate-400">

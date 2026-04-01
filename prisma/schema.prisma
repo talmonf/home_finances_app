@@ -46,6 +46,10 @@ model households {
   cars                    cars[]
   car_services            car_services[]
   car_licenses            car_licenses[]
+  jobs                    jobs[]
+  job_benefits            job_benefits[]
+  job_documents           job_documents[]
+  job_payroll_entries     job_payroll_entries[]
 }
 
 model family_members {
@@ -76,6 +80,7 @@ model family_members {
   donations            donations[]
   trip_family_members  trip_family_members[]
   main_driver_cars     cars[]
+  jobs                 jobs[]
 }
 
 model bank_accounts {
@@ -263,6 +268,23 @@ enum CarPurchasePaymentMethod {
   @@map("car_purchase_payment_method")
 }
 
+enum JobEmploymentType {
+  freelancer
+  employee
+
+  @@map("job_employment_type")
+}
+
+enum JobPayrollPeriodType {
+  monthly
+  biweekly
+  weekly
+  annual
+  other
+
+  @@map("job_payroll_period_type")
+}
+
 model cars {
   id                           String                   @id @default(uuid())
   household_id                 String
@@ -295,6 +317,86 @@ model cars {
   services     car_services[]
   licenses     car_licenses[]
   transactions transactions[]
+}
+
+model jobs {
+  id                   String            @id @default(uuid())
+  household_id         String
+  family_member_id     String
+  employment_type      JobEmploymentType
+  start_date           DateTime
+  end_date             DateTime?
+  job_title            String
+  employer_name        String?
+  employer_tax_number  String?
+  employer_address     String?
+  notes                String?
+  is_active            Boolean           @default(true)
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+
+  household            households        @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member        family_members    @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
+  benefits             job_benefits[]
+  documents            job_documents[]
+  payroll_entries      job_payroll_entries[]
+}
+
+model job_benefits {
+  id                    String   @id @default(uuid())
+  household_id          String
+  job_id                String
+  benefit_type          String
+  transfer_destination  String?
+  provider_name         String?
+  policy_number         String?
+  terms                 String?
+  notes                 String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job       jobs       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+}
+
+model job_documents {
+  id               String   @id @default(uuid())
+  household_id     String
+  job_id           String
+  file_name        String
+  mime_type        String?
+  storage_bucket   String?
+  storage_key      String
+  storage_url      String?
+  uploaded_at      DateTime @default(now())
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job       jobs       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+}
+
+model job_payroll_entries {
+  id                      String               @id @default(uuid())
+  household_id            String
+  job_id                  String
+  effective_date          DateTime
+  pay_period_start        DateTime?
+  pay_period_end          DateTime?
+  period_type             JobPayrollPeriodType @default(monthly)
+  currency                String               @default("ILS")
+  gross_amount            Decimal?             @db.Decimal(15, 2)
+  net_amount              Decimal?             @db.Decimal(15, 2)
+  employee_deductions     Decimal?             @db.Decimal(15, 2)
+  employer_contributions  Decimal?             @db.Decimal(15, 2)
+  bonus_amount            Decimal?             @db.Decimal(15, 2)
+  equity_amount           Decimal?             @db.Decimal(15, 2)
+  notes                   String?
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job       jobs       @relation(fields: [job_id], references: [id], onDelete: Cascade)
 }
 
 model car_services {
