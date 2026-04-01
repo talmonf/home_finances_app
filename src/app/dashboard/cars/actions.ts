@@ -244,19 +244,6 @@ export async function updateCar(formData: FormData) {
   redirect("/dashboard/cars?updated=1");
 }
 
-export async function toggleCarActive(id: string, nextActive: boolean) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
-
-  await prisma.cars.updateMany({
-    where: { id, household_id: householdId },
-    data: { is_active: nextActive },
-  });
-
-  revalidatePath("/dashboard/cars");
-}
-
 export async function createCarService(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();

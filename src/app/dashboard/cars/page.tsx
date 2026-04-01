@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createCar, toggleCarActive } from "./actions";
+import { createCar } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
     prisma.cars.findMany({
       where: { household_id: householdId },
       include: { main_driver: true },
-      orderBy: [{ is_active: "desc" }, { maker: "asc" }, { model: "asc" }],
+      orderBy: [{ maker: "asc" }, { model: "asc" }],
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -136,7 +136,6 @@ export default async function CarsPage({ searchParams }: PageProps) {
                     <th className="px-3 py-2 text-slate-300">Main driver</th>
                     <th className="px-3 py-2 text-slate-300">Purchase</th>
                     <th className="px-3 py-2 text-slate-300">Sale</th>
-                    <th className="px-3 py-2 text-slate-300">Status</th>
                     <th className="px-3 py-2 text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -153,13 +152,15 @@ export default async function CarsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">{car.main_driver?.full_name ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{formatMoney(car.purchase_amount)}</td>
                       <td className="px-3 py-2 text-slate-300">{formatMoney(car.sold_amount)}</td>
-                      <td className="px-3 py-2 text-slate-300">{car.is_active ? "Active" : "Inactive"}</td>
                       <td className="px-3 py-2">
-                        <form action={toggleCarActive.bind(null, car.id, !car.is_active)} className="inline">
-                          <button type="submit" className="text-xs text-sky-400 hover:text-sky-300">
-                            {car.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
+                        <Link
+                          href={`/dashboard/cars/${car.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-sky-400 hover:text-sky-300"
+                        >
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}
