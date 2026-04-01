@@ -36,6 +36,14 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
       where: { id, household_id: householdId },
       include: {
         utilities: { include: { payee: true } },
+        rentals: {
+          include: {
+            tenants: {
+              orderBy: { full_name: "asc" },
+            },
+          },
+          orderBy: { created_at: "desc" },
+        },
       },
     }),
     prisma.payees.findMany({
@@ -45,6 +53,11 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   ]);
 
   if (!property) redirect("/dashboard/properties?error=Not+found");
+  const now = new Date();
+  const currentRental =
+    property.rentals.find((rental) => !rental.end_date || rental.end_date >= now) ?? property.rentals[0] ?? null;
+  const currentTenantNames =
+    currentRental?.tenants.map((tenant) => tenant.full_name).filter(Boolean).join(", ") || "No tenants listed";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -85,6 +98,22 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
 
         <section className="space-y-4">
           <h2 className="text-lg font-medium text-slate-200">Property details</h2>
+          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Current rental</p>
+            {currentRental ? (
+              <div className="mt-2 space-y-1 text-sm text-slate-300">
+                <p>
+                  <span className="text-slate-400">Tenants:</span> {currentTenantNames}
+                </p>
+                <p>
+                  <span className="text-slate-400">Expires:</span>{" "}
+                  {currentRental.end_date ? currentRental.end_date.toISOString().slice(0, 10) : "No end date"}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-400">No rental found yet.</p>
+            )}
+          </div>
           <form action={updateProperty} className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2">
             <input type="hidden" name="id" value={property.id} />
             <div>
