@@ -79,44 +79,83 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
           <h2 className="text-lg font-medium text-slate-200">Car details</h2>
           <form action={updateCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="id" value={car.id} />
-            <input name="custom_name" defaultValue={car.custom_name ?? ""} placeholder="Car name (e.g. Kona (Talmon))" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="maker" defaultValue={car.maker} required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="model" defaultValue={car.model} required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="model_year" type="number" defaultValue={car.model_year ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="plate_number" defaultValue={car.plate_number ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="main_driver_family_member_id" defaultValue={car.main_driver_family_member_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Main driver</option>
-              {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-            </select>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Car name</label>
+              <input name="custom_name" defaultValue={car.custom_name ?? ""} placeholder="e.g. Kona (Talmon)" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Maker</label>
+              <input name="maker" defaultValue={car.maker} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Model</label>
+              <input name="model" defaultValue={car.model} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Model year</label>
+              <input name="model_year" type="number" defaultValue={car.model_year ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Plate number</label>
+              <input name="plate_number" defaultValue={car.plate_number ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Main driver</label>
+              <select name="main_driver_family_member_id" defaultValue={car.main_driver_family_member_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Not set</option>
+                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">General notes</label>
+              <textarea name="notes" defaultValue={car.notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Purchase date</label>
               <input name="purchase_date" type="date" defaultValue={dateInputValue(car.purchase_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
-            <input name="purchase_amount" type="number" step="0.01" defaultValue={car.purchase_amount?.toString() ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="purchase_payment_method" defaultValue={car.purchase_payment_method ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase payment method</option>
-              <option value="cash">Cash</option>
-              <option value="credit_card">Credit card</option>
-              <option value="bank_account">Bank account</option>
-              <option value="other">Other</option>
-            </select>
-            <select name="purchase_credit_card_id" defaultValue={car.purchase_credit_card_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase credit card</option>
-              {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
-            </select>
-            <select name="purchase_bank_account_id" defaultValue={car.purchase_bank_account_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase bank account</option>
-              {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-            </select>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchase amount</label>
+              <input name="purchase_amount" type="number" step="0.01" defaultValue={car.purchase_amount?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchase payment method</label>
+              <select name="purchase_payment_method" defaultValue={car.purchase_payment_method ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Not set</option>
+                <option value="cash">Cash</option>
+                <option value="credit_card">Credit card</option>
+                <option value="bank_account">Bank account</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchase credit card</label>
+              <select name="purchase_credit_card_id" defaultValue={car.purchase_credit_card_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Not set</option>
+                {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchase bank account</label>
+              <select name="purchase_bank_account_id" defaultValue={car.purchase_bank_account_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Not set</option>
+                {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+              </select>
+            </div>
             <textarea name="purchase_notes" defaultValue={car.purchase_notes ?? ""} placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sale date</label>
               <input name="sold_at" type="date" defaultValue={dateInputValue(car.sold_at)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
-            <input name="sold_amount" type="number" step="0.01" defaultValue={car.sold_amount?.toString() ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="sold_to" defaultValue={car.sold_to ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Sale amount</label>
+              <input name="sold_amount" type="number" step="0.01" defaultValue={car.sold_amount?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Sold to</label>
+              <input name="sold_to" defaultValue={car.sold_to ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <textarea name="sale_notes" defaultValue={car.sale_notes ?? ""} placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <textarea name="notes" defaultValue={car.notes ?? ""} className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Save car</button>
           </form>
         </section>
