@@ -14,6 +14,7 @@ export async function createInsurancePolicy(formData: FormData) {
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
   const policy_name = (formData.get("policy_name") as string | null)?.trim();
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
+  const car_id = (formData.get("car_id") as string | null)?.trim() || null;
   const expiration_date_raw = (formData.get("expiration_date") as string | null)?.trim();
 
   if (!provider_name || !policy_name || !expiration_date_raw) {
@@ -33,12 +34,21 @@ export async function createInsurancePolicy(formData: FormData) {
       redirect("/dashboard/insurance-policies?error=Invalid+family+member");
     }
   }
+  if (car_id) {
+    const car = await prisma.cars.findFirst({
+      where: { id: car_id, household_id: householdId },
+    });
+    if (!car) {
+      redirect("/dashboard/insurance-policies?error=Invalid+car");
+    }
+  }
 
   await prisma.insurance_policies.create({
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
       family_member_id,
+      car_id,
       provider_name,
       policy_name,
       expiration_date,
@@ -47,6 +57,7 @@ export async function createInsurancePolicy(formData: FormData) {
   });
 
   revalidatePath("/dashboard/insurance-policies");
+  revalidatePath("/dashboard/upcoming-renewals");
   redirect("/dashboard/insurance-policies?created=1");
 }
 
@@ -63,6 +74,7 @@ export async function toggleInsurancePolicyActive(id: string, nextActive: boolea
   });
 
   revalidatePath("/dashboard/insurance-policies");
+  revalidatePath("/dashboard/upcoming-renewals");
   redirect("/dashboard/insurance-policies?updated=1");
 }
 

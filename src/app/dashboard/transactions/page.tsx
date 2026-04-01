@@ -16,6 +16,7 @@ type PageProps = {
     memberId?: string;
     rentalId?: string;
     tripId?: string;
+    carId?: string;
   }>;
 };
 
@@ -52,6 +53,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const memberId = resolved.memberId || "";
   const rentalId = resolved.rentalId || "";
   const tripId = resolved.tripId || "";
+  const carId = resolved.carId || "";
   const direction = resolved.direction && resolved.direction !== "all" ? resolved.direction : undefined;
   const from = resolved.from ? new Date(resolved.from) : undefined;
   const to = resolved.to ? new Date(resolved.to) : undefined;
@@ -65,6 +67,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     family_member_id?: string;
     rental_id?: string;
     trip_id?: string;
+    car_id?: string;
     transaction_direction?: "debit" | "credit";
     transaction_date?: { gte?: Date; lte?: Date };
   } = {
@@ -78,6 +81,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   if (memberId) where.family_member_id = memberId;
   if (rentalId) where.rental_id = rentalId;
   if (tripId) where.trip_id = tripId;
+  if (carId) where.car_id = carId;
   if (direction) where.transaction_direction = direction;
   if (from || to) {
     where.transaction_date = {};
@@ -85,7 +89,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     if (to) where.transaction_date.lte = to;
   }
 
-  const [transactions, accounts, categories, payees, members, rentals, trips] = await Promise.all([
+  const [transactions, accounts, categories, payees, members, rentals, trips, cars] = await Promise.all([
     prisma.transactions.findMany({
       where,
       include: {
@@ -95,6 +99,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         family_member: true,
         rental: { include: { property: true } },
         trip: true,
+        car: true,
       },
       orderBy: { transaction_date: "desc" },
       take: 500,
@@ -123,6 +128,10 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     prisma.trips.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: [{ start_date: "desc" }, { name: "asc" }],
+    }),
+    prisma.cars.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ maker: "asc" }, { model: "asc" }],
     }),
   ]);
 
@@ -241,6 +250,22 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
               </select>
             </div>
             <div>
+              <label className="mb-1 block text-xs text-slate-400">Car</label>
+              <select
+                name="carId"
+                defaultValue={carId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All</option>
+                {cars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {car.maker} {car.model}
+                    {car.plate_number ? ` · ${car.plate_number}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="mb-1 block text-xs text-slate-400">From date</label>
               <input
                 type="date"
@@ -299,6 +324,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                     <th className="px-3 py-2 font-medium text-slate-300">Family member</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Rental</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Trip</th>
+                    <th className="px-3 py-2 font-medium text-slate-300">Car</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Description</th>
                   </tr>
                 </thead>
@@ -331,6 +357,9 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.trip?.name ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                        {tx.car ? `${tx.car.maker} ${tx.car.model}${tx.car.plate_number ? ` · ${tx.car.plate_number}` : ""}` : "—"}
                       </td>
                       <td className="max-w-[240px] truncate px-3 py-2 text-slate-400" title={tx.description ?? ""}>
                         {tx.description ?? "—"}

@@ -24,6 +24,7 @@ export async function updateTransactionRow(formData: FormData) {
   const study_or_class_id = (formData.get("study_or_class_id") as string)?.trim() || null;
   const rental_id = (formData.get("rental_id") as string)?.trim() || null;
   const trip_id = (formData.get("trip_id") as string)?.trim() || null;
+  const car_id = (formData.get("car_id") as string)?.trim() || null;
 
   const significant_purchase_id = (formData.get("significant_purchase_id") as string)?.trim() || null;
   const purchase_category_raw = (formData.get("purchase_category") as string)?.trim() || null;
@@ -44,6 +45,7 @@ export async function updateTransactionRow(formData: FormData) {
     significant_purchase_id,
     rental_id,
     trip_id,
+    car_id,
   };
 
   if (category_id) {
@@ -88,6 +90,12 @@ export async function updateTransactionRow(formData: FormData) {
       where: { id: trip_id, household_id: householdId },
     });
     if (!trip) data.trip_id = null;
+  }
+  if (car_id) {
+    const car = await prisma.cars.findFirst({
+      where: { id: car_id, household_id: householdId },
+    });
+    if (!car) data.car_id = null;
   }
 
   await prisma.transactions.update({

@@ -43,6 +43,9 @@ model households {
   rentals                 rentals[]
   rental_contracts        rental_contracts[]
   trips                   trips[]
+  cars                    cars[]
+  car_services            car_services[]
+  car_licenses            car_licenses[]
 }
 
 model family_members {
@@ -72,6 +75,7 @@ model family_members {
   medical_appointments  medical_appointments[]
   donations            donations[]
   trip_family_members  trip_family_members[]
+  main_driver_cars     cars[]
 }
 
 model bank_accounts {
@@ -101,6 +105,9 @@ model bank_accounts {
   medical_appointments            medical_appointments[]
   donations                       donations[]
   rentals                         rentals[]
+  car_purchase_payments           cars[]
+  car_service_payments            car_services[]
+  car_license_payments            car_licenses[]
 }
 
 model credit_cards {
@@ -134,6 +141,9 @@ model credit_cards {
   medical_appointments  medical_appointments[]
   donations             donations[]
   rentals               rentals[]
+  car_purchase_payments cars[]
+  car_service_payments  car_services[]
+  car_license_payments  car_licenses[]
 }
 
 enum CardScheme {
@@ -242,6 +252,86 @@ enum RentalPaymentMethod {
   other
 
   @@map("rental_payment_method")
+}
+
+enum CarPurchasePaymentMethod {
+  cash
+  credit_card
+  bank_account
+  other
+
+  @@map("car_purchase_payment_method")
+}
+
+model cars {
+  id                           String                   @id @default(uuid())
+  household_id                 String
+  maker                        String
+  model                        String
+  model_year                   Int?
+  plate_number                 String?
+  vin                          String?
+  notes                        String?
+  purchase_date                DateTime?
+  purchase_amount              Decimal?                 @db.Decimal(15, 2)
+  purchase_payment_method      CarPurchasePaymentMethod?
+  purchase_credit_card_id      String?
+  purchase_bank_account_id     String?
+  sold_at                      DateTime?
+  sold_amount                  Decimal?                 @db.Decimal(15, 2)
+  sold_to                      String?
+  main_driver_family_member_id String?
+  is_active                    Boolean                  @default(true)
+  created_at                   DateTime                 @default(now())
+  updated_at                   DateTime                 @updatedAt
+
+  household    households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  main_driver  family_members? @relation(fields: [main_driver_family_member_id], references: [id], onDelete: SetNull)
+  purchase_credit_card credit_cards? @relation(fields: [purchase_credit_card_id], references: [id], onDelete: SetNull)
+  purchase_bank_account bank_accounts? @relation(fields: [purchase_bank_account_id], references: [id], onDelete: SetNull)
+  insurance_policies insurance_policies[]
+  services     car_services[]
+  licenses     car_licenses[]
+  transactions transactions[]
+}
+
+model car_services {
+  id              String   @id @default(uuid())
+  household_id    String
+  car_id          String
+  provider_name   String
+  serviced_at     DateTime
+  cost_amount     Decimal? @db.Decimal(15, 2)
+  odometer_km     Int?
+  credit_card_id  String?
+  bank_account_id String?
+  notes           String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household    households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  car          cars          @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  credit_card  credit_cards? @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  bank_account bank_accounts? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+}
+
+model car_licenses {
+  id              String   @id @default(uuid())
+  household_id    String
+  car_id          String
+  renewed_at      DateTime?
+  expires_at      DateTime
+  cost_amount     Decimal? @db.Decimal(15, 2)
+  credit_card_id  String?
+  bank_account_id String?
+  notes           String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household    households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  car          cars          @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  credit_card  credit_cards? @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
+  bank_account bank_accounts? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
 }
 
 model rentals {
@@ -382,6 +472,7 @@ model insurance_policies {
   id               String    @id @default(uuid())
   household_id     String
   family_member_id String?
+  car_id           String?
   provider_name    String
   policy_name      String
   expiration_date  DateTime
@@ -391,6 +482,7 @@ model insurance_policies {
 
   household     households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
   family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+  car           cars?           @relation(fields: [car_id], references: [id], onDelete: SetNull)
 }
 
 enum DonationKind {
@@ -637,6 +729,7 @@ model transactions {
   significant_purchase_id String?
   rental_id             String?
   trip_id               String?
+  car_id                String?
   import_status         TransactionImportStatus @default(pending_review)
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
@@ -652,6 +745,7 @@ model transactions {
   significant_purchase significant_purchases? @relation(fields: [significant_purchase_id], references: [id], onDelete: SetNull)
   rental         rentals?         @relation(fields: [rental_id], references: [id], onDelete: SetNull)
   trip           trips?           @relation(fields: [trip_id], references: [id], onDelete: SetNull)
+  car            cars?            @relation(fields: [car_id], references: [id], onDelete: SetNull)
 }
 
 enum DocumentProcessingStatus {

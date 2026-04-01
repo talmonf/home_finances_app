@@ -1,0 +1,202 @@
+import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createCarLicense, createCarService, deleteCarLicense, deleteCarService, updateCar } from "../actions";
+
+export const dynamic = "force-dynamic";
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+};
+
+function dateInputValue(d: Date | null | undefined) {
+  return d ? d.toISOString().slice(0, 10) : "";
+}
+
+export default async function CarDetailsPage({ params, searchParams }: PageProps) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+  const { id } = await params;
+  const resolved = searchParams ? await searchParams : undefined;
+
+  const [car, familyMembers, creditCards, bankAccounts, services, licenses, insurancePolicies] = await Promise.all([
+    prisma.cars.findFirst({
+      where: { id, household_id: householdId },
+      include: { main_driver: true, purchase_credit_card: true, purchase_bank_account: true },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, cancelled_at: null },
+      orderBy: { card_name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { account_name: "asc" },
+    }),
+    prisma.car_services.findMany({
+      where: { household_id: householdId, car_id: id },
+      include: { credit_card: true, bank_account: true },
+      orderBy: { serviced_at: "desc" },
+    }),
+    prisma.car_licenses.findMany({
+      where: { household_id: householdId, car_id: id },
+      include: { credit_card: true, bank_account: true },
+      orderBy: { expires_at: "asc" },
+    }),
+    prisma.insurance_policies.findMany({
+      where: { household_id: householdId, car_id: id, is_active: true },
+      include: { family_member: true },
+      orderBy: { expiration_date: "asc" },
+    }),
+  ]);
+
+  if (!car) notFound();
+
+  return (
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <header className="space-y-2">
+          <Link href="/dashboard/cars" className="inline-block text-sm text-slate-400 hover:text-slate-200">
+            ← Back to cars
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            {car.maker} {car.model} {car.model_year ? `(${car.model_year})` : ""}
+          </h1>
+          {resolved?.error && (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              {decodeURIComponent(resolved.error.replace(/\+/g, " "))}
+            </div>
+          )}
+        </header>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium text-slate-200">Car details</h2>
+          <form action={updateCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
+            <input type="hidden" name="id" value={car.id} />
+            <input name="maker" defaultValue={car.maker} required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="model" defaultValue={car.model} required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="model_year" type="number" defaultValue={car.model_year ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="plate_number" defaultValue={car.plate_number ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="vin" defaultValue={car.vin ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <select name="main_driver_family_member_id" defaultValue={car.main_driver_family_member_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <option value="">Main driver</option>
+              {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+            </select>
+            <input name="purchase_date" type="date" defaultValue={dateInputValue(car.purchase_date)} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="purchase_amount" type="number" step="0.01" defaultValue={car.purchase_amount?.toString() ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <select name="purchase_payment_method" defaultValue={car.purchase_payment_method ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <option value="">Purchase payment method</option>
+              <option value="cash">Cash</option>
+              <option value="credit_card">Credit card</option>
+              <option value="bank_account">Bank account</option>
+              <option value="other">Other</option>
+            </select>
+            <select name="purchase_credit_card_id" defaultValue={car.purchase_credit_card_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <option value="">Purchase credit card</option>
+              {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
+            </select>
+            <select name="purchase_bank_account_id" defaultValue={car.purchase_bank_account_id ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <option value="">Purchase bank account</option>
+              {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+            </select>
+            <input name="sold_at" type="date" defaultValue={dateInputValue(car.sold_at)} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="sold_amount" type="number" step="0.01" defaultValue={car.sold_amount?.toString() ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="sold_to" defaultValue={car.sold_to ?? ""} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <textarea name="notes" defaultValue={car.notes ?? ""} className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Save car</button>
+          </form>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium text-slate-200">Insurance policies linked to this car</h2>
+            <Link href="/dashboard/insurance-policies" className="text-xs text-sky-400 hover:text-sky-300">Manage insurance</Link>
+          </div>
+          {insurancePolicies.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">No linked insurance policies yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Provider</th><th className="px-3 py-2 text-slate-300">Policy</th><th className="px-3 py-2 text-slate-300">Owner</th><th className="px-3 py-2 text-slate-300">Expires</th></tr></thead>
+                <tbody>{insurancePolicies.map((p) => <tr key={p.id} className="border-b border-slate-700/80"><td className="px-3 py-2 text-slate-100">{p.provider_name}</td><td className="px-3 py-2 text-slate-300">{p.policy_name}</td><td className="px-3 py-2 text-slate-300">{p.family_member?.full_name ?? "Household"}</td><td className="px-3 py-2 text-slate-300">{dateInputValue(p.expiration_date)}</td></tr>)}</tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium text-slate-200">Services</h2>
+          <form action={createCarService} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
+            <input type="hidden" name="car_id" value={car.id} />
+            <input name="provider_name" required placeholder="Service location/provider" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="serviced_at" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="odometer_km" type="number" placeholder="Odometer km" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Credit card (optional)</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}</select>
+            <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Bank account (optional)</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}</select>
+            <input name="notes" placeholder="Service notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add service</button>
+          </form>
+          {services.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Date</th><th className="px-3 py-2 text-slate-300">Provider</th><th className="px-3 py-2 text-slate-300">Cost</th><th className="px-3 py-2 text-slate-300">Km</th><th className="px-3 py-2 text-slate-300">Payment</th><th className="px-3 py-2 text-slate-300">Notes</th><th className="px-3 py-2 text-slate-300">Action</th></tr></thead>
+                <tbody>
+                  {services.map((s) => (
+                    <tr key={s.id} className="border-b border-slate-700/80">
+                      <td className="px-3 py-2 text-slate-200">{dateInputValue(s.serviced_at)}</td>
+                      <td className="px-3 py-2 text-slate-300">{s.provider_name}</td>
+                      <td className="px-3 py-2 text-slate-300">{s.cost_amount?.toString() ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-300">{s.odometer_km ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-300">{s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-400">{s.notes ?? "—"}</td>
+                      <td className="px-3 py-2"><form action={deleteCarService.bind(null, s.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium text-slate-200">Licenses</h2>
+          <form action={createCarLicense} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
+            <input type="hidden" name="car_id" value={car.id} />
+            <input name="renewed_at" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="expires_at" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Credit card (optional)</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}</select>
+            <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Bank account (optional)</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}</select>
+            <input name="notes" placeholder="License notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add license</button>
+          </form>
+          {licenses.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Renewed</th><th className="px-3 py-2 text-slate-300">Expires</th><th className="px-3 py-2 text-slate-300">Cost</th><th className="px-3 py-2 text-slate-300">Payment</th><th className="px-3 py-2 text-slate-300">Notes</th><th className="px-3 py-2 text-slate-300">Action</th></tr></thead>
+                <tbody>
+                  {licenses.map((l) => (
+                    <tr key={l.id} className="border-b border-slate-700/80">
+                      <td className="px-3 py-2 text-slate-300">{dateInputValue(l.renewed_at)}</td>
+                      <td className="px-3 py-2 text-slate-200">{dateInputValue(l.expires_at)}</td>
+                      <td className="px-3 py-2 text-slate-300">{l.cost_amount?.toString() ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-300">{l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-400">{l.notes ?? "—"}</td>
+                      <td className="px-3 py-2"><form action={deleteCarLicense.bind(null, l.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

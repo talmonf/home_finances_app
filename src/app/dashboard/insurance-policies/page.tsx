@@ -24,15 +24,19 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [policies, familyMembers] = await Promise.all([
+  const [policies, familyMembers, cars] = await Promise.all([
     prisma.insurance_policies.findMany({
       where: { household_id: householdId },
-      include: { family_member: true },
+      include: { family_member: true, car: true },
       orderBy: { expiration_date: "asc" },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.cars.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ maker: "asc" }, { model: "asc" }],
     }),
   ]);
 
@@ -116,6 +120,24 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               </select>
             </div>
             <div>
+              <label htmlFor="car_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Car (optional)
+              </label>
+              <select
+                id="car_id"
+                name="car_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">Not car-specific</option>
+                {cars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {car.maker} {car.model}
+                    {car.plate_number ? ` (${car.plate_number})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="expiration_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Expiration date
               </label>
@@ -151,6 +173,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">Provider</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Policy</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Car</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Expiration date</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
@@ -162,6 +185,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
                       <td className="px-4 py-3 text-slate-300">{p.policy_name}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {p.car ? `${p.car.maker} ${p.car.model}${p.car.plate_number ? ` (${p.car.plate_number})` : ""}` : "—"}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{p.family_member?.full_name ?? "Household"}</td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(p.expiration_date)}</td>
                       <td className="px-4 py-3">

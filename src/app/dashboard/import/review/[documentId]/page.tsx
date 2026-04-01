@@ -50,7 +50,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases, rentals, trips] = await Promise.all([
+  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases, rentals, trips, cars] = await Promise.all([
     prisma.documents.findFirst({
       where: { id: documentId, household_id: householdId },
       include: { bank_account: true },
@@ -64,6 +64,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
         study_or_class: true,
         rental: true,
         trip: true,
+        car: true,
       },
       orderBy: { transaction_date: "asc" },
     }),
@@ -96,6 +97,10 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
     prisma.trips.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: [{ start_date: "desc" }, { name: "asc" }],
+    }),
+    prisma.cars.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ maker: "asc" }, { model: "asc" }],
     }),
   ]);
 
@@ -181,7 +186,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                 <th className="px-2 py-2 font-medium text-slate-300">Date</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Amount</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Description</th>
-                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase · Rental · Trip</th>
+                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase · Rental · Trip · Car</th>
               </tr>
             </thead>
             <tbody>
@@ -311,6 +316,19 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                           <option key={trip.id} value={trip.id}>
                             {trip.name}
                             {trip.city ? ` · ${trip.city}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="car_id"
+                        defaultValue={tx.car_id ?? ""}
+                        className="min-w-[180px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                      >
+                        <option value="">— Car —</option>
+                        {cars.map((car) => (
+                          <option key={car.id} value={car.id}>
+                            {car.maker} {car.model}
+                            {car.plate_number ? ` · ${car.plate_number}` : ""}
                           </option>
                         ))}
                       </select>

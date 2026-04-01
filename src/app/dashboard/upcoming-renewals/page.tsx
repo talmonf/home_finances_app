@@ -82,6 +82,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     donationRenewals,
     significantPurchases,
     familyMembers,
+    carLicenses,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
       where: {
@@ -108,7 +109,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     }),
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
-      include: { family_member: true },
+      include: { family_member: true, car: true },
     }),
     prisma.rentals.findMany({
       where: { household_id: householdId, end_date: { not: null, gte: today } },
@@ -146,6 +147,11 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       where: { household_id: householdId, is_active: true },
       select: { id: true, full_name: true },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.car_licenses.findMany({
+      where: { household_id: householdId, expires_at: { gte: today } },
+      include: { car: true },
+      orderBy: { expires_at: "asc" },
     }),
   ]);
 
@@ -193,13 +199,23 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       })),
     ...insurancePolicies.map((p) => ({
       id: `insurance-${p.id}`,
-      category: "Insurance",
-      itemName: `${p.provider_name} — ${p.policy_name}`,
+      category: p.car_id ? "Car insurance" : "Insurance",
+      itemName: `${p.provider_name} — ${p.policy_name}${p.car ? ` (${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""})` : ""}`,
       owner: p.family_member?.full_name ?? "Household",
       ownerId: p.family_member?.id ?? null,
       renewalDate: p.expiration_date,
       renewalType: "—",
       href: "/dashboard/insurance-policies",
+    })),
+    ...carLicenses.map((l) => ({
+      id: `car-license-${l.id}`,
+      category: "Car license",
+      itemName: `${l.car.maker} ${l.car.model}${l.car.plate_number ? ` · ${l.car.plate_number}` : ""}`,
+      owner: "Vehicle",
+      ownerId: null,
+      renewalDate: l.expires_at,
+      renewalType: "Expiry",
+      href: `/dashboard/cars/${l.car_id}`,
     })),
     ...rentals
       .filter((r) => r.end_date)
@@ -273,7 +289,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     return categoryOk && ownerOk;
   });
 
-  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Rental", "Utility", "Task", "Donation", "Warranty"];
+  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Car insurance", "Car license", "Rental", "Utility", "Task", "Donation", "Warranty"];
   const categories = Array.from(
     new Set(rows.map((r) => r.category)),
   ).sort((a, b) => {
