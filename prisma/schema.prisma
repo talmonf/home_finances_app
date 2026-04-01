@@ -266,20 +266,22 @@ enum CarPurchasePaymentMethod {
 model cars {
   id                           String                   @id @default(uuid())
   household_id                 String
+  custom_name                  String?
   maker                        String
   model                        String
   model_year                   Int?
   plate_number                 String?
-  vin                          String?
   notes                        String?
   purchase_date                DateTime?
   purchase_amount              Decimal?                 @db.Decimal(15, 2)
+  purchase_notes               String?
   purchase_payment_method      CarPurchasePaymentMethod?
   purchase_credit_card_id      String?
   purchase_bank_account_id     String?
   sold_at                      DateTime?
   sold_amount                  Decimal?                 @db.Decimal(15, 2)
   sold_to                      String?
+  sale_notes                   String?
   main_driver_family_member_id String?
   is_active                    Boolean                  @default(true)
   created_at                   DateTime                 @default(now())

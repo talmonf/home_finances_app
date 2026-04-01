@@ -71,10 +71,11 @@ export async function createCar(formData: FormData) {
 
   const maker = (formData.get("maker") as string | null)?.trim();
   const model = (formData.get("model") as string | null)?.trim();
+  const custom_name = (formData.get("custom_name") as string | null)?.trim() || null;
   const model_year_raw = (formData.get("model_year") as string | null)?.trim();
   const plate_number = (formData.get("plate_number") as string | null)?.trim() || null;
-  const vin = (formData.get("vin") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const purchase_notes = (formData.get("purchase_notes") as string | null)?.trim() || null;
   const main_driver_family_member_id =
     (formData.get("main_driver_family_member_id") as string | null)?.trim() || null;
 
@@ -90,6 +91,7 @@ export async function createCar(formData: FormData) {
   const sold_at = parseDateInput((formData.get("sold_at") as string | null)?.trim() || null);
   const sold_amount = parseMoney((formData.get("sold_amount") as string | null) ?? null);
   const sold_to = (formData.get("sold_to") as string | null)?.trim() || null;
+  const sale_notes = (formData.get("sale_notes") as string | null)?.trim() || null;
 
   if (!maker || !model) redirect("/dashboard/cars?error=Maker+and+model+are+required");
 
@@ -130,21 +132,23 @@ export async function createCar(formData: FormData) {
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
+      custom_name,
       maker,
       model,
       model_year,
       plate_number,
-      vin,
       notes,
       main_driver_family_member_id,
       purchase_date,
       purchase_amount,
+      purchase_notes,
       purchase_payment_method,
       purchase_credit_card_id,
       purchase_bank_account_id,
       sold_at,
       sold_amount,
       sold_to,
+      sale_notes,
     },
   });
 
@@ -165,6 +169,7 @@ export async function updateCar(formData: FormData) {
 
   const maker = (formData.get("maker") as string | null)?.trim();
   const model = (formData.get("model") as string | null)?.trim();
+  const custom_name = (formData.get("custom_name") as string | null)?.trim() || null;
   if (!maker || !model) redirect(`/dashboard/cars/${id}?error=Maker+and+model+are+required`);
 
   const model_year_raw = (formData.get("model_year") as string | null)?.trim();
@@ -215,18 +220,20 @@ export async function updateCar(formData: FormData) {
     data: {
       maker,
       model,
+      custom_name,
       model_year,
       plate_number: (formData.get("plate_number") as string | null)?.trim() || null,
-      vin: (formData.get("vin") as string | null)?.trim() || null,
       notes: (formData.get("notes") as string | null)?.trim() || null,
       purchase_date: parseDateInput((formData.get("purchase_date") as string | null)?.trim() || null),
       purchase_amount: parseMoney((formData.get("purchase_amount") as string | null) ?? null),
+      purchase_notes: (formData.get("purchase_notes") as string | null)?.trim() || null,
       purchase_payment_method,
       purchase_credit_card_id,
       purchase_bank_account_id,
       sold_at: parseDateInput((formData.get("sold_at") as string | null)?.trim() || null),
       sold_amount: parseMoney((formData.get("sold_amount") as string | null) ?? null),
       sold_to: (formData.get("sold_to") as string | null)?.trim() || null,
+      sale_notes: (formData.get("sale_notes") as string | null)?.trim() || null,
       main_driver_family_member_id,
     },
   });

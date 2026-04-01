@@ -44,6 +44,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 032 | `032_tasks_links_and_assignee_validation.sql` | ALTER | tasks: add two title+URL link pairs; add DB check to prevent selecting both family_member_id and assigned_user_id simultaneously. |
 | 033 | `033_tasks_schedule_and_due_dates.sql` | ALTER | tasks: add schedule_date (planned work date) and due_date (deadline). |
 | 034 | `034_cars_domain.sql` | CREATE/ALTER | Cars domain: tables `cars`, `car_services`, `car_licenses`; enum `car_purchase_payment_method`; link `insurance_policies.car_id` and `transactions.car_id`. |
+| 035 | `035_cars_name_and_notes_cleanup.sql` | ALTER | cars: add `custom_name`, `purchase_notes`, `sale_notes`; drop `vin`. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -81,6 +82,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 032_tasks_links_and_assignee_validation.sql
 - [x] 033_tasks_schedule_and_due_dates.sql
 - [x] 034_cars_domain.sql
+- [x] 035_cars_name_and_notes_cleanup.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

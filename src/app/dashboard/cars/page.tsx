@@ -78,16 +78,19 @@ export default async function CarsPage({ searchParams }: PageProps) {
         <section className="space-y-3">
           <h2 className="text-lg font-medium text-slate-200">Add car</h2>
           <form action={createCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            <input name="maker" placeholder="Maker (e.g. Toyota)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="model" placeholder="Model (e.g. Corolla)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="custom_name" placeholder="Car name (e.g. Kona (Talmon))" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="maker" placeholder="Maker (e.g. Hyundai)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="model" placeholder="Model (e.g. Kona)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="model_year" placeholder="Model year" type="number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="plate_number" placeholder="Plate number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="vin" placeholder="VIN (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <select name="main_driver_family_member_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
               <option value="">Main driver (optional)</option>
               {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
-            <input name="purchase_date" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchase date</label>
+              <input name="purchase_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <input name="purchase_amount" placeholder="Purchase amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <select name="purchase_payment_method" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
               <option value="">Purchase payment method</option>
@@ -104,9 +107,14 @@ export default async function CarsPage({ searchParams }: PageProps) {
               <option value="">Purchase bank account (optional)</option>
               {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
             </select>
-            <input name="sold_at" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <textarea name="purchase_notes" placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Sale date</label>
+              <input name="sold_at" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <input name="sold_amount" placeholder="Sold amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="sold_to" placeholder="Sold to" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <textarea name="sale_notes" placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add car</button>
           </form>
@@ -137,6 +145,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
                     <tr key={car.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-3 py-2 text-slate-100">
                         <Link href={`/dashboard/cars/${car.id}`} className="text-sky-400 hover:text-sky-300">
+                          {car.custom_name ? `${car.custom_name} — ` : ""}
                           {car.maker} {car.model} {car.model_year ? `(${car.model_year})` : ""}
                         </Link>
                       </td>
