@@ -70,6 +70,12 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
   ]);
 
   if (!property) redirect("/dashboard/properties?error=Not+found");
+  const rentalsSortedDesc = [...property.rentals].sort((a, b) => {
+    const aPrimary = a.start_date?.getTime() ?? a.created_at.getTime();
+    const bPrimary = b.start_date?.getTime() ?? b.created_at.getTime();
+    if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+    return b.created_at.getTime() - a.created_at.getTime();
+  });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -161,13 +167,13 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
             </div>
           </form>
 
-          {property.rentals.length === 0 ? (
+          {rentalsSortedDesc.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No rentals yet. Use the form above, then add <span className="text-slate-300">tenants</span>, contracts, and transaction links inside each rental.
             </p>
           ) : (
             <div className="space-y-4">
-              {property.rentals.map((rental) => (
+              {rentalsSortedDesc.map((rental) => (
                 <div key={rental.id} className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                   <form action={updateRental} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="id" value={rental.id} />
