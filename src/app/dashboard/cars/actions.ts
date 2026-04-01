@@ -93,9 +93,13 @@ export async function createCar(formData: FormData) {
 
   if (!maker || !model) redirect("/dashboard/cars?error=Maker+and+model+are+required");
 
-  const model_year = model_year_raw ? Number(model_year_raw) : null;
-  if (model_year_raw && (!Number.isFinite(model_year) || model_year < 1886 || model_year > 9999)) {
-    redirect("/dashboard/cars?error=Invalid+model+year");
+  let model_year: number | null = null;
+  if (model_year_raw) {
+    const parsedModelYear = Number(model_year_raw);
+    if (!Number.isFinite(parsedModelYear) || parsedModelYear < 1886 || parsedModelYear > 9999) {
+      redirect("/dashboard/cars?error=Invalid+model+year");
+    }
+    model_year = parsedModelYear;
   }
 
   const allowedMethods: CarPurchasePaymentMethod[] = ["cash", "credit_card", "bank_account", "other"];
@@ -164,9 +168,13 @@ export async function updateCar(formData: FormData) {
   if (!maker || !model) redirect(`/dashboard/cars/${id}?error=Maker+and+model+are+required`);
 
   const model_year_raw = (formData.get("model_year") as string | null)?.trim();
-  const model_year = model_year_raw ? Number(model_year_raw) : null;
-  if (model_year_raw && (!Number.isFinite(model_year) || model_year < 1886 || model_year > 9999)) {
-    redirect(`/dashboard/cars/${id}?error=Invalid+model+year`);
+  let model_year: number | null = null;
+  if (model_year_raw) {
+    const parsedModelYear = Number(model_year_raw);
+    if (!Number.isFinite(parsedModelYear) || parsedModelYear < 1886 || parsedModelYear > 9999) {
+      redirect(`/dashboard/cars/${id}?error=Invalid+model+year`);
+    }
+    model_year = parsedModelYear;
   }
 
   const purchase_payment_method_raw =
