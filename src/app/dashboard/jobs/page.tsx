@@ -115,11 +115,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
                 <tbody>
                   {jobs.map((job) => (
                     <tr key={job.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-3 py-2 text-slate-100">
-                        <Link href={`/dashboard/jobs/${job.id}`} className="text-sky-400 hover:text-sky-300">
-                          {job.job_title}
-                        </Link>
-                      </td>
+                      <td className="px-3 py-2 text-slate-100">{job.job_title}</td>
                       <td className="px-3 py-2 text-slate-300">{job.family_member.full_name}</td>
                       <td className="px-3 py-2 text-slate-300">{job.employment_type === "employee" ? "Employee" : "Freelancer"}</td>
                       <td className="px-3 py-2 text-slate-300">{job.employer_name ?? "Self-employed / not set"}</td>
