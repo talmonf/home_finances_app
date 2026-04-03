@@ -1,8 +1,14 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
-import { carDisplayLabel, petrolMetricsByFillupId } from "@/lib/petrol-fillups-metrics";
+import {
+  carDisplayLabel,
+  formatCostPerLitre,
+  petrolMetricsByFillupId,
+} from "@/lib/petrol-fillups-metrics";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { PetrolCarPicker } from "@/components/petrol-car-picker";
+import { PetrolFillupFormFields } from "@/components/petrol-fillup-form-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
-import { createCarPetrolFillup, deleteCarPetrolFillup } from "@/app/dashboard/cars/actions";
+import { createCarPetrolFillup, deleteCarPetrolFillup, updateCarPetrolFillup } from "@/app/dashboard/cars/actions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -15,6 +21,8 @@ type PageProps = {
     saved?: string;
     deleted?: string;
     error?: string;
+    /** Fill-up id to edit */
+    edit?: string;
   }>;
 };
 
@@ -44,6 +52,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
 
   const resolved = searchParams ? await searchParams : {};
   const requestedCarId = resolved.carId?.trim() || null;
+  const editFillupId = resolved.edit?.trim() || null;
 
   const cars = await prisma.cars.findMany({
     where: { household_id: householdId, is_active: true },
@@ -83,6 +92,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
       if (resolved.saved) p.set("saved", typeof resolved.saved === "string" ? resolved.saved : "1");
       if (resolved.deleted) p.set("deleted", typeof resolved.deleted === "string" ? resolved.deleted : "1");
       if (resolved.error) p.set("error", resolved.error);
+      p.delete("edit");
       redirect(`/dashboard/petrol-fillups?${p.toString()}`);
     }
   }
@@ -99,9 +109,17 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
   const petrolMetrics = petrolMetricsByFillupId(fillups);
   const today = new Date().toISOString().slice(0, 10);
 
+  const editingFillup =
+    selectedCarId && editFillupId ? fillups.find((f) => f.id === editFillupId) || null : null;
+
+  const cancelEditHref =
+    selectedCarId != null
+      ? `/dashboard/petrol-fillups?carId=${encodeURIComponent(selectedCarId)}`
+      : "/dashboard/petrol-fillups";
+
   return (
     <div className="min-h-screen bg-slate-950 px-4 pb-28 pt-6 sm:pb-10">
-      <div className="mx-auto w-full max-w-lg space-y-6">
+      <div className="mx-auto w-full max-w-5xl space-y-6">
         <header className="space-y-1">
           <Link href="/" className="inline-block text-sm text-slate-400 hover:text-slate-200">
             ← Home
@@ -138,74 +156,49 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
 
         {selectedCarId ? (
           <>
-            <section className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/50 ring-1 ring-slate-700/80">
-              <h2 className="mb-4 text-lg font-medium text-slate-200">New fill-up</h2>
-              <form action={createCarPetrolFillup} className="flex flex-col gap-4">
-                <input type="hidden" name="car_id" value={selectedCarId} />
-                <div className="space-y-2">
-                  <label className={labelClass} htmlFor="filled_at">
-                    Date
-                  </label>
-                  <input
-                    id="filled_at"
-                    name="filled_at"
-                    type="date"
-                    required
-                    defaultValue={today}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass} htmlFor="amount_paid">
-                    Amount paid
-                  </label>
-                  <input
-                    id="amount_paid"
-                    name="amount_paid"
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    required
-                    placeholder="0.00"
-                    className={inputClass}
-                    autoComplete="transaction-amount"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass} htmlFor="litres">
-                    Litres
-                  </label>
-                  <input
-                    id="litres"
-                    name="litres"
-                    type="number"
-                    inputMode="decimal"
-                    step="0.001"
-                    min="0"
-                    required
-                    placeholder="0.000"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass} htmlFor="odometer_km">
-                    Odometer (km)
-                  </label>
-                  <input
-                    id="odometer_km"
-                    name="odometer_km"
-                    type="number"
-                    inputMode="numeric"
-                    min="0"
-                    required
-                    className={inputClass}
-                  />
-                </div>
+            {editFillupId && !editingFillup ? (
+              <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+                That fill-up could not be loaded.{" "}
+                <Link href={cancelEditHref} className="text-sky-400 underline hover:text-sky-300">
+                  Clear edit
+                </Link>
+              </div>
+            ) : null}
+
+            <section className="mx-auto w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/50 ring-1 ring-slate-700/80">
+              <h2 className="mb-4 text-lg font-medium text-slate-200">
+                {editingFillup ? "Edit fill-up" : "New fill-up"}
+              </h2>
+              <form
+                key={editingFillup?.id ?? "new-fillup"}
+                action={editingFillup ? updateCarPetrolFillup : createCarPetrolFillup}
+                className="flex flex-col gap-4"
+              >
+                <PetrolFillupFormFields
+                  carId={selectedCarId}
+                  fillupId={editingFillup?.id}
+                  currency={editingFillup?.currency ?? "ILS"}
+                  defaults={
+                    editingFillup
+                      ? {
+                          filled_at: dateInputValue(editingFillup.filled_at),
+                          amount_paid: editingFillup.amount_paid.toString(),
+                          litres: editingFillup.litres.toString(),
+                          odometer_km: String(editingFillup.odometer_km),
+                        }
+                      : {
+                          filled_at: today,
+                          amount_paid: "",
+                          litres: "",
+                          odometer_km: "",
+                        }
+                  }
+                />
                 <div className="[&_select]:min-h-[52px] [&_select]:text-base [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3">
                   <TherapyTransactionLinkSelect
                     name="linked_transaction_id"
                     householdId={householdId}
+                    currentId={editingFillup?.transaction_id ?? null}
                     label="Linked transaction (optional)"
                     hint="One bank transaction can link to only one petrol record."
                   />
@@ -218,15 +211,26 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                     id="notes"
                     name="notes"
                     rows={2}
+                    defaultValue={editingFillup?.notes ?? ""}
                     className={`${inputClass} min-h-[88px] resize-y py-3`}
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="mt-2 min-h-[56px] w-full rounded-xl bg-sky-500 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500"
-                >
-                  Save fill-up
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <button
+                    type="submit"
+                    className="min-h-[56px] rounded-xl bg-sky-500 px-5 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500 sm:flex-1"
+                  >
+                    {editingFillup ? "Save changes" : "Save fill-up"}
+                  </button>
+                  {editingFillup ? (
+                    <Link
+                      href={cancelEditHref}
+                      className="inline-flex min-h-[56px] items-center justify-center rounded-xl border border-slate-600 px-5 text-base font-medium text-slate-200 hover:bg-slate-800"
+                    >
+                      Cancel
+                    </Link>
+                  ) : null}
+                </div>
               </form>
             </section>
 
@@ -237,73 +241,82 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                   No fill-ups for this vehicle yet.
                 </p>
               ) : (
-                <ul className="space-y-3">
-                  {fillups.map((p) => {
-                    const m = petrolMetrics.get(p.id);
-                    const tx = p.transaction;
-                    const txLabel = tx
-                      ? `${dateInputValue(tx.transaction_date)} ${tx.transaction_direction === "credit" ? "+" : "−"}${tx.amount.toString()} ${tx.description ?? ""}`.slice(
-                          0,
-                          100,
-                        )
-                      : null;
-                    return (
-                      <li
-                        key={p.id}
-                        className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 shadow-sm ring-1 ring-slate-800"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-base font-medium text-slate-100">
-                            {dateInputValue(p.filled_at)}
-                          </p>
-                          <form action={deleteCarPetrolFillup.bind(null, p.id, selectedCarId)}>
-                            <button
-                              type="submit"
-                              className="min-h-[44px] min-w-[44px] rounded-lg px-3 text-sm font-medium text-rose-400 hover:bg-rose-950/40 hover:text-rose-300"
-                            >
-                              Delete
-                            </button>
-                          </form>
-                        </div>
-                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                          <dt className="text-slate-500">Paid</dt>
-                          <dd className="text-right text-slate-200">{formatMoney(p.amount_paid)}</dd>
-                          <dt className="text-slate-500">Litres</dt>
-                          <dd className="text-right text-slate-200">
-                            {Number(p.litres.toString()).toLocaleString("en", {
-                              minimumFractionDigits: 3,
-                              maximumFractionDigits: 3,
-                            })}
-                          </dd>
-                          <dt className="text-slate-500">Odometer</dt>
-                          <dd className="text-right text-slate-200">
-                            {p.odometer_km.toLocaleString("en")} km
-                          </dd>
-                          <dt className="text-slate-500">Δ km</dt>
-                          <dd className="text-right text-slate-200">
-                            {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
-                          </dd>
-                          <dt className="text-slate-500">Cost / L</dt>
-                          <dd className="text-right text-slate-200">
-                            {m?.costPerLitre != null ? m.costPerLitre.toFixed(3) : "—"}
-                          </dd>
-                          <dt className="text-slate-500">km / L</dt>
-                          <dd className="text-right text-slate-200">
-                            {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
-                          </dd>
-                        </dl>
-                        {txLabel ? (
-                          <p className="mt-3 border-t border-slate-700/80 pt-3 text-xs text-slate-500">
-                            {txLabel}
-                          </p>
-                        ) : null}
-                        {p.notes ? (
-                          <p className="mt-2 text-xs text-slate-400">{p.notes}</p>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/40">
+                  <table className="w-full min-w-[640px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700 bg-slate-800/80">
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Date</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Paid</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">L</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Odo (km)</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Δ km</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Cost/L</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">km/L</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Tx</th>
+                        <th className="min-w-[6rem] px-3 py-2 font-medium text-slate-300">Notes</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300"> </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fillups.map((p) => {
+                        const m = petrolMetrics.get(p.id);
+                        const tx = p.transaction;
+                        const editHref = `/dashboard/petrol-fillups?carId=${encodeURIComponent(selectedCarId)}&edit=${encodeURIComponent(p.id)}`;
+                        return (
+                          <tr
+                            key={p.id}
+                            className={`border-b border-slate-700/80 ${editingFillup?.id === p.id ? "bg-sky-950/40" : ""}`}
+                          >
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">{dateInputValue(p.filled_at)}</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">{formatMoney(p.amount_paid)}</td>
+                            <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
+                              {Number(p.litres.toString()).toLocaleString("en", {
+                                minimumFractionDigits: 3,
+                                maximumFractionDigits: 3,
+                              })}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
+                              {p.odometer_km.toLocaleString("en")}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
+                              {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
+                              {formatCostPerLitre(m?.costPerLitre ?? null)}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
+                              {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-400" title={tx ? `${dateInputValue(tx.transaction_date)} ${tx.amount.toString()}` : undefined}>
+                              {tx ? "✓" : "—"}
+                            </td>
+                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={p.notes ?? undefined}>
+                              {p.notes || "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-right">
+                              <div className="flex flex-wrap items-center justify-end gap-2">
+                                <Link
+                                  href={editHref}
+                                  className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                                >
+                                  Edit
+                                </Link>
+                                <ConfirmDeleteForm action={deleteCarPetrolFillup.bind(null, p.id, selectedCarId)}>
+                                  <button
+                                    type="submit"
+                                    className="text-xs font-medium text-rose-400 hover:text-rose-300"
+                                  >
+                                    Delete
+                                  </button>
+                                </ConfirmDeleteForm>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
 

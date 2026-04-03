@@ -1,3 +1,4 @@
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { createTherapyProgram, deleteTherapyProgram } from "../actions";
@@ -111,12 +112,12 @@ export default async function ProgramsPage({
                     <td className="px-3 py-2 text-slate-400">{p.job.job_title}</td>
                     <td className="px-3 py-2 text-slate-400">{p.is_active ? "Yes" : "No"}</td>
                     <td className="px-3 py-2">
-                      <form action={deleteTherapyProgram}>
+                      <ConfirmDeleteForm action={deleteTherapyProgram}>
                         <input type="hidden" name="id" value={p.id} />
                         <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                           Delete
                         </button>
-                      </form>
+                      </ConfirmDeleteForm>
                     </td>
                   </tr>
                 ))}

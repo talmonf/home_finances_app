@@ -5,6 +5,7 @@ import {
   deleteTherapyConsultation,
   updateTherapyConsultation,
 } from "../actions";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
@@ -252,12 +253,12 @@ export default async function ConsultationsPage({
                     Save
                   </button>
                 </form>
-                <form action={deleteTherapyConsultation} className="mt-2">
+                <ConfirmDeleteForm action={deleteTherapyConsultation} className="mt-2">
                   <input type="hidden" name="id" value={r.id} />
                   <button type="submit" className="text-xs text-rose-400">
                     Delete
                   </button>
-                </form>
+                </ConfirmDeleteForm>
               </details>
             ))}
           </div>

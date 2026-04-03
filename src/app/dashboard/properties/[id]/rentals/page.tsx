@@ -1,6 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConfirmDeleteForm, ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
 import RentalContractUpload from "../RentalContractUpload";
 import {
   createRental,
@@ -239,9 +240,12 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                     </div>
                     <div className="flex items-end gap-3">
                       <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">Save rental</button>
-                      <button formAction={deleteRental.bind(null, rental.id, property.id)} type="submit" className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600">
+                      <ConfirmDeleteFormActionButton
+                        formAction={deleteRental.bind(null, rental.id, property.id)}
+                        className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600"
+                      >
                         Delete rental
-                      </button>
+                      </ConfirmDeleteFormActionButton>
                     </div>
                   </form>
 
@@ -266,7 +270,12 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                           <input name="notes" defaultValue={tenant.notes ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
                           <div className="flex items-center gap-2">
                             <button type="submit" className="text-xs text-sky-300 hover:text-sky-200">Save</button>
-                            <button formAction={deleteRentalTenant.bind(null, tenant.id, property.id)} type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button>
+                            <ConfirmDeleteFormActionButton
+                              formAction={deleteRentalTenant.bind(null, tenant.id, property.id)}
+                              className="text-xs text-rose-400 hover:text-rose-300"
+                            >
+                              Delete
+                            </ConfirmDeleteFormActionButton>
                           </div>
                         </form>
                       ))}
@@ -282,11 +291,11 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                           <a href={contract.storage_url ?? "#"} target="_blank" rel="noreferrer" className="truncate text-sky-300 hover:text-sky-200">
                             {contract.file_name}
                           </a>
-                          <form action={deleteRentalContract.bind(null, contract.id, property.id)}>
+                          <ConfirmDeleteForm action={deleteRentalContract.bind(null, contract.id, property.id)}>
                             <button type="submit" className="text-rose-400 hover:text-rose-300">
                               Delete
                             </button>
-                          </form>
+                          </ConfirmDeleteForm>
                         </div>
                       ))}
                     </div>

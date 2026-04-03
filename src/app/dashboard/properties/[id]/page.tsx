@@ -1,6 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import {
   updateProperty,
   createUtility,
@@ -251,9 +252,9 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                           >
                             Edit
                           </Link>
-                          <form action={deleteUtility.bind(null, u.id, property.id)} className="inline">
+                          <ConfirmDeleteForm action={deleteUtility.bind(null, u.id, property.id)} className="inline">
                             <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">Delete</button>
-                          </form>
+                          </ConfirmDeleteForm>
                         </div>
                       </td>
                     </tr>

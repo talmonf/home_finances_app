@@ -1,3 +1,4 @@
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
@@ -223,12 +224,12 @@ export default async function AppointmentsPage() {
                 <span>
                   {s.client.first_name} — {s.job.job_title} — {s.recurrence} — DOW {s.day_of_week}
                 </span>
-                <form action={deleteTherapyAppointmentSeries}>
+                <ConfirmDeleteForm action={deleteTherapyAppointmentSeries}>
                   <input type="hidden" name="id" value={s.id} />
                   <button type="submit" className="text-xs text-rose-400">
                     Delete series
                   </button>
-                </form>
+                </ConfirmDeleteForm>
               </li>
             ))}
           </ul>

@@ -9,6 +9,7 @@ import {
   deleteJobPayrollEntry,
   updateJob,
 } from "../actions";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import JobDocumentUpload from "./JobDocumentUpload";
 
 export const dynamic = "force-dynamic";
@@ -137,7 +138,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-300">{b.policy_number ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{b.terms ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{b.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><form action={deleteJobBenefit.bind(null, b.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobBenefit.bind(null, b.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
                 </tbody>
@@ -186,7 +187,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-300">{p.net_amount?.toString() ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{p.currency}</td>
                       <td className="px-3 py-2 text-slate-300">{p.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><form action={deleteJobPayrollEntry.bind(null, p.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobPayrollEntry.bind(null, p.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
                 </tbody>
@@ -221,11 +222,11 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                         </a>
                       </td>
                       <td className="px-3 py-2">
-                        <form action={deleteJobDocument.bind(null, d.id, job.id)}>
+                        <ConfirmDeleteForm action={deleteJobDocument.bind(null, d.id, job.id)}>
                           <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                             Delete
                           </button>
-                        </form>
+                        </ConfirmDeleteForm>
                       </td>
                     </tr>
                   ))}

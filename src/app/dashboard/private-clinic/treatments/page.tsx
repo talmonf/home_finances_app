@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
 import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
@@ -393,12 +394,12 @@ export default async function TreatmentsPage({
                               Save
                             </button>
                           </form>
-                          <form action={deleteTherapyTreatment} className="mt-2">
+                          <ConfirmDeleteForm action={deleteTherapyTreatment} className="mt-2">
                             <input type="hidden" name="id" value={t.id} />
                             <button type="submit" className="text-xs text-rose-400">
                               Delete
                             </button>
-                          </form>
+                          </ConfirmDeleteForm>
                         </details>
                       </td>
                     </tr>

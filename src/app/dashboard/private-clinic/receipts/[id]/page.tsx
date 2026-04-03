@@ -6,6 +6,7 @@ import {
   updateTherapyReceipt,
   upsertReceiptAllocation,
 } from "../../actions";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
@@ -210,13 +211,13 @@ export default async function ReceiptDetailPage({
                   </td>
                   <td className="px-3 py-2 text-slate-100">{a.amount.toString()}</td>
                   <td className="px-3 py-2">
-                    <form action={deleteReceiptAllocation}>
+                    <ConfirmDeleteForm action={deleteReceiptAllocation}>
                       <input type="hidden" name="receipt_id" value={receipt.id} />
                       <input type="hidden" name="treatment_id" value={a.treatment_id} />
                       <button type="submit" className="text-xs text-rose-400">
                         Remove
                       </button>
-                    </form>
+                    </ConfirmDeleteForm>
                   </td>
                 </tr>
               ))}

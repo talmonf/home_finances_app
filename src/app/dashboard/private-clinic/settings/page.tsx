@@ -1,3 +1,4 @@
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
@@ -73,12 +74,12 @@ export default async function TherapySettingsPage() {
               {c.is_system ? (
                 <span className="text-xs text-slate-600">(default)</span>
               ) : (
-                <form action={deleteTherapyConsultationType} className="inline">
+                <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
                   <input type="hidden" name="id" value={c.id} />
                   <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                     Remove
                   </button>
-                </form>
+                </ConfirmDeleteForm>
               )}
             </li>
           ))}

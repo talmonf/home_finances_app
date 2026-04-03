@@ -483,6 +483,82 @@ export async function createCarPetrolFillup(formData: FormData) {
   redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&saved=1`);
 }
 
+export async function updateCarPetrolFillup(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const id = (formData.get("id") as string | null)?.trim() || null;
+  const car_id = (formData.get("car_id") as string | null)?.trim() || null;
+  const filled_at = parseDateInput((formData.get("filled_at") as string | null)?.trim() || null);
+  const amount_paid = parseMoney((formData.get("amount_paid") as string | null) ?? null);
+  const litres = parseLitres((formData.get("litres") as string | null) ?? null);
+  const odometerRaw = (formData.get("odometer_km") as string | null)?.trim();
+  const odometer_km =
+    odometerRaw != null && odometerRaw !== ""
+      ? (() => {
+          const n = Number(odometerRaw);
+          return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
+        })()
+      : null;
+
+  if (!id || !car_id || !filled_at || !amount_paid || !litres || odometer_km === null) {
+    const msg = "Date, amount, litres, and odometer are required.";
+    if (car_id) {
+      redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`);
+    }
+    redirect(`/dashboard/petrol-fillups?error=${encodeURIComponent(msg)}`);
+  }
+
+  const existing = await prisma.car_petrol_fillups.findFirst({
+    where: { id, household_id: householdId, car_id },
+    select: { id: true },
+  });
+  if (!existing) {
+    redirect(
+      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Fill-up not found.")}`,
+    );
+  }
+
+  const err = await validateHouseholdRefs(householdId, { car_id });
+  if (err) {
+    redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
+  }
+
+  const linked_transaction_id = await resolveTransactionLink(
+    householdId,
+    formData.get("linked_transaction_id") as string,
+  );
+  if (linked_transaction_id) {
+    const taken = await prisma.car_petrol_fillups.findFirst({
+      where: { transaction_id: linked_transaction_id, id: { not: id } },
+      select: { id: true },
+    });
+    if (taken) {
+      redirect(
+        `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&edit=${encodeURIComponent(id)}&error=${encodeURIComponent("That transaction is already linked to another petrol record.")}`,
+      );
+    }
+  }
+
+  await prisma.car_petrol_fillups.update({
+    where: { id },
+    data: {
+      filled_at,
+      amount_paid,
+      currency: (formData.get("currency") as string | null)?.trim() || "ILS",
+      litres,
+      odometer_km,
+      transaction_id: linked_transaction_id,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath("/dashboard/petrol-fillups");
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&saved=1`);
+}
+
 export async function deleteCarPetrolFillup(id: string, carId: string) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();

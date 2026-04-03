@@ -23,6 +23,12 @@ export function petrolMetricsByFillupId(
   return map;
 }
 
+/** Display cost per litre with two decimal places (e.g. 6.85). */
+export function formatCostPerLitre(costPerLitre: number | null | undefined): string {
+  if (costPerLitre == null || !Number.isFinite(costPerLitre)) return "—";
+  return costPerLitre.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function carDisplayLabel(car: {
   custom_name: string | null;
   maker: string;

@@ -1,6 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
 
@@ -194,12 +195,12 @@ export default async function ExpensesPage() {
                       Save
                     </button>
                   </form>
-                  <form action={deleteTherapyJobExpense} className="mt-2">
+                  <ConfirmDeleteForm action={deleteTherapyJobExpense} className="mt-2">
                     <input type="hidden" name="id" value={e.id} />
                     <button type="submit" className="text-xs text-rose-400">
                       Delete expense
                     </button>
-                  </form>
+                  </ConfirmDeleteForm>
                 </details>
               </div>
             ))}

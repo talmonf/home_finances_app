@@ -26,6 +26,7 @@ export function PetrolCarPicker({
           p.delete("saved");
           p.delete("deleted");
           p.delete("error");
+          p.delete("edit");
           if (v) p.set("carId", v);
           else p.delete("carId");
           const q = p.toString();

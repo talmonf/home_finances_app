@@ -5,6 +5,7 @@ import {
   deleteTherapyTravelEntry,
   updateTherapyTravelEntry,
 } from "../actions";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
@@ -241,12 +242,12 @@ export default async function TravelPage({
                       Save
                     </button>
                   </form>
-                  <form action={deleteTherapyTravelEntry} className="mt-2">
+                  <ConfirmDeleteForm action={deleteTherapyTravelEntry} className="mt-2">
                     <input type="hidden" name="id" value={e.id} />
                     <button type="submit" className="text-xs text-rose-400">
                       Delete
                     </button>
-                  </form>
+                  </ConfirmDeleteForm>
                 </details>
               );
             })}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { deleteCarLicense, updateCarLicense } from "@/app/dashboard/cars/actions";
 import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 
 type CardOpt = { id: string; label: string };
 
@@ -66,11 +67,11 @@ export function CarLicenseRow({
             >
               {editing ? "Cancel" : "Edit"}
             </button>
-            <form action={deleteCarLicense.bind(null, license.id, carId)} className="inline">
+            <ConfirmDeleteForm action={deleteCarLicense.bind(null, license.id, carId)} className="inline">
               <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                 Delete
               </button>
-            </form>
+            </ConfirmDeleteForm>
           </div>
         </td>
       </tr>

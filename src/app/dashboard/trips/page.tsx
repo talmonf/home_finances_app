@@ -1,6 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
 import { createTrip, updateTrip, deleteTrip } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -175,9 +176,12 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   </div>
                   <div className="flex items-end gap-3">
                     <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">Save</button>
-                    <button formAction={deleteTrip.bind(null, trip.id)} type="submit" className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600">
+                    <ConfirmDeleteFormActionButton
+                      formAction={deleteTrip.bind(null, trip.id)}
+                      className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600"
+                    >
                       Delete
-                    </button>
+                    </ConfirmDeleteFormActionButton>
                   </div>
                 </form>
               ))}

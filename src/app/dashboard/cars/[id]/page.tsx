@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
 import { CarLicenseRow } from "@/components/car-license-row";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { createCarService, deleteCarService, updateCar } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -237,7 +238,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-300">{s.odometer_km ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-400">{s.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><form action={deleteCarService.bind(null, s.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteCarService.bind(null, s.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
                 </tbody>
