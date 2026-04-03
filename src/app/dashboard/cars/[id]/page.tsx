@@ -2,8 +2,8 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
-import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
-import { createCarService, deleteCarLicense, deleteCarService, updateCar } from "../actions";
+import { CarLicenseRow } from "@/components/car-license-row";
+import { createCarService, deleteCarService, updateCar } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -277,35 +277,23 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                 </thead>
                 <tbody>
                   {licenses.map((l) => (
-                    <tr key={l.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-300">{dateInputValue(l.renewed_at)}</td>
-                      <td className="px-3 py-2 text-slate-200">{dateInputValue(l.expires_at)}</td>
-                      <td className="px-3 py-2 text-slate-300">{l.cost_amount?.toString() ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—"}</td>
-                      <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">
-                        {l.receipt_storage_key ? (
-                          <div className="space-y-2">
-                            <a
-                              href={`/api/cars/licenses/${l.id}/download`}
-                              className="text-xs text-sky-400 hover:text-sky-300"
-                            >
-                              Download
-                            </a>
-                            <CarLicenseReceiptUpload licenseId={l.id} hasReceipt />
-                          </div>
-                        ) : (
-                          <CarLicenseReceiptUpload licenseId={l.id} />
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-slate-400">{l.notes ?? "—"}</td>
-                      <td className="px-3 py-2">
-                        <form action={deleteCarLicense.bind(null, l.id, car.id)}>
-                          <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                            Delete
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
+                    <CarLicenseRow
+                      key={l.id}
+                      carId={car.id}
+                      license={{
+                        id: l.id,
+                        renewedAt: dateInputValue(l.renewed_at),
+                        expiresAt: dateInputValue(l.expires_at),
+                        costAmount: l.cost_amount?.toString() ?? "",
+                        creditCardId: l.credit_card_id ?? "",
+                        bankAccountId: l.bank_account_id ?? "",
+                        notes: l.notes ?? "",
+                        hasReceipt: Boolean(l.receipt_storage_key),
+                        paymentLabel: l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—",
+                      }}
+                      creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
+                      bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+                    />
                   ))}
                 </tbody>
               </table>

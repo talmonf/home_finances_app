@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { deleteS3ObjectFromJobStorage } from "@/lib/object-storage";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -347,10 +348,67 @@ export async function deleteCarService(id: string, carId: string) {
   revalidatePath(`/dashboard/cars/${carId}`);
 }
 
+export async function updateCarLicense(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const car_id = (formData.get("car_id") as string | null)?.trim();
+  const expires_at = parseDateInput((formData.get("expires_at") as string | null)?.trim() || null);
+  if (!id || !car_id || !expires_at) return;
+
+  const existing = await prisma.car_licenses.findFirst({
+    where: { id, car_id, household_id: householdId },
+    select: { id: true },
+  });
+  if (!existing) return;
+
+  const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  const bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  const err = await validateHouseholdRefs(householdId, { car_id, credit_card_id, bank_account_id });
+  if (err) return;
+
+  await prisma.car_licenses.updateMany({
+    where: { id, household_id: householdId, car_id },
+    data: {
+      renewed_at: parseDateInput((formData.get("renewed_at") as string | null)?.trim() || null),
+      expires_at,
+      cost_amount: parseMoney((formData.get("cost_amount") as string | null) ?? null),
+      credit_card_id,
+      bank_account_id,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  revalidatePath("/dashboard/upcoming-renewals");
+}
+
 export async function deleteCarLicense(id: string, carId: string) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
+
+  const row = await prisma.car_licenses.findFirst({
+    where: { id, car_id: carId, household_id: householdId },
+    select: { receipt_storage_bucket: true, receipt_storage_key: true },
+  });
+  if (row?.receipt_storage_bucket && row?.receipt_storage_key) {
+    const expectedKeyPrefix = `${householdId}/car-licenses/`;
+    if (!row.receipt_storage_key.startsWith(expectedKeyPrefix)) {
+      console.warn(
+        "Skipping S3 delete: receipt key does not match expected prefix for this household.",
+      );
+    } else {
+      try {
+        await deleteS3ObjectFromJobStorage(row.receipt_storage_bucket, row.receipt_storage_key);
+      } catch (e) {
+        console.error("Failed to delete car license receipt from S3 (record will still be removed):", e);
+      }
+    }
+  }
+
   await prisma.car_licenses.deleteMany({
     where: { id, car_id: carId, household_id: householdId },
   });

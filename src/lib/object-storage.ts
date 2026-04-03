@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
@@ -206,6 +206,21 @@ export async function uploadCarLicenseReceipt(
     ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
     : null;
   return { bucket: cfg.bucket, key, publicUrl };
+}
+
+/** Deletes an object using the same credentials/endpoint as job documents / car license uploads. */
+export async function deleteS3ObjectFromJobStorage(bucket: string, key: string): Promise<void> {
+  const cfg = getJobDocumentStorageConfig();
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }
 
 /** Uses same storage config as job documents; keys are under `therapy-expenses/`. */
