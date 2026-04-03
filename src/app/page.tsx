@@ -1,5 +1,190 @@
 import Link from "next/link";
-import { getAuthSession } from "@/lib/auth";
+import {
+  getAuthSession,
+  getCurrentHouseholdId,
+  prisma,
+  requireHouseholdMember,
+} from "@/lib/auth";
+import { getHouseholdEnabledSections } from "@/lib/household-sections";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+type DashboardGroup = "setup" | "ongoing";
+type SectionId =
+  | "familyMembers"
+  | "properties"
+  | "trips"
+  | "bankAccounts"
+  | "digitalPaymentMethods"
+  | "creditCards"
+  | "importStatements"
+  | "tasks"
+  | "studiesAndClasses"
+  | "subscriptions"
+  | "donations"
+  | "cars"
+  | "jobs"
+  | "upcomingRenewals"
+  | "significantPurchases"
+  | "medicalAppointments"
+  | "reports";
+
+type SetupCounts = {
+  familyMembers: number;
+  properties: number;
+  cars: number;
+  jobs: number;
+  bankAccounts: number;
+  digitalPaymentMethods: number;
+  creditCards: number;
+};
+
+type DashboardSection = {
+  id: SectionId;
+  group: DashboardGroup;
+  title: string;
+  href: string;
+  description: string;
+  countKey?: keyof SetupCounts;
+  countSuffix?: string;
+};
+
+export const DASHBOARD_SECTIONS: DashboardSection[] = [
+  {
+    id: "familyMembers",
+    group: "setup",
+    title: "Family Members",
+    href: "/dashboard/family-members",
+    description: "People in your household.",
+    countKey: "familyMembers",
+    countSuffix: "members",
+  },
+  {
+    id: "properties",
+    group: "setup",
+    title: "Homes & Properties",
+    href: "/dashboard/properties",
+    description: "Homes/units and rental details.",
+    countKey: "properties",
+    countSuffix: "properties",
+  },
+  {
+    id: "bankAccounts",
+    group: "setup",
+    title: "Bank accounts",
+    href: "/dashboard/bank-accounts",
+    description: "Where money moves in/out.",
+    countKey: "bankAccounts",
+    countSuffix: "accounts",
+  },
+  {
+    id: "digitalPaymentMethods",
+    group: "setup",
+    title: "Digital payment methods",
+    href: "/dashboard/digital-payment-methods",
+    description: "Wallets and linked payment methods.",
+    countKey: "digitalPaymentMethods",
+    countSuffix: "methods",
+  },
+  {
+    id: "creditCards",
+    group: "setup",
+    title: "Credit cards",
+    href: "/dashboard/credit-cards",
+    description: "Cards and settlement accounts.",
+    countKey: "creditCards",
+    countSuffix: "cards",
+  },
+  {
+    id: "cars",
+    group: "setup",
+    title: "Cars",
+    href: "/dashboard/cars",
+    description: "Vehicles with services/licenses/insurance.",
+    countKey: "cars",
+    countSuffix: "cars",
+  },
+  {
+    id: "jobs",
+    group: "setup",
+    title: "Jobs",
+    href: "/dashboard/jobs",
+    description: "Employment history and payroll changes.",
+    countKey: "jobs",
+    countSuffix: "jobs",
+  },
+
+  {
+    id: "trips",
+    group: "ongoing",
+    title: "Trips",
+    href: "/dashboard/trips",
+    description: "Track business trips and linked expenses.",
+  },
+  {
+    id: "importStatements",
+    group: "ongoing",
+    title: "Import statements",
+    href: "/dashboard/import",
+    description: "Upload statements and review transactions.",
+  },
+  {
+    id: "tasks",
+    group: "ongoing",
+    title: "Tasks",
+    href: "/dashboard/tasks",
+    description: "Create and track tasks.",
+  },
+  {
+    id: "studiesAndClasses",
+    group: "ongoing",
+    title: "Studies & Classes",
+    href: "/dashboard/studies-and-classes",
+    description: "Track studies/classes per family member with expected costs.",
+  },
+  {
+    id: "subscriptions",
+    group: "ongoing",
+    title: "Subscriptions",
+    href: "/dashboard/subscriptions",
+    description: "Recurring subscriptions, renewal dates, and payments.",
+  },
+  {
+    id: "donations",
+    group: "ongoing",
+    title: "Donations",
+    href: "/dashboard/donations",
+    description: "Log gifts and ongoing commitments.",
+  },
+  {
+    id: "upcomingRenewals",
+    group: "ongoing",
+    title: "Upcoming Renewals & Deadlines",
+    href: "/dashboard/upcoming-renewals",
+    description: "See upcoming renewals and expirations across your data.",
+  },
+  {
+    id: "significantPurchases",
+    group: "ongoing",
+    title: "Significant purchases",
+    href: "/dashboard/significant-purchases",
+    description: "Track major purchases and warranty expiry.",
+  },
+  {
+    id: "medicalAppointments",
+    group: "ongoing",
+    title: "Medical appointments",
+    href: "/dashboard/medical-appointments",
+    description: "Log visits, reimbursements, and payment methods.",
+  },
+  {
+    id: "reports",
+    group: "ongoing",
+    title: "Reports",
+    href: "/dashboard/reports",
+    description: "P&L and reports will appear here as we build them.",
+  },
+];
 
 export default async function Home() {
   const session = await getAuthSession();
@@ -26,6 +211,121 @@ export default async function Home() {
   }
 
   const isSuperAdmin = session.user.isSuperAdmin;
+  const householdId = session.user.householdId ?? null;
+
+  const setupCounts: SetupCounts | null = !isSuperAdmin && householdId
+    ? await Promise.all([
+        prisma.family_members.count({
+          where: { household_id: householdId, is_active: true },
+        }),
+        prisma.properties.count({
+          where: { household_id: householdId, is_active: true },
+        }),
+        prisma.cars.count({ where: { household_id: householdId, is_active: true } }),
+        prisma.jobs.count({ where: { household_id: householdId, is_active: true } }),
+        prisma.bank_accounts.count({
+          where: { household_id: householdId, is_active: true },
+        }),
+        prisma.digital_payment_methods.count({
+          where: { household_id: householdId, is_active: true },
+        }),
+        prisma.credit_cards.count({
+          where: { household_id: householdId, is_active: true },
+        }),
+      ]).then(([
+        familyMembers,
+        properties,
+        cars,
+        jobs,
+        bankAccounts,
+        digitalPaymentMethods,
+        creditCards,
+      ]) => ({
+        familyMembers,
+        properties,
+        cars,
+        jobs,
+        bankAccounts,
+        digitalPaymentMethods,
+        creditCards,
+      }))
+    : null;
+
+  const enabledSections =
+    !isSuperAdmin && householdId
+      ? await getHouseholdEnabledSections(householdId)
+      : [];
+
+  const enabledBySectionId = new Map(
+    enabledSections.map((s) => [s.sectionId, s.enabled] as const),
+  );
+
+  const visibleSections = DASHBOARD_SECTIONS.filter(
+    (s) => enabledBySectionId.get(s.id) ?? true,
+  );
+
+  const setupSections = visibleSections.filter((s) => s.group === "setup");
+  const ongoingSections = visibleSections.filter((s) => s.group === "ongoing");
+
+  const setupSectionIds = setupSections.map((s) => s.id);
+
+  const doneRows =
+    !isSuperAdmin && householdId && setupSectionIds.length > 0
+      ? await prisma.household_section_statuses.findMany({
+          where: {
+            household_id: householdId,
+            section_id: { in: setupSectionIds },
+          },
+          select: { section_id: true, is_done: true },
+        })
+      : [];
+
+  const isDoneBySectionId = new Map(
+    doneRows.map((r) => [r.section_id, r.is_done] as const),
+  );
+
+  async function toggleSectionDone(formData: FormData) {
+    "use server";
+
+    await requireHouseholdMember();
+
+    const currentHouseholdId = await getCurrentHouseholdId();
+    if (!currentHouseholdId) {
+      redirect("/");
+    }
+
+    const sectionId = (formData.get("section_id") as string | null) ?? "";
+    const nextIsDoneRaw =
+      (formData.get("next_is_done") as string | null) ?? "false";
+    const nextIsDone = nextIsDoneRaw === "true";
+
+    const allowedSetupSectionIds = new Set(
+      DASHBOARD_SECTIONS.filter((s) => s.group === "setup").map((s) => s.id),
+    );
+
+    if (!allowedSetupSectionIds.has(sectionId as SectionId)) {
+      redirect("/");
+    }
+
+    await prisma.household_section_statuses.upsert({
+      where: {
+        household_id_section_id: {
+          household_id: currentHouseholdId,
+          section_id: sectionId,
+        },
+      },
+      update: { is_done: nextIsDone },
+      create: {
+        id: crypto.randomUUID(),
+        household_id: currentHouseholdId,
+        section_id: sectionId,
+        is_done: nextIsDone,
+      },
+    });
+
+    revalidatePath("/");
+    redirect("/");
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -62,242 +362,118 @@ export default async function Home() {
             )}
           </div>
           {!isSuperAdmin && (
-            <>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Family members
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Manage people in your household for studies, classes, and cards.
+            <div className="col-span-full">
+              {setupSections.length === 0 && ongoingSections.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  Your super admin hasn&apos;t enabled any sections yet.
                 </p>
-                <Link
-                  href="/dashboard/family-members"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Family members
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Homes &amp; properties
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Define homes or apartments you own or rent, and the utility companies that service them.
-                </p>
-                <Link
-                  href="/dashboard/properties"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Homes &amp; properties
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Trips
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track business trips and holidays, including participants and linked expenses.
-                </p>
-                <Link
-                  href="/dashboard/trips"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Trips
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Bank accounts
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Manage bank accounts for this household.
-                </p>
-                <Link
-                  href="/dashboard/bank-accounts"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Bank accounts
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Digital payment methods
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Bit, PayBox, PayPal, and other wallets or payment apps.
-                </p>
-                <Link
-                  href="/dashboard/digital-payment-methods"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Digital payment methods
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Credit cards
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Manage credit cards and link to settlement accounts.
-                </p>
-                <Link
-                  href="/dashboard/credit-cards"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Credit cards
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Import statements
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Upload PDF or Excel bank statements, review transactions, and fill categories and notes.
-                </p>
-                <Link
-                  href="/dashboard/import"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Import
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Tasks
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Create and track tasks. Assign to family members or financial advisors.
-                </p>
-                <Link
-                  href="/dashboard/tasks"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Tasks
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Studies &amp; Classes
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track studies and classes per family member with expected costs.
-                </p>
-                <Link
-                  href="/dashboard/studies-and-classes"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Studies &amp; Classes
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Subscriptions
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track recurring subscriptions, renewal dates, and payment methods.
-                </p>
-                <Link
-                  href="/dashboard/subscriptions"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Subscriptions
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Donations
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Log one-time gifts and monthly commitments with organization and Seif 46 details.
-                </p>
-                <Link
-                  href="/dashboard/donations"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Donations
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Cars
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track owned cars with purchase/sale details, services, licenses, insurance, and linked expenses.
-                </p>
-                <Link
-                  href="/dashboard/cars"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Cars
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Jobs
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track employment history per family member, including benefits, payroll changes, and job documents.
-                </p>
-                <Link
-                  href="/dashboard/jobs"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Jobs
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Upcoming Renewals &amp; Deadlines
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  See all upcoming renewals and expirations across subscriptions, identity, cards,
-                  insurance, car licenses, utilities, donations, and warranty-bearing significant purchases.
-                </p>
-                <Link
-                  href="/dashboard/upcoming-renewals"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Upcoming Renewals &amp; Deadlines
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Significant purchases
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Track major purchases with optional warranty expiry and link card transactions.
-                </p>
-                <Link
-                  href="/dashboard/significant-purchases"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Significant purchases
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Medical appointments
-                </h2>
-                <p className="mb-3 text-xs text-slate-400">
-                  Log visits, payment method, and reimbursement requests to kupat holim or private insurance.
-                </p>
-                <Link
-                  href="/dashboard/medical-appointments"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open Medical appointments
-                </Link>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Reports
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Your P&amp;L and other reports will live here as we build them
-                  out.
-                </p>
-              </div>
-            </>
+              ) : (
+                <>
+                  {setupSections.length > 0 && (
+                    <>
+                      <div className="mb-4 text-sm font-semibold text-slate-200">
+                        Setup your household
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {setupSections.map((section) => {
+                          const count =
+                            section.countKey && setupCounts
+                              ? setupCounts[section.countKey]
+                              : null;
+
+                          const isDone =
+                            isDoneBySectionId.get(section.id) ?? false;
+
+                          return (
+                            <div
+                              key={section.id}
+                              className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500"
+                            >
+                              <Link
+                                href={section.href}
+                                className="block focus:outline-none focus:ring-2 focus:ring-sky-400"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <h2 className="text-sm font-semibold text-slate-200">
+                                    {section.title}
+                                  </h2>
+
+                                  <span
+                                    className={`mt-0.5 rounded-full px-2 py-0.5 text-xs ${
+                                      isDone
+                                        ? "bg-emerald-500/15 text-emerald-300"
+                                        : "bg-slate-500/15 text-slate-300"
+                                    }`}
+                                  >
+                                    {isDone ? "Done" : "Not done"}
+                                  </span>
+                                </div>
+
+                                {typeof count === "number" &&
+                                  section.countSuffix && (
+                                    <p className="mt-1 text-xs text-slate-400">
+                                      {count} {section.countSuffix}
+                                    </p>
+                                  )}
+
+                                {section.description && (
+                                  <p className="mt-2 text-xs text-slate-400">
+                                    {section.description}
+                                  </p>
+                                )}
+                              </Link>
+
+                              <form action={toggleSectionDone} className="mt-3">
+                                <input
+                                  type="hidden"
+                                  name="section_id"
+                                  value={section.id}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="next_is_done"
+                                  value={String(!isDone)}
+                                />
+                                <button
+                                  type="submit"
+                                  className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                                >
+                                  {isDone ? "Mark not done" : "Mark done"}
+                                </button>
+                              </form>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {ongoingSections.length > 0 && (
+                    <>
+                      <div className="mt-6 mb-4 text-sm font-semibold text-slate-200">
+                        Manage your finances
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {ongoingSections.map((section) => (
+                          <Link
+                            key={section.id}
+                            href={section.href}
+                            className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                          >
+                            <h2 className="mb-1 text-sm font-semibold text-slate-200">
+                              {section.title}
+                            </h2>
+                            <p className="mt-2 text-xs text-slate-400">
+                              {section.description}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

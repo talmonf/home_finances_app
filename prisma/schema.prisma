@@ -21,6 +21,9 @@ model households {
   updated_at       DateTime @updatedAt
   is_active        Boolean  @default(true)
 
+  household_enabled_sections household_enabled_sections[]
+  household_section_statuses household_section_statuses[]
+
   users                 users[]
   family_members        family_members[]
   bank_accounts         bank_accounts[]
@@ -50,6 +53,32 @@ model households {
   job_benefits            job_benefits[]
   job_documents           job_documents[]
   job_payroll_entries     job_payroll_entries[]
+}
+
+model household_enabled_sections {
+  id           String   @id @default(uuid())
+  household_id String
+  section_id   String
+  enabled      Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+
+  @@unique([household_id, section_id])
+}
+
+model household_section_statuses {
+  id           String   @id @default(uuid())
+  household_id String
+  section_id   String
+  is_done      Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+
+  @@unique([household_id, section_id])
 }
 
 model family_members {

@@ -61,6 +61,23 @@ export default async function HouseholdUsersPage({
       );
     }
 
+    const allowedUserTypes = [
+      "family_member",
+      "financial_advisor",
+      "other",
+    ] as const;
+    if (
+      !allowedUserTypes.includes(
+        userType as (typeof allowedUserTypes)[number],
+      )
+    ) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("Invalid user type")}`,
+      );
+    }
+
+    const userTypeValue = userType as (typeof allowedUserTypes)[number];
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     await prisma.users.create({
@@ -71,7 +88,7 @@ export default async function HouseholdUsersPage({
         password_hash: passwordHash,
         full_name: fullName,
         role: role as "admin" | "member",
-        user_type: userType as any,
+        user_type: userTypeValue,
         is_active: true,
       },
     });
@@ -112,13 +129,30 @@ export default async function HouseholdUsersPage({
       );
     }
 
+    const allowedUserTypes = [
+      "family_member",
+      "financial_advisor",
+      "other",
+    ] as const;
+    if (
+      !allowedUserTypes.includes(
+        userType as (typeof allowedUserTypes)[number],
+      )
+    ) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("Invalid user type")}`,
+      );
+    }
+
+    const userTypeValue = userType as (typeof allowedUserTypes)[number];
+
     await prisma.users.update({
       where: { id: userId },
       data: {
         email,
         full_name: fullName,
         role: role as "admin" | "member",
-        user_type: userType as any,
+        user_type: userTypeValue,
       },
     });
 

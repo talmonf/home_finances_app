@@ -40,7 +40,7 @@ function getJobDocumentStorageConfig(): {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const token = await getToken({ req: _req, secret: process.env.NEXTAUTH_SECRET });
@@ -51,7 +51,7 @@ export async function GET(
       return NextResponse.json({ error: "Household users only." }, { status: 403 });
     }
 
-    const documentId = params.id;
+    const { id: documentId } = await context.params;
     const doc = await prisma.job_documents.findFirst({
       where: { id: documentId, household_id: householdId },
       select: {
@@ -98,7 +98,8 @@ export async function GET(
     headers.set("Cache-Control", "private, no-store");
 
     if (body instanceof Uint8Array) {
-      return new NextResponse(body, { headers });
+      // Ensure NextResponse receives a supported body type.
+      return new NextResponse(Buffer.from(body), { headers });
     }
 
     const arrayBufferFn = (body as unknown as { arrayBuffer?: () => Promise<ArrayBuffer> }).arrayBuffer;

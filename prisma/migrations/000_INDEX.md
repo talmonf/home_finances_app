@@ -47,6 +47,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 035 | `035_cars_name_and_notes_cleanup.sql` | ALTER | cars: add `custom_name`, `purchase_notes`, `sale_notes`; drop `vin`. |
 | 036 | `036_jobs_domain.sql` | CREATE | Jobs domain: enums `job_employment_type`, `job_payroll_period_type`; tables `jobs`, `job_benefits`, `job_documents`, `job_payroll_entries`. |
 | 037 | `037_donations_tax_authority_and_website.sql` | ALTER | donations: add Tax Authority submission flag + organization website URL. |
+| 038 | `038_household_enabled_sections.sql` | CREATE | Household dashboard section enablement toggles. |
+| 039 | `039_household_section_statuses.sql` | CREATE | Household setup "Done" tracking per dashboard section. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -87,6 +89,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 035_cars_name_and_notes_cleanup.sql
 - [x] 036_jobs_domain.sql
 - [x] 037_donations_tax_authority_and_website.sql
+- [x] 038_household_enabled_sections.sql
+- [x] 039_household_section_statuses.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
