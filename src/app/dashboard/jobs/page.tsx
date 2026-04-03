@@ -75,7 +75,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
             <input name="job_title" placeholder="Job title" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Start date</label>
-              <input name="start_date" type="date" required defaultValue={dateInputValue(new Date())} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="start_date" type="date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">End date</label>
