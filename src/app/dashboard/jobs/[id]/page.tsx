@@ -208,19 +208,12 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-100">{d.file_name}</td>
                       <td className="px-3 py-2 text-slate-300">{dateInputValue(d.uploaded_at)}</td>
                       <td className="px-3 py-2 text-slate-300">
-                        {d.storage_url ? (
-                          <a
-                            href={d.storage_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            download={d.file_name}
-                            className="inline-flex items-center rounded border border-sky-500 px-2 py-1 text-xs text-sky-100 hover:bg-sky-500/10"
-                          >
-                            Open / Download
-                          </a>
-                        ) : (
-                          "—"
-                        )}
+                        <Link
+                          href={`/api/jobs/documents/${d.id}/download`}
+                          className="inline-flex items-center rounded border border-sky-500 px-2 py-1 text-xs text-sky-100 hover:bg-sky-500/10"
+                        >
+                          Open / Download
+                        </Link>
                       </td>
                       <td className="px-3 py-2">
                         <form action={deleteJobDocument.bind(null, d.id, job.id)}>
