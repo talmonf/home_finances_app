@@ -27,14 +27,28 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [method, bankAccounts] = await Promise.all([
+  const [method, bankAccounts, familyMembers, creditCards] = await Promise.all([
     prisma.digital_payment_methods.findFirst({
       where: { id, household_id: householdId },
+      include: {
+        family_member: true,
+        primary_credit_card: true,
+        secondary_credit_card: true,
+      },
     }),
     prisma.bank_accounts.findMany({
       where: { household_id: householdId },
       orderBy: { account_name: "asc" },
       select: { id: true, account_name: true, bank_name: true, is_active: true },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId },
+      orderBy: { card_name: "asc" },
+      select: { id: true, card_name: true, card_last_four: true, cancelled_at: true, expiry_date: true },
     }),
   ]);
 
@@ -114,6 +128,76 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Family member (optional)
+              </label>
+              <select
+                id="family_member_id"
+                name="family_member_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={method.family_member_id ?? ""}
+              >
+                <option value="">None</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="primary_credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Primary credit card (optional)
+              </label>
+              <select
+                id="primary_credit_card_id"
+                name="primary_credit_card_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={method.primary_credit_card_id ?? ""}
+              >
+                <option value="">None</option>
+                {creditCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.card_name} · ****{c.card_last_four}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="secondary_credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
+                Secondary credit card (optional)
+              </label>
+              <select
+                id="secondary_credit_card_id"
+                name="secondary_credit_card_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={method.secondary_credit_card_id ?? ""}
+              >
+                <option value="">None</option>
+                {creditCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.card_name} · ****{c.card_last_four}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="date_created" className="mb-1 block text-xs font-medium text-slate-400">
+                Date created (optional)
+              </label>
+              <input
+                id="date_created"
+                name="date_created"
+                type="date"
+                defaultValue={
+                  method.date_created
+                    ? method.date_created.toISOString().slice(0, 10)
+                    : ""
+                }
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">

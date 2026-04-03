@@ -7,6 +7,12 @@ import { redirect } from "next/navigation";
 const METHOD_TYPES = ["bit", "paybox", "paypal", "other"] as const;
 type MethodType = (typeof METHOD_TYPES)[number];
 
+function parseDateInput(raw: string | null): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -53,6 +59,10 @@ export async function createDigitalPaymentMethod(formData: FormData) {
   const method_type_raw = (formData.get("method_type") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
+  const family_member_id_raw = (formData.get("family_member_id") as string | null)?.trim() || "";
+  const primary_credit_card_id_raw = (formData.get("primary_credit_card_id") as string | null)?.trim() || "";
+  const secondary_credit_card_id_raw = (formData.get("secondary_credit_card_id") as string | null)?.trim() || "";
+  const date_created_raw = (formData.get("date_created") as string | null)?.trim() || "";
 
   if (!name) {
     redirect("/dashboard/digital-payment-methods?error=Name+is+required");
@@ -75,6 +85,44 @@ export async function createDigitalPaymentMethod(formData: FormData) {
     "/dashboard/digital-payment-methods?error=Invalid+linked+bank+account"
   );
 
+  const family_member_id = family_member_id_raw || null;
+  if (family_member_id) {
+    const member = await prisma.family_members.findFirst({
+      where: { id: family_member_id, household_id: householdId, is_active: true },
+      select: { id: true },
+    });
+    if (!member) {
+      redirect("/dashboard/digital-payment-methods?error=Invalid+family+member");
+    }
+  }
+
+  const primary_credit_card_id = primary_credit_card_id_raw || null;
+  if (primary_credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: primary_credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) {
+      redirect("/dashboard/digital-payment-methods?error=Invalid+primary+credit+card");
+    }
+  }
+
+  const secondary_credit_card_id = secondary_credit_card_id_raw || null;
+  if (secondary_credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: secondary_credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) {
+      redirect("/dashboard/digital-payment-methods?error=Invalid+secondary+credit+card");
+    }
+  }
+
+  const date_created = date_created_raw ? parseDateInput(date_created_raw) : null;
+  if (date_created_raw && !date_created) {
+    redirect("/dashboard/digital-payment-methods?error=Invalid+created+date");
+  }
+
   await prisma.digital_payment_methods.create({
     data: {
       id: crypto.randomUUID(),
@@ -84,6 +132,10 @@ export async function createDigitalPaymentMethod(formData: FormData) {
       linked_bank_account_id,
       notes,
       website_url,
+      family_member_id,
+      primary_credit_card_id,
+      secondary_credit_card_id,
+      date_created,
     },
   });
 
@@ -121,6 +173,10 @@ export async function updateDigitalPaymentMethod(formData: FormData) {
   const method_type_raw = (formData.get("method_type") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
+  const family_member_id_raw = (formData.get("family_member_id") as string | null)?.trim() || "";
+  const primary_credit_card_id_raw = (formData.get("primary_credit_card_id") as string | null)?.trim() || "";
+  const secondary_credit_card_id_raw = (formData.get("secondary_credit_card_id") as string | null)?.trim() || "";
+  const date_created_raw = (formData.get("date_created") as string | null)?.trim() || "";
 
   if (!name) {
     redirect(`/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Name+is+required`);
@@ -143,9 +199,65 @@ export async function updateDigitalPaymentMethod(formData: FormData) {
     `/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+linked+bank+account`
   );
 
+  const family_member_id = family_member_id_raw || null;
+  if (family_member_id) {
+    const member = await prisma.family_members.findFirst({
+      where: { id: family_member_id, household_id: householdId, is_active: true },
+      select: { id: true },
+    });
+    if (!member) {
+      redirect(
+        `/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+family+member`,
+      );
+    }
+  }
+
+  const primary_credit_card_id = primary_credit_card_id_raw || null;
+  if (primary_credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: primary_credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) {
+      redirect(
+        `/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+primary+credit+card`,
+      );
+    }
+  }
+
+  const secondary_credit_card_id = secondary_credit_card_id_raw || null;
+  if (secondary_credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: secondary_credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) {
+      redirect(
+        `/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+secondary+credit+card`,
+      );
+    }
+  }
+
+  const date_created = date_created_raw ? parseDateInput(date_created_raw) : null;
+  if (date_created_raw && !date_created) {
+    redirect(
+      `/dashboard/digital-payment-methods/${encodeURIComponent(id)}?error=Invalid+created+date`,
+    );
+  }
+
   await prisma.digital_payment_methods.updateMany({
     where: { id, household_id: householdId },
-    data: { name, method_type, notes, website_url, linked_bank_account_id },
+    data: {
+      name,
+      method_type,
+      notes,
+      website_url,
+      linked_bank_account_id,
+      family_member_id,
+      primary_credit_card_id,
+      secondary_credit_card_id,
+      date_created,
+    },
   });
 
   revalidatePath("/dashboard/digital-payment-methods");

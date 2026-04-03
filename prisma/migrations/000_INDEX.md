@@ -49,6 +49,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 037 | `037_donations_tax_authority_and_website.sql` | ALTER | donations: add Tax Authority submission flag + organization website URL. |
 | 038 | `038_household_enabled_sections.sql` | CREATE | Household dashboard section enablement toggles. |
 | 039 | `039_household_section_statuses.sql` | CREATE | Household setup "Done" tracking per dashboard section. |
+| 040 | `040_digital_payment_methods_family_and_cards.sql` | ALTER | digital_payment_methods: optional family_member_id, primary/secondary credit card links, explicit date_created. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -91,6 +92,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 037_donations_tax_authority_and_website.sql
 - [x] 038_household_enabled_sections.sql
 - [x] 039_household_section_statuses.sql
+- [x] 040_digital_payment_methods_family_and_cards.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

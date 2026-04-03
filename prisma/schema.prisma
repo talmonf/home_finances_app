@@ -178,6 +178,8 @@ model credit_cards {
   car_purchase_payments cars[]
   car_service_payments  car_services[]
   car_license_payments  car_licenses[]
+  primary_digital_payment_methods  digital_payment_methods[] @relation("PrimaryDigitalPaymentCreditCard")
+  secondary_digital_payment_methods digital_payment_methods[] @relation("SecondaryDigitalPaymentCreditCard")
 }
 
 enum CardScheme {
@@ -726,14 +728,21 @@ model digital_payment_methods {
   name                   String
   method_type            DigitalPaymentMethodType
   linked_bank_account_id String?
+  family_member_id       String?
+  primary_credit_card_id String?
+  secondary_credit_card_id String?
+  date_created           DateTime?
   notes                  String?
   website_url            String?
   is_active              Boolean                  @default(true)
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
 
-  household           households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
-  linked_bank_account bank_accounts? @relation(fields: [linked_bank_account_id], references: [id], onDelete: SetNull)
+  household             households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  linked_bank_account   bank_accounts? @relation(fields: [linked_bank_account_id], references: [id], onDelete: SetNull)
+  family_member         family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+  primary_credit_card   credit_cards?   @relation("PrimaryDigitalPaymentCreditCard", fields: [primary_credit_card_id], references: [id], onDelete: SetNull)
+  secondary_credit_card credit_cards?   @relation("SecondaryDigitalPaymentCreditCard", fields: [secondary_credit_card_id], references: [id], onDelete: SetNull)
   medical_appointments medical_appointments[]
   donations             donations[]
 }
