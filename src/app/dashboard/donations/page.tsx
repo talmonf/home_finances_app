@@ -220,10 +220,27 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                           <div className="text-xs text-slate-500">
                             {d.provides_seif_46_receipts ? "Seif 46 receipts" : "No Seif 46"}
                           </div>
+                          <div className="text-xs text-slate-500">
+                            {d.tax_authority_info_passed ? "Submitted to Tax Authority" : "Not submitted to Tax Authority"}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-slate-400">
                           <div>{d.organization_phone ?? "—"}</div>
                           <div className="text-xs">{d.organization_email ?? "—"}</div>
+                          <div className="text-xs">
+                            {d.organization_website_url ? (
+                              <a
+                                href={d.organization_website_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sky-400 hover:text-sky-300"
+                              >
+                                Website
+                              </a>
+                            ) : (
+                              "—"
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-slate-400">{formatDate(d.renewal_date)}</td>
                         <td className="max-w-[12rem] truncate px-4 py-3 text-slate-500" title={d.notes ?? undefined}>

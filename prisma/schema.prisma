@@ -623,7 +623,9 @@ model donations {
   digital_payment_method_id String?
   organization_name       String
   organization_tax_number String?
+  organization_website_url String?
   provides_seif_46_receipts Boolean    @default(false)
+  tax_authority_info_passed Boolean   @default(false)
   organization_phone      String?
   organization_email      String?
   currency                String       @default("ILS")

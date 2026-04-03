@@ -46,6 +46,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 034 | `034_cars_domain.sql` | CREATE/ALTER | Cars domain: tables `cars`, `car_services`, `car_licenses`; enum `car_purchase_payment_method`; link `insurance_policies.car_id` and `transactions.car_id`. |
 | 035 | `035_cars_name_and_notes_cleanup.sql` | ALTER | cars: add `custom_name`, `purchase_notes`, `sale_notes`; drop `vin`. |
 | 036 | `036_jobs_domain.sql` | CREATE | Jobs domain: enums `job_employment_type`, `job_payroll_period_type`; tables `jobs`, `job_benefits`, `job_documents`, `job_payroll_entries`. |
+| 037 | `037_donations_tax_authority_and_website.sql` | ALTER | donations: add Tax Authority submission flag + organization website URL. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -85,6 +86,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 034_cars_domain.sql
 - [x] 035_cars_name_and_notes_cleanup.sql
 - [x] 036_jobs_domain.sql
+- [x] 037_donations_tax_authority_and_website.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

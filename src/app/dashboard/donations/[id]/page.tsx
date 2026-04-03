@@ -113,6 +113,8 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
     organization_name: donation.organization_name,
     organization_tax_number: donation.organization_tax_number,
     provides_seif_46_receipts: donation.provides_seif_46_receipts,
+    organization_website_url: donation.organization_website_url,
+    tax_authority_info_passed: donation.tax_authority_info_passed,
     organization_phone: donation.organization_phone,
     organization_email: donation.organization_email,
     currency: donation.currency,

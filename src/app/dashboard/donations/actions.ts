@@ -52,6 +52,8 @@ export async function createDonation(formData: FormData) {
   const payment_method_raw = (formData.get("payment_method") as string | null)?.trim() || null;
   const organization_tax_number =
     (formData.get("organization_tax_number") as string | null)?.trim() || null;
+  const organization_website_url =
+    (formData.get("organization_website_url") as string | null)?.trim() || null;
   const organization_phone = (formData.get("organization_phone") as string | null)?.trim() || null;
   const organization_email = (formData.get("organization_email") as string | null)?.trim() || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
@@ -62,6 +64,7 @@ export async function createDonation(formData: FormData) {
     (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const provides_seif_46_receipts = formData.get("provides_seif_46_receipts") === "on";
+  const tax_authority_info_passed = formData.get("tax_authority_info_passed") === "on";
   const statusRaw = (formData.get("status") as string | null)?.trim() || "active";
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim();
   let renewal_date: Date | null = null;
@@ -175,7 +178,9 @@ export async function createDonation(formData: FormData) {
     category,
     organization_name,
     organization_tax_number,
+    organization_website_url,
     provides_seif_46_receipts,
+    tax_authority_info_passed,
     organization_phone,
     organization_email,
     currency: currency || "ILS",
@@ -267,6 +272,8 @@ export async function updateDonation(formData: FormData) {
   const payment_method_raw = (formData.get("payment_method") as string | null)?.trim() || null;
   const organization_tax_number =
     (formData.get("organization_tax_number") as string | null)?.trim() || null;
+  const organization_website_url =
+    (formData.get("organization_website_url") as string | null)?.trim() || null;
   const organization_phone = (formData.get("organization_phone") as string | null)?.trim() || null;
   const organization_email = (formData.get("organization_email") as string | null)?.trim() || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
@@ -277,6 +284,7 @@ export async function updateDonation(formData: FormData) {
     (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const provides_seif_46_receipts = formData.get("provides_seif_46_receipts") === "on";
+  const tax_authority_info_passed = formData.get("tax_authority_info_passed") === "on";
   const statusRaw = (formData.get("status") as string | null)?.trim() || "active";
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim();
 
@@ -407,7 +415,9 @@ export async function updateDonation(formData: FormData) {
     category,
     organization_name,
     organization_tax_number,
+    organization_website_url,
     provides_seif_46_receipts,
+    tax_authority_info_passed,
     organization_phone,
     organization_email,
     currency: currency || "ILS",

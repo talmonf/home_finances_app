@@ -18,7 +18,9 @@ type DonationFormInitialValues = {
   family_member_id?: string | null;
   organization_name: string;
   organization_tax_number?: string | null;
+  organization_website_url?: string | null;
   provides_seif_46_receipts?: boolean;
+  tax_authority_info_passed?: boolean;
   organization_phone?: string | null;
   organization_email?: string | null;
   currency?: string | null;
@@ -196,6 +198,20 @@ export function DonationForm({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
+          <div>
+            <label htmlFor="organization_website_url" className="mb-1 block text-xs font-medium text-slate-400">
+              Organization website URL
+            </label>
+            <input
+              id="organization_website_url"
+              name="organization_website_url"
+              type="text"
+              inputMode="url"
+              defaultValue={initial?.organization_website_url ?? ""}
+              placeholder="https://example.org"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="flex items-end pb-2">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
               <input
@@ -205,6 +221,17 @@ export function DonationForm({
                 className="rounded border-slate-600 bg-slate-800 text-sky-500"
               />
               Provides tax-deductible receipts (Seif 46)
+            </label>
+          </div>
+          <div className="flex items-end pb-2">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                name="tax_authority_info_passed"
+                defaultChecked={initial?.tax_authority_info_passed ?? false}
+                className="rounded border-slate-600 bg-slate-800 text-sky-500"
+              />
+              Info submitted to Tax Authority
             </label>
           </div>
           <div>
