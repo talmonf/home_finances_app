@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCreditCard } from "./actions";
@@ -125,6 +126,10 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
+          <SetupSectionMarkNotDoneBanner
+            sectionId="creditCards"
+            redirectPath="/dashboard/credit-cards"
+          />
           <div className="flex items-center justify-between gap-4">
             <div>
               <Link

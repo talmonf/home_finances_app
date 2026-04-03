@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCar } from "./actions";
@@ -51,6 +52,10 @@ export default async function CarsPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
+          <SetupSectionMarkNotDoneBanner
+            sectionId="cars"
+            redirectPath="/dashboard/cars"
+          />
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
             ← Back to dashboard
           </Link>

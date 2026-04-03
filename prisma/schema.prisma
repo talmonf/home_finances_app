@@ -107,6 +107,7 @@ model family_members {
   subscriptions         subscriptions[]
   medical_appointments  medical_appointments[]
   donations            donations[]
+  digital_payment_methods digital_payment_methods[]
   trip_family_members  trip_family_members[]
   main_driver_cars     cars[]
   jobs                 jobs[]

@@ -1,13 +1,8 @@
 import Link from "next/link";
-import {
-  getAuthSession,
-  getCurrentHouseholdId,
-  prisma,
-  requireHouseholdMember,
-} from "@/lib/auth";
+import { getAuthSession, prisma } from "@/lib/auth";
 import { getHouseholdEnabledSections } from "@/lib/household-sections";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
+import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
 
 type DashboardGroup = "setup" | "ongoing";
 type SectionId =
@@ -284,49 +279,6 @@ export default async function Home() {
     doneRows.map((r) => [r.section_id, r.is_done] as const),
   );
 
-  async function toggleSectionDone(formData: FormData) {
-    "use server";
-
-    await requireHouseholdMember();
-
-    const currentHouseholdId = await getCurrentHouseholdId();
-    if (!currentHouseholdId) {
-      redirect("/");
-    }
-
-    const sectionId = (formData.get("section_id") as string | null) ?? "";
-    const nextIsDoneRaw =
-      (formData.get("next_is_done") as string | null) ?? "false";
-    const nextIsDone = nextIsDoneRaw === "true";
-
-    const allowedSetupSectionIds = new Set(
-      DASHBOARD_SECTIONS.filter((s) => s.group === "setup").map((s) => s.id),
-    );
-
-    if (!allowedSetupSectionIds.has(sectionId as SectionId)) {
-      redirect("/");
-    }
-
-    await prisma.household_section_statuses.upsert({
-      where: {
-        household_id_section_id: {
-          household_id: currentHouseholdId,
-          section_id: sectionId,
-        },
-      },
-      update: { is_done: nextIsDone },
-      create: {
-        id: crypto.randomUUID(),
-        household_id: currentHouseholdId,
-        section_id: sectionId,
-        is_done: nextIsDone,
-      },
-    });
-
-    revalidatePath("/");
-    redirect("/");
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
       <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -370,60 +322,60 @@ export default async function Home() {
               ) : (
                 <>
                   {setupSections.length > 0 && (
-                    <>
-                      <div className="mb-4 text-sm font-semibold text-slate-200">
-                        Setup your household
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-3">
-                        {setupSections.map((section) => {
-                          const count =
-                            section.countKey && setupCounts
-                              ? setupCounts[section.countKey]
-                              : null;
+                    <SetupHouseholdCollapsible>
+                      {setupSections.map((section) => {
+                        const count =
+                          section.countKey && setupCounts
+                            ? setupCounts[section.countKey]
+                            : null;
 
-                          const isDone =
-                            isDoneBySectionId.get(section.id) ?? false;
+                        const isDone =
+                          isDoneBySectionId.get(section.id) ?? false;
 
-                          return (
-                            <div
-                              key={section.id}
-                              className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500"
+                        return (
+                          <div
+                            key={section.id}
+                            className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500"
+                          >
+                            <Link
+                              href={section.href}
+                              className="block focus:outline-none focus:ring-2 focus:ring-sky-400"
                             >
-                              <Link
-                                href={section.href}
-                                className="block focus:outline-none focus:ring-2 focus:ring-sky-400"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <h2 className="text-sm font-semibold text-slate-200">
-                                    {section.title}
-                                  </h2>
+                              <div className="flex items-start justify-between gap-3">
+                                <h2 className="text-sm font-semibold text-slate-200">
+                                  {section.title}
+                                </h2>
 
-                                  <span
-                                    className={`mt-0.5 rounded-full px-2 py-0.5 text-xs ${
-                                      isDone
-                                        ? "bg-emerald-500/15 text-emerald-300"
-                                        : "bg-slate-500/15 text-slate-300"
-                                    }`}
-                                  >
-                                    {isDone ? "Done" : "Not done"}
-                                  </span>
-                                </div>
+                                <span
+                                  className={`mt-0.5 rounded-full px-2 py-0.5 text-xs ${
+                                    isDone
+                                      ? "bg-emerald-500/15 text-emerald-300"
+                                      : "bg-slate-500/15 text-slate-300"
+                                  }`}
+                                >
+                                  {isDone ? "Done" : "Not done"}
+                                </span>
+                              </div>
 
-                                {typeof count === "number" &&
-                                  section.countSuffix && (
-                                    <p className="mt-1 text-xs text-slate-400">
-                                      {count} {section.countSuffix}
-                                    </p>
-                                  )}
-
-                                {section.description && (
-                                  <p className="mt-2 text-xs text-slate-400">
-                                    {section.description}
+                              {typeof count === "number" &&
+                                section.countSuffix && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    {count} {section.countSuffix}
                                   </p>
                                 )}
-                              </Link>
 
-                              <form action={toggleSectionDone} className="mt-3">
+                              {section.description && (
+                                <p className="mt-2 text-xs text-slate-400">
+                                  {section.description}
+                                </p>
+                              )}
+                            </Link>
+
+                            {!isDone && (
+                              <form
+                                action={toggleSetupSectionDone}
+                                className="mt-3"
+                              >
                                 <input
                                   type="hidden"
                                   name="section_id"
@@ -432,20 +384,21 @@ export default async function Home() {
                                 <input
                                   type="hidden"
                                   name="next_is_done"
-                                  value={String(!isDone)}
+                                  value="true"
                                 />
+                                <input type="hidden" name="redirect_to" value="/" />
                                 <button
                                   type="submit"
                                   className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
                                 >
-                                  {isDone ? "Mark not done" : "Mark done"}
+                                  Mark done
                                 </button>
                               </form>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </SetupHouseholdCollapsible>
                   )}
 
                   {ongoingSections.length > 0 && (
