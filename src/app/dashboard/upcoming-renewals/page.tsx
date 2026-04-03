@@ -83,6 +83,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     significantPurchases,
     familyMembers,
     carLicenses,
+    loansForRenewals,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
       where: {
@@ -152,6 +153,16 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       where: { household_id: householdId, expires_at: { gte: today } },
       include: { car: true },
       orderBy: { expires_at: "asc" },
+    }),
+    prisma.loans.findMany({
+      where: {
+        household_id: householdId,
+        is_active: true,
+        OR: [
+          { repayment_day_of_month: { not: null } },
+          { maturity_date: { not: null, gte: today } },
+        ],
+      },
     }),
   ]);
 
@@ -273,6 +284,34 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       renewalType: "—",
       href: "/dashboard/significant-purchases",
     })),
+    ...loansForRenewals.flatMap((loan) => {
+      const parts: RenewalRow[] = [];
+      if (loan.repayment_day_of_month != null) {
+        parts.push({
+          id: `loan-monthly-${loan.id}`,
+          category: "Loan",
+          itemName: `${loan.institution_name}${loan.loan_number ? ` · #${loan.loan_number}` : ""}`,
+          owner: "Household",
+          ownerId: null,
+          renewalDate: nextMonthlyRenewal(loan.repayment_day_of_month, today),
+          renewalType: "Monthly",
+          href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
+        });
+      }
+      if (loan.maturity_date && dateOnlyLocal(loan.maturity_date as Date) >= today) {
+        parts.push({
+          id: `loan-payoff-${loan.id}`,
+          category: "Loan",
+          itemName: `${loan.institution_name} (payoff)${loan.loan_number ? ` · #${loan.loan_number}` : ""}`,
+          owner: "Household",
+          ownerId: null,
+          renewalDate: dateOnlyLocal(loan.maturity_date as Date),
+          renewalType: "Payoff",
+          href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
+        });
+      }
+      return parts;
+    }),
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
 
   const effectiveCategoryFilter =
@@ -289,7 +328,20 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     return categoryOk && ownerOk;
   });
 
-  const categoryOrder = ["Subscription", "Identity", "Credit card", "Insurance", "Car insurance", "Car license", "Rental", "Utility", "Task", "Donation", "Warranty"];
+  const categoryOrder = [
+    "Subscription",
+    "Identity",
+    "Credit card",
+    "Insurance",
+    "Car insurance",
+    "Car license",
+    "Rental",
+    "Utility",
+    "Task",
+    "Donation",
+    "Loan",
+    "Warranty",
+  ];
   const categories = Array.from(
     new Set(rows.map((r) => r.category)),
   ).sort((a, b) => {
@@ -312,7 +364,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           <p className="text-sm text-slate-400">
             Renewal and expiration dates across subscriptions (including past subscription renewal
             dates you may have missed), identity, cards, insurance, rental end dates, utilities,
-            task due dates, donations, and warranty-bearing significant purchases.
+            task due dates, donations, loans (monthly repayment and maturity), and warranty-bearing
+            significant purchases.
           </p>
         </header>
 

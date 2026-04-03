@@ -53,6 +53,28 @@ model households {
   job_benefits            job_benefits[]
   job_documents           job_documents[]
   job_payroll_entries     job_payroll_entries[]
+  loans                   loans[]
+}
+
+model loans {
+  id                       String    @id @default(uuid())
+  household_id             String
+  loan_date                DateTime
+  loan_amount              Decimal   @db.Decimal(15, 2)
+  currency                 String    @default("ILS")
+  institution_name         String
+  loan_number              String?
+  monthly_repayment_amount Decimal?  @db.Decimal(15, 2)
+  repayment_day_of_month   Int?
+  maturity_date            DateTime?
+  total_repayment_amount   Decimal?  @db.Decimal(15, 2)
+  purpose                  String?
+  notes                    String?
+  is_active                Boolean   @default(true)
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
 }
 
 model household_enabled_sections {

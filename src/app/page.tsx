@@ -17,6 +17,7 @@ type SectionId =
   | "studiesAndClasses"
   | "subscriptions"
   | "donations"
+  | "loans"
   | "cars"
   | "jobs"
   | "upcomingRenewals"
@@ -150,6 +151,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     title: "Donations",
     href: "/dashboard/donations",
     description: "Log gifts and ongoing commitments.",
+  },
+  {
+    id: "loans",
+    group: "ongoing",
+    title: "Loans",
+    href: "/dashboard/loans",
+    description: "Mortgages and loans with repayment schedule and maturity.",
   },
   {
     id: "upcomingRenewals",
