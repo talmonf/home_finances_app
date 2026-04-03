@@ -4,7 +4,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-type EmploymentType = "freelancer" | "employee";
+type EmploymentType = "freelancer" | "employee" | "self_employed" | "contractor_via_company";
 type PayrollPeriodType = "monthly" | "biweekly" | "weekly" | "annual" | "other";
 
 function parseDateInput(raw: string | null): Date | null {
@@ -38,7 +38,14 @@ async function validateJobBelongsToHousehold(householdId: string, jobId: string)
 }
 
 function parseEmploymentType(raw: string | null): EmploymentType | null {
-  if (raw === "freelancer" || raw === "employee") return raw;
+  if (
+    raw === "freelancer" ||
+    raw === "employee" ||
+    raw === "self_employed" ||
+    raw === "contractor_via_company"
+  ) {
+    return raw;
+  }
   return null;
 }
 

@@ -54,6 +54,20 @@ model households {
   job_documents           job_documents[]
   job_payroll_entries     job_payroll_entries[]
   loans                   loans[]
+  therapy_settings                  therapy_settings?
+  therapy_expense_categories        therapy_expense_categories[]
+  therapy_service_programs          therapy_service_programs[]
+  therapy_clients                   therapy_clients[]
+  therapy_clients_jobs              therapy_clients_jobs[]
+  therapy_treatments                therapy_treatments[]
+  therapy_receipts                  therapy_receipts[]
+  therapy_receipt_allocations       therapy_receipt_allocations[]
+  therapy_job_expenses              therapy_job_expenses[]
+  therapy_appointment_series        therapy_appointment_series[]
+  therapy_appointments              therapy_appointments[]
+  therapy_consultation_types        therapy_consultation_types[]
+  therapy_consultations             therapy_consultations[]
+  therapy_travel_entries            therapy_travel_entries[]
 }
 
 model loans {
@@ -325,6 +339,8 @@ enum CarPurchasePaymentMethod {
 enum JobEmploymentType {
   freelancer
   employee
+  self_employed
+  contractor_via_company
 
   @@map("job_employment_type")
 }
@@ -394,6 +410,16 @@ model jobs {
   benefits             job_benefits[]
   documents            job_documents[]
   payroll_entries      job_payroll_entries[]
+  therapy_service_programs therapy_service_programs[]
+  therapy_clients_jobs     therapy_clients_jobs[]
+  therapy_clients_default  therapy_clients[]         @relation("TherapyClientDefaultJob")
+  therapy_treatments       therapy_treatments[]
+  therapy_receipts         therapy_receipts[]
+  therapy_job_expenses     therapy_job_expenses[]
+  therapy_appointment_series therapy_appointment_series[]
+  therapy_appointments       therapy_appointments[]
+  therapy_consultations      therapy_consultations[]
+  therapy_travel_entries     therapy_travel_entries[]
 }
 
 model job_benefits {
@@ -913,6 +939,12 @@ model transactions {
   rental         rentals?         @relation(fields: [rental_id], references: [id], onDelete: SetNull)
   trip           trips?           @relation(fields: [trip_id], references: [id], onDelete: SetNull)
   car            cars?            @relation(fields: [car_id], references: [id], onDelete: SetNull)
+  therapy_treatments_linked  therapy_treatments[] @relation("TherapyTreatmentTransaction")
+  therapy_receipts_linked    therapy_receipts[]   @relation("TherapyReceiptTransaction")
+  therapy_job_expenses_linked therapy_job_expenses[] @relation("TherapyExpenseTransaction")
+  therapy_consultations_income  therapy_consultations[] @relation("TherapyConsultationIncomeTx")
+  therapy_consultations_cost    therapy_consultations[] @relation("TherapyConsultationCostTx")
+  therapy_travel_entries_linked therapy_travel_entries[] @relation("TherapyTravelTransaction")
 }
 
 enum DocumentProcessingStatus {
@@ -1077,4 +1109,342 @@ enum UserType {
   other
 
   @@map("user_type")
+}
+
+enum TherapyVisitType {
+  clinic
+  home
+  phone
+  video
+
+  @@map("therapy_visit_type")
+}
+
+enum TherapyReceiptRecipientType {
+  organization
+  client
+
+  @@map("therapy_receipt_recipient_type")
+}
+
+enum TherapyReceiptPaymentMethod {
+  cash
+  bank_transfer
+  digital_card
+  credit_card
+
+  @@map("therapy_receipt_payment_method")
+}
+
+enum TherapyAppointmentStatus {
+  scheduled
+  cancelled
+  completed
+
+  @@map("therapy_appointment_status")
+}
+
+enum TherapyAppointmentRecurrence {
+  weekly
+  biweekly
+
+  @@map("therapy_appointment_recurrence")
+}
+
+model therapy_settings {
+  id           String   @id @default(uuid())
+  household_id String   @unique
+  note_1_label String   @default("Note 1")
+  note_2_label String   @default("Note 2")
+  note_3_label String   @default("Note 3")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+}
+
+model therapy_expense_categories {
+  id           String   @id @default(uuid())
+  household_id String
+  name         String
+  sort_order   Int      @default(0)
+  is_system    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households           @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  expenses  therapy_job_expenses[]
+
+  @@unique([household_id, name])
+}
+
+model therapy_service_programs {
+  id           String   @id @default(uuid())
+  household_id String
+  job_id       String
+  name         String
+  description  String?
+  sort_order   Int      @default(0)
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job       jobs       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  clients_default_for therapy_clients[] @relation("TherapyClientDefaultProgram")
+  treatments          therapy_treatments[]
+  appointment_series  therapy_appointment_series[]
+  appointments        therapy_appointments[]
+}
+
+model therapy_clients {
+  id                 String    @id @default(uuid())
+  household_id       String
+  first_name         String
+  last_name          String?
+  id_number          String?
+  start_date         DateTime? @db.Date
+  notes              String?
+  default_job_id     String
+  default_program_id String
+  email              String?
+  phones             String?
+  address            String?
+  import_key         String?
+  is_active          Boolean   @default(true)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  household       households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  default_job     jobs       @relation("TherapyClientDefaultJob", fields: [default_job_id], references: [id], onDelete: Restrict)
+  default_program therapy_service_programs @relation("TherapyClientDefaultProgram", fields: [default_program_id], references: [id], onDelete: Restrict)
+  client_jobs     therapy_clients_jobs[]
+  treatments      therapy_treatments[]
+  appointments    therapy_appointments[]
+  series          therapy_appointment_series[]
+}
+
+model therapy_clients_jobs {
+  id           String   @id @default(uuid())
+  household_id String
+  client_id    String
+  job_id       String
+  is_primary   Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  client    therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  job       jobs            @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([client_id, job_id])
+}
+
+model therapy_treatments {
+  id                    String   @id @default(uuid())
+  household_id          String
+  client_id             String
+  job_id                String
+  program_id            String
+  occurred_at           DateTime
+  amount                Decimal  @db.Decimal(15, 2)
+  currency              String   @default("ILS")
+  visit_type            TherapyVisitType
+  note_1                String?
+  note_2                String?
+  note_3                String?
+  linked_transaction_id String?
+  import_key            String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  client             therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  job                jobs            @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  program            therapy_service_programs @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  linked_transaction transactions? @relation("TherapyTreatmentTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+  receipt_allocations therapy_receipt_allocations[]
+  appointments_completed therapy_appointments[]
+  travel_entries       therapy_travel_entries[]
+
+  @@index([household_id, job_id])
+  @@index([household_id, occurred_at])
+}
+
+model therapy_receipts {
+  id                    String   @id @default(uuid())
+  household_id          String
+  job_id                String
+  receipt_number        String
+  issued_at             DateTime @db.Date
+  total_amount          Decimal  @db.Decimal(15, 2)
+  currency              String   @default("ILS")
+  recipient_type        TherapyReceiptRecipientType
+  payment_method        TherapyReceiptPaymentMethod
+  notes                 String?
+  linked_transaction_id String?
+  import_key            String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  linked_transaction transactions? @relation("TherapyReceiptTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+  allocations        therapy_receipt_allocations[]
+
+  @@index([household_id, job_id])
+}
+
+model therapy_receipt_allocations {
+  id           String   @id @default(uuid())
+  household_id String
+  receipt_id   String
+  treatment_id String
+  amount       Decimal  @db.Decimal(15, 2)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household  households        @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  receipt    therapy_receipts  @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+  treatment  therapy_treatments @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+
+  @@unique([receipt_id, treatment_id])
+}
+
+model therapy_job_expenses {
+  id                    String   @id @default(uuid())
+  household_id          String
+  job_id                String
+  category_id           String
+  expense_date          DateTime @db.Date
+  amount                Decimal  @db.Decimal(15, 2)
+  currency              String   @default("ILS")
+  notes                 String?
+  image_file_name       String?
+  image_mime_type       String?
+  image_storage_bucket  String?
+  image_storage_key     String?
+  image_storage_url     String?
+  linked_transaction_id String?
+  import_key            String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  category           therapy_expense_categories @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  linked_transaction transactions? @relation("TherapyExpenseTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, job_id])
+  @@index([household_id, expense_date])
+}
+
+model therapy_appointment_series {
+  id           String   @id @default(uuid())
+  household_id String
+  client_id    String
+  job_id       String
+  program_id   String?
+  visit_type   TherapyVisitType
+  recurrence   TherapyAppointmentRecurrence
+  day_of_week  Int
+  time_of_day  DateTime @db.Time
+  start_date   DateTime @db.Date
+  end_date     DateTime? @db.Date
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  client    therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  job       jobs            @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  program   therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
+  appointments therapy_appointments[]
+}
+
+model therapy_appointments {
+  id           String   @id @default(uuid())
+  household_id String
+  client_id    String
+  job_id       String
+  program_id   String?
+  series_id    String?
+  visit_type   TherapyVisitType
+  start_at     DateTime
+  end_at       DateTime?
+  status       TherapyAppointmentStatus @default(scheduled)
+  treatment_id String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household  households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  client     therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  job        jobs            @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  program    therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
+  series     therapy_appointment_series? @relation(fields: [series_id], references: [id], onDelete: SetNull)
+  treatment  therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, start_at])
+}
+
+model therapy_consultation_types {
+  id           String   @id @default(uuid())
+  household_id String
+  name         String
+  sort_order   Int      @default(0)
+  is_system    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  consultations therapy_consultations[]
+
+  @@unique([household_id, name])
+}
+
+model therapy_consultations {
+  id                    String   @id @default(uuid())
+  household_id          String
+  job_id                String
+  consultation_type_id  String
+  occurred_at           DateTime
+  income_amount         Decimal? @db.Decimal(15, 2)
+  income_currency       String   @default("ILS")
+  cost_amount           Decimal? @db.Decimal(15, 2)
+  cost_currency         String   @default("ILS")
+  notes                 String?
+  linked_income_transaction_id  String?
+  linked_cost_transaction_id    String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  consultation_type  therapy_consultation_types @relation(fields: [consultation_type_id], references: [id], onDelete: Restrict)
+  linked_income_tx   transactions? @relation("TherapyConsultationIncomeTx", fields: [linked_income_transaction_id], references: [id], onDelete: SetNull)
+  linked_cost_tx     transactions? @relation("TherapyConsultationCostTx", fields: [linked_cost_transaction_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, job_id])
+  @@index([household_id, occurred_at])
+}
+
+model therapy_travel_entries {
+  id                    String   @id @default(uuid())
+  household_id          String
+  job_id                String?
+  treatment_id          String?
+  occurred_at           DateTime?
+  notes                 String?
+  amount                Decimal? @db.Decimal(15, 2)
+  currency              String   @default("ILS")
+  linked_transaction_id String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job                jobs?       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  treatment          therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  linked_transaction transactions? @relation("TherapyTravelTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id])
 }

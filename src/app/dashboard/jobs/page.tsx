@@ -14,6 +14,21 @@ function dateInputValue(d: Date | null | undefined) {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
+function employmentTypeLabel(t: string) {
+  switch (t) {
+    case "employee":
+      return "Employee";
+    case "freelancer":
+      return "Freelancer";
+    case "self_employed":
+      return "Self-employed";
+    case "contractor_via_company":
+      return "Contractor via company";
+    default:
+      return t;
+  }
+}
+
 export default async function JobsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -76,6 +91,8 @@ export default async function JobsPage({ searchParams }: PageProps) {
               <option value="">Employment type</option>
               <option value="employee">Regular employee</option>
               <option value="freelancer">Freelancer</option>
+              <option value="self_employed">Self-employed</option>
+              <option value="contractor_via_company">Contractor via company</option>
             </select>
             <input name="job_title" placeholder="Job title" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <div className="space-y-1">
@@ -122,7 +139,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
                     <tr key={job.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-3 py-2 text-slate-100">{job.job_title}</td>
                       <td className="px-3 py-2 text-slate-300">{job.family_member.full_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{job.employment_type === "employee" ? "Employee" : "Freelancer"}</td>
+                      <td className="px-3 py-2 text-slate-300">{employmentTypeLabel(job.employment_type)}</td>
                       <td className="px-3 py-2 text-slate-300">{job.employer_name ?? "Self-employed / not set"}</td>
                       <td className="px-3 py-2 text-slate-300">
                         {dateInputValue(job.start_date)} - {dateInputValue(job.end_date) || "Present"}

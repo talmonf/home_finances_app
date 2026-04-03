@@ -84,6 +84,8 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
               <select name="employment_type" defaultValue={job.employment_type} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="employee">Regular employee</option>
                 <option value="freelancer">Freelancer</option>
+                <option value="self_employed">Self-employed</option>
+                <option value="contractor_via_company">Contractor via company</option>
               </select>
             </div>
             <div className="space-y-1">

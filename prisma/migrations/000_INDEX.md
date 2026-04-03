@@ -51,6 +51,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 039 | `039_household_section_statuses.sql` | CREATE | Household setup "Done" tracking per dashboard section. |
 | 040 | `040_digital_payment_methods_family_and_cards.sql` | ALTER | digital_payment_methods: optional family_member_id, primary/secondary credit card links, explicit date_created. |
 | 041 | `041_loans.sql` | CREATE | Table `loans`: loan amounts/currency, institution, repayment day of month, maturity, totals, purpose, notes. |
+| 042 | `042_therapy_clinic.sql` | CREATE/ALTER | Extend `job_employment_type`; enums + tables for private clinic (therapy clients, programs, treatments, receipts, expenses, appointments). |
+| 043 | `043_therapy_consultations_travel.sql` | CREATE | Consultation types, consultations (income/cost + tx links), travel entries (job XOR treatment + tx link). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -95,6 +97,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 039_household_section_statuses.sql
 - [x] 040_digital_payment_methods_family_and_cards.sql
 - [x] 041_loans.sql
+- [x] 042_therapy_clinic.sql
+- [x] 043_therapy_consultations_travel.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

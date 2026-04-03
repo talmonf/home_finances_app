@@ -23,6 +23,7 @@ type SectionId =
   | "upcomingRenewals"
   | "significantPurchases"
   | "medicalAppointments"
+  | "privateClinic"
   | "reports";
 
 type SetupCounts = {
@@ -179,6 +180,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     title: "Medical appointments",
     href: "/dashboard/medical-appointments",
     description: "Log visits, reimbursements, and payment methods.",
+  },
+  {
+    id: "privateClinic",
+    group: "ongoing",
+    title: "Private clinic",
+    href: "/dashboard/private-clinic",
+    description: "Clients, treatments, receipts, appointments, and clinic expenses.",
   },
   {
     id: "reports",
