@@ -94,7 +94,11 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           { billing_interval: "annual", renewal_date: { not: null } },
         ],
       },
-      include: { credit_card: { include: { family_member: true } }, family_member: true },
+      include: {
+        credit_card: { include: { family_member: true } },
+        digital_payment_method: { include: { family_member: true } },
+        family_member: true,
+      },
     }),
     prisma.identities.findMany({
       where: { household_id: householdId, is_active: true, expiry_date: { gte: today } },
@@ -171,8 +175,16 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       id: `sub-${s.id}`,
       category: "Subscription",
       itemName: s.name,
-      owner: s.family_member?.full_name ?? s.credit_card?.family_member?.full_name ?? "Household",
-      ownerId: s.family_member?.id ?? s.credit_card?.family_member?.id ?? null,
+      owner:
+        s.family_member?.full_name ??
+        s.digital_payment_method?.family_member?.full_name ??
+        s.credit_card?.family_member?.full_name ??
+        "Household",
+      ownerId:
+        s.family_member?.id ??
+        s.digital_payment_method?.family_member?.id ??
+        s.credit_card?.family_member?.id ??
+        null,
       renewalDate:
         s.billing_interval === "monthly" && s.monthly_day_of_month
           ? nextMonthlyRenewal(s.monthly_day_of_month, today)

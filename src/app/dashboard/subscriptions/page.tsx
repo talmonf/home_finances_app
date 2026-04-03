@@ -72,6 +72,16 @@ function buildCreditCardLabel(card: {
   return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four}`;
 }
 
+function formatSubscriptionPaymentSummary(s: {
+  credit_card: { card_name: string } | null;
+  digital_payment_method: { name: string } | null;
+}) {
+  const parts: string[] = [];
+  if (s.digital_payment_method?.name) parts.push(s.digital_payment_method.name);
+  if (s.credit_card?.card_name) parts.push(s.credit_card.card_name);
+  return parts.length ? parts.join(" · ") : "—";
+}
+
 export default async function SubscriptionsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -82,10 +92,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
-  const [subscriptions, creditCards, familyMembers] = await Promise.all([
+  const [subscriptions, creditCards, digitalPaymentMethods, familyMembers] = await Promise.all([
     prisma.subscriptions.findMany({
       where: { household_id: householdId },
-      include: { credit_card: true, family_member: true },
+      include: { credit_card: true, digital_payment_method: true, family_member: true },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.credit_cards.findMany({
@@ -95,6 +105,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
       orderBy: { card_name: "asc" },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -316,10 +330,31 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label
+                htmlFor="digital_payment_method_id"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Digital payment (optional)
+              </label>
+              <select
+                id="digital_payment_method_id"
+                name="digital_payment_method_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="">None</option>
+                {digitalPaymentMethods.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
                 htmlFor="credit_card_id"
                 className="mb-1 block text-xs font-medium text-slate-400"
               >
-                Payment method (optional)
+                Credit card (optional)
               </label>
               <select
                 id="credit_card_id"
@@ -437,7 +472,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {s.credit_card?.card_name ?? "—"}
+                        {formatSubscriptionPaymentSummary(s)}
                       </td>
                       <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={s.website_url ?? undefined}>
                         {s.website_url ? (

@@ -64,7 +64,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
     redirect("/dashboard/subscriptions?error=Not+found");
   }
 
-  const [creditCards, familyMembers] = await Promise.all([
+  const [creditCards, digitalPaymentMethods, familyMembers] = await Promise.all([
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
@@ -77,6 +77,18 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
         ],
       },
       orderBy: { card_name: "asc" },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: {
+        household_id: householdId,
+        OR: [
+          ...(subscription.digital_payment_method_id
+            ? [{ id: subscription.digital_payment_method_id }]
+            : []),
+          { is_active: true },
+        ],
+      },
+      orderBy: { name: "asc" },
     }),
     prisma.family_members.findMany({
       where: {
@@ -255,8 +267,30 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               </select>
             </div>
             <div>
+              <label
+                htmlFor="digital_payment_method_id"
+                className="mb-1 block text-xs font-medium text-slate-400"
+              >
+                Digital payment (optional)
+              </label>
+              <select
+                id="digital_payment_method_id"
+                name="digital_payment_method_id"
+                defaultValue={subscription.digital_payment_method_id ?? ""}
+                className={inputClass}
+              >
+                <option value="">None</option>
+                {digitalPaymentMethods.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                    {!d.is_active ? " (inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
-                Payment method (optional)
+                Credit card (optional)
               </label>
               <select
                 id="credit_card_id"

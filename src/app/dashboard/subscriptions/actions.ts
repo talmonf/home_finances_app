@@ -57,6 +57,8 @@ export async function createSubscription(formData: FormData) {
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
   const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  const digital_payment_method_id =
+    (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
@@ -111,6 +113,16 @@ export async function createSubscription(formData: FormData) {
     }
   }
 
+  if (digital_payment_method_id) {
+    const dpm = await prisma.digital_payment_methods.findFirst({
+      where: { id: digital_payment_method_id, household_id: householdId, is_active: true },
+      select: { id: true },
+    });
+    if (!dpm) {
+      redirect("/dashboard/subscriptions?error=Invalid+digital+payment+method");
+    }
+  }
+
   if (family_member_id) {
     const member = await prisma.family_members.findFirst({
       where: { id: family_member_id, household_id: householdId },
@@ -162,6 +174,7 @@ export async function createSubscription(formData: FormData) {
       billing_interval: billing_interval as "monthly" | "annual",
       monthly_day_of_month,
       credit_card_id,
+      digital_payment_method_id,
       family_member_id,
       description,
       website_url,
@@ -190,6 +203,8 @@ export async function updateSubscription(formData: FormData) {
   const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
   const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  const digital_payment_method_id =
+    (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
@@ -199,6 +214,15 @@ export async function updateSubscription(formData: FormData) {
   if (!id || !name || !fee_amount_raw || !billing_interval) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
   }
+
+  const existingSub = await prisma.subscriptions.findFirst({
+    where: { id, household_id: householdId },
+    select: { digital_payment_method_id: true },
+  });
+  if (!existingSub) {
+    redirect("/dashboard/subscriptions?error=Not+found");
+  }
+
   if (status !== "active" && status !== "cancelled") {
     redirect(`/dashboard/subscriptions/${id}?error=Invalid+status`);
   }
@@ -241,6 +265,19 @@ export async function updateSubscription(formData: FormData) {
     });
     if (!card) {
       redirect(`/dashboard/subscriptions/${id}?error=Credit+card+must+be+active+and+not+expired`);
+    }
+  }
+
+  if (digital_payment_method_id) {
+    const dpm = await prisma.digital_payment_methods.findFirst({
+      where: { id: digital_payment_method_id, household_id: householdId },
+      select: { id: true, is_active: true },
+    });
+    if (
+      !dpm ||
+      (!dpm.is_active && dpm.id !== existingSub.digital_payment_method_id)
+    ) {
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+digital+payment+method`);
     }
   }
 
@@ -294,6 +331,7 @@ export async function updateSubscription(formData: FormData) {
       billing_interval: billing_interval as "monthly" | "annual",
       monthly_day_of_month,
       credit_card_id,
+      digital_payment_method_id,
       family_member_id,
       description,
       website_url,

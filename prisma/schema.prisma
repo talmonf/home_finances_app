@@ -794,6 +794,7 @@ model digital_payment_methods {
   secondary_credit_card credit_cards?   @relation("SecondaryDigitalPaymentCreditCard", fields: [secondary_credit_card_id], references: [id], onDelete: SetNull)
   medical_appointments medical_appointments[]
   donations             donations[]
+  subscriptions         subscriptions[]
 }
 
 model medical_appointments {
@@ -992,6 +993,7 @@ model subscriptions {
   billing_interval SubscriptionBillingInterval
   monthly_day_of_month Int?
   credit_card_id   String?
+  digital_payment_method_id String?
   family_member_id String?
   description      String?
   website_url      String?
@@ -1000,9 +1002,10 @@ model subscriptions {
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt
 
-  household     households     @relation(fields: [household_id], references: [id])
-  credit_card   credit_cards?  @relation(fields: [credit_card_id], references: [id])
-  family_member family_members? @relation(fields: [family_member_id], references: [id])
+  household              households              @relation(fields: [household_id], references: [id])
+  credit_card            credit_cards?           @relation(fields: [credit_card_id], references: [id])
+  digital_payment_method digital_payment_methods? @relation(fields: [digital_payment_method_id], references: [id], onDelete: SetNull)
+  family_member          family_members?         @relation(fields: [family_member_id], references: [id])
 }
 
 enum StudyOrClassType {
