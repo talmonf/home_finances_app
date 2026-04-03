@@ -49,6 +49,7 @@ model households {
   cars                    cars[]
   car_services            car_services[]
   car_licenses            car_licenses[]
+  car_petrol_fillups      car_petrol_fillups[]
   jobs                    jobs[]
   job_benefits            job_benefits[]
   job_documents           job_documents[]
@@ -386,7 +387,27 @@ model cars {
   insurance_policies insurance_policies[]
   services     car_services[]
   licenses     car_licenses[]
+  petrol_fillups car_petrol_fillups[]
   transactions transactions[]
+}
+
+model car_petrol_fillups {
+  id              String   @id @default(uuid())
+  household_id    String
+  car_id          String
+  filled_at       DateTime
+  amount_paid     Decimal  @db.Decimal(15, 2)
+  currency        String   @default("ILS")
+  litres          Decimal  @db.Decimal(12, 3)
+  odometer_km     Int
+  transaction_id  String?  @unique
+  notes           String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household   households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  car         cars          @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  transaction transactions? @relation(fields: [transaction_id], references: [id], onDelete: SetNull)
 }
 
 model jobs {
@@ -946,6 +967,7 @@ model transactions {
   therapy_consultations_income  therapy_consultations[] @relation("TherapyConsultationIncomeTx")
   therapy_consultations_cost    therapy_consultations[] @relation("TherapyConsultationCostTx")
   therapy_travel_entries_linked therapy_travel_entries[] @relation("TherapyTravelTransaction")
+  car_petrol_fillups            car_petrol_fillups?
 }
 
 enum DocumentProcessingStatus {

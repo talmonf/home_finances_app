@@ -61,7 +61,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Cars</h1>
           <p className="text-sm text-slate-400">
-            Record vehicles, purchase/sale details, driver ownership, services, licenses, and linked insurance.
+            Record vehicles, purchase/sale details, driver ownership, petrol fill-ups, services, licenses, and linked insurance.
           </p>
           {(resolved?.created || resolved?.updated || resolved?.error) && (
             <div

@@ -1,7 +1,16 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createCarLicense, createCarService, deleteCarLicense, deleteCarService, updateCar } from "../actions";
+import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import {
+  createCarLicense,
+  createCarPetrolFillup,
+  createCarService,
+  deleteCarLicense,
+  deleteCarPetrolFillup,
+  deleteCarService,
+  updateCar,
+} from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +23,42 @@ function dateInputValue(d: Date | null | undefined) {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
+function formatMoney(value: unknown) {
+  if (value == null) return "—";
+  const n =
+    typeof value === "object" && value !== null && "toNumber" in value
+      ? (value as { toNumber(): number }).toNumber()
+      : Number(value);
+  return Number.isNaN(n)
+    ? "—"
+    : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function petrolMetricsByFillupId(
+  rows: { id: string; odometer_km: number; amount_paid: { toString(): string }; litres: { toString(): string } }[],
+) {
+  const sorted = [...rows].sort((a, b) => {
+    if (a.odometer_km !== b.odometer_km) return a.odometer_km - b.odometer_km;
+    return a.id.localeCompare(b.id);
+  });
+  const map = new Map<
+    string,
+    { deltaKm: number | null; costPerLitre: number | null; kmPerLitre: number | null }
+  >();
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const prev = i > 0 ? sorted[i - 1] : null;
+    const deltaKm = prev != null ? cur.odometer_km - prev.odometer_km : null;
+    const litresN = Number(cur.litres.toString());
+    const amountN = Number(cur.amount_paid.toString());
+    const costPerLitre = litresN > 0 ? amountN / litresN : null;
+    const kmPerLitre =
+      deltaKm != null && deltaKm > 0 && litresN > 0 ? deltaKm / litresN : null;
+    map.set(cur.id, { deltaKm, costPerLitre, kmPerLitre });
+  }
+  return map;
+}
+
 export default async function CarDetailsPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -21,7 +66,8 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
-  const [car, familyMembers, creditCards, bankAccounts, services, licenses, insurancePolicies] = await Promise.all([
+  const [car, familyMembers, creditCards, bankAccounts, services, licenses, insurancePolicies, petrolFillups] =
+    await Promise.all([
     prisma.cars.findFirst({
       where: { id, household_id: householdId },
       include: { main_driver: true, purchase_credit_card: true, purchase_bank_account: true },
@@ -53,9 +99,16 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
       include: { family_member: true },
       orderBy: { expiration_date: "asc" },
     }),
+    prisma.car_petrol_fillups.findMany({
+      where: { household_id: householdId, car_id: id },
+      include: { transaction: true },
+      orderBy: { filled_at: "desc" },
+    }),
   ]);
 
   if (!car) notFound();
+
+  const petrolMetrics = petrolMetricsByFillupId(petrolFillups);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -172,6 +225,102 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
               <table className="w-full text-left text-sm">
                 <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Provider</th><th className="px-3 py-2 text-slate-300">Policy</th><th className="px-3 py-2 text-slate-300">Owner</th><th className="px-3 py-2 text-slate-300">Expires</th></tr></thead>
                 <tbody>{insurancePolicies.map((p) => <tr key={p.id} className="border-b border-slate-700/80"><td className="px-3 py-2 text-slate-100">{p.provider_name}</td><td className="px-3 py-2 text-slate-300">{p.policy_name}</td><td className="px-3 py-2 text-slate-300">{p.family_member?.full_name ?? "Household"}</td><td className="px-3 py-2 text-slate-300">{dateInputValue(p.expiration_date)}</td></tr>)}</tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium text-slate-200">Petrol fill-ups</h2>
+          <p className="text-xs text-slate-500">
+            Δ km and km/L use the previous fill for this car with a lower odometer reading. Cost per litre is amount paid ÷
+            litres.
+          </p>
+          <form action={createCarPetrolFillup} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
+            <input type="hidden" name="car_id" value={car.id} />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Date</label>
+              <input name="filled_at" type="date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Amount paid</label>
+              <input name="amount_paid" type="number" step="0.01" min="0" required placeholder="0.00" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Litres</label>
+              <input name="litres" type="number" step="0.001" min="0" required placeholder="0.000" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Odometer (km)</label>
+              <input name="odometer_km" type="number" min="0" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <TherapyTransactionLinkSelect
+                name="linked_transaction_id"
+                householdId={householdId}
+                label="Linked transaction (optional)"
+                hint="Each bank transaction can be linked to at most one petrol record."
+              />
+            </div>
+            <textarea name="notes" placeholder="Notes (optional)" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+              Add fill-up
+            </button>
+          </form>
+          {petrolFillups.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-3 py-2 text-slate-300">Date</th>
+                    <th className="px-3 py-2 text-slate-300">Paid</th>
+                    <th className="px-3 py-2 text-slate-300">Litres</th>
+                    <th className="px-3 py-2 text-slate-300">Odometer</th>
+                    <th className="px-3 py-2 text-slate-300">Δ km</th>
+                    <th className="px-3 py-2 text-slate-300">Cost/L</th>
+                    <th className="px-3 py-2 text-slate-300">km/L</th>
+                    <th className="px-3 py-2 text-slate-300">Transaction</th>
+                    <th className="px-3 py-2 text-slate-300">Notes</th>
+                    <th className="px-3 py-2 text-slate-300">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {petrolFillups.map((p) => {
+                    const m = petrolMetrics.get(p.id);
+                    const tx = p.transaction;
+                    const txLabel = tx
+                      ? `${tx.transaction_date.toISOString().slice(0, 10)} ${tx.transaction_direction === "credit" ? "+" : "−"}${tx.amount.toString()} ${tx.description ?? ""}`.slice(0, 80)
+                      : "—";
+                    return (
+                      <tr key={p.id} className="border-b border-slate-700/80">
+                        <td className="px-3 py-2 text-slate-200">{dateInputValue(p.filled_at)}</td>
+                        <td className="px-3 py-2 text-slate-300">{formatMoney(p.amount_paid)}</td>
+                        <td className="px-3 py-2 text-slate-300">{Number(p.litres.toString()).toLocaleString("en", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
+                        <td className="px-3 py-2 text-slate-300">{p.odometer_km.toLocaleString("en")}</td>
+                        <td className="px-3 py-2 text-slate-300">
+                          {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-slate-300">
+                          {m?.costPerLitre != null ? m.costPerLitre.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-slate-300">
+                          {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
+                        </td>
+                        <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={txLabel}>
+                          {txLabel}
+                        </td>
+                        <td className="px-3 py-2 text-slate-400">{p.notes ?? "—"}</td>
+                        <td className="px-3 py-2">
+                          <form action={deleteCarPetrolFillup.bind(null, p.id, car.id)}>
+                            <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                              Delete
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
           )}

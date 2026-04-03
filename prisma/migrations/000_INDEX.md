@@ -53,6 +53,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 041 | `041_loans.sql` | CREATE | Table `loans`: loan amounts/currency, institution, repayment day of month, maturity, totals, purpose, notes. |
 | 042 | `042_therapy_clinic.sql` | CREATE/ALTER | Extend `job_employment_type`; enums + tables for private clinic (therapy clients, programs, treatments, receipts, expenses, appointments). |
 | 043 | `043_therapy_consultations_travel.sql` | CREATE | Consultation types, consultations (income/cost + tx links), travel entries (job XOR treatment + tx link). |
+| 044 | `044_subscriptions_digital_payment_method.sql` | ALTER | subscriptions: optional `digital_payment_method_id` FK → `digital_payment_methods`, index. |
+| 045 | `045_car_petrol_fillups.sql` | CREATE | Table `car_petrol_fillups`: per-car petrol fill-ups (litres, odometer, amount, optional unique `transaction_id` → `transactions`). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -99,6 +101,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 041_loans.sql
 - [x] 042_therapy_clinic.sql
 - [x] 043_therapy_consultations_travel.sql
+- [x] 044_subscriptions_digital_payment_method.sql
+- [x] 045_car_petrol_fillups.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
