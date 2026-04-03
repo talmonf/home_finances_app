@@ -25,16 +25,32 @@ export function CarLicenseCreateForm({
     setError(null);
     try {
       const fd = new FormData(e.currentTarget);
-      const res = await fetch("/api/cars/licenses", { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
+      const res = await fetch("/api/cars/licenses", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const text = await res.text();
+      let serverMessage: string | undefined;
+      try {
+        const data = JSON.parse(text) as { error?: unknown };
+        if (typeof data?.error === "string") serverMessage = data.error;
+      } catch {
+        if (text.trim()) serverMessage = text.trim().slice(0, 400);
+      }
       if (!res.ok) {
-        setError(typeof data?.error === "string" ? data.error : "Could not save license.");
+        setError(
+          serverMessage ??
+            (res.status === 413
+              ? "Request too large (try a smaller PDF or compress the file)."
+              : `Could not save license (HTTP ${res.status}).`),
+        );
         return;
       }
       e.currentTarget.reset();
       router.refresh();
-    } catch {
-      setError("Could not save license.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error — could not reach the server.");
     } finally {
       setBusy(false);
     }

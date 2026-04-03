@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/auth";
 import { uploadCarLicenseReceipt } from "@/lib/object-storage";
+
+export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -54,9 +55,6 @@ export async function POST(
         receipt_uploaded_at: new Date(),
       },
     });
-
-    revalidatePath(`/dashboard/cars/${license.car_id}`);
-    revalidatePath("/dashboard/upcoming-renewals");
 
     return NextResponse.json({ ok: true });
   } catch (error) {

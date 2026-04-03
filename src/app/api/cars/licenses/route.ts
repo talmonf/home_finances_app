@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/auth";
 import { uploadCarLicenseReceipt } from "@/lib/object-storage";
+
+export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -80,36 +82,49 @@ export async function POST(req: NextRequest) {
     });
 
     if (file && file.size > 0) {
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const stored = await uploadCarLicenseReceipt(
-        householdId,
-        licenseId,
-        file.name || "receipt",
-        file.type,
-        bytes,
-      );
-      await prisma.car_licenses.update({
-        where: { id: licenseId },
-        data: {
-          receipt_file_name: file.name || "receipt",
-          receipt_mime_type: file.type || null,
-          receipt_storage_bucket: stored.bucket,
-          receipt_storage_key: stored.key,
-          receipt_storage_url: stored.publicUrl,
-          receipt_uploaded_at: new Date(),
-        },
-      });
+      try {
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const stored = await uploadCarLicenseReceipt(
+          householdId,
+          licenseId,
+          file.name || "receipt",
+          file.type,
+          bytes,
+        );
+        await prisma.car_licenses.update({
+          where: { id: licenseId },
+          data: {
+            receipt_file_name: file.name || "receipt",
+            receipt_mime_type: file.type || null,
+            receipt_storage_bucket: stored.bucket,
+            receipt_storage_key: stored.key,
+            receipt_storage_url: stored.publicUrl,
+            receipt_uploaded_at: new Date(),
+          },
+        });
+      } catch (uploadOrReceiptErr) {
+        await prisma.car_licenses.deleteMany({ where: { id: licenseId, household_id: householdId } });
+        throw uploadOrReceiptErr;
+      }
     }
-
-    revalidatePath(`/dashboard/cars/${car_id}`);
-    revalidatePath("/dashboard/upcoming-renewals");
 
     return NextResponse.json({ id: licenseId });
   } catch (error) {
     console.error("Car license create failed:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Create failed" },
-      { status: 500 },
-    );
+    const message = formatApiError(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function formatApiError(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2022") {
+      return "Database is missing receipt columns. Run migration 047_car_licenses_receipt.sql (or prisma migrate), then try again.";
+    }
+    return `Database error (${error.code}): ${error.message}`;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Create failed";
 }
