@@ -172,6 +172,22 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
               <input name="purchase_amount" type="number" step="0.01" defaultValue={car.purchase_amount?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Purchased from</label>
+              <input name="purchased_from" defaultValue={car.purchased_from ?? ""} placeholder="Dealer, private seller…" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Km at purchase</label>
+              <input name="purchase_odometer_km" type="number" min="0" defaultValue={car.purchase_odometer_km ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Extra purchase costs</label>
+              <input name="extra_purchase_costs" type="number" step="0.01" min="0" defaultValue={car.extra_purchase_costs?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">Extra purchase costs notes</label>
+              <textarea name="extra_purchase_costs_notes" defaultValue={car.extra_purchase_costs_notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
               <label className="block text-xs text-slate-400">Purchase payment method</label>
               <select name="purchase_payment_method" defaultValue={car.purchase_payment_method ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">Not set</option>

@@ -367,6 +367,10 @@ model cars {
   notes                        String?
   purchase_date                DateTime?
   purchase_amount              Decimal?                 @db.Decimal(15, 2)
+  purchased_from               String?
+  purchase_odometer_km         Int?
+  extra_purchase_costs         Decimal?                 @db.Decimal(15, 2)
+  extra_purchase_costs_notes   String?
   purchase_notes               String?
   purchase_payment_method      CarPurchasePaymentMethod?
   purchase_credit_card_id      String?

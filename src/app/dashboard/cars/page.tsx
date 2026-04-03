@@ -97,6 +97,10 @@ export default async function CarsPage({ searchParams }: PageProps) {
               <input name="purchase_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <input name="purchase_amount" placeholder="Purchase amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="purchased_from" placeholder="Purchased from (dealer, private…)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="purchase_odometer_km" placeholder="Km at purchase" type="number" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <input name="extra_purchase_costs" placeholder="Extra purchase costs" type="number" step="0.01" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <textarea name="extra_purchase_costs_notes" placeholder="Extra purchase costs notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <select name="purchase_payment_method" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
               <option value="">Purchase payment method</option>
               <option value="cash">Cash</option>

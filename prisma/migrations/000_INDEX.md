@@ -55,6 +55,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 043 | `043_therapy_consultations_travel.sql` | CREATE | Consultation types, consultations (income/cost + tx links), travel entries (job XOR treatment + tx link). |
 | 044 | `044_subscriptions_digital_payment_method.sql` | ALTER | subscriptions: optional `digital_payment_method_id` FK → `digital_payment_methods`, index. |
 | 045 | `045_car_petrol_fillups.sql` | CREATE | Table `car_petrol_fillups`: per-car petrol fill-ups (litres, odometer, amount, optional unique `transaction_id` → `transactions`). |
+| 046 | `046_cars_purchase_extras.sql` | ALTER | `cars`: `purchased_from`, `purchase_odometer_km`, `extra_purchase_costs`, `extra_purchase_costs_notes`. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -103,6 +104,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 043_therapy_consultations_travel.sql
 - [x] 044_subscriptions_digital_payment_method.sql
 - [x] 045_car_petrol_fillups.sql
+- [x] 046_cars_purchase_extras.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

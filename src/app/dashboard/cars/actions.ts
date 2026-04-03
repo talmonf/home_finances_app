@@ -18,6 +18,14 @@ function parseMoney(raw: string | null): string | null {
   return parsed.toFixed(2);
 }
 
+function parseOptionalOdometerKm(raw: string | null): number | null {
+  const v = raw?.trim();
+  if (!v) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.trunc(n);
+}
+
 function parseLitres(raw: string | null): string | null {
   const value = raw?.trim();
   if (!value) return null;
@@ -102,6 +110,16 @@ export async function createCar(formData: FormData) {
 
   const purchase_date = parseDateInput((formData.get("purchase_date") as string | null)?.trim() || null);
   const purchase_amount = parseMoney((formData.get("purchase_amount") as string | null) ?? null);
+  const purchased_from = (formData.get("purchased_from") as string | null)?.trim() || null;
+  const purchase_odometer_km_raw = (formData.get("purchase_odometer_km") as string | null)?.trim();
+  if (purchase_odometer_km_raw) {
+    const n = Number(purchase_odometer_km_raw);
+    if (!Number.isFinite(n) || n < 0) redirect("/dashboard/cars?error=Invalid+km+at+purchase");
+  }
+  const purchase_odometer_km = parseOptionalOdometerKm((formData.get("purchase_odometer_km") as string | null) ?? null);
+  const extra_purchase_costs = parseMoney((formData.get("extra_purchase_costs") as string | null) ?? null);
+  const extra_purchase_costs_notes =
+    (formData.get("extra_purchase_costs_notes") as string | null)?.trim() || null;
   const purchase_payment_method_raw =
     (formData.get("purchase_payment_method") as string | null)?.trim() || null;
   let purchase_credit_card_id =
@@ -162,6 +180,10 @@ export async function createCar(formData: FormData) {
       main_driver_family_member_id,
       purchase_date,
       purchase_amount,
+      purchased_from,
+      purchase_odometer_km,
+      extra_purchase_costs,
+      extra_purchase_costs_notes,
       purchase_notes,
       purchase_payment_method,
       purchase_credit_card_id,
@@ -229,6 +251,13 @@ export async function updateCar(formData: FormData) {
   const main_driver_family_member_id =
     (formData.get("main_driver_family_member_id") as string | null)?.trim() || null;
 
+  const purchase_odometer_km_raw = (formData.get("purchase_odometer_km") as string | null)?.trim();
+  if (purchase_odometer_km_raw) {
+    const n = Number(purchase_odometer_km_raw);
+    if (!Number.isFinite(n) || n < 0) redirect(`/dashboard/cars/${id}?error=Invalid+km+at+purchase`);
+  }
+  const purchase_odometer_km = parseOptionalOdometerKm((formData.get("purchase_odometer_km") as string | null) ?? null);
+
   const error = await validateHouseholdRefs(householdId, {
     main_driver_family_member_id,
     purchase_credit_card_id,
@@ -247,6 +276,11 @@ export async function updateCar(formData: FormData) {
       notes: (formData.get("notes") as string | null)?.trim() || null,
       purchase_date: parseDateInput((formData.get("purchase_date") as string | null)?.trim() || null),
       purchase_amount: parseMoney((formData.get("purchase_amount") as string | null) ?? null),
+      purchased_from: (formData.get("purchased_from") as string | null)?.trim() || null,
+      purchase_odometer_km,
+      extra_purchase_costs: parseMoney((formData.get("extra_purchase_costs") as string | null) ?? null),
+      extra_purchase_costs_notes:
+        (formData.get("extra_purchase_costs_notes") as string | null)?.trim() || null,
       purchase_notes: (formData.get("purchase_notes") as string | null)?.trim() || null,
       purchase_payment_method,
       purchase_credit_card_id,
