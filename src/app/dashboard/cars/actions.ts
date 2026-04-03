@@ -347,38 +347,6 @@ export async function deleteCarService(id: string, carId: string) {
   revalidatePath(`/dashboard/cars/${carId}`);
 }
 
-export async function createCarLicense(formData: FormData) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
-
-  const car_id = (formData.get("car_id") as string | null)?.trim() || null;
-  const expires_at = parseDateInput((formData.get("expires_at") as string | null)?.trim() || null);
-  if (!car_id || !expires_at) return;
-
-  const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
-  const bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
-  const error = await validateHouseholdRefs(householdId, { car_id, credit_card_id, bank_account_id });
-  if (error) return;
-
-  await prisma.car_licenses.create({
-    data: {
-      id: crypto.randomUUID(),
-      household_id: householdId,
-      car_id,
-      renewed_at: parseDateInput((formData.get("renewed_at") as string | null)?.trim() || null),
-      expires_at,
-      cost_amount: parseMoney((formData.get("cost_amount") as string | null) ?? null),
-      credit_card_id,
-      bank_account_id,
-      notes: (formData.get("notes") as string | null)?.trim() || null,
-    },
-  });
-
-  revalidatePath(`/dashboard/cars/${car_id}`);
-  revalidatePath("/dashboard/upcoming-renewals");
-}
-
 export async function deleteCarLicense(id: string, carId: string) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -393,7 +361,7 @@ export async function deleteCarLicense(id: string, carId: string) {
 export async function createCarPetrolFillup(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
+  if (!householdId) redirect("/");
 
   const car_id = (formData.get("car_id") as string | null)?.trim() || null;
   const filled_at = parseDateInput((formData.get("filled_at") as string | null)?.trim() || null);
@@ -410,12 +378,16 @@ export async function createCarPetrolFillup(formData: FormData) {
 
   if (!car_id || !filled_at || !amount_paid || !litres || odometer_km === null) {
     const msg = "Date, amount, litres, and odometer are required.";
-    if (car_id) redirect(`/dashboard/cars/${car_id}?error=${encodeURIComponent(msg)}`);
-    redirect(`/dashboard/cars?error=${encodeURIComponent(msg)}`);
+    if (car_id) {
+      redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`);
+    }
+    redirect(`/dashboard/petrol-fillups?error=${encodeURIComponent(msg)}`);
   }
 
   const err = await validateHouseholdRefs(householdId, { car_id });
-  if (err) redirect(`/dashboard/cars/${car_id}?error=${encodeURIComponent(err)}`);
+  if (err) {
+    redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
+  }
 
   const linked_transaction_id = await resolveTransactionLink(
     householdId,
@@ -428,7 +400,7 @@ export async function createCarPetrolFillup(formData: FormData) {
     });
     if (taken) {
       redirect(
-        `/dashboard/cars/${car_id}?error=${encodeURIComponent("That transaction is already linked to another petrol record.")}`,
+        `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("That transaction is already linked to another petrol record.")}`,
       );
     }
   }
@@ -448,15 +420,19 @@ export async function createCarPetrolFillup(formData: FormData) {
     },
   });
 
+  revalidatePath("/dashboard/petrol-fillups");
   revalidatePath(`/dashboard/cars/${car_id}`);
+  redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&saved=1`);
 }
 
 export async function deleteCarPetrolFillup(id: string, carId: string) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
+  if (!householdId) redirect("/");
   await prisma.car_petrol_fillups.deleteMany({
     where: { id, car_id: carId, household_id: householdId },
   });
+  revalidatePath("/dashboard/petrol-fillups");
   revalidatePath(`/dashboard/cars/${carId}`);
+  redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(carId)}&deleted=1`);
 }

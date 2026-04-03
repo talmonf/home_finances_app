@@ -19,6 +19,7 @@ type SectionId =
   | "donations"
   | "loans"
   | "cars"
+  | "petrolFillups"
   | "jobs"
   | "upcomingRenewals"
   | "significantPurchases"
@@ -100,6 +101,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     description: "Vehicles with services/licenses/insurance.",
     countKey: "cars",
     countSuffix: "cars",
+  },
+  {
+    id: "petrolFillups",
+    group: "ongoing",
+    title: "Petrol",
+    href: "/dashboard/petrol-fillups",
+    description: "Log fill-ups from your phone: pick the car, odometer, litres, and amount paid.",
   },
   {
     id: "jobs",

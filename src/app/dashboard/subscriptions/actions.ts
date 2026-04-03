@@ -9,27 +9,6 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-function getDaysInMonth(year: number, monthZeroBased: number) {
-  return new Date(year, monthZeroBased + 1, 0).getDate();
-}
-
-function computeNextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-
-  const thisMonthDay = Math.min(dayOfMonth, getDaysInMonth(year, month));
-  const candidateThisMonth = new Date(year, month, thisMonthDay);
-  if (candidateThisMonth >= baseDate) {
-    return candidateThisMonth;
-  }
-
-  const nextMonthDate = new Date(year, month + 1, 1);
-  const nextYear = nextMonthDate.getFullYear();
-  const nextMonth = nextMonthDate.getMonth();
-  const nextMonthDay = Math.min(dayOfMonth, getDaysInMonth(nextYear, nextMonth));
-  return new Date(nextYear, nextMonth, nextMonthDay);
-}
-
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -142,9 +121,7 @@ export async function createSubscription(formData: FormData) {
   }
 
   let renewal_date: Date | null = null;
-  if (billing_interval === "monthly" && monthly_day_of_month != null) {
-    renewal_date = computeNextMonthlyRenewal(monthly_day_of_month, startOfToday());
-  } else if (renewal_date_raw) {
+  if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
       redirect("/dashboard/subscriptions?error=Invalid+renewal+date");
@@ -300,9 +277,7 @@ export async function updateSubscription(formData: FormData) {
   }
 
   let renewal_date: Date | null = null;
-  if (billing_interval === "monthly" && monthly_day_of_month != null) {
-    renewal_date = computeNextMonthlyRenewal(monthly_day_of_month, startOfToday());
-  } else if (renewal_date_raw) {
+  if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
       redirect(`/dashboard/subscriptions/${id}?error=Invalid+renewal+date`);

@@ -162,12 +162,20 @@ export default async function CarsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">{formatMoney(car.purchase_amount)}</td>
                       <td className="px-3 py-2 text-slate-300">{formatMoney(car.sold_amount)}</td>
                       <td className="px-3 py-2">
-                        <Link
-                          href={`/dashboard/cars/${car.id}`}
-                          className="text-xs text-sky-400 hover:text-sky-300"
-                        >
-                          Edit
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <Link
+                            href={`/dashboard/petrol-fillups?carId=${car.id}`}
+                            className="text-xs text-emerald-400 hover:text-emerald-300"
+                          >
+                            Petrol
+                          </Link>
+                          <Link
+                            href={`/dashboard/cars/${car.id}`}
+                            className="text-xs text-sky-400 hover:text-sky-300"
+                          >
+                            Edit
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

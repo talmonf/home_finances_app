@@ -161,11 +161,52 @@ export async function uploadJobDocumentObject(
   return { bucket: cfg.bucket, key, publicUrl };
 }
 
+export type UploadCarLicenseReceiptResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
 export type UploadTherapyExpenseImageResult = {
   bucket: string;
   key: string;
   publicUrl: string | null;
 };
+
+/** Same bucket/credentials as job documents; keys under `car-licenses/{licenseId}/`. */
+export async function uploadCarLicenseReceipt(
+  householdId: string,
+  licenseId: string,
+  fileName: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadCarLicenseReceiptResult> {
+  const cfg = getJobDocumentStorageConfig();
+  const key = `${householdId}/car-licenses/${licenseId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/octet-stream",
+    }),
+  );
+
+  const publicUrl = cfg.publicBaseUrl
+    ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
+    : null;
+  return { bucket: cfg.bucket, key, publicUrl };
+}
 
 /** Uses same storage config as job documents; keys are under `therapy-expenses/`. */
 export async function uploadTherapyExpenseImage(

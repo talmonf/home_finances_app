@@ -1,16 +1,9 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
-import {
-  createCarLicense,
-  createCarPetrolFillup,
-  createCarService,
-  deleteCarLicense,
-  deleteCarPetrolFillup,
-  deleteCarService,
-  updateCar,
-} from "../actions";
+import { CarLicenseCreateForm } from "@/components/car-license-create-form";
+import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
+import { createCarService, deleteCarLicense, deleteCarService, updateCar } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,42 +16,6 @@ function dateInputValue(d: Date | null | undefined) {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
-function formatMoney(value: unknown) {
-  if (value == null) return "—";
-  const n =
-    typeof value === "object" && value !== null && "toNumber" in value
-      ? (value as { toNumber(): number }).toNumber()
-      : Number(value);
-  return Number.isNaN(n)
-    ? "—"
-    : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function petrolMetricsByFillupId(
-  rows: { id: string; odometer_km: number; amount_paid: { toString(): string }; litres: { toString(): string } }[],
-) {
-  const sorted = [...rows].sort((a, b) => {
-    if (a.odometer_km !== b.odometer_km) return a.odometer_km - b.odometer_km;
-    return a.id.localeCompare(b.id);
-  });
-  const map = new Map<
-    string,
-    { deltaKm: number | null; costPerLitre: number | null; kmPerLitre: number | null }
-  >();
-  for (let i = 0; i < sorted.length; i++) {
-    const cur = sorted[i];
-    const prev = i > 0 ? sorted[i - 1] : null;
-    const deltaKm = prev != null ? cur.odometer_km - prev.odometer_km : null;
-    const litresN = Number(cur.litres.toString());
-    const amountN = Number(cur.amount_paid.toString());
-    const costPerLitre = litresN > 0 ? amountN / litresN : null;
-    const kmPerLitre =
-      deltaKm != null && deltaKm > 0 && litresN > 0 ? deltaKm / litresN : null;
-    map.set(cur.id, { deltaKm, costPerLitre, kmPerLitre });
-  }
-  return map;
-}
-
 export default async function CarDetailsPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -66,7 +23,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
-  const [car, familyMembers, creditCards, bankAccounts, services, licenses, insurancePolicies, petrolFillups] =
+  const [car, familyMembers, creditCards, bankAccounts, services, licenses, insurancePolicies] =
     await Promise.all([
     prisma.cars.findFirst({
       where: { id, household_id: householdId },
@@ -99,16 +56,9 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
       include: { family_member: true },
       orderBy: { expiration_date: "asc" },
     }),
-    prisma.car_petrol_fillups.findMany({
-      where: { household_id: householdId, car_id: id },
-      include: { transaction: true },
-      orderBy: { filled_at: "desc" },
-    }),
   ]);
 
   if (!car) notFound();
-
-  const petrolMetrics = petrolMetricsByFillupId(petrolFillups);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -248,98 +198,17 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
 
         <section className="space-y-3">
           <h2 className="text-lg font-medium text-slate-200">Petrol fill-ups</h2>
-          <p className="text-xs text-slate-500">
-            Δ km and km/L use the previous fill for this car with a lower odometer reading. Cost per litre is amount paid ÷
-            litres.
-          </p>
-          <form action={createCarPetrolFillup} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            <input type="hidden" name="car_id" value={car.id} />
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Date</label>
-              <input name="filled_at" type="date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Amount paid</label>
-              <input name="amount_paid" type="number" step="0.01" min="0" required placeholder="0.00" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Litres</label>
-              <input name="litres" type="number" step="0.001" min="0" required placeholder="0.000" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Odometer (km)</label>
-              <input name="odometer_km" type="number" min="0" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <TherapyTransactionLinkSelect
-                name="linked_transaction_id"
-                householdId={householdId}
-                label="Linked transaction (optional)"
-                hint="Each bank transaction can be linked to at most one petrol record."
-              />
-            </div>
-            <textarea name="notes" placeholder="Notes (optional)" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-              Add fill-up
-            </button>
-          </form>
-          {petrolFillups.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-3 py-2 text-slate-300">Date</th>
-                    <th className="px-3 py-2 text-slate-300">Paid</th>
-                    <th className="px-3 py-2 text-slate-300">Litres</th>
-                    <th className="px-3 py-2 text-slate-300">Odometer</th>
-                    <th className="px-3 py-2 text-slate-300">Δ km</th>
-                    <th className="px-3 py-2 text-slate-300">Cost/L</th>
-                    <th className="px-3 py-2 text-slate-300">km/L</th>
-                    <th className="px-3 py-2 text-slate-300">Transaction</th>
-                    <th className="px-3 py-2 text-slate-300">Notes</th>
-                    <th className="px-3 py-2 text-slate-300">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {petrolFillups.map((p) => {
-                    const m = petrolMetrics.get(p.id);
-                    const tx = p.transaction;
-                    const txLabel = tx
-                      ? `${tx.transaction_date.toISOString().slice(0, 10)} ${tx.transaction_direction === "credit" ? "+" : "−"}${tx.amount.toString()} ${tx.description ?? ""}`.slice(0, 80)
-                      : "—";
-                    return (
-                      <tr key={p.id} className="border-b border-slate-700/80">
-                        <td className="px-3 py-2 text-slate-200">{dateInputValue(p.filled_at)}</td>
-                        <td className="px-3 py-2 text-slate-300">{formatMoney(p.amount_paid)}</td>
-                        <td className="px-3 py-2 text-slate-300">{Number(p.litres.toString()).toLocaleString("en", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
-                        <td className="px-3 py-2 text-slate-300">{p.odometer_km.toLocaleString("en")}</td>
-                        <td className="px-3 py-2 text-slate-300">
-                          {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-slate-300">
-                          {m?.costPerLitre != null ? m.costPerLitre.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-slate-300">
-                          {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
-                        </td>
-                        <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={txLabel}>
-                          {txLabel}
-                        </td>
-                        <td className="px-3 py-2 text-slate-400">{p.notes ?? "—"}</td>
-                        <td className="px-3 py-2">
-                          <form action={deleteCarPetrolFillup.bind(null, p.id, car.id)}>
-                            <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                              Delete
-                            </button>
-                          </form>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <p className="mb-4 text-sm text-slate-400">
+              Log fill-ups on a separate screen with larger controls, built for quick entry on your phone.
+            </p>
+            <Link
+              href={`/dashboard/petrol-fillups?carId=${car.id}`}
+              className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-emerald-600 px-4 text-base font-semibold text-white hover:bg-emerald-500 sm:w-auto"
+            >
+              Open petrol fill-up
+            </Link>
+          </div>
         </section>
 
         <section className="space-y-3">
@@ -378,21 +247,34 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Licenses</h2>
-          <form action={createCarLicense} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            <input type="hidden" name="car_id" value={car.id} />
-            <input name="renewed_at" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="expires_at" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Credit card (optional)</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}</select>
-            <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Bank account (optional)</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}</select>
-            <input name="notes" placeholder="License notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add license</button>
-          </form>
+          <div>
+            <h2 className="text-lg font-medium text-slate-200">Licenses</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              <span className="font-medium text-slate-400">Renewal / payment date</span> is when you paid (optional).{" "}
+              <span className="font-medium text-slate-400">Expires on</span> is when the license stops being valid (required).
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <CarLicenseCreateForm
+              carId={car.id}
+              creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
+              bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+            />
+          </div>
           {licenses.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Renewed</th><th className="px-3 py-2 text-slate-300">Expires</th><th className="px-3 py-2 text-slate-300">Cost</th><th className="px-3 py-2 text-slate-300">Payment</th><th className="px-3 py-2 text-slate-300">Notes</th><th className="px-3 py-2 text-slate-300">Action</th></tr></thead>
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-3 py-2 text-slate-300">Renewal / paid</th>
+                    <th className="px-3 py-2 text-slate-300">Expires</th>
+                    <th className="px-3 py-2 text-slate-300">Cost</th>
+                    <th className="px-3 py-2 text-slate-300">Payment</th>
+                    <th className="px-3 py-2 text-slate-300">Receipt</th>
+                    <th className="px-3 py-2 text-slate-300">Notes</th>
+                    <th className="px-3 py-2 text-slate-300">Action</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {licenses.map((l) => (
                     <tr key={l.id} className="border-b border-slate-700/80">
@@ -400,8 +282,29 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-200">{dateInputValue(l.expires_at)}</td>
                       <td className="px-3 py-2 text-slate-300">{l.cost_amount?.toString() ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—"}</td>
+                      <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">
+                        {l.receipt_storage_key ? (
+                          <div className="space-y-2">
+                            <a
+                              href={`/api/cars/licenses/${l.id}/download`}
+                              className="text-xs text-sky-400 hover:text-sky-300"
+                            >
+                              Download
+                            </a>
+                            <CarLicenseReceiptUpload licenseId={l.id} hasReceipt />
+                          </div>
+                        ) : (
+                          <CarLicenseReceiptUpload licenseId={l.id} />
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-slate-400">{l.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><form action={deleteCarLicense.bind(null, l.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></form></td>
+                      <td className="px-3 py-2">
+                        <form action={deleteCarLicense.bind(null, l.id, car.id)}>
+                          <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                            Delete
+                          </button>
+                        </form>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -44,7 +44,8 @@ function nextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
   const month = baseDate.getMonth();
   const thisMonthDay = Math.min(dayOfMonth, getDaysInMonth(year, month));
   const candidateThisMonth = new Date(year, month, thisMonthDay);
-  if (candidateThisMonth >= baseDate) {
+  // Strictly after today: if today is the billing day, next renewal is next month.
+  if (candidateThisMonth > baseDate) {
     return candidateThisMonth;
   }
   const nextMonthDate = new Date(year, month + 1, 1);
