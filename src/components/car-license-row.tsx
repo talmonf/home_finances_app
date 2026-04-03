@@ -156,6 +156,23 @@ export function CarLicenseRow({
                 defaultValue={license.notes}
                 className={`md:col-span-2 ${field}`}
               />
+              <div className="space-y-2 md:col-span-3">
+                <p className="text-xs font-medium text-slate-300">License receipt (optional)</p>
+                <p className="text-xs text-slate-500">PDF or image of the renewed license. Stored securely with your household.</p>
+                {license.hasReceipt ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <a
+                      href={`/api/cars/licenses/${license.id}/download`}
+                      className="text-xs text-sky-400 hover:text-sky-300"
+                    >
+                      Download current file
+                    </a>
+                    <CarLicenseReceiptUpload licenseId={license.id} hasReceipt />
+                  </div>
+                ) : (
+                  <CarLicenseReceiptUpload licenseId={license.id} />
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-3 md:col-span-3">
                 <button
                   type="submit"

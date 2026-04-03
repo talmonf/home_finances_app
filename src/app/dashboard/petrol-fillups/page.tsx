@@ -6,6 +6,7 @@ import {
 } from "@/lib/petrol-fillups-metrics";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { PetrolCarPicker } from "@/components/petrol-car-picker";
+import { PetrolFillupDateTankerFields } from "@/components/petrol-fillup-date-tanker-fields";
 import { PetrolFillupFormFields } from "@/components/petrol-fillup-form-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { createCarPetrolFillup, deleteCarPetrolFillup, updateCarPetrolFillup } from "@/app/dashboard/cars/actions";
@@ -101,8 +102,17 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
     selectedCarId != null
       ? await prisma.car_petrol_fillups.findMany({
           where: { household_id: householdId, car_id: selectedCarId },
-          include: { transaction: true },
+          include: { transaction: true, tanked_up_by_family_member: true },
           orderBy: { filled_at: "desc" },
+        })
+      : [];
+
+  const familyMembers =
+    selectedCarId != null
+      ? await prisma.family_members.findMany({
+          where: { household_id: householdId, is_active: true },
+          orderBy: { full_name: "asc" },
+          select: { id: true, full_name: true, date_of_birth: true },
         })
       : [];
 
@@ -174,6 +184,11 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                 action={editingFillup ? updateCarPetrolFillup : createCarPetrolFillup}
                 className="flex flex-col gap-4"
               >
+                <PetrolFillupDateTankerFields
+                  members={familyMembers}
+                  defaultFilledAt={editingFillup ? dateInputValue(editingFillup.filled_at) : today}
+                  defaultTankerId={editingFillup?.tanked_up_by_family_member_id ?? null}
+                />
                 <PetrolFillupFormFields
                   carId={selectedCarId}
                   fillupId={editingFillup?.id}
@@ -181,13 +196,11 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                   defaults={
                     editingFillup
                       ? {
-                          filled_at: dateInputValue(editingFillup.filled_at),
                           amount_paid: editingFillup.amount_paid.toString(),
                           litres: editingFillup.litres.toString(),
                           odometer_km: String(editingFillup.odometer_km),
                         }
                       : {
-                          filled_at: today,
                           amount_paid: "",
                           litres: "",
                           odometer_km: "",
@@ -242,10 +255,11 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                 </p>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/40">
-                  <table className="w-full min-w-[640px] text-left text-sm">
+                  <table className="w-full min-w-[760px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-slate-700 bg-slate-800/80">
                         <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Date</th>
+                        <th className="min-w-[7rem] px-3 py-2 font-medium text-slate-300">Tanked by</th>
                         <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Paid</th>
                         <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">L</th>
                         <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Odo (km)</th>
@@ -268,6 +282,9 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                             className={`border-b border-slate-700/80 ${editingFillup?.id === p.id ? "bg-sky-950/40" : ""}`}
                           >
                             <td className="whitespace-nowrap px-3 py-2 text-slate-200">{dateInputValue(p.filled_at)}</td>
+                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-300" title={p.tanked_up_by_family_member?.full_name ?? undefined}>
+                              {p.tanked_up_by_family_member?.full_name ?? "—"}
+                            </td>
                             <td className="whitespace-nowrap px-3 py-2 text-slate-200">{formatMoney(p.amount_paid)}</td>
                             <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
                               {Number(p.litres.toString()).toLocaleString("en", {

@@ -148,6 +148,7 @@ model family_members {
   trip_family_members  trip_family_members[]
   main_driver_cars     cars[]
   jobs                 jobs[]
+  petrol_fillups_tanked_up car_petrol_fillups[] @relation("PetrolFillupTanker")
 }
 
 model bank_accounts {
@@ -405,6 +406,7 @@ model car_petrol_fillups {
   litres          Decimal  @db.Decimal(12, 3)
   odometer_km     Int
   transaction_id  String?  @unique
+  tanked_up_by_family_member_id String?
   notes           String?
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
@@ -412,6 +414,7 @@ model car_petrol_fillups {
   household   households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
   car         cars          @relation(fields: [car_id], references: [id], onDelete: Cascade)
   transaction transactions? @relation(fields: [transaction_id], references: [id], onDelete: SetNull)
+  tanked_up_by_family_member family_members? @relation("PetrolFillupTanker", fields: [tanked_up_by_family_member_id], references: [id], onDelete: SetNull)
 }
 
 model jobs {

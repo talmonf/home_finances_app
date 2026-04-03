@@ -57,6 +57,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 045 | `045_car_petrol_fillups.sql` | CREATE | Table `car_petrol_fillups`: per-car petrol fill-ups (litres, odometer, amount, optional unique `transaction_id` → `transactions`). |
 | 046 | `046_cars_purchase_extras.sql` | ALTER | `cars`: `purchased_from`, `purchase_odometer_km`, `extra_purchase_costs`, `extra_purchase_costs_notes`. |
 | 047 | `047_car_licenses_receipt.sql` | ALTER | `car_licenses`: optional S3 receipt columns (`receipt_file_name`, `receipt_mime_type`, `receipt_storage_*`, `receipt_uploaded_at`). |
+| 048 | `048_car_petrol_fillups_tanked_up_by.sql` | ALTER | `car_petrol_fillups`: optional `tanked_up_by_family_member_id` FK → `family_members`. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -107,6 +108,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 045_car_petrol_fillups.sql
 - [x] 046_cars_purchase_extras.sql
 - [x] 047_car_licenses_receipt.sql
+- [x] 048_car_petrol_fillups_tanked_up_by.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

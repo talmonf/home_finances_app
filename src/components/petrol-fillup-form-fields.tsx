@@ -19,7 +19,6 @@ type Props = {
   fillupId?: string;
   currency?: string;
   defaults: {
-    filled_at: string;
     amount_paid: string;
     litres: string;
     odometer_km: string;
@@ -37,19 +36,6 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
       <input type="hidden" name="car_id" value={carId} />
       {fillupId ? <input type="hidden" name="id" value={fillupId} /> : null}
       <input type="hidden" name="currency" value={currency} />
-      <div className="space-y-2">
-        <label className={labelClass} htmlFor="filled_at">
-          Date
-        </label>
-        <input
-          id="filled_at"
-          name="filled_at"
-          type="date"
-          required
-          defaultValue={defaults.filled_at}
-          className={inputClass}
-        />
-      </div>
       <div className="space-y-2">
         <label className={labelClass} htmlFor="amount_paid">
           Amount paid

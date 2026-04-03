@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { deleteS3ObjectFromJobStorage } from "@/lib/object-storage";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -33,6 +34,40 @@ function parseLitres(raw: string | null): string | null {
   const parsed = Number(value.replace(",", "."));
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed.toFixed(3);
+}
+
+async function countEligiblePetrolTankers(householdId: string, filledAt: Date): Promise<number> {
+  const members = await prisma.family_members.findMany({
+    where: { household_id: householdId, is_active: true, date_of_birth: { not: null } },
+    select: { date_of_birth: true },
+  });
+  return members.filter((m) => isEligiblePetrolTankerOnFillDate(m.date_of_birth!, filledAt)).length;
+}
+
+async function resolveTankedUpByFamilyMemberId(
+  householdId: string,
+  raw: string | null | undefined,
+  filledAt: Date,
+  eligibleTankerCount: number,
+): Promise<{ id: string | null; error: string | null }> {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (!trimmed) {
+    if (eligibleTankerCount > 0) {
+      return { id: null, error: "Choose who tanked up." };
+    }
+    return { id: null, error: null };
+  }
+  const member = await prisma.family_members.findFirst({
+    where: { id: trimmed, household_id: householdId, is_active: true },
+    select: { id: true, date_of_birth: true },
+  });
+  if (!member) {
+    return { id: null, error: "Invalid family member." };
+  }
+  if (!member.date_of_birth || !isEligiblePetrolTankerOnFillDate(member.date_of_birth, filledAt)) {
+    return { id: null, error: "Choose a family member who is 16 or older on the fill date." };
+  }
+  return { id: member.id, error: null };
 }
 
 async function resolveTransactionLink(
@@ -447,6 +482,17 @@ export async function createCarPetrolFillup(formData: FormData) {
     redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
   }
 
+  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
+  const tankedUp = await resolveTankedUpByFamilyMemberId(
+    householdId,
+    formData.get("tanked_up_by_family_member_id") as string,
+    filled_at,
+    eligibleTankers,
+  );
+  if (tankedUp.error) {
+    redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(tankedUp.error)}`);
+  }
+
   const linked_transaction_id = await resolveTransactionLink(
     householdId,
     formData.get("linked_transaction_id") as string,
@@ -474,6 +520,7 @@ export async function createCarPetrolFillup(formData: FormData) {
       litres,
       odometer_km,
       transaction_id: linked_transaction_id,
+      tanked_up_by_family_member_id: tankedUp.id,
       notes: (formData.get("notes") as string | null)?.trim() || null,
     },
   });
@@ -525,6 +572,19 @@ export async function updateCarPetrolFillup(formData: FormData) {
     redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
   }
 
+  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
+  const tankedUp = await resolveTankedUpByFamilyMemberId(
+    householdId,
+    formData.get("tanked_up_by_family_member_id") as string,
+    filled_at,
+    eligibleTankers,
+  );
+  if (tankedUp.error) {
+    redirect(
+      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&edit=${encodeURIComponent(id)}&error=${encodeURIComponent(tankedUp.error)}`,
+    );
+  }
+
   const linked_transaction_id = await resolveTransactionLink(
     householdId,
     formData.get("linked_transaction_id") as string,
@@ -550,6 +610,7 @@ export async function updateCarPetrolFillup(formData: FormData) {
       litres,
       odometer_km,
       transaction_id: linked_transaction_id,
+      tanked_up_by_family_member_id: tankedUp.id,
       notes: (formData.get("notes") as string | null)?.trim() || null,
     },
   });
