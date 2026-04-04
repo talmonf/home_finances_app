@@ -167,10 +167,10 @@ export function CarLicenseRow({
                     >
                       Download current file
                     </a>
-                    <CarLicenseReceiptUpload licenseId={license.id} hasReceipt />
+                    <CarLicenseReceiptUpload licenseId={license.id} hasReceipt inputSuffix="-edit" />
                   </div>
                 ) : (
-                  <CarLicenseReceiptUpload licenseId={license.id} />
+                  <CarLicenseReceiptUpload licenseId={license.id} inputSuffix="-edit" />
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3 md:col-span-3">
