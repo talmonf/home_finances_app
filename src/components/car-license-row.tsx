@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { deleteCarLicense, updateCarLicense } from "@/app/dashboard/cars/actions";
+import { CarLicenseReceiptDeleteButton } from "@/components/car-license-receipt-delete";
 import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 
 type CardOpt = { id: string; label: string };
 
@@ -12,6 +14,11 @@ function formatLicenseCostDisplay(raw: string): string {
   const n = Number(String(raw).replace(",", "."));
   if (!Number.isFinite(n)) return raw;
   return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NIS`;
+}
+
+function formatLicenseCostInputDefault(raw: string): string {
+  const n = Number(String(raw ?? "").trim().replace(",", "."));
+  return Number.isFinite(n) ? n.toFixed(2) : raw;
 }
 
 export type CarLicenseRowData = {
@@ -51,12 +58,9 @@ export function CarLicenseRow({
         <td className="px-3 py-2 text-slate-300">{license.paymentLabel}</td>
         <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">
           {license.hasReceipt ? (
-            <a
-              href={`/api/cars/licenses/${license.id}/download`}
-              className="text-xs text-sky-400 hover:text-sky-300"
-            >
-              Download
-            </a>
+            <ProxiedFileOpenDownloadLinks
+              downloadApiPath={`/api/cars/licenses/${license.id}/download`}
+            />
           ) : (
             <span className="text-xs text-slate-500">—</span>
           )}
@@ -126,7 +130,7 @@ export function CarLicenseRow({
                   type="number"
                   step="0.01"
                   min="0"
-                  defaultValue={license.costAmount}
+                  defaultValue={formatLicenseCostInputDefault(license.costAmount)}
                   className={`w-full ${field}`}
                 />
               </div>
@@ -160,21 +164,44 @@ export function CarLicenseRow({
                 defaultValue={license.notes}
                 className={`md:col-span-2 ${field}`}
               />
-              <div className="space-y-2 md:col-span-3">
+              <div className="space-y-3 md:col-span-3 rounded-lg border border-slate-600/80 bg-slate-900/30 p-3">
                 <p className="text-xs font-medium text-slate-300">License receipt (optional)</p>
-                <p className="text-xs text-slate-500">PDF or image of the renewed license. Stored securely with your household.</p>
+                <p className="text-xs text-slate-500">
+                  PDF or image of the renewed license. Stored securely with your household.
+                </p>
                 {license.hasReceipt ? (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    <a
-                      href={`/api/cars/licenses/${license.id}/download`}
-                      className="text-xs text-sky-400 hover:text-sky-300"
-                    >
-                      Download current file
-                    </a>
-                    <CarLicenseReceiptUpload licenseId={license.id} hasReceipt inputSuffix="-edit" />
+                  <div className="space-y-4">
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-slate-400">Current file</p>
+                      <ProxiedFileOpenDownloadLinks
+                        downloadApiPath={`/api/cars/licenses/${license.id}/download`}
+                      />
+                    </div>
+                    <div className="border-t border-slate-700/80 pt-3">
+                      <p className="mb-1.5 text-xs font-medium text-slate-400">Remove receipt</p>
+                      <p className="mb-2 text-xs text-slate-500">
+                        Deletes the file from storage and clears it from this license.
+                      </p>
+                      <CarLicenseReceiptDeleteButton licenseId={license.id} />
+                    </div>
+                    <div className="border-t border-slate-700/80 pt-3">
+                      <p className="mb-1.5 text-xs font-medium text-slate-400">Replace with a new file</p>
+                      <p className="mb-2 text-xs text-slate-500">
+                        Choose a file below, then upload. The previous file is removed from storage first.
+                      </p>
+                      <CarLicenseReceiptUpload
+                        licenseId={license.id}
+                        hasReceipt
+                        inputSuffix="-edit"
+                        layout="stacked"
+                      />
+                    </div>
                   </div>
                 ) : (
-                  <CarLicenseReceiptUpload licenseId={license.id} inputSuffix="-edit" />
+                  <div>
+                    <p className="mb-2 text-xs text-slate-500">Add a receipt after choosing a file.</p>
+                    <CarLicenseReceiptUpload licenseId={license.id} inputSuffix="-edit" layout="stacked" />
+                  </div>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3 md:col-span-3">

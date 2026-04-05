@@ -9,10 +9,13 @@ export function CarLicenseReceiptUpload({
   hasReceipt = false,
   /** Disambiguate id when two uploaders exist for the same license (table row + edit panel). */
   inputSuffix = "",
+  /** `stacked`: file input on one line, button on the next (clearer in edit panels). */
+  layout = "inline",
 }: {
   licenseId: string;
   hasReceipt?: boolean;
   inputSuffix?: string;
+  layout?: "inline" | "stacked";
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,22 +57,35 @@ export function CarLicenseReceiptUpload({
 
   const inputId = `car-license-receipt-file-${licenseId}${inputSuffix}`;
 
+  const rowClass =
+    layout === "stacked"
+      ? "flex flex-col items-stretch gap-2"
+      : "flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2";
+
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+    <div className={rowClass}>
       <input
         ref={inputRef}
         id={inputId}
         type="file"
-        className="max-w-[200px] text-xs text-slate-200"
+        className={
+          layout === "stacked"
+            ? "w-full max-w-md text-xs text-slate-200"
+            : "max-w-[200px] text-xs text-slate-200"
+        }
         aria-describedby={error ? `${inputId}-err` : success ? `${inputId}-ok` : undefined}
       />
       <button
         type="button"
         onClick={upload}
         disabled={busy}
-        className="rounded bg-slate-700 px-2 py-1 text-xs text-slate-100 hover:bg-slate-600 disabled:opacity-60"
+        className="w-fit rounded bg-slate-700 px-3 py-1.5 text-xs text-slate-100 hover:bg-slate-600 disabled:opacity-60"
       >
-        {busy ? "Uploading…" : hasReceipt ? "Replace" : "Upload"}
+        {busy
+          ? "Uploading…"
+          : hasReceipt
+            ? "Upload and replace in storage"
+            : "Upload"}
       </button>
       {error ? (
         <span id={`${inputId}-err`} className="text-xs text-rose-300" role="alert">

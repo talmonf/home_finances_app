@@ -90,8 +90,13 @@ export async function GET(
 
     const fileName = row.receipt_file_name || "license-receipt";
     const escapedFileName = fileName.replace(/"/g, '\\"');
+    const disposition = req.nextUrl.searchParams.get("disposition");
+    const inline = disposition === "inline";
     const headers = new Headers();
-    headers.set("Content-Disposition", `attachment; filename="${escapedFileName}"`);
+    headers.set(
+      "Content-Disposition",
+      `${inline ? "inline" : "attachment"}; filename="${escapedFileName}"`,
+    );
     headers.set("Content-Type", row.receipt_mime_type || "application/octet-stream");
     headers.set("Cache-Control", "private, no-store");
 

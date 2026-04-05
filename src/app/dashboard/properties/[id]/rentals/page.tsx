@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm, ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
+import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import RentalContractUpload from "../RentalContractUpload";
 import {
   createRental,
@@ -287,15 +288,24 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                     <RentalContractUpload rentalId={rental.id} />
                     <div className="mt-2 space-y-1">
                       {rental.contracts.map((contract) => (
-                        <div key={contract.id} className="flex items-center justify-between text-xs text-slate-300">
-                          <a href={contract.storage_url ?? "#"} target="_blank" rel="noreferrer" className="truncate text-sky-300 hover:text-sky-200">
-                            {contract.file_name}
-                          </a>
-                          <ConfirmDeleteForm action={deleteRentalContract.bind(null, contract.id, property.id)}>
-                            <button type="submit" className="text-rose-400 hover:text-rose-300">
-                              Delete
-                            </button>
-                          </ConfirmDeleteForm>
+                        <div
+                          key={contract.id}
+                          className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300"
+                        >
+                          <span className="min-w-0 truncate text-slate-200">{contract.file_name}</span>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            {contract.storage_url ? (
+                              <DirectFileOpenDownloadLinks
+                                href={contract.storage_url}
+                                fileName={contract.file_name}
+                              />
+                            ) : null}
+                            <ConfirmDeleteForm action={deleteRentalContract.bind(null, contract.id, property.id)}>
+                              <button type="submit" className="text-rose-400 hover:text-rose-300">
+                                Delete
+                              </button>
+                            </ConfirmDeleteForm>
+                          </div>
                         </div>
                       ))}
                     </div>

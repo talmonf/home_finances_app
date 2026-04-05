@@ -92,8 +92,13 @@ export async function GET(
     if (!body) return NextResponse.json({ error: "Empty document body" }, { status: 404 });
 
     const escapedFileName = doc.file_name.replace(/"/g, '\\"');
+    const disposition = _req.nextUrl.searchParams.get("disposition");
+    const inline = disposition === "inline";
     const headers = new Headers();
-    headers.set("Content-Disposition", `attachment; filename="${escapedFileName}"`);
+    headers.set(
+      "Content-Disposition",
+      `${inline ? "inline" : "attachment"}; filename="${escapedFileName}"`,
+    );
     headers.set("Content-Type", doc.mime_type || "application/octet-stream");
     headers.set("Cache-Control", "private, no-store");
 

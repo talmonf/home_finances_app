@@ -2,6 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
 
@@ -121,16 +122,12 @@ export default async function ExpensesPage() {
                   </span>
                 </div>
                 {e.notes && <p className="text-sm text-slate-400">{e.notes}</p>}
-                {e.image_storage_url && (
-                  <a
+                {e.image_storage_url ? (
+                  <DirectFileOpenDownloadLinks
                     href={e.image_storage_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-sky-400"
-                  >
-                    View receipt image
-                  </a>
-                )}
+                    fileName={e.image_file_name?.trim() || "receipt"}
+                  />
+                ) : null}
                 <TherapyExpenseImageUpload expenseId={e.id} />
                 <details>
                   <summary className="cursor-pointer text-xs text-slate-500">Edit / delete</summary>
