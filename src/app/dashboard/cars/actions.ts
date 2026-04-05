@@ -357,13 +357,9 @@ export async function createCarService(formData: FormData) {
       car_id,
       provider_name,
       serviced_at,
+      next_service_at: parseDateInput((formData.get("next_service_at") as string | null)?.trim() || null),
       cost_amount: parseMoney((formData.get("cost_amount") as string | null) ?? null),
-      odometer_km: (() => {
-        const raw = (formData.get("odometer_km") as string | null)?.trim();
-        if (!raw) return null;
-        const n = Number(raw);
-        return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
-      })(),
+      odometer_km: parseOptionalOdometerKm((formData.get("odometer_km") as string | null) ?? null),
       credit_card_id,
       bank_account_id,
       notes: (formData.get("notes") as string | null)?.trim() || null,
@@ -371,16 +367,81 @@ export async function createCarService(formData: FormData) {
   });
 
   revalidatePath(`/dashboard/cars/${car_id}`);
+  revalidatePath("/dashboard/upcoming-renewals");
+}
+
+export async function updateCarService(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const car_id = (formData.get("car_id") as string | null)?.trim();
+  const provider_name = (formData.get("provider_name") as string | null)?.trim();
+  const serviced_at = parseDateInput((formData.get("serviced_at") as string | null)?.trim() || null);
+  if (!id || !car_id || !provider_name || !serviced_at) return;
+
+  const existing = await prisma.car_services.findFirst({
+    where: { id, car_id, household_id: householdId },
+    select: { id: true },
+  });
+  if (!existing) return;
+
+  const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  const bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  const err = await validateHouseholdRefs(householdId, { car_id, credit_card_id, bank_account_id });
+  if (err) return;
+
+  await prisma.car_services.updateMany({
+    where: { id, household_id: householdId, car_id },
+    data: {
+      provider_name,
+      serviced_at,
+      next_service_at: parseDateInput((formData.get("next_service_at") as string | null)?.trim() || null),
+      cost_amount: parseMoney((formData.get("cost_amount") as string | null) ?? null),
+      odometer_km: parseOptionalOdometerKm((formData.get("odometer_km") as string | null) ?? null),
+      credit_card_id,
+      bank_account_id,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  revalidatePath("/dashboard/upcoming-renewals");
 }
 
 export async function deleteCarService(id: string, carId: string) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
+
+  const row = await prisma.car_services.findFirst({
+    where: { id, car_id: carId, household_id: householdId },
+    select: { receipt_storage_bucket: true, receipt_storage_key: true },
+  });
+  if (row?.receipt_storage_bucket && row?.receipt_storage_key) {
+    const expectedKeyPrefix = `${householdId}/car-services/`;
+    if (!row.receipt_storage_key.startsWith(expectedKeyPrefix)) {
+      console.warn(
+        "Skipping S3 delete: car service attachment key does not match expected prefix for this household.",
+      );
+    } else {
+      try {
+        await deleteS3ObjectFromJobStorage(row.receipt_storage_bucket, row.receipt_storage_key);
+      } catch (e) {
+        console.error(
+          "Failed to delete car service attachment from S3 (record will still be removed):",
+          e,
+        );
+      }
+    }
+  }
+
   await prisma.car_services.deleteMany({
     where: { id, car_id: carId, household_id: householdId },
   });
   revalidatePath(`/dashboard/cars/${carId}`);
+  revalidatePath("/dashboard/upcoming-renewals");
 }
 
 export async function updateCarLicense(formData: FormData) {

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
 import { CarLicenseRow } from "@/components/car-license-row";
-import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { createCarService, deleteCarService, updateCar } from "../actions";
+import { CarServiceRow } from "@/components/car-service-row";
+import { createCarService, updateCar } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -243,28 +243,64 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             <input type="hidden" name="car_id" value={car.id} />
             <input name="provider_name" required placeholder="Service location/provider" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="serviced_at" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400" htmlFor="new-service-next-at">
+                Next service date (optional)
+              </label>
+              <input
+                id="new-service-next-at"
+                name="next_service_at"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
             <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="odometer_km" type="number" placeholder="Odometer km" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Credit card (optional)</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}</select>
             <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">Bank account (optional)</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}</select>
             <input name="notes" placeholder="Service notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <p className="md:col-span-3 text-xs text-slate-500">
+              Optional <span className="text-slate-400">next service date</span> appears on Upcoming Renewals. Attach invoices or work orders from <span className="text-slate-400">Edit</span> after the service is saved.
+            </p>
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add service</button>
           </form>
           {services.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Date</th><th className="px-3 py-2 text-slate-300">Provider</th><th className="px-3 py-2 text-slate-300">Cost</th><th className="px-3 py-2 text-slate-300">Km</th><th className="px-3 py-2 text-slate-300">Payment</th><th className="px-3 py-2 text-slate-300">Notes</th><th className="px-3 py-2 text-slate-300">Action</th></tr></thead>
+              <table className="w-full min-w-[880px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-3 py-2 text-slate-300">Service date</th>
+                    <th className="px-3 py-2 text-slate-300">Next service</th>
+                    <th className="px-3 py-2 text-slate-300">Provider</th>
+                    <th className="px-3 py-2 text-slate-300">Cost</th>
+                    <th className="px-3 py-2 text-slate-300">Km</th>
+                    <th className="px-3 py-2 text-slate-300">Payment</th>
+                    <th className="px-3 py-2 text-slate-300">Details file</th>
+                    <th className="px-3 py-2 text-slate-300">Notes</th>
+                    <th className="px-3 py-2 text-slate-300">Action</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {services.map((s) => (
-                    <tr key={s.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-200">{dateInputValue(s.serviced_at)}</td>
-                      <td className="px-3 py-2 text-slate-300">{s.provider_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{s.cost_amount?.toString() ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{s.odometer_km ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-400">{s.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteCarService.bind(null, s.id, car.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
-                    </tr>
+                    <CarServiceRow
+                      key={s.id}
+                      carId={car.id}
+                      service={{
+                        id: s.id,
+                        servicedAt: dateInputValue(s.serviced_at),
+                        nextServiceAt: s.next_service_at ? dateInputValue(s.next_service_at) : "",
+                        providerName: s.provider_name,
+                        costAmount: s.cost_amount?.toString() ?? "",
+                        odometerKm: s.odometer_km,
+                        creditCardId: s.credit_card_id ?? "",
+                        bankAccountId: s.bank_account_id ?? "",
+                        notes: s.notes ?? "",
+                        hasAttachment: Boolean(s.receipt_storage_key),
+                        paymentLabel: s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—",
+                      }}
+                      creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
+                      bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+                    />
                   ))}
                 </tbody>
               </table>

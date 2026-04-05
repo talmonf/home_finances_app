@@ -84,6 +84,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     significantPurchases,
     familyMembers,
     carLicenses,
+    carServicesNext,
     loansForRenewals,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
@@ -158,6 +159,14 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       where: { household_id: householdId, expires_at: { gte: today } },
       include: { car: true },
       orderBy: { expires_at: "asc" },
+    }),
+    prisma.car_services.findMany({
+      where: {
+        household_id: householdId,
+        next_service_at: { not: null, gte: today },
+      },
+      include: { car: true },
+      orderBy: { next_service_at: "asc" },
     }),
     prisma.loans.findMany({
       where: {
@@ -240,6 +249,16 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       renewalDate: l.expires_at,
       renewalType: "Expiry",
       href: `/dashboard/cars/${l.car_id}`,
+    })),
+    ...carServicesNext.map((s) => ({
+      id: `car-service-${s.id}`,
+      category: "Car service",
+      itemName: `${s.provider_name} — ${s.car.maker} ${s.car.model}${s.car.plate_number ? ` · ${s.car.plate_number}` : ""}`,
+      owner: "Vehicle",
+      ownerId: null,
+      renewalDate: s.next_service_at as Date,
+      renewalType: "Next service",
+      href: `/dashboard/cars/${s.car_id}`,
     })),
     ...rentals
       .filter((r) => r.end_date)
@@ -348,6 +367,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     "Insurance",
     "Car insurance",
     "Car license",
+    "Car service",
     "Rental",
     "Utility",
     "Task",
@@ -376,9 +396,9 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
           <p className="text-sm text-slate-400">
             Renewal and expiration dates across subscriptions (including past subscription renewal
-            dates you may have missed), identity, cards, insurance, rental end dates, utilities,
-            task due dates, donations, loans (monthly repayment and maturity), and warranty-bearing
-            significant purchases.
+            dates you may have missed), identity, cards, insurance, car licenses, scheduled car
+            services, rental end dates, utilities, task due dates, donations, loans (monthly repayment
+            and maturity), and warranty-bearing significant purchases.
           </p>
         </header>
 

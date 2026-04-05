@@ -208,6 +208,47 @@ export async function uploadCarLicenseReceipt(
   return { bucket: cfg.bucket, key, publicUrl };
 }
 
+export type UploadCarServiceAttachmentResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
+/** Same bucket as job documents; keys under `car-services/{serviceId}/`. */
+export async function uploadCarServiceAttachment(
+  householdId: string,
+  serviceId: string,
+  fileName: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadCarServiceAttachmentResult> {
+  const cfg = getJobDocumentStorageConfig();
+  const key = `${householdId}/car-services/${serviceId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/octet-stream",
+    }),
+  );
+
+  const publicUrl = cfg.publicBaseUrl
+    ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
+    : null;
+  return { bucket: cfg.bucket, key, publicUrl };
+}
+
 /** Deletes an object using the same credentials/endpoint as job documents / car license uploads. */
 export async function deleteS3ObjectFromJobStorage(bucket: string, key: string): Promise<void> {
   const cfg = getJobDocumentStorageConfig();

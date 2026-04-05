@@ -507,18 +507,25 @@ model job_payroll_entries {
 }
 
 model car_services {
-  id              String   @id @default(uuid())
-  household_id    String
-  car_id          String
-  provider_name   String
-  serviced_at     DateTime
-  cost_amount     Decimal? @db.Decimal(15, 2)
-  odometer_km     Int?
-  credit_card_id  String?
-  bank_account_id String?
-  notes           String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                     String    @id @default(uuid())
+  household_id           String
+  car_id                 String
+  provider_name          String
+  serviced_at            DateTime
+  next_service_at        DateTime? @db.Date
+  cost_amount            Decimal?  @db.Decimal(15, 2)
+  odometer_km            Int?
+  credit_card_id         String?
+  bank_account_id        String?
+  notes                  String?
+  receipt_file_name      String?
+  receipt_mime_type      String?
+  receipt_storage_bucket String?
+  receipt_storage_key    String?
+  receipt_storage_url    String?
+  receipt_uploaded_at    DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
 
   household    households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
   car          cars          @relation(fields: [car_id], references: [id], onDelete: Cascade)

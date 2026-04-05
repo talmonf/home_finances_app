@@ -59,6 +59,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 047 | `047_car_licenses_receipt.sql` | ALTER | `car_licenses`: optional S3 receipt columns (`receipt_file_name`, `receipt_mime_type`, `receipt_storage_*`, `receipt_uploaded_at`). |
 | 048 | `048_car_petrol_fillups_tanked_up_by.sql` | ALTER | `car_petrol_fillups`: optional `tanked_up_by_family_member_id` FK → `family_members`. |
 | 049 | `049_insurance_policies_car_only_premium.sql` | ALTER | `insurance_policies`: `car_id` NOT NULL, drop `family_member_id`; add `policy_start_date`, `premium_paid`, `premium_currency`; car FK `ON DELETE CASCADE`. |
+| 050 | `050_car_services_attachment_next_service.sql` | ALTER | `car_services`: optional `next_service_at` (DATE); optional S3 attachment columns (same pattern as `car_licenses` receipts). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -110,7 +111,8 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 046_cars_purchase_extras.sql
 - [x] 047_car_licenses_receipt.sql
 - [x] 048_car_petrol_fillups_tanked_up_by.sql
-- [ ] 049_insurance_policies_car_only_premium.sql
+- [x] 049_insurance_policies_car_only_premium.sql
+- [x] 050_car_services_attachment_next_service.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
