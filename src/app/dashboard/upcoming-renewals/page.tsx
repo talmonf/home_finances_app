@@ -115,7 +115,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     }),
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
-      include: { family_member: true, car: true },
+      include: { car: true },
     }),
     prisma.rentals.findMany({
       where: { household_id: householdId, end_date: { not: null, gte: today } },
@@ -223,10 +223,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       })),
     ...insurancePolicies.map((p) => ({
       id: `insurance-${p.id}`,
-      category: p.car_id ? "Car insurance" : "Insurance",
-      itemName: `${p.provider_name} — ${p.policy_name}${p.car ? ` (${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""})` : ""}`,
-      owner: p.family_member?.full_name ?? "Household",
-      ownerId: p.family_member?.id ?? null,
+      category: "Car insurance",
+      itemName: `${p.provider_name} — ${p.policy_name} (${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""})`,
+      owner: `${p.car.maker} ${p.car.model}`,
+      ownerId: null,
       renewalDate: p.expiration_date,
       renewalType: "—",
       href: "/dashboard/insurance-policies",

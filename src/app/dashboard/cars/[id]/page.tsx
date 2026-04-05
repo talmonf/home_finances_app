@@ -17,6 +17,12 @@ function dateInputValue(d: Date | null | undefined) {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
+function formatInsurancePremium(paid: { toString(): string }, currency: string) {
+  const n = Number(paid.toString());
+  if (Number.isNaN(n)) return "—";
+  return `${n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
 export default async function CarDetailsPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -54,7 +60,6 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
     }),
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, car_id: id, is_active: true },
-      include: { family_member: true },
       orderBy: { expiration_date: "asc" },
     }),
   ]);
@@ -190,8 +195,28 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
               <table className="w-full text-left text-sm">
-                <thead><tr className="border-b border-slate-700 bg-slate-800/80"><th className="px-3 py-2 text-slate-300">Provider</th><th className="px-3 py-2 text-slate-300">Policy</th><th className="px-3 py-2 text-slate-300">Owner</th><th className="px-3 py-2 text-slate-300">Expires</th></tr></thead>
-                <tbody>{insurancePolicies.map((p) => <tr key={p.id} className="border-b border-slate-700/80"><td className="px-3 py-2 text-slate-100">{p.provider_name}</td><td className="px-3 py-2 text-slate-300">{p.policy_name}</td><td className="px-3 py-2 text-slate-300">{p.family_member?.full_name ?? "Household"}</td><td className="px-3 py-2 text-slate-300">{dateInputValue(p.expiration_date)}</td></tr>)}</tbody>
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-3 py-2 text-slate-300">Provider</th>
+                    <th className="px-3 py-2 text-slate-300">Policy</th>
+                    <th className="px-3 py-2 text-slate-300">Taken out</th>
+                    <th className="px-3 py-2 text-slate-300">Premium</th>
+                    <th className="px-3 py-2 text-slate-300">Expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insurancePolicies.map((p) => (
+                    <tr key={p.id} className="border-b border-slate-700/80">
+                      <td className="px-3 py-2 text-slate-100">{p.provider_name}</td>
+                      <td className="px-3 py-2 text-slate-300">{p.policy_name}</td>
+                      <td className="px-3 py-2 text-slate-300">{dateInputValue(p.policy_start_date)}</td>
+                      <td className="px-3 py-2 text-slate-300 tabular-nums">
+                        {formatInsurancePremium(p.premium_paid, p.premium_currency)}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">{dateInputValue(p.expiration_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}

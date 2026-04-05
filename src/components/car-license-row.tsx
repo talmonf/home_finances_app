@@ -7,6 +7,13 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 
 type CardOpt = { id: string; label: string };
 
+function formatLicenseCostDisplay(raw: string): string {
+  if (!raw?.trim()) return "—";
+  const n = Number(String(raw).replace(",", "."));
+  if (!Number.isFinite(n)) return raw;
+  return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NIS`;
+}
+
 export type CarLicenseRowData = {
   id: string;
   renewedAt: string;
@@ -40,21 +47,18 @@ export function CarLicenseRow({
       <tr className="border-b border-slate-700/80">
         <td className="px-3 py-2 text-slate-300">{license.renewedAt ? license.renewedAt : "—"}</td>
         <td className="px-3 py-2 text-slate-200">{license.expiresAt || "—"}</td>
-        <td className="px-3 py-2 text-slate-300">{license.costAmount ? license.costAmount : "—"}</td>
+        <td className="px-3 py-2 text-slate-300 tabular-nums">{formatLicenseCostDisplay(license.costAmount)}</td>
         <td className="px-3 py-2 text-slate-300">{license.paymentLabel}</td>
         <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">
           {license.hasReceipt ? (
-            <div className="space-y-2">
-              <a
-                href={`/api/cars/licenses/${license.id}/download`}
-                className="text-xs text-sky-400 hover:text-sky-300"
-              >
-                Download
-              </a>
-              <CarLicenseReceiptUpload licenseId={license.id} hasReceipt />
-            </div>
+            <a
+              href={`/api/cars/licenses/${license.id}/download`}
+              className="text-xs text-sky-400 hover:text-sky-300"
+            >
+              Download
+            </a>
           ) : (
-            <CarLicenseReceiptUpload licenseId={license.id} />
+            <span className="text-xs text-slate-500">—</span>
           )}
         </td>
         <td className="px-3 py-2 text-slate-400">{license.notes || "—"}</td>

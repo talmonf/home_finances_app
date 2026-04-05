@@ -135,7 +135,6 @@ model family_members {
   credit_cards        credit_cards[]
   identities          identities[]
   studies_and_classes studies_and_classes[]
-  insurance_policies  insurance_policies[]
   transactions        transactions[]
   significant_purchases significant_purchases[]
   tasks_assigned      tasks[]
@@ -687,20 +686,21 @@ enum IdentityType {
 }
 
 model insurance_policies {
-  id               String    @id @default(uuid())
-  household_id     String
-  family_member_id String?
-  car_id           String?
-  provider_name    String
-  policy_name      String
-  expiration_date  DateTime
-  is_active        Boolean   @default(true)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  id                 String   @id @default(uuid())
+  household_id       String
+  car_id             String
+  provider_name      String
+  policy_name        String
+  policy_start_date  DateTime
+  expiration_date    DateTime
+  premium_paid       Decimal  @db.Decimal(15, 2)
+  premium_currency   String   @default("ILS")
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
 
-  household     households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
-  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
-  car           cars?           @relation(fields: [car_id], references: [id], onDelete: SetNull)
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  car       cars       @relation(fields: [car_id], references: [id], onDelete: Cascade)
 }
 
 enum DonationKind {
