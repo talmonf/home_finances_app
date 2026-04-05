@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
 import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
@@ -24,6 +30,7 @@ export default async function TreatmentsPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const sp = searchParams ? await searchParams : {};
   const paidFilter = sp.paid || "all";
   const jobFilter = sp.job || "";
@@ -321,7 +328,7 @@ export default async function TreatmentsPage({
                   return (
                     <tr key={t.id} className="border-b border-slate-700/80">
                       <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                        {t.occurred_at.toISOString().slice(0, 16).replace("T", " ")}
+                        {formatHouseholdDateUtcWithTime(t.occurred_at, dateDisplayFormat)}
                       </td>
                       <td className="px-3 py-2 text-slate-100">
                         {t.client.first_name} {t.client.last_name ?? ""}

@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
@@ -27,6 +33,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -209,11 +216,15 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                     <tr key={p.id} className="border-b border-slate-700/80">
                       <td className="px-3 py-2 text-slate-100">{p.provider_name}</td>
                       <td className="px-3 py-2 text-slate-300">{p.policy_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{dateInputValue(p.policy_start_date)}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {p.policy_start_date ? formatHouseholdDate(p.policy_start_date, dateDisplayFormat) : "—"}
+                      </td>
                       <td className="px-3 py-2 text-slate-300 tabular-nums">
                         {formatInsurancePremium(p.premium_paid, p.premium_currency)}
                       </td>
-                      <td className="px-3 py-2 text-slate-300">{dateInputValue(p.expiration_date)}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

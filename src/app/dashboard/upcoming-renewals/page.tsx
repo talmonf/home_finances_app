@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -21,10 +27,6 @@ const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
   tools: "Tools",
   other: "Other",
 };
-
-function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function startOfToday() {
   const now = new Date();
@@ -67,6 +69,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const today = startOfToday();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const categoryFilter = resolvedSearchParams?.category ?? "all";
@@ -480,7 +483,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                       }`}
                       title={overdue ? "Renewal date has passed" : undefined}
                     >
-                      {formatDate(row.renewalDate)}
+                      {formatHouseholdDate(row.renewalDate, dateDisplayFormat)}
                       {overdue ? (
                         <span className="ml-2 text-xs font-medium text-rose-400/90">
                           {isDonation ? "Passed" : "Overdue"}

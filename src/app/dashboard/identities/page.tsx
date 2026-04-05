@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createIdentity } from "./actions";
@@ -25,15 +31,12 @@ type PageProps = {
   }>;
 };
 
-function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
 export default async function IdentitiesPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const sort = resolvedSearchParams?.sort ?? "expiry_date";
@@ -384,7 +387,9 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                           <div className="mt-1 text-xs text-slate-500">{i.notes}</div>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(i.expiry_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                      {formatHouseholdDate(i.expiry_date, dateDisplayFormat)}
+                    </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/identities/${i.id}?${editListContextQuery}`}

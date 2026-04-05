@@ -1,5 +1,11 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import {
   createTherapyAppointment,
@@ -15,6 +21,7 @@ export default async function AppointmentsPage() {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const now = new Date();
 
   const [jobs, programs, clients, upcoming, series] = await Promise.all([
@@ -255,7 +262,7 @@ export default async function AppointmentsPage() {
                 {upcoming.map((a) => (
                   <tr key={a.id} className="border-b border-slate-700/80">
                     <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                      {a.start_at.toISOString().slice(0, 16).replace("T", " ")}
+                      {formatHouseholdDateUtcWithTime(a.start_at, dateDisplayFormat)}
                     </td>
                     <td className="px-3 py-2 text-slate-100">{a.client.first_name}</td>
                     <td className="px-3 py-2 text-slate-400">{a.job.job_title}</td>

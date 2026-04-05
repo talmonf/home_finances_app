@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { notFound, redirect } from "next/navigation";
 import {
   deleteReceiptAllocation,
@@ -21,6 +27,7 @@ export default async function ReceiptDetailPage({
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const { id } = await params;
   const sp = searchParams ? await searchParams : undefined;
 
@@ -174,7 +181,7 @@ export default async function ReceiptDetailPage({
             <option value="">Treatment</option>
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.occurred_at.toISOString().slice(0, 10)} — {t.client.first_name}{" "}
+                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name}{" "}
                 {t.amount.toString()} {t.currency}
               </option>
             ))}
@@ -206,7 +213,7 @@ export default async function ReceiptDetailPage({
               {receipt.allocations.map((a) => (
                 <tr key={a.id} className="border-b border-slate-700/80">
                   <td className="px-3 py-2 text-slate-300">
-                    {a.treatment.occurred_at.toISOString().slice(0, 10)} —{" "}
+                    {formatHouseholdDate(a.treatment.occurred_at, dateDisplayFormat)} —{" "}
                     {a.treatment.client.first_name}
                   </td>
                   <td className="px-3 py-2 text-slate-100">{a.amount.toString()}</td>

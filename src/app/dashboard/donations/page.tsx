@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { DonationKind } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,11 +20,6 @@ type PageProps = {
     error?: string;
   }>;
 };
-
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return d.toISOString().slice(0, 10);
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -77,6 +78,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const now = new Date();
@@ -196,10 +198,10 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                   {rows.map((d) => {
                     const amountSummary =
                       d.kind === DonationKind.one_time
-                        ? `${formatMoney(d.one_time_amount)} ${d.currency} on ${formatDate(d.donation_date)}`
+                        ? `${formatMoney(d.one_time_amount)} ${d.currency} on ${formatHouseholdDate(d.donation_date, dateDisplayFormat)}`
                         : `${formatMoney(d.monthly_amount)} ${d.currency}/mo × ${d.commitment_months ?? "—"} mo${
                             d.commitment_start_date
-                              ? ` (from ${formatDate(d.commitment_start_date)})`
+                              ? ` (from ${formatHouseholdDate(d.commitment_start_date, dateDisplayFormat)})`
                               : ""
                           }`;
                     return (
@@ -242,7 +244,9 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-400">{formatDate(d.renewal_date)}</td>
+                        <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(d.renewal_date, dateDisplayFormat)}
+                      </td>
                         <td className="max-w-[12rem] truncate px-4 py-3 text-slate-500" title={d.notes ?? undefined}>
                           {d.notes ?? "—"}
                         </td>

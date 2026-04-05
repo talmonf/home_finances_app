@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
@@ -15,14 +21,6 @@ type PageProps = {
   params: Promise<{ documentId: string }>;
   searchParams?: Promise<{ confirmed?: string; error?: string }>;
 };
-
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -47,6 +45,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -193,7 +192,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
               {transactions.map((tx) => (
                 <tr key={tx.id} className="border-b border-slate-700/80 hover:bg-slate-800/30">
                   <td className="whitespace-nowrap px-2 py-2 text-slate-300">
-                    {formatDate(tx.transaction_date)}
+                    {formatHouseholdDate(tx.transaction_date, dateDisplayFormat)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 text-slate-300">
                     {formatMoney(tx.amount)} {tx.transaction_direction}
@@ -290,7 +289,9 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         {significantPurchases.map((sp) => (
                           <option key={sp.id} value={sp.id}>
                             {sp.item_name}
-                            {sp.warranty_expiry_date ? ` (${formatDate(sp.warranty_expiry_date)})` : ""}
+                            {sp.warranty_expiry_date
+                            ? ` (${formatHouseholdDate(sp.warranty_expiry_date, dateDisplayFormat)})`
+                            : ""}
                           </option>
                         ))}
                       </select>

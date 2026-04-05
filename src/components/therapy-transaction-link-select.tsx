@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/auth";
+import { getCurrentHouseholdDateDisplayFormat, prisma } from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 
 export async function TherapyTransactionLinkSelect({
   name,
@@ -15,6 +16,7 @@ export async function TherapyTransactionLinkSelect({
   /** Extra line of help under the label */
   hint?: string;
 }) {
+  const dateFmt = await getCurrentHouseholdDateDisplayFormat();
   const txs = await prisma.transactions.findMany({
     where: { household_id: householdId },
     orderBy: { transaction_date: "desc" },
@@ -43,7 +45,7 @@ export async function TherapyTransactionLinkSelect({
       {txs.map((t) => {
         const amt = t.amount.toString();
         const dir = t.transaction_direction === "credit" ? "+" : "−";
-        const label = `${t.transaction_date.toISOString().slice(0, 10)} ${dir}${amt} ${t.description ?? ""}`.slice(
+        const label = `${formatHouseholdDate(t.transaction_date, dateFmt)} ${dir}${amt} ${t.description ?? ""}`.slice(
           0,
           120,
         );

@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "./actions";
@@ -17,19 +23,6 @@ type PageProps = {
     error?: string;
   }>;
 };
-
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateOptional(d: Date | null) {
-  if (!d) return "—";
-  return formatDate(d);
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -89,6 +82,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -451,7 +445,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     >
                       <td className="px-4 py-3 text-slate-100">{s.name}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatDateOptional(s.start_date)} / {formatDateOptional(s.renewal_date)}
+                        {formatHouseholdDate(s.start_date, dateDisplayFormat)} /{" "}
+                        {formatHouseholdDate(s.renewal_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
                         {formatMoneyWithCurrency(s.fee_amount, s.currency)}

@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import {
   createTherapyTravelEntry,
@@ -19,6 +25,7 @@ export default async function TravelPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const sp = searchParams ? await searchParams : undefined;
 
   const [jobs, treatments, entries] = await Promise.all([
@@ -91,7 +98,7 @@ export default async function TravelPage({
             <option value="">Treatment (when “related to a treatment”)</option>
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.occurred_at.toISOString().slice(0, 10)} — {t.client.first_name} — {t.job.job_title}
+                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name} — {t.job.job_title}
               </option>
             ))}
           </select>
@@ -149,7 +156,7 @@ export default async function TravelPage({
                 >
                   <summary className="cursor-pointer text-sm text-slate-200">
                     {e.occurred_at
-                      ? e.occurred_at.toISOString().slice(0, 16).replace("T", " ")
+                      ? formatHouseholdDateUtcWithTime(e.occurred_at, dateDisplayFormat)
                       : "No date"}{" "}
                     —{" "}
                     {e.treatment
@@ -201,7 +208,7 @@ export default async function TravelPage({
                       <option value="">Treatment</option>
                       {treatments.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.occurred_at.toISOString().slice(0, 10)} — {t.client.first_name}
+                          {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name}
                         </option>
                       ))}
                     </select>

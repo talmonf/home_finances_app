@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -29,6 +35,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -108,7 +115,9 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                 </p>
                 <p>
                   <span className="text-slate-400">Expires:</span>{" "}
-                  {currentRental.end_date ? currentRental.end_date.toISOString().slice(0, 10) : "No end date"}
+                  {currentRental.end_date
+                    ? formatHouseholdDate(currentRental.end_date, dateDisplayFormat)
+                    : "No end date"}
                 </p>
               </div>
             ) : (
@@ -241,7 +250,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                       <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
                       <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
                       <td className="px-4 py-3 text-slate-300">
-                        {u.renewal_date ? u.renewal_date.toISOString().slice(0, 10) : "—"}
+                        {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{u.notes || "—"}</td>
                       <td className="px-4 py-3">

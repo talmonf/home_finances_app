@@ -5,6 +5,11 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
+import {
+  DEFAULT_HOUSEHOLD_DATE_DISPLAY_FORMAT,
+  normalizeHouseholdDateDisplayFormat,
+  type HouseholdDateDisplayFormat,
+} from "@/lib/household-date-format";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -176,5 +181,15 @@ export async function requireHouseholdMember() {
 export async function getCurrentHouseholdId() {
   const session = await getAuthSession();
   return session?.user?.householdId ?? null;
+}
+
+export async function getCurrentHouseholdDateDisplayFormat(): Promise<HouseholdDateDisplayFormat> {
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return DEFAULT_HOUSEHOLD_DATE_DISPLAY_FORMAT;
+  const row = await prisma.households.findUnique({
+    where: { id: householdId },
+    select: { date_display_format: true },
+  });
+  return normalizeHouseholdDateDisplayFormat(row?.date_display_format);
 }
 

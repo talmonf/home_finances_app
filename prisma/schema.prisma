@@ -12,14 +12,21 @@ datasource db {
   provider = "postgresql"
 }
 
+enum HouseholdDateDisplayFormat {
+  YMD
+  DMY
+  MDY
+}
+
 model households {
-  id               String   @id @default(uuid())
-  name             String
-  country          String   @default("IL")
-  primary_currency String   @default("ILS")
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-  is_active        Boolean  @default(true)
+  id                    String                     @id @default(uuid())
+  name                  String
+  country               String                     @default("IL")
+  primary_currency      String                     @default("ILS")
+  date_display_format   HouseholdDateDisplayFormat @default(YMD)
+  created_at            DateTime                   @default(now())
+  updated_at            DateTime                   @updatedAt
+  is_active             Boolean                    @default(true)
 
   household_enabled_sections household_enabled_sections[]
   household_section_statuses household_section_statuses[]

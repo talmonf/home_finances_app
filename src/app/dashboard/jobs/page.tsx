@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,10 +15,6 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
 };
-
-function dateInputValue(d: Date | null | undefined) {
-  return d ? d.toISOString().slice(0, 10) : "";
-}
 
 function employmentTypeLabel(t: string) {
   switch (t) {
@@ -34,6 +36,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolved = searchParams ? await searchParams : undefined;
 
   const [jobs, familyMembers] = await Promise.all([
@@ -142,7 +145,8 @@ export default async function JobsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">{employmentTypeLabel(job.employment_type)}</td>
                       <td className="px-3 py-2 text-slate-300">{job.employer_name ?? "Self-employed / not set"}</td>
                       <td className="px-3 py-2 text-slate-300">
-                        {dateInputValue(job.start_date)} - {dateInputValue(job.end_date) || "Present"}
+                        {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}
+                        {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : "Present"}
                       </td>
                       <td className="px-3 py-2">
                         <Link href={`/dashboard/jobs/${job.id}`} className="text-xs text-sky-400 hover:text-sky-300">

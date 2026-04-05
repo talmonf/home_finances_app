@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -28,6 +34,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
     redirect("/");
   }
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const [methods, bankAccounts, familyMembers, creditCards] = await Promise.all([
@@ -324,9 +331,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                         {m.notes?.trim() ? m.notes : "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {m.date_created
-                          ? m.date_created.toISOString().slice(0, 10)
-                          : m.created_at.toISOString().slice(0, 10)}
+                        {formatHouseholdDate(m.date_created ?? m.created_at, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{m.is_active ? "Active" : "Inactive"}</td>
                       <td className="px-4 py-3">

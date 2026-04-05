@@ -1,4 +1,13 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import {
+  formatHouseholdDate,
+  type HouseholdDateDisplayFormat,
+} from "@/lib/household-date-format";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
   MedicalReimbursementSource as ReimbursementSourceValues,
@@ -23,14 +32,6 @@ type PageProps = {
     error?: string;
   }>;
 };
-
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -104,13 +105,17 @@ function formatPaymentDetail(
   return base;
 }
 
-function formatReimbursementBlock(submittedAt: Date | null, notes: string | null) {
+function formatReimbursementBlock(
+  submittedAt: Date | null,
+  notes: string | null,
+  dateDisplayFormat: HouseholdDateDisplayFormat,
+) {
   if (!submittedAt && !notes?.trim()) {
     return <span className="text-slate-500">—</span>;
   }
   const parts: string[] = [];
   if (submittedAt) {
-    parts.push(`Request filed ${formatDate(submittedAt)}`);
+    parts.push(`Request filed ${formatHouseholdDate(submittedAt, dateDisplayFormat)}`);
   }
   if (notes?.trim()) {
     parts.push(notes.trim());
@@ -127,6 +132,7 @@ function formatReimbursementPaid(
   receivedAt: Date | null,
   source: MedicalReimbursementSource | null,
   amount: unknown,
+  dateDisplayFormat: HouseholdDateDisplayFormat,
 ) {
   if (receivedAt == null && source == null && amount == null) {
     return <span className="text-slate-500">—</span>;
@@ -136,7 +142,7 @@ function formatReimbursementPaid(
     parts.push(formatMoneyWithCurrency(amount, currency));
   }
   if (receivedAt) {
-    parts.push(`received ${formatDate(receivedAt)}`);
+    parts.push(`received ${formatHouseholdDate(receivedAt, dateDisplayFormat)}`);
   }
   if (source) {
     parts.push(`via ${REIMBURSEMENT_SOURCE_LABELS[source]}`);
@@ -149,6 +155,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -511,7 +518,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   {appointments.map((row) => (
                     <tr key={row.id} className="border-b border-slate-700/80 align-top hover:bg-slate-800/40">
                       <td className="px-4 py-3 whitespace-nowrap text-slate-200">
-                        {formatDate(row.appointment_date)}
+                        {formatHouseholdDate(row.appointment_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-100">
                         <div className="font-medium">{row.provider_name}</div>
@@ -534,12 +541,17 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                         {formatPaymentDetail(row.payment_method, row)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
-                        {formatReimbursementBlock(row.kupat_holim_request_submitted_at, row.kupat_holim_notes)}
+                        {formatReimbursementBlock(
+                          row.kupat_holim_request_submitted_at,
+                          row.kupat_holim_notes,
+                          dateDisplayFormat,
+                        )}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
                           row.private_insurance_request_submitted_at,
                           row.private_insurance_notes,
+                          dateDisplayFormat,
                         )}
                       </td>
                       <td className="max-w-[200px] px-4 py-3 text-xs">
@@ -548,6 +560,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           row.reimbursement_received_at,
                           row.reimbursement_source,
                           row.reimbursement_amount_received,
+                          dateDisplayFormat,
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">

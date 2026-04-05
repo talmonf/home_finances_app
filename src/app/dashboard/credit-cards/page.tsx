@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,11 +12,6 @@ import { createCreditCard } from "./actions";
 import ExpiryMonthYearInput from "./ExpiryMonthYearInput";
 
 export const dynamic = "force-dynamic";
-
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return d.toISOString().slice(0, 10);
-}
 
 function formatExpiryMonthYear(d: Date | null) {
   if (!d) return "—";
@@ -51,6 +52,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const sort = resolvedSearchParams?.sort ?? "card";
   const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
@@ -470,7 +472,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                               <p className={colorClass}>{status}</p>
                               {c.cancelled_at && (
                                 <p className="text-xs text-slate-500">
-                                  On {formatDate(c.cancelled_at)}
+                                  On {formatHouseholdDate(c.cancelled_at, dateDisplayFormat)}
                                 </p>
                               )}
                             </div>

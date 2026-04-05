@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -20,14 +26,6 @@ type PageProps = {
   }>;
 };
 
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function formatMoney(value: unknown) {
   if (value == null) return "—";
   const n =
@@ -46,6 +44,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolved = searchParams ? await searchParams : {};
   const accountId = resolved.accountId || "";
   const categoryId = resolved.categoryId || "";
@@ -332,7 +331,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                   {transactions.map((tx) => (
                     <tr key={tx.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                        {formatDate(tx.transaction_date)}
+                        {formatHouseholdDate(tx.transaction_date, dateDisplayFormat)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.bank_account?.account_name ?? "—"}

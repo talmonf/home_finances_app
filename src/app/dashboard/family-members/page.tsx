@@ -1,4 +1,11 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+  getAuthSession,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,15 +24,6 @@ type PageProps = {
   }>;
 };
 
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default async function FamilyMembersPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -33,6 +31,8 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const session = await getAuthSession();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const sort = resolvedSearchParams?.sort ?? "name";
@@ -74,7 +74,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
             sectionId="familyMembers"
             redirectPath="/dashboard/family-members"
           />
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Link
                 href="/"
@@ -87,6 +87,14 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               </h1>
               <p className="text-sm text-slate-400">Manage people in your household.</p>
             </div>
+            {session?.user?.role === "admin" ? (
+              <Link
+                href="/dashboard/household-settings"
+                className="text-sm font-medium text-sky-400 hover:text-sky-300"
+              >
+                Household settings
+              </Link>
+            ) : null}
           </div>
 
           {(resolvedSearchParams?.created ||
@@ -277,7 +285,9 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(m.date_of_birth)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(m.date_of_birth, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>

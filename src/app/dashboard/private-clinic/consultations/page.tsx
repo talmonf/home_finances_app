@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import {
   createTherapyConsultation,
@@ -19,6 +25,7 @@ export default async function ConsultationsPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const sp = searchParams ? await searchParams : undefined;
 
   const [jobs, types, rows] = await Promise.all([
@@ -168,7 +175,7 @@ export default async function ConsultationsPage({
                 className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
               >
                 <summary className="cursor-pointer text-sm text-slate-200">
-                  {r.occurred_at.toISOString().slice(0, 16).replace("T", " ")} — {r.consultation_type.name}{" "}
+                  {formatHouseholdDateUtcWithTime(r.occurred_at, dateDisplayFormat)} — {r.consultation_type.name}{" "}
                   — {r.job.job_title}
                 </summary>
                 <form action={updateTherapyConsultation} className="mt-3 grid gap-2 md:grid-cols-2">

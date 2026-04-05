@@ -6,6 +6,8 @@ import { CarServiceAttachmentDeleteButton } from "@/components/car-service-attac
 import { CarServiceAttachmentUpload } from "@/components/car-service-attachment-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
 type CardOpt = { id: string; label: string };
 
@@ -47,6 +49,7 @@ export function CarServiceRow({
   bankAccounts: CardOpt[];
 }) {
   const [editing, setEditing] = useState(false);
+  const dateFmt = useHouseholdDateFormat();
 
   const field =
     "rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500";
@@ -54,8 +57,12 @@ export function CarServiceRow({
   return (
     <>
       <tr className="border-b border-slate-700/80">
-        <td className="px-3 py-2 text-slate-200">{service.servicedAt || "—"}</td>
-        <td className="px-3 py-2 text-slate-300">{service.nextServiceAt || "—"}</td>
+        <td className="px-3 py-2 text-slate-200">
+          {service.servicedAt ? formatIsoDateStringForHousehold(service.servicedAt, dateFmt) : "—"}
+        </td>
+        <td className="px-3 py-2 text-slate-300">
+          {service.nextServiceAt ? formatIsoDateStringForHousehold(service.nextServiceAt, dateFmt) : "—"}
+        </td>
         <td className="px-3 py-2 text-slate-300">{service.providerName}</td>
         <td className="px-3 py-2 text-slate-300 tabular-nums">{formatServiceCostDisplay(service.costAmount)}</td>
         <td className="px-3 py-2 text-slate-300">{service.odometerKm ?? "—"}</td>

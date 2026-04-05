@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
@@ -10,19 +16,11 @@ type PageProps = {
   searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
 };
 
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default async function TripsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolved = searchParams ? await searchParams : undefined;
 
   const [trips, members] = await Promise.all([
@@ -154,7 +152,9 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs text-slate-400">
-                      Participants ({trip.participants.length}) · {formatDate(trip.start_date)} - {formatDate(trip.end_date)}
+                      Participants ({trip.participants.length}) ·{" "}
+                      {formatHouseholdDate(trip.start_date, dateDisplayFormat)} -{" "}
+                      {formatHouseholdDate(trip.end_date, dateDisplayFormat)}
                     </label>
                     <select
                       name="family_member_ids"

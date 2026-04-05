@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createLoan } from "./actions";
@@ -12,11 +18,6 @@ type PageProps = {
     error?: string;
   }>;
 };
-
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return d.toISOString().slice(0, 10);
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -36,6 +37,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const rows = await prisma.loans.findMany({
@@ -108,7 +110,9 @@ export default async function LoansPage({ searchParams }: PageProps) {
                     <tr key={loan.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{loan.institution_name}</td>
                       <td className="px-4 py-3 text-slate-400">{loan.loan_number ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(loan.loan_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(loan.loan_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatMoney(loan.loan_amount)} {loan.currency}
                       </td>
@@ -118,7 +122,10 @@ export default async function LoansPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">
                         <div>{loan.repayment_day_of_month != null ? `${loan.repayment_day_of_month} (monthly)` : "—"}</div>
                         <div className="text-xs text-slate-500">
-                          Maturity: {loan.maturity_date ? formatDate(loan.maturity_date) : "—"}
+                          Maturity:{" "}
+                          {loan.maturity_date
+                            ? formatHouseholdDate(loan.maturity_date, dateDisplayFormat)
+                            : "—"}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-400">

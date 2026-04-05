@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -20,7 +26,7 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }>;
 };
 
-function dateInputValue(d: Date | null | undefined) {
+function isoDateOnly(d: Date | null | undefined) {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
@@ -28,6 +34,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -96,11 +103,11 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Start date</label>
-              <input name="start_date" type="date" defaultValue={dateInputValue(job.start_date)} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="start_date" type="date" defaultValue={isoDateOnly(job.start_date)} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">End date</label>
-              <input name="end_date" type="date" defaultValue={dateInputValue(job.end_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="end_date" type="date" defaultValue={isoDateOnly(job.end_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
@@ -179,10 +186,14 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                 <tbody>
                   {payrollEntries.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-100">{dateInputValue(p.effective_date)}</td>
+                      <td className="px-3 py-2 text-slate-100">
+                        {formatHouseholdDate(p.effective_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">
                         {p.period_type}
-                        {p.pay_period_start ? ` (${dateInputValue(p.pay_period_start)} - ${dateInputValue(p.pay_period_end) || "?"})` : ""}
+                        {p.pay_period_start
+                          ? ` (${formatHouseholdDate(p.pay_period_start, dateDisplayFormat)} - ${p.pay_period_end ? formatHouseholdDate(p.pay_period_end, dateDisplayFormat) : "?"})`
+                          : ""}
                       </td>
                       <td className="px-3 py-2 text-slate-300">{p.gross_amount?.toString() ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{p.net_amount?.toString() ?? "—"}</td>
@@ -210,7 +221,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                   {documents.map((d) => (
                     <tr key={d.id} className="border-b border-slate-700/80">
                       <td className="px-3 py-2 text-slate-100">{d.file_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{dateInputValue(d.uploaded_at)}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {formatHouseholdDateUtcWithTime(d.uploaded_at, dateDisplayFormat)}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">
                         <ProxiedFileOpenDownloadLinks
                           downloadApiPath={`/api/jobs/documents/${d.id}/download`}

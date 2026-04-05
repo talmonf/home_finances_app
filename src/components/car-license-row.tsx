@@ -6,6 +6,8 @@ import { CarLicenseReceiptDeleteButton } from "@/components/car-license-receipt-
 import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
 type CardOpt = { id: string; label: string };
 
@@ -45,6 +47,7 @@ export function CarLicenseRow({
   bankAccounts: CardOpt[];
 }) {
   const [editing, setEditing] = useState(false);
+  const dateFmt = useHouseholdDateFormat();
 
   const field =
     "rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500";
@@ -52,8 +55,12 @@ export function CarLicenseRow({
   return (
     <>
       <tr className="border-b border-slate-700/80">
-        <td className="px-3 py-2 text-slate-300">{license.renewedAt ? license.renewedAt : "—"}</td>
-        <td className="px-3 py-2 text-slate-200">{license.expiresAt || "—"}</td>
+        <td className="px-3 py-2 text-slate-300">
+          {license.renewedAt ? formatIsoDateStringForHousehold(license.renewedAt, dateFmt) : "—"}
+        </td>
+        <td className="px-3 py-2 text-slate-200">
+          {license.expiresAt ? formatIsoDateStringForHousehold(license.expiresAt, dateFmt) : "—"}
+        </td>
         <td className="px-3 py-2 text-slate-300 tabular-nums">{formatLicenseCostDisplay(license.costAmount)}</td>
         <td className="px-3 py-2 text-slate-300">{license.paymentLabel}</td>
         <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">

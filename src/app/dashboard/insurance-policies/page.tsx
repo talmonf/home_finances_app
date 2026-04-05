@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
@@ -13,10 +19,6 @@ type PageProps = {
   }>;
 };
 
-function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
 function formatPremium(paid: { toString(): string }, currency: string) {
   const n = Number(paid.toString());
   if (Number.isNaN(n)) return "—";
@@ -28,6 +30,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const [policies, cars] = await Promise.all([
@@ -238,11 +241,15 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                       </td>
                       <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
                       <td className="px-4 py-3 text-slate-300">{p.policy_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(p.policy_start_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.policy_start_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300 tabular-nums">
                         {formatPremium(p.premium_paid, p.premium_currency)}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(p.expiration_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {p.is_active ? "Active" : "Inactive"}

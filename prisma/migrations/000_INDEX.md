@@ -60,6 +60,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 048 | `048_car_petrol_fillups_tanked_up_by.sql` | ALTER | `car_petrol_fillups`: optional `tanked_up_by_family_member_id` FK → `family_members`. |
 | 049 | `049_insurance_policies_car_only_premium.sql` | ALTER | `insurance_policies`: `car_id` NOT NULL, drop `family_member_id`; add `policy_start_date`, `premium_paid`, `premium_currency`; car FK `ON DELETE CASCADE`. |
 | 050 | `050_car_services_attachment_next_service.sql` | ALTER | `car_services`: optional `next_service_at` (DATE); optional S3 attachment columns (same pattern as `car_licenses` receipts). |
+| 051 | `051_households_date_display_format.sql` | ALTER | `households`: enum `household_date_display_format` + `date_display_format` (default YMD) for per-household date display. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -113,6 +114,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 048_car_petrol_fillups_tanked_up_by.sql
 - [x] 049_insurance_policies_car_only_premium.sql
 - [x] 050_car_services_attachment_next_service.sql
+- [x] 051_households_date_display_format.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

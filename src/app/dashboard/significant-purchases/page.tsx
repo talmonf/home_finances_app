@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSignificantPurchase, toggleSignificantPurchaseActive } from "./actions";
@@ -22,11 +28,6 @@ const PURCHASE_SOURCE_TYPE_LABELS: Record<string, string> = {
   present: "Present",
   other: "Other",
 };
-
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return d.toISOString().slice(0, 10);
-}
 
 function formatScheme(scheme: string) {
   if (scheme === "amex") return "Amex";
@@ -64,6 +65,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -286,8 +288,12 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                   {purchases.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{p.item_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(p.purchase_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(p.warranty_expiry_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.purchase_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.warranty_expiry_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">
                         {PURCHASE_CATEGORY_LABELS[p.purchase_category] ?? p.purchase_category} /{" "}
                         {PURCHASE_SOURCE_TYPE_LABELS[p.purchase_source_type] ?? p.purchase_source_type}

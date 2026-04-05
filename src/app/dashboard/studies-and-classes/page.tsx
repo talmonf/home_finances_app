@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createStudyOrClass, toggleStudyOrClassActive } from "./actions";
@@ -13,15 +19,6 @@ type PageProps = {
     family_member_id?: string;
   }>;
 };
-
-function formatDate(d: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -38,6 +35,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
     redirect("/");
   }
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const filterFamilyMemberId = resolvedSearchParams?.family_member_id?.trim() || null;
 
@@ -277,8 +275,12 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                       <td className="px-4 py-3 text-slate-100">{s.name}</td>
                       <td className="px-4 py-3 text-slate-300 capitalize">{s.type}</td>
                       <td className="px-4 py-3 text-slate-300">{s.family_member.full_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(s.start_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(s.end_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(s.start_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(s.end_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{formatMoney(s.expected_annual_cost)}</td>
                       <td className="px-4 py-3 text-slate-400">{s.number_of_years ?? "—"}</td>
                       <td className="px-4 py-3">

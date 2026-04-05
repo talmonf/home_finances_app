@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
   carDisplayLabel,
   formatCostPerLitre,
@@ -51,6 +57,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const resolved = searchParams ? await searchParams : {};
   const requestedCarId = resolved.carId?.trim() || null;
   const editFillupId = resolved.edit?.trim() || null;
@@ -281,7 +288,9 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                             key={p.id}
                             className={`border-b border-slate-700/80 ${editingFillup?.id === p.id ? "bg-sky-950/40" : ""}`}
                           >
-                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">{dateInputValue(p.filled_at)}</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">
+                              {formatHouseholdDate(p.filled_at, dateDisplayFormat)}
+                            </td>
                             <td className="max-w-[10rem] truncate px-3 py-2 text-slate-300" title={p.tanked_up_by_family_member?.full_name ?? undefined}>
                               {p.tanked_up_by_family_member?.full_name ?? "—"}
                             </td>
@@ -304,7 +313,11 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                             <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
                               {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
                             </td>
-                            <td className="whitespace-nowrap px-3 py-2 text-slate-400" title={tx ? `${dateInputValue(tx.transaction_date)} ${tx.amount.toString()}` : undefined}>
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-400" title={
+                                tx
+                                  ? `${formatHouseholdDate(tx.transaction_date, dateDisplayFormat)} ${tx.amount.toString()}`
+                                  : undefined
+                              }>
                               {tx ? "✓" : "—"}
                             </td>
                             <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={p.notes ?? undefined}>
