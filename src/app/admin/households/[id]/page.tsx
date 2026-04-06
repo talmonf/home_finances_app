@@ -1,4 +1,5 @@
 import { prisma, requireSuperAdmin } from "@/lib/auth";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import bcrypt from "bcryptjs";
@@ -61,6 +62,12 @@ export default async function HouseholdUsersPage({
       );
     }
 
+    if (role !== "admin" && role !== "member") {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("Please select a role")}`,
+      );
+    }
+
     const allowedUserTypes = [
       "family_member",
       "financial_advisor",
@@ -111,61 +118,24 @@ export default async function HouseholdUsersPage({
     redirect(`/admin/households/${householdId}?updated=1`);
   }
 
-  async function updateUser(formData: FormData) {
-    "use server";
-
-    await requireSuperAdmin();
-
-    const householdId = formData.get("household_id") as string;
-    const userId = (formData.get("user_id") as string | null)?.trim();
-    const email = (formData.get("email") as string | null)?.trim();
-    const fullName = (formData.get("full_name") as string | null)?.trim();
-    const role = (formData.get("role") as string | null)?.trim();
-    const userType = (formData.get("user_type") as string | null)?.trim();
-
-    if (!userId || !email || !fullName || !role || !userType) {
-      redirect(
-        `/admin/households/${householdId}?error=${encodeURIComponent("All fields are required")}`,
-      );
-    }
-
-    const allowedUserTypes = [
-      "family_member",
-      "financial_advisor",
-      "other",
-    ] as const;
-    if (
-      !allowedUserTypes.includes(
-        userType as (typeof allowedUserTypes)[number],
-      )
-    ) {
-      redirect(
-        `/admin/households/${householdId}?error=${encodeURIComponent("Invalid user type")}`,
-      );
-    }
-
-    const userTypeValue = userType as (typeof allowedUserTypes)[number];
-
-    await prisma.users.update({
-      where: { id: userId },
-      data: {
-        email,
-        full_name: fullName,
-        role: role as "admin" | "member",
-        user_type: userTypeValue,
-      },
-    });
-
-    revalidatePath(`/admin/households/${householdId}`);
-    redirect(`/admin/households/${householdId}?updated=1`);
-  }
-
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
+              <div className="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                <Link href="/admin/households" className="hover:text-slate-200">
+                  ← Households
+                </Link>
+                <span className="text-slate-600">·</span>
+                <Link
+                  href={`/admin/households/${householdId}/edit`}
+                  className="hover:text-slate-200"
+                >
+                  Edit household
+                </Link>
+              </div>
               <h1 className="text-2xl font-semibold text-slate-50">
                 Household users
               </h1>
@@ -234,9 +204,11 @@ export default async function HouseholdUsersPage({
               </label>
               <select
                 name="role"
-                defaultValue="admin"
+                required
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                defaultValue=""
               >
+                <option value="">Select role</option>
                 <option value="admin">Admin</option>
                 <option value="member">Member</option>
               </select>
@@ -247,9 +219,11 @@ export default async function HouseholdUsersPage({
               </label>
               <select
                 name="user_type"
-                defaultValue="family_member"
+                required
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                defaultValue=""
               >
+                <option value="">Select user type</option>
                 <option value="family_member">Family member</option>
                 <option value="financial_advisor">Financial advisor</option>
                 <option value="other">Other</option>
@@ -305,47 +279,21 @@ export default async function HouseholdUsersPage({
                       key={u.id}
                       className="border-b border-slate-800 last:border-0"
                     >
+                      <td className="py-2 pr-4 text-xs text-slate-200">
+                        {u.email}
+                      </td>
+                      <td className="py-2 pr-4 text-xs text-slate-200">
+                        {u.full_name}
+                      </td>
                       <td className="py-2 pr-4 text-xs text-slate-300">
-                        <form
-                          action={updateUser}
-                          className="flex flex-wrap items-center gap-2"
-                        >
-                          <input type="hidden" name="household_id" value={household.id} />
-                          <input type="hidden" name="user_id" value={u.id} />
-                          <input
-                            name="email"
-                            defaultValue={u.email}
-                            className="w-40 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                          />
-                          <input
-                            name="full_name"
-                            defaultValue={u.full_name}
-                            className="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                          />
-                          <select
-                            name="role"
-                            defaultValue={u.role}
-                            className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                          >
-                            <option value="admin">Admin</option>
-                            <option value="member">Member</option>
-                          </select>
-                          <select
-                            name="user_type"
-                            defaultValue={u.user_type}
-                            className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                          >
-                            <option value="family_member">Family member</option>
-                            <option value="financial_advisor">Financial advisor</option>
-                            <option value="other">Other</option>
-                          </select>
-                          <button
-                            type="submit"
-                            className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950 hover:bg-sky-400"
-                          >
-                            Save
-                          </button>
-                        </form>
+                        {u.role === "admin" ? "Admin" : "Member"}
+                      </td>
+                      <td className="py-2 pr-4 text-xs text-slate-300">
+                        {u.user_type === "family_member"
+                          ? "Family member"
+                          : u.user_type === "financial_advisor"
+                            ? "Financial advisor"
+                            : "Other"}
                       </td>
                       <td className="py-2 pr-4 text-xs text-slate-400">
                         {new Date(u.created_at).toLocaleDateString("en-CA")}
@@ -362,19 +310,27 @@ export default async function HouseholdUsersPage({
                         )}
                       </td>
                       <td className="py-2 pr-4 text-right">
-                        <form
-                          action={async () => {
-                            "use server";
-                            await toggleUserActive(u.id, !u.is_active);
-                          }}
-                        >
-                          <button
-                            type="submit"
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/households/${householdId}/users/${u.id}`}
                             className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
                           >
-                            {u.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
+                            Edit
+                          </Link>
+                          <form
+                            action={async () => {
+                              "use server";
+                              await toggleUserActive(u.id, !u.is_active);
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                            >
+                              {u.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   ))}

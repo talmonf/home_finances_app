@@ -1,0 +1,67 @@
+"use server";
+
+import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+const ALLOWED_USER_TYPES = [
+  "family_member",
+  "financial_advisor",
+  "other",
+] as const;
+
+export async function updateHouseholdUser(formData: FormData) {
+  await requireSuperAdmin();
+
+  const householdId = (formData.get("household_id") as string | null)?.trim();
+  const userId = (formData.get("user_id") as string | null)?.trim();
+  const email = (formData.get("email") as string | null)?.trim();
+  const fullName = (formData.get("full_name") as string | null)?.trim();
+  const role = (formData.get("role") as string | null)?.trim();
+  const userType = (formData.get("user_type") as string | null)?.trim();
+
+  if (!householdId || !userId) {
+    redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
+  }
+
+  if (!email || !fullName || !role || !userType) {
+    redirect(
+      `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("All fields are required")}`,
+    );
+  }
+
+  if (role !== "admin" && role !== "member") {
+    redirect(
+      `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("Invalid role")}`,
+    );
+  }
+
+  if (!ALLOWED_USER_TYPES.includes(userType as (typeof ALLOWED_USER_TYPES)[number])) {
+    redirect(
+      `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("Invalid user type")}`,
+    );
+  }
+
+  const existing = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId },
+    select: { id: true },
+  });
+  if (!existing) {
+    redirect(`/admin/households/${householdId}?error=${encodeURIComponent("User not found")}`);
+  }
+
+  await prisma.users.update({
+    where: { id: userId },
+    data: {
+      email,
+      full_name: fullName,
+      role,
+      user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
+    },
+  });
+
+  revalidatePath(`/admin/households/${householdId}`);
+  revalidatePath(`/admin/households/${householdId}/users/${userId}`);
+
+  redirect(`/admin/households/${householdId}/users/${userId}?updated=1`);
+}

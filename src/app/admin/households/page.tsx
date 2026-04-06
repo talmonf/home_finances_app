@@ -20,6 +20,9 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
 
   const households = await prisma.households.findMany({
     orderBy: { created_at: "desc" },
+    include: {
+      _count: { select: { users: true } },
+    },
   });
 
   async function createHousehold(formData: FormData) {
@@ -164,6 +167,7 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                     <th className="py-2 pr-4">Name</th>
                     <th className="py-2 pr-4">Country</th>
                     <th className="py-2 pr-4">Currency</th>
+                    <th className="py-2 pr-4">Users</th>
                     <th className="py-2 pr-4">Created</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4 text-right">Actions</th>
@@ -178,6 +182,18 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                       <td className="py-2 pr-4">{h.name}</td>
                       <td className="py-2 pr-4">{h.country}</td>
                       <td className="py-2 pr-4">{h.primary_currency}</td>
+                      <td className="py-2 pr-4 text-sm tabular-nums">
+                        {h._count.users > 0 ? (
+                          <Link
+                            href={`/admin/households/${h.id}`}
+                            className="font-medium text-sky-300 underline decoration-sky-500/40 underline-offset-2 hover:text-sky-200"
+                          >
+                            {h._count.users}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-500">0</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-4 text-xs text-slate-400">
                         {h.created_at.toISOString().slice(0, 10)}
                       </td>
@@ -192,7 +208,13 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                           </span>
                         )}
                       </td>
-                      <td className="flex items-center justify-end gap-2 py-2 pr-4">
+                      <td className="flex flex-wrap items-center justify-end gap-2 py-2 pr-4">
+                        <Link
+                          href={`/admin/households/${h.id}/edit`}
+                          className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                        >
+                          Edit
+                        </Link>
                         <Link
                           href={`/admin/households/${h.id}`}
                           className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
