@@ -12,10 +12,13 @@ datasource db {
   provider = "postgresql"
 }
 
+// Must match migration 051: PostgreSQL type name is household_date_display_format (not Prisma’s default PascalCase).
 enum HouseholdDateDisplayFormat {
   YMD
   DMY
   MDY
+
+  @@map("household_date_display_format")
 }
 
 model households {
