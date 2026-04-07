@@ -41,7 +41,9 @@ export default async function Home() {
         prisma.properties.count({
           where: { household_id: householdId, is_active: true },
         }),
-        prisma.cars.count({ where: { household_id: householdId, is_active: true } }),
+        prisma.cars.count({
+          where: { household_id: householdId, is_active: true, sold_at: null },
+        }),
         prisma.jobs.count({ where: { household_id: householdId, is_active: true } }),
         prisma.bank_accounts.count({
           where: { household_id: householdId, is_active: true },

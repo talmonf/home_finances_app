@@ -232,6 +232,7 @@ export async function createCar(formData: FormData) {
   });
 
   revalidatePath("/dashboard/cars");
+  revalidatePath("/");
   redirect("/dashboard/cars?created=1");
 }
 
@@ -332,6 +333,7 @@ export async function updateCar(formData: FormData) {
   revalidatePath("/dashboard/cars");
   revalidatePath(`/dashboard/cars/${id}`);
   revalidatePath("/dashboard/upcoming-renewals");
+  revalidatePath("/");
   redirect("/dashboard/cars?updated=1");
 }
 

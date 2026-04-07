@@ -21,6 +21,13 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDate(value: Date | string | null | undefined) {
+  if (!value) return "—";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB");
+}
+
 export default async function CarsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -160,7 +167,16 @@ export default async function CarsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">{car.plate_number ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{car.main_driver?.full_name ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{formatMoney(car.purchase_amount)}</td>
-                      <td className="px-3 py-2 text-slate-300">{formatMoney(car.sold_amount)}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {car.sold_at ? (
+                          <div className="space-y-1">
+                            <div className="text-amber-300">Sold on {formatDate(car.sold_at)}</div>
+                            <div>{car.sold_amount ? formatMoney(car.sold_amount) : "Amount not entered"}</div>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Link
