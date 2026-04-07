@@ -910,6 +910,45 @@ export async function createTherapyExpenseCategory(formData: FormData) {
   redirect(`${BASE}/settings?cat=1`);
 }
 
+export async function updateTherapyExpenseCategory(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const id = (formData.get("id") as string)?.trim() || "";
+  const name = (formData.get("name") as string)?.trim() || "";
+  if (!id || !name) redirect(`${BASE}/settings?error=cat`);
+
+  await prisma.therapy_expense_categories.updateMany({
+    where: { id, household_id: householdId },
+    data: { name },
+  });
+
+  revalidatePath(`${BASE}/settings`);
+  revalidatePath(`${BASE}/expenses`);
+  redirect(`${BASE}/settings?updated=1`);
+}
+
+export async function deleteTherapyExpenseCategory(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const id = (formData.get("id") as string)?.trim() || "";
+  if (!id) redirect(`${BASE}/settings?error=cat`);
+
+  const category = await prisma.therapy_expense_categories.findFirst({
+    where: { id, household_id: householdId },
+    select: { id: true, is_system: true },
+  });
+  if (!category || category.is_system) redirect(`${BASE}/settings?error=cat`);
+
+  const usageCount = await prisma.therapy_job_expenses.count({
+    where: { household_id: householdId, category_id: id },
+  });
+  if (usageCount > 0) redirect(`${BASE}/settings?error=cat-in-use`);
+
+  await prisma.therapy_expense_categories.delete({ where: { id } });
+
+  revalidatePath(`${BASE}/settings`);
+  revalidatePath(`${BASE}/expenses`);
+  redirect(`${BASE}/settings?updated=1`);
+}
+
 export async function createTherapyJobExpense(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   await ensureDefaultExpenseCategories(householdId);
@@ -1180,15 +1219,43 @@ export async function createTherapyConsultationType(formData: FormData) {
   redirect(`${BASE}/settings?ctype=1`);
 }
 
+export async function updateTherapyConsultationType(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const id = (formData.get("id") as string)?.trim() || "";
+  const name = (formData.get("name") as string)?.trim() || "";
+  if (!id || !name) redirect(`${BASE}/settings?error=ctype`);
+
+  await prisma.therapy_consultation_types.updateMany({
+    where: { id, household_id: householdId },
+    data: { name },
+  });
+
+  revalidatePath(`${BASE}/settings`);
+  revalidatePath(`${BASE}/consultations`);
+  redirect(`${BASE}/settings?updated=1`);
+}
+
 export async function deleteTherapyConsultationType(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) return;
+  if (!id) redirect(`${BASE}/settings?error=ctype`);
+  const type = await prisma.therapy_consultation_types.findFirst({
+    where: { id, household_id: householdId },
+    select: { id: true, is_system: true },
+  });
+  if (!type || type.is_system) redirect(`${BASE}/settings?error=ctype`);
+
+  const usageCount = await prisma.therapy_consultations.count({
+    where: { household_id: householdId, consultation_type_id: id },
+  });
+  if (usageCount > 0) redirect(`${BASE}/settings?error=ctype-in-use`);
+
   await prisma.therapy_consultation_types.deleteMany({
     where: { id, household_id: householdId, is_system: false },
   });
   revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/consultations`);
+  redirect(`${BASE}/settings?updated=1`);
 }
 
 // --- Consultations (meetings) ---

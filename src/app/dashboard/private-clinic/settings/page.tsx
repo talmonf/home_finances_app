@@ -4,16 +4,24 @@ import { redirect } from "next/navigation";
 import {
   createTherapyConsultationType,
   createTherapyExpenseCategory,
+  deleteTherapyExpenseCategory,
   deleteTherapyConsultationType,
+  updateTherapyConsultationType,
+  updateTherapyExpenseCategory,
   updateTherapySettings,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function TherapySettingsPage() {
+export default async function TherapySettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ updated?: string; error?: string }>;
+}) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const sp = searchParams ? await searchParams : undefined;
 
   const [settings, categories, consultationTypes] = await Promise.all([
     prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
@@ -29,6 +37,21 @@ export default async function TherapySettingsPage() {
 
   return (
     <div className="space-y-8">
+      {sp?.error && (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
+          {sp.error === "ctype-in-use"
+            ? "Cannot delete consultation type because it is already used by one or more consultations."
+            : sp.error === "cat-in-use"
+              ? "Cannot delete expense category because it is already used by one or more expenses."
+              : "Could not complete the action."}
+        </p>
+      )}
+      {sp?.updated && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          Saved.
+        </p>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">Treatment note labels</h2>
         <p className="text-sm text-slate-500">
@@ -70,10 +93,19 @@ export default async function TherapySettingsPage() {
         <ul className="space-y-1 text-sm text-slate-400">
           {consultationTypes.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-2">
-              <span>{c.name}</span>
-              {c.is_system ? (
-                <span className="text-xs text-slate-600">(default)</span>
-              ) : (
+              <form action={updateTherapyConsultationType} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="id" value={c.id} />
+                <input
+                  name="name"
+                  defaultValue={c.name}
+                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                />
+                <button type="submit" className="text-xs text-sky-400 hover:text-sky-300">
+                  Save
+                </button>
+              </form>
+              {c.is_system ? <span className="text-xs text-slate-600">(default)</span> : null}
+              {!c.is_system && (
                 <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
                   <input type="hidden" name="id" value={c.id} />
                   <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
@@ -107,11 +139,27 @@ export default async function TherapySettingsPage() {
         <h2 className="text-lg font-medium text-slate-200">Expense categories</h2>
         <ul className="space-y-1 text-sm text-slate-400">
           {categories.map((c) => (
-            <li key={c.id}>
-              {c.name}
-              {c.is_system ? (
-                <span className="ml-2 text-xs text-slate-600">(default)</span>
-              ) : null}
+            <li key={c.id} className="flex flex-wrap items-center gap-2">
+              <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="id" value={c.id} />
+                <input
+                  name="name"
+                  defaultValue={c.name}
+                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                />
+                <button type="submit" className="text-xs text-sky-400 hover:text-sky-300">
+                  Save
+                </button>
+              </form>
+              {c.is_system ? <span className="text-xs text-slate-600">(default)</span> : null}
+              {!c.is_system && (
+                <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+                  <input type="hidden" name="id" value={c.id} />
+                  <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                    Remove
+                  </button>
+                </ConfirmDeleteForm>
+              )}
             </li>
           ))}
         </ul>
