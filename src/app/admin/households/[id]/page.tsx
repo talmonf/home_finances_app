@@ -45,8 +45,8 @@ export default async function HouseholdUsersPage({
   });
   const familyMembers = await prisma.family_members.findMany({
     where: { household_id: householdId, is_active: true },
-    orderBy: { first_name: "asc" },
-    select: { id: true, first_name: true, last_name: true },
+    orderBy: { full_name: "asc" },
+    select: { id: true, full_name: true },
   });
 
   async function createUser(formData: FormData) {
@@ -274,7 +274,7 @@ export default async function HouseholdUsersPage({
                 <option value="">None</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {[m.first_name, m.last_name].filter(Boolean).join(" ").trim() || "(Unnamed)"}
+                    {m.full_name?.trim() || "(Unnamed)"}
                   </option>
                 ))}
               </select>
