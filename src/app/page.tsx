@@ -106,7 +106,8 @@ export default async function Home() {
     doneRows.map((r) => [r.section_id, r.is_done] as const),
   );
 
-  const showHouseholdsCard = isSuperAdmin || !!householdId;
+  const hasHouseholdSetupOptions = setupSections.length > 0;
+  const showHouseholdsCard = isSuperAdmin || hasHouseholdSetupOptions;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -119,7 +120,9 @@ export default async function Home() {
             <p className="text-sm text-slate-400">
               {isSuperAdmin
                 ? "Use the super admin tools to manage households and platform users."
-                : "This dashboard will show your households, accounts, and key finance insights."}
+                : showHouseholdsCard
+                  ? "This dashboard will show your households, accounts, and key finance insights."
+                  : "This dashboard will show your enabled finance sections and key finance insights."}
             </p>
           </div>
         </div>
