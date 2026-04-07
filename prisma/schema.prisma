@@ -90,6 +90,9 @@ model loans {
   currency                 String    @default("ILS")
   institution_name         String
   loan_number              String?
+  interest_rate_percent    Decimal?  @db.Decimal(7, 4)
+  interest_rate_linked_index String?
+  interest_rate_index_delta_percent Decimal? @db.Decimal(7, 4)
   monthly_repayment_amount Decimal?  @db.Decimal(15, 2)
   repayment_day_of_month   Int?
   maturity_date            DateTime?

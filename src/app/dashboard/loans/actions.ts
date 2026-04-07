@@ -30,6 +30,26 @@ function parseNullableDecimal(raw: string | null): { ok: true; value: string | n
   return { ok: true, value: n.toFixed(2) };
 }
 
+function parseNullablePercent(raw: string | null): { ok: true; value: string | null } | { ok: false; error: string } {
+  const t = raw?.trim() ?? "";
+  if (!t) return { ok: true, value: null };
+  const n = Number(t.replace(",", "."));
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    return { ok: false, error: "Interest rate must be between 0 and 100" };
+  }
+  return { ok: true, value: n.toFixed(4) };
+}
+
+function parseNullableSignedPercent(raw: string | null): { ok: true; value: string | null } | { ok: false; error: string } {
+  const t = raw?.trim() ?? "";
+  if (!t) return { ok: true, value: null };
+  const n = Number(t.replace(",", "."));
+  if (!Number.isFinite(n) || n < -100 || n > 100) {
+    return { ok: false, error: "Interest delta must be between -100 and 100" };
+  }
+  return { ok: true, value: n.toFixed(4) };
+}
+
 function parseRepaymentDay(raw: string | null): { ok: true; value: number | null } | { ok: false; error: string } {
   const t = raw?.trim() ?? "";
   if (!t) return { ok: true, value: null };
@@ -55,6 +75,7 @@ export async function createLoan(formData: FormData) {
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const statusRaw = (formData.get("status") as string | null)?.trim() || "active";
   const maturity_date_raw = (formData.get("maturity_date") as string | null)?.trim();
+  const interestRateMode = (formData.get("interest_rate_mode") as string | null)?.trim() || "none";
 
   if (!loan_date_raw) {
     redirect("/dashboard/loans?error=Loan+date+required");
@@ -64,6 +85,9 @@ export async function createLoan(formData: FormData) {
   }
   if (statusRaw !== "active" && statusRaw !== "historic") {
     redirect("/dashboard/loans?error=Invalid+status");
+  }
+  if (interestRateMode !== "none" && interestRateMode !== "fixed" && interestRateMode !== "indexed") {
+    redirect("/dashboard/loans?error=Invalid+interest+type");
   }
   const is_active = statusRaw === "active";
 
@@ -91,6 +115,36 @@ export async function createLoan(formData: FormData) {
   if (!dayParsed.ok) {
     redirect(`/dashboard/loans?error=${encodeURIComponent(dayParsed.error)}`);
   }
+  const interestRateParsed = parseNullablePercent(formData.get("interest_rate_percent") as string | null);
+  if (!interestRateParsed.ok) {
+    redirect(`/dashboard/loans?error=${encodeURIComponent(interestRateParsed.error)}`);
+  }
+  const interestDeltaParsed = parseNullableSignedPercent(
+    formData.get("interest_rate_index_delta_percent") as string | null,
+  );
+  if (!interestDeltaParsed.ok) {
+    redirect(`/dashboard/loans?error=${encodeURIComponent(interestDeltaParsed.error)}`);
+  }
+  const interestLinkedIndex = (formData.get("interest_rate_linked_index") as string | null)?.trim() || null;
+
+  let interest_rate_percent: string | null = null;
+  let interest_rate_linked_index: string | null = null;
+  let interest_rate_index_delta_percent: string | null = null;
+  if (interestRateMode === "fixed") {
+    if (!interestRateParsed.value) {
+      redirect("/dashboard/loans?error=Interest+rate+required+for+fixed+interest");
+    }
+    interest_rate_percent = interestRateParsed.value;
+  } else if (interestRateMode === "indexed") {
+    if (!interestLinkedIndex) {
+      redirect("/dashboard/loans?error=Linked+index+required+for+indexed+interest");
+    }
+    if (!interestDeltaParsed.value) {
+      redirect("/dashboard/loans?error=Interest+delta+required+for+indexed+interest");
+    }
+    interest_rate_linked_index = interestLinkedIndex;
+    interest_rate_index_delta_percent = interestDeltaParsed.value;
+  }
 
   let maturity_date: Date | null = null;
   if (maturity_date_raw) {
@@ -110,6 +164,9 @@ export async function createLoan(formData: FormData) {
       currency: currency || "ILS",
       institution_name,
       loan_number,
+      interest_rate_percent,
+      interest_rate_linked_index,
+      interest_rate_index_delta_percent,
       monthly_repayment_amount: monthlyParsed.value,
       repayment_day_of_month: dayParsed.value,
       maturity_date,
@@ -145,6 +202,7 @@ export async function updateLoan(formData: FormData) {
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const statusRaw = (formData.get("status") as string | null)?.trim() || "active";
   const maturity_date_raw = (formData.get("maturity_date") as string | null)?.trim();
+  const interestRateMode = (formData.get("interest_rate_mode") as string | null)?.trim() || "none";
 
   if (!loan_date_raw) {
     redirect(`/dashboard/loans/${id}?error=Loan+date+required`);
@@ -154,6 +212,9 @@ export async function updateLoan(formData: FormData) {
   }
   if (statusRaw !== "active" && statusRaw !== "historic") {
     redirect(`/dashboard/loans/${id}?error=Invalid+status`);
+  }
+  if (interestRateMode !== "none" && interestRateMode !== "fixed" && interestRateMode !== "indexed") {
+    redirect(`/dashboard/loans/${id}?error=Invalid+interest+type`);
   }
   const is_active = statusRaw === "active";
 
@@ -189,6 +250,36 @@ export async function updateLoan(formData: FormData) {
   if (!dayParsed.ok) {
     redirect(`/dashboard/loans/${id}?error=${encodeURIComponent(dayParsed.error)}`);
   }
+  const interestRateParsed = parseNullablePercent(formData.get("interest_rate_percent") as string | null);
+  if (!interestRateParsed.ok) {
+    redirect(`/dashboard/loans/${id}?error=${encodeURIComponent(interestRateParsed.error)}`);
+  }
+  const interestDeltaParsed = parseNullableSignedPercent(
+    formData.get("interest_rate_index_delta_percent") as string | null,
+  );
+  if (!interestDeltaParsed.ok) {
+    redirect(`/dashboard/loans/${id}?error=${encodeURIComponent(interestDeltaParsed.error)}`);
+  }
+  const interestLinkedIndex = (formData.get("interest_rate_linked_index") as string | null)?.trim() || null;
+
+  let interest_rate_percent: string | null = null;
+  let interest_rate_linked_index: string | null = null;
+  let interest_rate_index_delta_percent: string | null = null;
+  if (interestRateMode === "fixed") {
+    if (!interestRateParsed.value) {
+      redirect(`/dashboard/loans/${id}?error=Interest+rate+required+for+fixed+interest`);
+    }
+    interest_rate_percent = interestRateParsed.value;
+  } else if (interestRateMode === "indexed") {
+    if (!interestLinkedIndex) {
+      redirect(`/dashboard/loans/${id}?error=Linked+index+required+for+indexed+interest`);
+    }
+    if (!interestDeltaParsed.value) {
+      redirect(`/dashboard/loans/${id}?error=Interest+delta+required+for+indexed+interest`);
+    }
+    interest_rate_linked_index = interestLinkedIndex;
+    interest_rate_index_delta_percent = interestDeltaParsed.value;
+  }
 
   let maturity_date: Date | null = null;
   if (maturity_date_raw) {
@@ -207,6 +298,9 @@ export async function updateLoan(formData: FormData) {
       currency: currency || "ILS",
       institution_name,
       loan_number,
+      interest_rate_percent,
+      interest_rate_linked_index,
+      interest_rate_index_delta_percent,
       monthly_repayment_amount: monthlyParsed.value,
       repayment_day_of_month: dayParsed.value,
       maturity_date,

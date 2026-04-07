@@ -41,6 +41,16 @@ export default async function EditLoanPage({ params, searchParams }: PageProps) 
     currency: loan.currency,
     institution_name: loan.institution_name,
     loan_number: loan.loan_number,
+    interest_rate_mode: loan.interest_rate_linked_index
+      ? ("indexed" as const)
+      : loan.interest_rate_percent != null
+        ? ("fixed" as const)
+        : ("none" as const),
+    interest_rate_percent: loan.interest_rate_percent ? loan.interest_rate_percent.toFixed(4) : "",
+    interest_rate_linked_index: loan.interest_rate_linked_index,
+    interest_rate_index_delta_percent: loan.interest_rate_index_delta_percent
+      ? loan.interest_rate_index_delta_percent.toFixed(4)
+      : "",
     monthly_repayment_amount: loan.monthly_repayment_amount
       ? loan.monthly_repayment_amount.toFixed(2)
       : "",

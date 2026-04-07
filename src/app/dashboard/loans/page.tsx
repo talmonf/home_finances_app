@@ -32,6 +32,40 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatPercent(value: unknown, digits = 2) {
+  if (value == null) return null;
+  const n =
+    typeof value === "object" &&
+    value !== null &&
+    "toNumber" in value
+      ? (value as { toNumber(): number }).toNumber()
+      : Number(value);
+  if (Number.isNaN(n)) return null;
+  return `${n.toLocaleString("en-IL", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+}
+
+function formatLoanInterestRate(loan: {
+  interest_rate_percent: unknown;
+  interest_rate_linked_index: string | null;
+  interest_rate_index_delta_percent: unknown;
+}) {
+  if (loan.interest_rate_linked_index && loan.interest_rate_index_delta_percent != null) {
+    const deltaNumber =
+      typeof loan.interest_rate_index_delta_percent === "object" &&
+      loan.interest_rate_index_delta_percent !== null &&
+      "toNumber" in loan.interest_rate_index_delta_percent
+        ? (loan.interest_rate_index_delta_percent as { toNumber(): number }).toNumber()
+        : Number(loan.interest_rate_index_delta_percent);
+    const deltaAbs = Math.abs(deltaNumber);
+    const deltaSign = deltaNumber < 0 ? "-" : "+";
+    return `${loan.interest_rate_linked_index} ${deltaSign} ${deltaAbs.toLocaleString("en-IL", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}%`;
+  }
+  return formatPercent(loan.interest_rate_percent) ?? "—";
+}
+
 export default async function LoansPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -97,6 +131,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Loan #</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Loan date</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Amount</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Interest</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Monthly</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Day / Maturity</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Total repay</th>
@@ -116,6 +151,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">
                         {formatMoney(loan.loan_amount)} {loan.currency}
                       </td>
+                      <td className="px-4 py-3 text-slate-400">{formatLoanInterestRate(loan)}</td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatMoney(loan.monthly_repayment_amount)} {loan.currency}
                       </td>

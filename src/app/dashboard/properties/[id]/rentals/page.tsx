@@ -1,4 +1,9 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm, ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
@@ -13,6 +18,7 @@ import {
   deleteRentalTenant,
   deleteRentalContract,
 } from "../../actions";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +42,7 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
 
   const { id } = await params;
 
@@ -317,7 +324,7 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                       <ul className="space-y-1 text-xs text-slate-300">
                         {rental.transactions.map((tx) => (
                           <li key={tx.id}>
-                            {new Date(tx.transaction_date).toLocaleDateString("en-CA")} · {tx.amount.toString()} · {tx.description ?? "—"}
+                            {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} · {tx.description ?? "—"}
                           </li>
                         ))}
                       </ul>
@@ -330,7 +337,7 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                         <option value="">Use Import Review page for linking</option>
                         {transactions.filter((t) => t.rental_id !== rental.id).slice(0, 20).map((tx) => (
                           <option key={tx.id} value={tx.id}>
-                            {new Date(tx.transaction_date).toLocaleDateString("en-CA")} · {tx.amount.toString()} · {tx.description ?? "—"}
+                            {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} · {tx.description ?? "—"}
                           </option>
                         ))}
                       </select>

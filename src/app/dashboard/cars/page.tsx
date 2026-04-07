@@ -1,8 +1,14 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCar } from "./actions";
+import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 
 export const dynamic = "force-dynamic";
 
@@ -21,17 +27,21 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDate(value: Date | string | null | undefined) {
+function formatDate(
+  value: Date | string | null | undefined,
+  dateDisplayFormat: HouseholdDateDisplayFormat,
+) {
   if (!value) return "—";
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB");
+  return formatHouseholdDate(d, dateDisplayFormat);
 }
 
 export default async function CarsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -170,7 +180,9 @@ export default async function CarsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">
                         {car.sold_at ? (
                           <div className="space-y-1">
-                            <div className="text-amber-300">Sold on {formatDate(car.sold_at)}</div>
+                            <div className="text-amber-300">
+                              Sold on {formatDate(car.sold_at, dateDisplayFormat)}
+                            </div>
                             <div>{car.sold_amount ? formatMoney(car.sold_amount) : "Amount not entered"}</div>
                           </div>
                         ) : (

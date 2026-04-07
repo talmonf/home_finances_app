@@ -1,7 +1,16 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTask } from "./actions";
+import {
+  formatHouseholdDate,
+  type HouseholdDateDisplayFormat,
+} from "@/lib/household-date-format";
 
 export const dynamic = "force-dynamic";
 
@@ -30,21 +39,16 @@ type PageProps = {
   }>;
 };
 
-function formatDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function formatDate(d: Date, dateDisplayFormat: HouseholdDateDisplayFormat) {
+  return formatHouseholdDate(new Date(d), dateDisplayFormat);
 }
 
-function formatDateInput(d: Date | null) {
+function formatDateInput(
+  d: Date | null,
+  dateDisplayFormat: HouseholdDateDisplayFormat,
+) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatHouseholdDate(new Date(d), dateDisplayFormat);
 }
 
 function assigneeLabel(task: {
@@ -160,6 +164,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const statusFilter = resolvedSearchParams?.status?.trim() || null;
@@ -532,8 +537,12 @@ export default async function TasksPage({ searchParams }: PageProps) {
                           {task.priority}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatDateInput(task.schedule_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDateInput(task.due_date)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatDateInput(task.schedule_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatDateInput(task.due_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{assigneeLabel(task)}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
@@ -562,7 +571,9 @@ export default async function TasksPage({ searchParams }: PageProps) {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatDate(task.created_at)}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatDate(task.created_at, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/tasks/${task.id}/edit`}

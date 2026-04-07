@@ -62,6 +62,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 050 | `050_car_services_attachment_next_service.sql` | ALTER | `car_services`: optional `next_service_at` (DATE); optional S3 attachment columns (same pattern as `car_licenses` receipts). |
 | 051 | `051_households_date_display_format.sql` | ALTER | `households`: enum `household_date_display_format` + `date_display_format` (default YMD) for per-household date display. |
 | 052 | `052_user_level_preferences.sql` | CREATE/ALTER | `users.date_display_format` override + `user_enabled_sections` table for per-user section visibility overrides. |
+| 053 | `053_loans_interest_rate_fields.sql` | ALTER | `loans`: add fixed rate percent and index-linked rate fields (`interest_rate_linked_index` + delta percent). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -117,6 +118,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 050_car_services_attachment_next_service.sql
 - [x] 051_households_date_display_format.sql
 - [x] 052_user_level_preferences.sql
+- [x] 053_loans_interest_rate_fields.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

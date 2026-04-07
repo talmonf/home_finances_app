@@ -8,6 +8,10 @@ type LoanFormInitialValues = {
   currency?: string | null;
   institution_name?: string | null;
   loan_number?: string | null;
+  interest_rate_mode?: "none" | "fixed" | "indexed";
+  interest_rate_percent?: string | null;
+  interest_rate_linked_index?: string | null;
+  interest_rate_index_delta_percent?: string | null;
   monthly_repayment_amount?: string | null;
   repayment_day_of_month?: number | null;
   maturity_date?: string | null;
@@ -28,6 +32,9 @@ export function LoanForm({
 }) {
   const initialStatus = initial?.is_active === false ? "historic" : "active";
   const [status, setStatus] = useState<"active" | "historic">(initialStatus);
+  const [interestRateMode, setInterestRateMode] = useState<"none" | "fixed" | "indexed">(
+    initial?.interest_rate_mode ?? "none",
+  );
 
   return (
     <form
@@ -76,6 +83,78 @@ export function LoanForm({
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
+
+      <div>
+        <label htmlFor="interest_rate_mode" className="mb-1 block text-xs font-medium text-slate-400">
+          Interest type
+        </label>
+        <select
+          id="interest_rate_mode"
+          name="interest_rate_mode"
+          value={interestRateMode}
+          onChange={(e) => setInterestRateMode(e.target.value as "none" | "fixed" | "indexed")}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="none">Not specified</option>
+          <option value="fixed">Fixed %</option>
+          <option value="indexed">Linked to index + delta</option>
+        </select>
+      </div>
+
+      {interestRateMode === "fixed" && (
+        <div>
+          <label htmlFor="interest_rate_percent" className="mb-1 block text-xs font-medium text-slate-400">
+            Interest rate (%)
+          </label>
+          <input
+            id="interest_rate_percent"
+            name="interest_rate_percent"
+            type="text"
+            inputMode="decimal"
+            required
+            defaultValue={initial?.interest_rate_percent ?? ""}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            placeholder="4.50"
+          />
+        </div>
+      )}
+
+      {interestRateMode === "indexed" && (
+        <>
+          <div>
+            <label htmlFor="interest_rate_linked_index" className="mb-1 block text-xs font-medium text-slate-400">
+              Linked index
+            </label>
+            <input
+              id="interest_rate_linked_index"
+              name="interest_rate_linked_index"
+              type="text"
+              required
+              defaultValue={initial?.interest_rate_linked_index ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="Prime"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="interest_rate_index_delta_percent"
+              className="mb-1 block text-xs font-medium text-slate-400"
+            >
+              Delta (%)
+            </label>
+            <input
+              id="interest_rate_index_delta_percent"
+              name="interest_rate_index_delta_percent"
+              type="text"
+              inputMode="decimal"
+              required
+              defaultValue={initial?.interest_rate_index_delta_percent ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              placeholder="-1.00"
+            />
+          </div>
+        </>
+      )}
 
       <div>
         <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
