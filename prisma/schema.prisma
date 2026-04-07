@@ -1282,7 +1282,7 @@ model therapy_clients {
   start_date         DateTime? @db.Date
   notes              String?
   default_job_id     String
-  default_program_id String
+  default_program_id String?
   email              String?
   phones             String?
   address            String?
@@ -1293,7 +1293,7 @@ model therapy_clients {
 
   household       households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   default_job     jobs       @relation("TherapyClientDefaultJob", fields: [default_job_id], references: [id], onDelete: Restrict)
-  default_program therapy_service_programs @relation("TherapyClientDefaultProgram", fields: [default_program_id], references: [id], onDelete: Restrict)
+  default_program therapy_service_programs? @relation("TherapyClientDefaultProgram", fields: [default_program_id], references: [id], onDelete: Restrict)
   client_jobs     therapy_clients_jobs[]
   treatments      therapy_treatments[]
   appointments    therapy_appointments[]

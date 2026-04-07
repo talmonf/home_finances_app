@@ -31,6 +31,14 @@ async function assertJob(householdId: string, jobId: string) {
   return j?.id ?? null;
 }
 
+async function assertJobForFamilyMember(householdId: string, familyMemberId: string, jobId: string) {
+  const j = await prisma.jobs.findFirst({
+    where: { id: jobId, household_id: householdId, family_member_id: familyMemberId },
+    select: { id: true },
+  });
+  return j?.id ?? null;
+}
+
 async function assertProgram(householdId: string, programId: string) {
   const p = await prisma.therapy_service_programs.findFirst({
     where: { id: programId, household_id: householdId },
@@ -474,20 +482,40 @@ export async function deleteTherapyProgram(formData: FormData) {
 
 export async function createTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const familyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  if (!familyMemberId) redirect(`${BASE}/clients?error=family`);
   const first_name = (formData.get("first_name") as string)?.trim() || "";
-  const default_program_id = (formData.get("default_program_id") as string)?.trim() || "";
-  if (!first_name || !default_program_id) {
+  const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
+  const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
+  if (!first_name || !default_job_id) {
     redirect(`${BASE}/clients?error=missing`);
   }
-  const prog = await assertProgram(householdId, default_program_id);
-  if (!prog) redirect(`${BASE}/clients?error=program`);
-  const default_job_id = prog.job_id;
+  if (!(await assertJobForFamilyMember(householdId, familyMemberId, default_job_id))) {
+    redirect(`${BASE}/clients?error=job`);
+  }
+  let default_program_id: string | null = null;
+  if (default_program_id_raw) {
+    const prog = await assertProgram(householdId, default_program_id_raw);
+    if (!prog || prog.job_id !== default_job_id) redirect(`${BASE}/clients?error=program`);
+    default_program_id = prog.id;
+  }
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
   if (!jobIds.includes(default_job_id)) jobIds.push(default_job_id);
+  const allowedJobIds = new Set(
+    (
+      await prisma.jobs.findMany({
+        where: { household_id: householdId, family_member_id: familyMemberId },
+        select: { id: true },
+      })
+    ).map((j) => j.id),
+  );
 
   const id = crypto.randomUUID();
+  const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
+  const home = (formData.get("home_phone") as string)?.trim() || "";
+  const phones = [mobile, home].filter(Boolean).join("\n") || null;
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.create({
@@ -502,13 +530,13 @@ export async function createTherapyClient(formData: FormData) {
         default_job_id,
         default_program_id,
         email: (formData.get("email") as string)?.trim() || null,
-        phones: (formData.get("phones") as string)?.trim() || null,
+        phones,
         address: (formData.get("address") as string)?.trim() || null,
       },
     });
 
     for (const jid of jobIds) {
-      if (!(await assertJob(householdId, jid))) continue;
+      if (!allowedJobIds.has(jid)) continue;
       await tx.therapy_clients_jobs.create({
         data: {
           id: crypto.randomUUID(),
@@ -527,18 +555,38 @@ export async function createTherapyClient(formData: FormData) {
 
 export async function updateTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const familyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  if (!familyMemberId) redirect(`${BASE}/clients?error=family`);
   const id = (formData.get("id") as string)?.trim() || "";
   if (!(await assertClient(householdId, id))) redirect(`${BASE}/clients?error=notfound`);
 
-  const default_program_id = (formData.get("default_program_id") as string)?.trim() || "";
-  if (!default_program_id) redirect(`${BASE}/clients?error=missing`);
-  const prog = await assertProgram(householdId, default_program_id);
-  if (!prog) redirect(`${BASE}/clients?error=program`);
-  const default_job_id = prog.job_id;
+  const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
+  const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
+  if (!default_job_id) redirect(`${BASE}/clients?error=missing`);
+  if (!(await assertJobForFamilyMember(householdId, familyMemberId, default_job_id))) {
+    redirect(`${BASE}/clients?error=job`);
+  }
+  let default_program_id: string | null = null;
+  if (default_program_id_raw) {
+    const prog = await assertProgram(householdId, default_program_id_raw);
+    if (!prog || prog.job_id !== default_job_id) redirect(`${BASE}/clients?error=program`);
+    default_program_id = prog.id;
+  }
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
   if (!jobIds.includes(default_job_id)) jobIds.push(default_job_id);
+  const allowedJobIds = new Set(
+    (
+      await prisma.jobs.findMany({
+        where: { household_id: householdId, family_member_id: familyMemberId },
+        select: { id: true },
+      })
+    ).map((j) => j.id),
+  );
+  const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
+  const home = (formData.get("home_phone") as string)?.trim() || "";
+  const phones = [mobile, home].filter(Boolean).join("\n") || null;
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.update({
@@ -552,7 +600,7 @@ export async function updateTherapyClient(formData: FormData) {
         default_job_id,
         default_program_id,
         email: (formData.get("email") as string)?.trim() || null,
-        phones: (formData.get("phones") as string)?.trim() || null,
+        phones,
         address: (formData.get("address") as string)?.trim() || null,
         is_active: formData.has("is_active"),
       },
@@ -560,7 +608,7 @@ export async function updateTherapyClient(formData: FormData) {
 
     await tx.therapy_clients_jobs.deleteMany({ where: { client_id: id, household_id: householdId } });
     for (const jid of jobIds) {
-      if (!(await assertJob(householdId, jid))) continue;
+      if (!allowedJobIds.has(jid)) continue;
       await tx.therapy_clients_jobs.create({
         data: {
           id: crypto.randomUUID(),
