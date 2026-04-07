@@ -1,6 +1,9 @@
 "use server";
 
 import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
+import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { upsertUserEnabledSections } from "@/lib/household-sections";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -19,6 +22,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const fullName = (formData.get("full_name") as string | null)?.trim();
   const role = (formData.get("role") as string | null)?.trim();
   const userType = (formData.get("user_type") as string | null)?.trim();
+  const rawDateDisplayFormat = (formData.get("date_display_format") as string | null)?.trim();
 
   if (!householdId || !userId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
@@ -57,9 +61,20 @@ export async function updateHouseholdUser(formData: FormData) {
       full_name: fullName,
       role,
       user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
+      date_display_format: rawDateDisplayFormat
+        ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
+        : null,
     },
   });
 
+  const enabledBySectionId: Record<string, boolean> = {};
+  for (const section of DASHBOARD_SECTIONS) {
+    enabledBySectionId[section.id] = formData.get(`section_${section.id}`) === "on";
+  }
+  await upsertUserEnabledSections({ householdId, userId, enabledBySectionId });
+
+  revalidatePath("/");
+  revalidatePath("/dashboard", "layout");
   revalidatePath(`/admin/households/${householdId}`);
   revalidatePath(`/admin/households/${householdId}/users/${userId}`);
 

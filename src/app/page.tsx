@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAuthSession, prisma } from "@/lib/auth";
 import { DASHBOARD_SECTIONS, type SetupCounts } from "@/lib/dashboard-sections";
-import { getHouseholdEnabledSections } from "@/lib/household-sections";
+import { getEffectiveEnabledSections } from "@/lib/household-sections";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
 
@@ -31,6 +31,7 @@ export default async function Home() {
 
   const isSuperAdmin = session.user.isSuperAdmin;
   const householdId = session.user.householdId ?? null;
+  const userId = session.user.id;
 
   const setupCounts: SetupCounts | null = !isSuperAdmin && householdId
     ? await Promise.all([
@@ -72,7 +73,7 @@ export default async function Home() {
 
   const enabledSections =
     !isSuperAdmin && householdId
-      ? await getHouseholdEnabledSections(householdId)
+      ? await getEffectiveEnabledSections({ householdId, userId })
       : [];
 
   const enabledBySectionId = new Map(

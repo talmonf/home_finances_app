@@ -184,8 +184,21 @@ export async function getCurrentHouseholdId() {
 }
 
 export async function getCurrentHouseholdDateDisplayFormat(): Promise<HouseholdDateDisplayFormat> {
-  const householdId = await getCurrentHouseholdId();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  const householdId = session?.user?.householdId ?? null;
   if (!householdId) return DEFAULT_HOUSEHOLD_DATE_DISPLAY_FORMAT;
+
+  if (userId && !session?.user?.isSuperAdmin) {
+    const userRow = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId },
+      select: { date_display_format: true },
+    });
+    if (userRow?.date_display_format) {
+      return normalizeHouseholdDateDisplayFormat(userRow.date_display_format);
+    }
+  }
+
   const row = await prisma.households.findUnique({
     where: { id: householdId },
     select: { date_display_format: true },

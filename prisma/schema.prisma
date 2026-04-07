@@ -35,6 +35,7 @@ model households {
   household_section_statuses household_section_statuses[]
 
   users                 users[]
+  user_enabled_sections user_enabled_sections[]
   family_members        family_members[]
   bank_accounts         bank_accounts[]
   credit_cards          credit_cards[]
@@ -1093,6 +1094,7 @@ model users {
   role                 UserRole
   user_type            UserType
   user_type_description String?
+  date_display_format  HouseholdDateDisplayFormat?
   family_member_id     String?
   is_active            Boolean  @default(true)
   created_at           DateTime @default(now())
@@ -1100,7 +1102,23 @@ model users {
 
   household            households     @relation(fields: [household_id], references: [id])
   family_member        family_members? @relation(fields: [family_member_id], references: [id])
+  user_enabled_sections user_enabled_sections[]
   tasks_assigned       tasks[]
+}
+
+model user_enabled_sections {
+  id           String   @id @default(uuid())
+  household_id String
+  user_id      String
+  section_id   String
+  enabled      Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, section_id])
 }
 
 model tasks {
