@@ -10,20 +10,29 @@ export default async function ProgramsPage({
 }: {
   searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
   const resolved = searchParams ? await searchParams : undefined;
 
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+
   const [jobs, programs] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: { household_id: householdId, is_active: true, ...(familyMemberId ? { family_member_id: familyMemberId } : { id: "__none__" }) },
       orderBy: { start_date: "desc" },
       include: { family_member: true },
     }),
     prisma.therapy_service_programs.findMany({
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : { id: "__none__" }),
+      },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },
     }),
@@ -56,7 +65,7 @@ export default async function ProgramsPage({
             <option value="">Job</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title} — {j.family_member.full_name}
+                {j.job_title} {j.employer_name ? `- ${j.employer_name}` : ""} — {j.family_member.full_name}
               </option>
             ))}
           </select>
@@ -66,12 +75,17 @@ export default async function ProgramsPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
-          <input
-            name="sort_order"
-            type="number"
-            placeholder="Sort order"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="space-y-1">
+            <input
+              name="sort_order"
+              type="number"
+              placeholder="Sort order (optional)"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <p className="text-xs text-slate-400">
+              Lower values appear first (for example: 10, 20, 30). Leave empty to use 0.
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="checkbox" name="is_active" defaultChecked />
             Active
@@ -92,7 +106,9 @@ export default async function ProgramsPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">Programs</h2>
-        {programs.length === 0 ? (
+        {!familyMemberId ? (
+          <p className="text-sm text-slate-500">Your user is not linked to a family member, so jobs cannot be loaded.</p>
+        ) : programs.length === 0 ? (
           <p className="text-sm text-slate-500">No programs yet. Add a job under Jobs, then define programs here.</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -101,6 +117,7 @@ export default async function ProgramsPage({
                 <tr className="border-b border-slate-700 bg-slate-800/80">
                   <th className="px-3 py-2 text-slate-300">Name</th>
                   <th className="px-3 py-2 text-slate-300">Job</th>
+                  <th className="px-3 py-2 text-slate-300">Sort</th>
                   <th className="px-3 py-2 text-slate-300">Active</th>
                   <th className="px-3 py-2 text-slate-300">Delete</th>
                 </tr>
@@ -109,7 +126,10 @@ export default async function ProgramsPage({
                 {programs.map((p) => (
                   <tr key={p.id} className="border-b border-slate-700/80">
                     <td className="px-3 py-2 text-slate-100">{p.name}</td>
-                    <td className="px-3 py-2 text-slate-400">{p.job.job_title}</td>
+                    <td className="px-3 py-2 text-slate-400">
+                      {p.job.job_title} {p.job.employer_name ? `- ${p.job.employer_name}` : ""}
+                    </td>
+                    <td className="px-3 py-2 text-slate-400">{p.sort_order}</td>
                     <td className="px-3 py-2 text-slate-400">{p.is_active ? "Yes" : "No"}</td>
                     <td className="px-3 py-2">
                       <ConfirmDeleteForm action={deleteTherapyProgram}>

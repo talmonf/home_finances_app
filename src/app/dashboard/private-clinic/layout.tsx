@@ -8,6 +8,7 @@ import {
 
 const NAV = [
   { href: "/dashboard/private-clinic", label: "Overview" },
+  { href: "/dashboard/private-clinic/jobs", label: "Jobs" },
   { href: "/dashboard/private-clinic/programs", label: "Programs" },
   { href: "/dashboard/private-clinic/clients", label: "Clients" },
   { href: "/dashboard/private-clinic/treatments", label: "Treatments" },
@@ -16,6 +17,7 @@ const NAV = [
   { href: "/dashboard/private-clinic/appointments", label: "Appointments" },
   { href: "/dashboard/private-clinic/consultations", label: "Consultations" },
   { href: "/dashboard/private-clinic/travel", label: "Travel" },
+  { href: "/dashboard/private-clinic/petrol", label: "Petrol" },
   { href: "/dashboard/private-clinic/settings", label: "Settings" },
   { href: "/dashboard/private-clinic/import-export", label: "Import / Export" },
 ] as const;

@@ -3,6 +3,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
+import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
@@ -60,6 +61,14 @@ function parseDate(raw: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function parseLitres(raw: string | null | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const parsed = Number(value.replace(",", "."));
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed.toFixed(3);
+}
+
 function parseDateRequired(raw: string | null | undefined): Date | null {
   const d = parseDate(raw);
   return d;
@@ -92,6 +101,69 @@ function parseSeriesRecurrence(raw: string | null | undefined): TherapyAppointme
   return null;
 }
 
+type EmploymentType = "freelancer" | "employee" | "self_employed" | "contractor_via_company";
+
+function parseEmploymentType(raw: string | null | undefined): EmploymentType | null {
+  if (
+    raw === "freelancer" ||
+    raw === "employee" ||
+    raw === "self_employed" ||
+    raw === "contractor_via_company"
+  ) {
+    return raw;
+  }
+  return null;
+}
+
+async function getCurrentUserFamilyMemberId(householdId: string): Promise<string | null> {
+  const session = await requireHouseholdMember();
+  const userId = session.user.id;
+  if (!userId) return null;
+  const user = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  return user?.family_member_id ?? null;
+}
+
+async function validateCarInHousehold(householdId: string, carId: string): Promise<boolean> {
+  const car = await prisma.cars.findFirst({
+    where: { id: carId, household_id: householdId },
+    select: { id: true },
+  });
+  return !!car;
+}
+
+async function countEligiblePetrolTankers(householdId: string, filledAt: Date): Promise<number> {
+  const members = await prisma.family_members.findMany({
+    where: { household_id: householdId, is_active: true, date_of_birth: { not: null } },
+    select: { date_of_birth: true },
+  });
+  return members.filter((m) => isEligiblePetrolTankerOnFillDate(m.date_of_birth!, filledAt)).length;
+}
+
+async function resolveTankedUpByFamilyMemberId(
+  householdId: string,
+  raw: string | null | undefined,
+  filledAt: Date,
+  eligibleTankerCount: number,
+): Promise<{ id: string | null; error: string | null }> {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (!trimmed) {
+    if (eligibleTankerCount > 0) return { id: null, error: "Choose who tanked up." };
+    return { id: null, error: null };
+  }
+  const member = await prisma.family_members.findFirst({
+    where: { id: trimmed, household_id: householdId, is_active: true },
+    select: { id: true, date_of_birth: true },
+  });
+  if (!member) return { id: null, error: "Invalid family member." };
+  if (!member.date_of_birth || !isEligiblePetrolTankerOnFillDate(member.date_of_birth, filledAt)) {
+    return { id: null, error: "Choose a family member who is 16 or older on the fill date." };
+  }
+  return { id: member.id, error: null };
+}
+
 // --- Settings ---
 
 export async function updateTherapySettings(formData: FormData) {
@@ -109,6 +181,234 @@ export async function updateTherapySettings(formData: FormData) {
 
   revalidatePath(`${BASE}/settings`);
   redirect(`${BASE}/settings?updated=1`);
+}
+
+// --- Jobs ---
+
+export async function createTherapyJob(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const family_member_id = await getCurrentUserFamilyMemberId(householdId);
+  if (!family_member_id) redirect(`${BASE}/jobs?error=family`);
+
+  const employment_type = parseEmploymentType((formData.get("employment_type") as string)?.trim() || null);
+  const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
+  const end_date_raw = (formData.get("end_date") as string)?.trim() || "";
+  const job_title = (formData.get("job_title") as string)?.trim() || "";
+
+  if (!employment_type || !start_date_raw || !job_title) {
+    redirect(`${BASE}/jobs?error=missing`);
+  }
+  const start_date = parseDate(start_date_raw);
+  const end_date = parseDate(end_date_raw || null);
+  if (!start_date) redirect(`${BASE}/jobs?error=start`);
+  if (end_date_raw && !end_date) redirect(`${BASE}/jobs?error=end`);
+  if (end_date && end_date < start_date) redirect(`${BASE}/jobs?error=range`);
+
+  await prisma.jobs.create({
+    data: {
+      id: crypto.randomUUID(),
+      household_id: householdId,
+      family_member_id,
+      employment_type,
+      start_date,
+      end_date,
+      job_title,
+      employer_name: (formData.get("employer_name") as string)?.trim() || null,
+      employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
+      employer_address: (formData.get("employer_address") as string)?.trim() || null,
+      notes: (formData.get("notes") as string)?.trim() || null,
+      is_active: formData.has("is_active"),
+    },
+  });
+
+  revalidatePath(`${BASE}/jobs`);
+  revalidatePath(`${BASE}/programs`);
+  redirect(`${BASE}/jobs?created=1`);
+}
+
+export async function updateTherapyJob(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const family_member_id = await getCurrentUserFamilyMemberId(householdId);
+  if (!family_member_id) redirect(`${BASE}/jobs?error=family`);
+
+  const id = (formData.get("id") as string)?.trim() || "";
+  if (!id) redirect(`${BASE}/jobs?error=id`);
+
+  const row = await prisma.jobs.findFirst({
+    where: { id, household_id: householdId, family_member_id },
+    select: { id: true },
+  });
+  if (!row) redirect(`${BASE}/jobs?error=notfound`);
+
+  const employment_type = parseEmploymentType((formData.get("employment_type") as string)?.trim() || null);
+  const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
+  const end_date_raw = (formData.get("end_date") as string)?.trim() || "";
+  const job_title = (formData.get("job_title") as string)?.trim() || "";
+
+  if (!employment_type || !start_date_raw || !job_title) {
+    redirect(`${BASE}/jobs?error=missing`);
+  }
+  const start_date = parseDate(start_date_raw);
+  const end_date = parseDate(end_date_raw || null);
+  if (!start_date) redirect(`${BASE}/jobs?error=start`);
+  if (end_date_raw && !end_date) redirect(`${BASE}/jobs?error=end`);
+  if (end_date && end_date < start_date) redirect(`${BASE}/jobs?error=range`);
+
+  await prisma.jobs.update({
+    where: { id },
+    data: {
+      employment_type,
+      start_date,
+      end_date,
+      job_title,
+      employer_name: (formData.get("employer_name") as string)?.trim() || null,
+      employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
+      employer_address: (formData.get("employer_address") as string)?.trim() || null,
+      notes: (formData.get("notes") as string)?.trim() || null,
+      is_active: formData.has("is_active"),
+    },
+  });
+
+  revalidatePath(`${BASE}/jobs`);
+  revalidatePath(`${BASE}/programs`);
+  redirect(`${BASE}/jobs?updated=1`);
+}
+
+// --- Petrol ---
+
+export async function createPrivateClinicPetrolFillup(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const car_id = (formData.get("car_id") as string | null)?.trim() || "";
+  const filled_at = parseDate((formData.get("filled_at") as string | null)?.trim() || null);
+  const amount_paid = parseMoney((formData.get("amount_paid") as string | null) ?? null);
+  const litres = parseLitres((formData.get("litres") as string | null) ?? null);
+  const odometerRaw = (formData.get("odometer_km") as string | null)?.trim();
+  const odometer_km = odometerRaw ? Math.trunc(Number(odometerRaw)) : NaN;
+
+  if (!car_id || !filled_at || !amount_paid || !litres || !Number.isFinite(odometer_km) || odometer_km < 0) {
+    redirect(`${BASE}/petrol?${car_id ? `carId=${encodeURIComponent(car_id)}&` : ""}error=${encodeURIComponent("Date, amount, litres, and odometer are required.")}`);
+  }
+  if (!(await validateCarInHousehold(householdId, car_id))) {
+    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Invalid car")}`);
+  }
+
+  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
+  const tankedUp = await resolveTankedUpByFamilyMemberId(
+    householdId,
+    formData.get("tanked_up_by_family_member_id") as string,
+    filled_at,
+    eligibleTankers,
+  );
+  if (tankedUp.error) {
+    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(tankedUp.error)}`);
+  }
+
+  const linked_transaction_id = await resolveTransactionLink(householdId, formData.get("linked_transaction_id") as string);
+  if (linked_transaction_id) {
+    const taken = await prisma.car_petrol_fillups.findFirst({
+      where: { transaction_id: linked_transaction_id },
+      select: { id: true },
+    });
+    if (taken) {
+      redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("That transaction is already linked to another petrol record.")}`);
+    }
+  }
+
+  await prisma.car_petrol_fillups.create({
+    data: {
+      id: crypto.randomUUID(),
+      household_id: householdId,
+      car_id,
+      filled_at,
+      amount_paid,
+      currency: (formData.get("currency") as string | null)?.trim() || "ILS",
+      litres,
+      odometer_km,
+      transaction_id: linked_transaction_id,
+      tanked_up_by_family_member_id: tankedUp.id,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/petrol-fillups");
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&saved=1`);
+}
+
+export async function updatePrivateClinicPetrolFillup(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const id = (formData.get("id") as string | null)?.trim() || "";
+  const car_id = (formData.get("car_id") as string | null)?.trim() || "";
+  const filled_at = parseDate((formData.get("filled_at") as string | null)?.trim() || null);
+  const amount_paid = parseMoney((formData.get("amount_paid") as string | null) ?? null);
+  const litres = parseLitres((formData.get("litres") as string | null) ?? null);
+  const odometerRaw = (formData.get("odometer_km") as string | null)?.trim();
+  const odometer_km = odometerRaw ? Math.trunc(Number(odometerRaw)) : NaN;
+
+  if (!id || !car_id || !filled_at || !amount_paid || !litres || !Number.isFinite(odometer_km) || odometer_km < 0) {
+    redirect(`${BASE}/petrol?${car_id ? `carId=${encodeURIComponent(car_id)}&` : ""}error=${encodeURIComponent("Date, amount, litres, and odometer are required.")}`);
+  }
+
+  const existing = await prisma.car_petrol_fillups.findFirst({
+    where: { id, household_id: householdId, car_id },
+    select: { id: true },
+  });
+  if (!existing) {
+    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Fill-up not found.")}`);
+  }
+
+  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
+  const tankedUp = await resolveTankedUpByFamilyMemberId(
+    householdId,
+    formData.get("tanked_up_by_family_member_id") as string,
+    filled_at,
+    eligibleTankers,
+  );
+  if (tankedUp.error) {
+    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&edit=${encodeURIComponent(id)}&error=${encodeURIComponent(tankedUp.error)}`);
+  }
+
+  const linked_transaction_id = await resolveTransactionLink(householdId, formData.get("linked_transaction_id") as string);
+  if (linked_transaction_id) {
+    const taken = await prisma.car_petrol_fillups.findFirst({
+      where: { transaction_id: linked_transaction_id, id: { not: id } },
+      select: { id: true },
+    });
+    if (taken) {
+      redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&edit=${encodeURIComponent(id)}&error=${encodeURIComponent("That transaction is already linked to another petrol record.")}`);
+    }
+  }
+
+  await prisma.car_petrol_fillups.update({
+    where: { id },
+    data: {
+      filled_at,
+      amount_paid,
+      currency: (formData.get("currency") as string | null)?.trim() || "ILS",
+      litres,
+      odometer_km,
+      transaction_id: linked_transaction_id,
+      tanked_up_by_family_member_id: tankedUp.id,
+      notes: (formData.get("notes") as string | null)?.trim() || null,
+    },
+  });
+
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/petrol-fillups");
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&saved=1`);
+}
+
+export async function deletePrivateClinicPetrolFillup(id: string, carId: string) {
+  const householdId = await householdIdOrRedirect();
+  await prisma.car_petrol_fillups.deleteMany({
+    where: { id, car_id: carId, household_id: householdId },
+  });
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/petrol-fillups");
+  revalidatePath(`/dashboard/cars/${carId}`);
+  redirect(`${BASE}/petrol?carId=${encodeURIComponent(carId)}&deleted=1`);
 }
 
 // --- Programs ---
