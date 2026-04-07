@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
   MedicalReimbursementSource as ReimbursementSourceValues,
@@ -45,6 +45,8 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -116,9 +118,9 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
             href="/dashboard/medical-appointments"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to medical appointments
+            {isHebrew ? "חזרה לתורים רפואיים →" : "← Back to medical appointments"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Edit appointment</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת תור" : "Edit appointment"}</h1>
           <p className="text-sm text-slate-400">
             {appointment.provider_name} · {isoDate(appointment.appointment_date)}
           </p>
@@ -453,7 +455,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Save changes
+                {isHebrew ? "שמירת שינויים" : "Save changes"}
               </button>
             </div>
           </form>

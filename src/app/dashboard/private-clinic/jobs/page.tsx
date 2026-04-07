@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentHouseholdDateDisplayFormat } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { createTherapyJob, updateTherapyJob } from "../actions";
@@ -30,6 +30,7 @@ export default async function PrivateClinicJobsPage({
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
   const resolved = searchParams ? await searchParams : undefined;
 
   const user = await prisma.users.findFirst({
@@ -61,10 +62,10 @@ export default async function PrivateClinicJobsPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Add job</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "הוספת עבודה" : "Add job"}</h2>
         <form action={createTherapyJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
           <select name="employment_type" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Employment type</option>
+            <option value="">{uiLanguage === "he" ? "סוג העסקה" : "Employment type"}</option>
             <option value="employee">Regular employee</option>
             <option value="freelancer">Freelancer</option>
             <option value="self_employed">Self-employed</option>
@@ -118,13 +119,13 @@ export default async function PrivateClinicJobsPage({
             className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-            Add job
+            {uiLanguage === "he" ? "הוספת עבודה" : "Add job"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Jobs</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "עבודות" : "Jobs"}</h2>
         {jobs.length === 0 ? (
           <p className="text-sm text-slate-500">No jobs yet for your linked family member.</p>
         ) : (
@@ -202,7 +203,7 @@ export default async function PrivateClinicJobsPage({
                       {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : "Present"}
                     </p>
                     <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                      Save
+                      {uiLanguage === "he" ? "שמירה" : "Save"}
                     </button>
                   </div>
                 </form>

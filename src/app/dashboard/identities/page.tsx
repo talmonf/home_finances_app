@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -37,6 +38,8 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const sort = resolvedSearchParams?.sort ?? "expiry_date";
@@ -127,7 +130,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
         <header className="space-y-3">
           <div>
             <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to dashboard
+              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
             </Link>
             <h1 className="text-2xl font-semibold text-slate-50">Identity</h1>
             <p className="text-sm text-slate-400">
@@ -157,7 +160,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Filters</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "סינון" : "Filters"}</h2>
           <form method="get" className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label htmlFor="family_member_id_filter" className="mb-1 block text-xs font-medium text-slate-400">
@@ -169,7 +172,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 defaultValue={filterFamilyMemberId ?? "all"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
-                <option value="all">All</option>
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.full_name}
@@ -188,7 +191,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 defaultValue={filterIdentityType ?? "all"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
-                <option value="all">All</option>
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
                 <option value="passport">Passport</option>
                 <option value="national_id">National ID</option>
                 <option value="driver_license">Driver license</option>
@@ -203,14 +206,14 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 type="submit"
                 className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Apply filters
+                {isHebrew ? "החל סינון" : "Apply filters"}
               </button>
             </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createIdentity}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -311,7 +314,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add identity item
+                {isHebrew ? "הוספת פריט זהות" : "Add identity item"}
               </button>
             </div>
           </form>
@@ -323,7 +326,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
           {sortedIdentities.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No identity items yet. Add one above.
@@ -366,7 +369,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                         </th>
                       );
                     })}
-                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "פעולות" : "Actions"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -395,7 +398,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                           href={`/dashboard/identities/${i.id}?${editListContextQuery}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
                     </tr>

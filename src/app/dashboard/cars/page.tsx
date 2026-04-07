@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
@@ -42,6 +43,8 @@ export default async function CarsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -74,7 +77,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
             redirectPath="/dashboard/cars"
           />
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Cars</h1>
           <p className="text-sm text-slate-400">
@@ -98,7 +101,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Add car</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת רכב" : "Add car"}</h2>
           <form action={createCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input name="custom_name" placeholder="Car name (e.g. Kona (Talmon))" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="maker" placeholder="Maker (e.g. Hyundai)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -142,12 +145,12 @@ export default async function CarsPage({ searchParams }: PageProps) {
             <input name="sold_to" placeholder="Sold to" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <textarea name="sale_notes" placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add car</button>
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת רכב" : "Add car"}</button>
           </form>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Cars list</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימת רכבים" : "Cars list"}</h2>
           {cars.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-sm text-slate-400">
               No cars yet.
@@ -195,13 +198,13 @@ export default async function CarsPage({ searchParams }: PageProps) {
                             href={`/dashboard/petrol-fillups?carId=${car.id}`}
                             className="text-xs text-emerald-400 hover:text-emerald-300"
                           >
-                            Petrol
+                          {isHebrew ? "תדלוק" : "Petrol"}
                           </Link>
                           <Link
                             href={`/dashboard/cars/${car.id}`}
                             className="text-xs text-sky-400 hover:text-sky-300"
                           >
-                            Edit
+                            {isHebrew ? "עריכה" : "Edit"}
                           </Link>
                         </div>
                       </td>

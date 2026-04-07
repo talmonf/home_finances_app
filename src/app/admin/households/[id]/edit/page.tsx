@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { getHouseholdEnabledSections } from "@/lib/household-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
+import { UI_LANGUAGES, UI_LANGUAGE_LABELS } from "@/lib/ui-language";
 import { saveHouseholdSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +82,23 @@ export default async function EditHouseholdPage({
 
         <form action={saveHouseholdSettings} className="space-y-8">
           <input type="hidden" name="household_id" value={household.id} />
+
+          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-200">
+              Interface language
+            </h2>
+            <select
+              name="ui_language"
+              defaultValue={household.ui_language ?? "en"}
+              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {UI_LANGUAGES.map((value) => (
+                <option key={value} value={value}>
+                  {UI_LANGUAGE_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </section>
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-200">

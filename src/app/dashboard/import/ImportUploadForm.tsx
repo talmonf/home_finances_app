@@ -7,14 +7,17 @@ type BankAccount = { id: string; account_name: string };
 
 export function ImportUploadForm({
   bankAccounts,
+  uiLanguage = "en",
 }: {
   bankAccounts: BankAccount[];
+  uiLanguage?: "en" | "he";
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [bankAccountId, setBankAccountId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isHebrew = uiLanguage === "he";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +61,7 @@ export function ImportUploadForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-400">
-            Bank account (optional)
+            {isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}
           </label>
           <select
             value={bankAccountId}
@@ -75,7 +78,7 @@ export function ImportUploadForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-400">
-            PDF or Excel file
+            {isHebrew ? "קובץ PDF או Excel" : "PDF or Excel file"}
           </label>
           <input
             type="file"
@@ -93,7 +96,7 @@ export function ImportUploadForm({
         disabled={loading}
         className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400 disabled:opacity-60"
       >
-        {loading ? "Uploading…" : "Upload and extract"}
+        {loading ? (isHebrew ? "מעלה..." : "Uploading…") : isHebrew ? "העלאה וחילוץ" : "Upload and extract"}
       </button>
     </form>
   );

@@ -2,6 +2,7 @@ import { prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { getUserEnabledSections } from "@/lib/household-sections";
+import { UI_LANGUAGE_LABELS, UI_LANGUAGES } from "@/lib/ui-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateHouseholdUser } from "./actions";
@@ -210,6 +211,27 @@ export default async function EditHouseholdUserPage({
                 {(["YMD", "DMY", "MDY"] as const).map((value) => (
                   <option key={value} value={value}>
                     {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="ui_language"
+                className="mb-1 block text-xs font-medium text-slate-300"
+              >
+                Interface language override
+              </label>
+              <select
+                id="ui_language"
+                name="ui_language"
+                defaultValue={user.ui_language ?? ""}
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              >
+                <option value="">Inherit household default ({UI_LANGUAGE_LABELS[(household.ui_language as "en" | "he") ?? "en"]})</option>
+                {UI_LANGUAGES.map((value) => (
+                  <option key={value} value={value}>
+                    {UI_LANGUAGE_LABELS[value]}
                   </option>
                 ))}
               </select>

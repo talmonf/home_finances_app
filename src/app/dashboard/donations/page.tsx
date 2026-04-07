@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { DonationKind } from "@/generated/prisma/enums";
@@ -34,40 +35,26 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatPaymentMethod(paymentMethod: string | null | undefined) {
-  switch (paymentMethod) {
-    case "cash":
-      return "Cash";
-    case "credit_card":
-      return "Credit card";
-    case "bank_account":
-      return "Bank account";
-    case "digital_wallet":
-      return "Digital wallet";
-    case "other":
-      return "Other";
-    default:
-      return "—";
-  }
-}
-
-function formatPaymentDetail(d: {
+function formatPaymentDetail(
+  d: {
   payment_method: string | null;
   credit_card?: { card_name: string; card_last_four: string } | null;
   bank_account?: { account_name: string; bank_name: string } | null;
   digital_payment_method?: { name: string } | null;
-}) {
+},
+  language: "en" | "he",
+) {
   switch (d.payment_method) {
     case "cash":
-      return "Cash";
+      return language === "he" ? "מזומן" : "Cash";
     case "credit_card":
-      return d.credit_card ? `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}` : "Credit card";
+      return d.credit_card ? `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}` : language === "he" ? "כרטיס אשראי" : "Credit card";
     case "bank_account":
-      return d.bank_account ? `${d.bank_account.account_name} · ${d.bank_account.bank_name}` : "Bank account";
+      return d.bank_account ? `${d.bank_account.account_name} · ${d.bank_account.bank_name}` : language === "he" ? "חשבון בנק" : "Bank account";
     case "digital_wallet":
-      return d.digital_payment_method ? d.digital_payment_method.name : "Digital wallet";
+      return d.digital_payment_method ? d.digital_payment_method.name : language === "he" ? "ארנק דיגיטלי" : "Digital wallet";
     case "other":
-      return "Other";
+      return language === "he" ? "אחר" : "Other";
     default:
       return "—";
   }
@@ -79,6 +66,8 @@ export default async function DonationsPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const now = new Date();
@@ -128,7 +117,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
         <header className="space-y-3">
           <div>
             <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to dashboard
+              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
             </Link>
             <h1 className="text-2xl font-semibold text-slate-50">Donations</h1>
             <p className="text-sm text-slate-400">
@@ -159,7 +148,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add donation</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת תרומה" : "Add donation"}</h2>
           <DonationForm
             action={createDonation}
             payees={payees.map((p) => ({ id: p.id, name: p.name }))}
@@ -167,6 +156,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
             creditCards={creditCards.map((c) => ({ id: c.id, label: `${c.card_name} · ****${c.card_last_four}` }))}
             bankAccounts={bankAccounts.map((a) => ({ id: a.id, label: `${a.account_name} · ${a.bank_name}` }))}
             digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
+            uiLanguage={uiLanguage}
           />
         </section>
 
@@ -174,23 +164,23 @@ export default async function DonationsPage({ searchParams }: PageProps) {
           <h2 className="text-lg font-medium text-slate-200">Recorded donations</h2>
           {rows.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No donations yet. Add one above.
+              {isHebrew ? "אין עדיין תרומות. ניתן להוסיף למעלה." : "No donations yet. Add one above."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סוג" : "Type"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Organization</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Category</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Amount</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "קטגוריה" : "Category"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סכום" : "Amount"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Tax / Seif 46</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Contact</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Family / Payment</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סטטוס" : "Status"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "בן משפחה / תשלום" : "Family / Payment"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -207,7 +197,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                     return (
                       <tr key={d.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                         <td className="px-4 py-3 text-slate-300">
-                          {d.kind === DonationKind.one_time ? "One-time" : "Monthly commitment"}
+                          {d.kind === DonationKind.one_time ? (isHebrew ? "חד פעמי" : "One-time") : isHebrew ? "התחייבות חודשית" : "Monthly commitment"}
                         </td>
                         <td className="px-4 py-3 text-slate-100">
                           {d.organization_name}
@@ -257,14 +247,14 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                         </td>
                         <td className="px-4 py-3 text-slate-400">
                           <div>{d.family_member?.full_name ?? "—"}</div>
-                          <div className="text-xs text-slate-500">{formatPaymentDetail(d)}</div>
+                          <div className="text-xs text-slate-500">{formatPaymentDetail(d, uiLanguage)}</div>
                         </td>
                         <td className="px-4 py-3">
                           <Link
                             href={`/dashboard/donations/${d.id}`}
                             className="text-xs font-medium text-sky-400 hover:text-sky-300"
                           >
-                            Edit
+                            {isHebrew ? "עריכה" : "Edit"}
                           </Link>
                         </td>
                       </tr>

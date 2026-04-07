@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateBankAccount } from "../actions";
@@ -19,6 +19,8 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -47,9 +49,9 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
             href="/dashboard/bank-accounts"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to bank accounts
+            {isHebrew ? "חזרה לחשבונות בנק →" : "← Back to bank accounts"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Edit bank account</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת חשבון בנק" : "Edit bank account"}</h1>
 
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
@@ -66,7 +68,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
             <input type="hidden" name="id" value={account.id} />
 
             <div className="sm:col-span-2 lg:col-span-4">
-              <h2 className="text-lg font-medium text-slate-200">Account details</h2>
+              <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "פרטי חשבון" : "Account details"}</h2>
             </div>
 
             <div>
@@ -211,7 +213,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Save changes
+                {isHebrew ? "שמירת שינויים" : "Save changes"}
               </button>
             </div>
           </form>

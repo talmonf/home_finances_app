@@ -10,6 +10,7 @@ import {
   normalizeHouseholdDateDisplayFormat,
   type HouseholdDateDisplayFormat,
 } from "@/lib/household-date-format";
+import { DEFAULT_UI_LANGUAGE, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -204,5 +205,28 @@ export async function getCurrentHouseholdDateDisplayFormat(): Promise<HouseholdD
     select: { date_display_format: true },
   });
   return normalizeHouseholdDateDisplayFormat(row?.date_display_format);
+}
+
+export async function getCurrentUiLanguage(): Promise<UiLanguage> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  const householdId = session?.user?.householdId ?? null;
+  if (!householdId) return DEFAULT_UI_LANGUAGE;
+
+  if (userId && !session?.user?.isSuperAdmin) {
+    const userRow = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId },
+      select: { ui_language: true },
+    });
+    if (userRow?.ui_language) {
+      return normalizeUiLanguage(userRow.ui_language);
+    }
+  }
+
+  const row = await prisma.households.findUnique({
+    where: { id: householdId },
+    select: { ui_language: true },
+  });
+  return normalizeUiLanguage(row?.ui_language);
 }
 

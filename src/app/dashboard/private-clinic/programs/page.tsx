@@ -1,5 +1,5 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { createTherapyProgram, deleteTherapyProgram } from "../actions";
 
@@ -13,6 +13,7 @@ export default async function ProgramsPage({
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -52,7 +53,7 @@ export default async function ProgramsPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Add program</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "הוספת תכנית" : "Add program"}</h2>
         <form
           action={createTherapyProgram}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -62,7 +63,7 @@ export default async function ProgramsPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Job</option>
+            <option value="">{uiLanguage === "he" ? "עבודה" : "Job"}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.job_title} {j.employer_name ? `- ${j.employer_name}` : ""} — {j.family_member.full_name}
@@ -71,7 +72,7 @@ export default async function ProgramsPage({
           </select>
           <input
             name="name"
-            placeholder="Program name"
+            placeholder={uiLanguage === "he" ? "שם תכנית" : "Program name"}
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -99,13 +100,13 @@ export default async function ProgramsPage({
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Add program
+            {uiLanguage === "he" ? "הוספת תכנית" : "Add program"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Programs</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "תכניות" : "Programs"}</h2>
         {!familyMemberId ? (
           <p className="text-sm text-slate-500">Your user is not linked to a family member, so jobs cannot be loaded.</p>
         ) : programs.length === 0 ? (
@@ -135,7 +136,7 @@ export default async function ProgramsPage({
                       <ConfirmDeleteForm action={deleteTherapyProgram}>
                         <input type="hidden" name="id" value={p.id} />
                         <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                          Delete
+                          {uiLanguage === "he" ? "מחיקה" : "Delete"}
                         </button>
                       </ConfirmDeleteForm>
                     </td>

@@ -2,6 +2,7 @@
 
 import { getAuthSession, prisma, requireHouseholdAdmin } from "@/lib/auth";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 
 export async function updateHouseholdDateDisplayFormat(formData: FormData) {
@@ -12,10 +13,11 @@ export async function updateHouseholdDateDisplayFormat(formData: FormData) {
 
   const raw = (formData.get("date_display_format") as string | null)?.trim();
   const date_display_format = normalizeHouseholdDateDisplayFormat(raw);
+  const ui_language = normalizeUiLanguage((formData.get("ui_language") as string | null)?.trim());
 
   await prisma.households.update({
     where: { id: householdId },
-    data: { date_display_format },
+    data: { date_display_format, ui_language },
   });
 
   revalidatePath("/");

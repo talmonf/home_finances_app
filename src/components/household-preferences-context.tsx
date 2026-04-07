@@ -2,23 +2,36 @@
 
 import { createContext, useContext } from "react";
 import type { HouseholdDateDisplayFormat } from "@/generated/prisma/client";
+import type { UiLanguage } from "@/lib/ui-language";
 
-const HouseholdDateFormatContext = createContext<HouseholdDateDisplayFormat>("YMD");
+const HouseholdPreferencesContext = createContext<{
+  dateDisplayFormat: HouseholdDateDisplayFormat;
+  uiLanguage: UiLanguage;
+}>({
+  dateDisplayFormat: "YMD",
+  uiLanguage: "en",
+});
 
 export function HouseholdPreferencesProvider({
   dateDisplayFormat,
+  uiLanguage,
   children,
 }: {
   dateDisplayFormat: HouseholdDateDisplayFormat;
+  uiLanguage: UiLanguage;
   children: React.ReactNode;
 }) {
   return (
-    <HouseholdDateFormatContext.Provider value={dateDisplayFormat}>
+    <HouseholdPreferencesContext.Provider value={{ dateDisplayFormat, uiLanguage }}>
       {children}
-    </HouseholdDateFormatContext.Provider>
+    </HouseholdPreferencesContext.Provider>
   );
 }
 
 export function useHouseholdDateFormat(): HouseholdDateDisplayFormat {
-  return useContext(HouseholdDateFormatContext);
+  return useContext(HouseholdPreferencesContext).dateDisplayFormat;
+}
+
+export function useUiLanguage(): UiLanguage {
+  return useContext(HouseholdPreferencesContext).uiLanguage;
 }

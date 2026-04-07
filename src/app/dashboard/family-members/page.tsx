@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getAuthSession,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { Prisma } from "@/generated/prisma/client";
@@ -33,6 +34,8 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
 
   const session = await getAuthSession();
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const sort = resolvedSearchParams?.sort ?? "name";
@@ -80,11 +83,9 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 href="/"
                 className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
               >
-                ← Back to dashboard
+                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
               </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">
-                Family members
-              </h1>
+              <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "בני משפחה" : "Family members"}</h1>
               <p className="text-sm text-slate-400">Manage people in your household.</p>
             </div>
             {session?.user?.role === "admin" ? (
@@ -92,7 +93,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 href="/dashboard/household-settings"
                 className="text-sm font-medium text-sky-400 hover:text-sky-300"
               >
-                Household settings
+                {isHebrew ? "הגדרות משק בית" : "Household settings"}
               </Link>
             ) : null}
           </div>
@@ -119,7 +120,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createFamilyMember}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -228,14 +229,14 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add family member
+                {isHebrew ? "הוספת בן משפחה" : "Add family member"}
               </button>
             </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
           {members.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No family members yet. Add one above to use in Studies &amp; Classes or Credit cards.
@@ -301,13 +302,13 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                           href={`/dashboard/family-members/${m.id}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                         <Link
                           href={`/dashboard/identities?family_member_id=${m.id}`}
                           className="text-xs font-medium text-violet-400 hover:text-violet-300"
                         >
-                          Identity
+                          {isHebrew ? "זהויות" : "Identity"}
                         </Link>
                         <form
                           action={toggleFamilyMemberActive.bind(null, m.id, !m.is_active)}
@@ -317,7 +318,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                             type="submit"
                             className="text-xs font-medium text-slate-400 hover:text-slate-200"
                           >
-                            {m.is_active ? "Deactivate" : "Activate"}
+                            {m.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
                           </button>
                         </form>
                       </td>

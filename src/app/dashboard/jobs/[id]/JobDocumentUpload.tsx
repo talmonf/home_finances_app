@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUiLanguage } from "@/components/household-preferences-context";
 
 type Props = {
   jobId: string;
@@ -9,6 +10,7 @@ type Props = {
 export default function JobDocumentUpload({ jobId }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isHebrew = useUiLanguage() === "he";
 
   async function onSubmit(formData: FormData) {
     setBusy(true);
@@ -21,12 +23,12 @@ export default function JobDocumentUpload({ jobId }: Props) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error ?? "Upload failed");
+        setError(data?.error ?? (isHebrew ? "העלאה נכשלה" : "Upload failed"));
         return;
       }
       window.location.reload();
     } catch {
-      setError("Upload failed");
+      setError(isHebrew ? "העלאה נכשלה" : "Upload failed");
     } finally {
       setBusy(false);
     }
@@ -40,7 +42,7 @@ export default function JobDocumentUpload({ jobId }: Props) {
         disabled={busy}
         className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500 disabled:opacity-60"
       >
-        {busy ? "Uploading..." : "Upload document"}
+        {busy ? (isHebrew ? "מעלה..." : "Uploading...") : isHebrew ? "העלאת מסמך" : "Upload document"}
       </button>
       {error ? <span className="text-xs text-rose-300">{error}</span> : null}
     </form>

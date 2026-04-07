@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -36,6 +37,8 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
   }
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const filterFamilyMemberId = resolvedSearchParams?.family_member_id?.trim() || null;
 
@@ -64,7 +67,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                 href="/"
                 className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
               >
-                ← Back to dashboard
+                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
               </Link>
               <h1 className="text-2xl font-semibold text-slate-50">
                 Studies &amp; Classes
@@ -97,7 +100,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createStudyOrClass}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -211,7 +214,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add study/class
+                {isHebrew ? "הוספת לימודים/חוג" : "Add study/class"}
               </button>
             </div>
           </form>
@@ -219,7 +222,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
 
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-lg font-medium text-slate-200">List</h2>
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
             {familyMembers.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -230,7 +233,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                       : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                   }`}
                 >
-                  All
+                  {isHebrew ? "הכל" : "All"}
                 </Link>
                 {familyMembers.map((m) => (
                   <Link
@@ -303,7 +306,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                             type="submit"
                             className="text-sky-400 hover:text-sky-300 text-xs font-medium"
                           >
-                            {s.is_active ? "Deactivate" : "Activate"}
+                            {s.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
                           </button>
                         </form>
                       </td>

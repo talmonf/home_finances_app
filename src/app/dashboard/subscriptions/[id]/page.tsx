@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateSubscription } from "../actions";
@@ -52,6 +52,8 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -113,12 +115,12 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
             href="/dashboard/subscriptions"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to subscriptions
+            {isHebrew ? "חזרה למנויים →" : "← Back to subscriptions"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Edit subscription</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת מנוי" : "Edit subscription"}</h1>
           {resolvedSearchParams?.updated && (
             <div className="rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
-              Updated.
+              {isHebrew ? "עודכן." : "Updated."}
             </div>
           )}
           {resolvedSearchParams?.error && (
@@ -333,7 +335,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Save changes
+                {isHebrew ? "שמירת שינויים" : "Save changes"}
               </button>
             </div>
           </form>

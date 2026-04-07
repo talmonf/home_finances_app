@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -21,6 +22,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolved = searchParams ? await searchParams : undefined;
 
   const [trips, members] = await Promise.all([
@@ -42,7 +45,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
       <div className="w-full max-w-6xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Trips</h1>
           <p className="text-sm text-slate-400">Track travel details and group related transactions.</p>
@@ -64,14 +67,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new trip</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת נסיעה חדשה" : "Add new trip"}</h2>
           <form action={createTrip} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="mb-1 block text-xs text-slate-400">Name</label>
               <input name="name" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Type</label>
+              <label className="mb-1 block text-xs text-slate-400">{isHebrew ? "סוג" : "Type"}</label>
               <input name="trip_type" placeholder="Business / Holiday / Other" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
@@ -110,7 +113,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
               <textarea name="notes" rows={2} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="flex items-end">
-              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add trip</button>
+              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת נסיעה" : "Add trip"}</button>
             </div>
           </form>
         </section>
@@ -119,7 +122,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
           <h2 className="text-lg font-medium text-slate-200">Trips list</h2>
           {trips.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No trips yet. Add one above.
+              {isHebrew ? "אין נסיעות עדיין. ניתן להוסיף למעלה." : "No trips yet. Add one above."}
             </p>
           ) : (
             <div className="space-y-3">
@@ -131,7 +134,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <input name="name" defaultValue={trip.name} required className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-slate-400">Type</label>
+                    <label className="mb-1 block text-xs text-slate-400">{isHebrew ? "סוג" : "Type"}</label>
                     <input name="trip_type" defaultValue={trip.trip_type ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                   </div>
                   <div>
@@ -175,12 +178,12 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <textarea name="notes" rows={2} defaultValue={trip.notes ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                   </div>
                   <div className="flex items-end gap-3">
-                    <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">Save</button>
+                    <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">{isHebrew ? "שמירה" : "Save"}</button>
                     <ConfirmDeleteFormActionButton
                       formAction={deleteTrip.bind(null, trip.id)}
                       className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600"
                     >
-                      Delete
+                      {isHebrew ? "מחיקה" : "Delete"}
                     </ConfirmDeleteFormActionButton>
                   </div>
                 </form>

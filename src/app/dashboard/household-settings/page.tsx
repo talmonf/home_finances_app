@@ -2,6 +2,7 @@ import { prisma, requireHouseholdAdmin, getAuthSession } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
+import { UI_LANGUAGE_LABELS, UI_LANGUAGES } from "@/lib/ui-language";
 import { updateHouseholdDateDisplayFormat } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function HouseholdSettingsPage() {
 
   const household = await prisma.households.findUnique({
     where: { id: householdId },
-    select: { name: true, date_display_format: true },
+    select: { name: true, date_display_format: true, ui_language: true },
   });
   if (!household) redirect("/");
 
@@ -32,6 +33,23 @@ export default async function HouseholdSettingsPage() {
         </header>
 
         <form action={updateHouseholdDateDisplayFormat} className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <div className="space-y-2">
+            <label htmlFor="ui_language" className="block text-sm font-medium text-slate-300">
+              Interface language
+            </label>
+            <select
+              id="ui_language"
+              name="ui_language"
+              defaultValue={household.ui_language}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {UI_LANGUAGES.map((value) => (
+                <option key={value} value={value}>
+                  {UI_LANGUAGE_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-2">
             <label htmlFor="date_display_format" className="block text-sm font-medium text-slate-300">
               Date display format

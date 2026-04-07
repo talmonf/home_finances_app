@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoanForm } from "../LoanForm";
@@ -23,6 +23,8 @@ export default async function EditLoanPage({ params, searchParams }: PageProps) 
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -68,9 +70,9 @@ export default async function EditLoanPage({ params, searchParams }: PageProps) 
         <header className="space-y-3">
           <div>
             <Link href="/dashboard/loans" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to loans
+              {isHebrew ? "חזרה להלוואות →" : "← Back to loans"}
             </Link>
-            <h1 className="text-2xl font-semibold text-slate-50">Edit loan</h1>
+            <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת הלוואה" : "Edit loan"}</h1>
             <p className="text-sm text-slate-400">Update amounts, schedule, and status.</p>
           </div>
 
@@ -81,12 +83,12 @@ export default async function EditLoanPage({ params, searchParams }: PageProps) 
           )}
           {resolvedSearchParams?.updated && !resolvedSearchParams?.error && (
             <div className="rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
-              Updated.
+              {isHebrew ? "עודכן." : "Updated."}
             </div>
           )}
         </header>
 
-        <LoanForm action={updateLoan} loanId={loan.id} initial={initial} />
+        <LoanForm action={updateLoan} loanId={loan.id} initial={initial} uiLanguage={uiLanguage} />
       </div>
     </div>
   );

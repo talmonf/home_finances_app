@@ -200,3 +200,39 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     description: "P&L and reports will appear here as we build them.",
   },
 ];
+
+const HE_TRANSLATIONS: Record<SectionId, { title: string; description: string; countSuffix?: string }> = {
+  familyMembers: { title: "בני משפחה", description: "אנשים במשק הבית.", countSuffix: "בני משפחה" },
+  properties: { title: "בתים ונכסים", description: "נכסים ופרטי שכירות.", countSuffix: "נכסים" },
+  trips: { title: "נסיעות", description: "מעקב אחר נסיעות והוצאות קשורות." },
+  bankAccounts: { title: "חשבונות בנק", description: "איפה כסף נכנס ויוצא.", countSuffix: "חשבונות" },
+  digitalPaymentMethods: { title: "אמצעי תשלום דיגיטליים", description: "ארנקים ואמצעי תשלום מקושרים.", countSuffix: "אמצעים" },
+  creditCards: { title: "כרטיסי אשראי", description: "כרטיסים וחשבונות חיוב.", countSuffix: "כרטיסים" },
+  importStatements: { title: "יבוא דפי חשבון", description: "העלאת קבצים ובדיקת תנועות." },
+  tasks: { title: "משימות", description: "יצירה ומעקב אחר משימות." },
+  studiesAndClasses: { title: "לימודים וחוגים", description: "מעקב לפי בן משפחה ועלויות צפויות." },
+  subscriptions: { title: "מנויים", description: "מנויים חוזרים, תאריכי חידוש ותשלומים." },
+  donations: { title: "תרומות", description: "ניהול תרומות חד פעמיות ומתמשכות." },
+  loans: { title: "הלוואות", description: "משכנתאות והלוואות כולל מועדי החזר." },
+  cars: { title: "רכבים", description: "רכבים כולל טיפולים, רישוי וביטוח.", countSuffix: "רכבים" },
+  petrolFillups: { title: "תדלוקים", description: "רישום תדלוקים: רכב, קילומטראז', ליטרים וסכום." },
+  jobs: { title: "משרות", description: "היסטוריית עבודה ושינויי שכר.", countSuffix: "משרות" },
+  upcomingRenewals: { title: "חידושים ותוקפים קרובים", description: "צפייה בכל החידושים והפגות התוקף הקרובים." },
+  significantPurchases: { title: "רכישות גדולות", description: "מעקב אחר רכישות משמעותיות ותוקף אחריות." },
+  medicalAppointments: { title: "תורים רפואיים", description: "רישום ביקורים, החזרים ואמצעי תשלום." },
+  privateClinic: { title: "קליניקה פרטית", description: "לקוחות, טיפולים, קבלות, תורים והוצאות קליניקה." },
+  reports: { title: "דוחות", description: "רווח והפסד ודוחות נוספים." },
+};
+
+export function getDashboardSections(language: "en" | "he"): DashboardSection[] {
+  if (language === "en") return DASHBOARD_SECTIONS;
+  return DASHBOARD_SECTIONS.map((section) => {
+    const tr = HE_TRANSLATIONS[section.id];
+    return {
+      ...section,
+      title: tr.title,
+      description: tr.description,
+      countSuffix: tr.countSuffix ?? section.countSuffix,
+    };
+  });
+}

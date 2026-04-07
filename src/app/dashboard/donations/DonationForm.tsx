@@ -2,6 +2,7 @@
 
 import { DonationKind } from "@/generated/prisma/enums";
 import { useState } from "react";
+import type { UiLanguage } from "@/lib/ui-language";
 
 type PayeeOption = { id: string; name: string };
 
@@ -43,6 +44,7 @@ export function DonationForm({
   digitalPaymentMethods,
   donationId,
   initial,
+  uiLanguage,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   payees: PayeeOption[];
@@ -52,6 +54,7 @@ export function DonationForm({
   digitalPaymentMethods: LabeledOption[];
   donationId?: string;
   initial?: DonationFormInitialValues;
+  uiLanguage: UiLanguage;
 }) {
   const initialKind = initial?.kind ?? DonationKind.one_time;
   const [kind, setKind] = useState<string>(initialKind);
@@ -60,6 +63,7 @@ export function DonationForm({
 
   const initialPaymentMethod = initial?.payment_method ?? "cash";
   const [paymentMethod, setPaymentMethod] = useState<string>(initialPaymentMethod);
+  const isHebrew = uiLanguage === "he";
 
   return (
     <form
@@ -80,8 +84,8 @@ export function DonationForm({
           required
           className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value={DonationKind.one_time}>One-time donation</option>
-          <option value={DonationKind.monthly_commitment}>Monthly commitment</option>
+          <option value={DonationKind.one_time}>{isHebrew ? "תרומה חד פעמית" : "One-time donation"}</option>
+          <option value={DonationKind.monthly_commitment}>{isHebrew ? "התחייבות חודשית" : "Monthly commitment"}</option>
         </select>
       </div>
 
@@ -89,7 +93,7 @@ export function DonationForm({
         <>
           <div>
             <label htmlFor="one_time_amount" className="mb-1 block text-xs font-medium text-slate-400">
-              Amount
+              {isHebrew ? "סכום" : "Amount"}
             </label>
             <input
               id="one_time_amount"
@@ -298,11 +302,11 @@ export function DonationForm({
       </div>
 
       <div className="lg:col-span-2 border-t border-slate-700/80 pt-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Payment</h3>
+        <h3 className="mb-3 text-sm font-medium text-slate-300">{isHebrew ? "תשלום" : "Payment"}</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="sm:col-span-2">
             <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
-              Payment type
+              {isHebrew ? "סוג תשלום" : "Payment type"}
             </label>
             <select
               id="payment_method"
@@ -312,11 +316,11 @@ export function DonationForm({
               required
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="cash">Cash</option>
-              <option value="credit_card">Credit card</option>
-              <option value="bank_account">Bank account</option>
-              <option value="digital_wallet">Digital wallet</option>
-              <option value="other">Other</option>
+              <option value="cash">{isHebrew ? "מזומן" : "Cash"}</option>
+              <option value="credit_card">{isHebrew ? "כרטיס אשראי" : "Credit card"}</option>
+              <option value="bank_account">{isHebrew ? "חשבון בנק" : "Bank account"}</option>
+              <option value="digital_wallet">{isHebrew ? "ארנק דיגיטלי" : "Digital wallet"}</option>
+              <option value="other">{isHebrew ? "אחר" : "Other"}</option>
             </select>
           </div>
 
@@ -411,7 +415,7 @@ export function DonationForm({
       </div>
       <div>
         <label htmlFor="category" className="mb-1 block text-xs font-medium text-slate-400">
-          Category
+          {isHebrew ? "קטגוריה" : "Category"}
         </label>
         <select
           id="category"
@@ -420,15 +424,15 @@ export function DonationForm({
           required
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="Yeshiva">Yeshiva</option>
-          <option value="Cancer patients">Cancer patients</option>
-          <option value="Food packages">Food packages</option>
-          <option value="Other">Other</option>
+          <option value="Yeshiva">{isHebrew ? "ישיבה" : "Yeshiva"}</option>
+          <option value="Cancer patients">{isHebrew ? "חולי סרטן" : "Cancer patients"}</option>
+          <option value="Food packages">{isHebrew ? "סלי מזון" : "Food packages"}</option>
+          <option value="Other">{isHebrew ? "אחר" : "Other"}</option>
         </select>
       </div>
       <div>
         <label htmlFor="status" className="mb-1 block text-xs font-medium text-slate-400">
-          Status
+          {isHebrew ? "סטטוס" : "Status"}
         </label>
         <select
           id="status"
@@ -437,8 +441,8 @@ export function DonationForm({
           onChange={(e) => setStatus(e.target.value as "active" | "historic")}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="active">Active</option>
-          <option value="historic">Historic</option>
+          <option value="active">{isHebrew ? "פעיל" : "Active"}</option>
+          <option value="historic">{isHebrew ? "היסטורי" : "Historic"}</option>
         </select>
       </div>
       <div>
@@ -470,7 +474,7 @@ export function DonationForm({
           type="submit"
           className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
         >
-          Save donation
+          {isHebrew ? "שמירת תרומה" : "Save donation"}
         </button>
       </div>
     </form>

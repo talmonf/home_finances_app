@@ -4,6 +4,7 @@ import { prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertUserEnabledSections } from "@/lib/household-sections";
+import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -23,6 +24,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const role = (formData.get("role") as string | null)?.trim();
   const userType = (formData.get("user_type") as string | null)?.trim();
   const rawDateDisplayFormat = (formData.get("date_display_format") as string | null)?.trim();
+  const rawUiLanguage = (formData.get("ui_language") as string | null)?.trim();
   const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
 
   if (!householdId || !userId) {
@@ -82,6 +84,7 @@ export async function updateHouseholdUser(formData: FormData) {
       date_display_format: rawDateDisplayFormat
         ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
         : null,
+      ui_language: rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null,
     },
   });
 

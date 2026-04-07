@@ -4,6 +4,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { notFound, redirect } from "next/navigation";
@@ -28,6 +29,8 @@ export default async function ReceiptDetailPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const { id } = await params;
   const sp = searchParams ? await searchParams : undefined;
 
@@ -60,26 +63,30 @@ export default async function ReceiptDetailPage({
   const totalNum = Number(receipt.total_amount);
   const match =
     Math.abs(allocatedSum - totalNum) < 0.01 ? (
-      <span className="text-emerald-400">Allocations match total</span>
+      <span className="text-emerald-400">{isHebrew ? "השיוכים תואמים לסכום הכולל" : "Allocations match total"}</span>
     ) : (
       <span className="text-amber-400">
-        Allocated {allocatedSum.toFixed(2)} vs total {totalNum.toFixed(2)}
+        {isHebrew
+          ? `שוייך ${allocatedSum.toFixed(2)} מתוך ${totalNum.toFixed(2)}`
+          : `Allocated ${allocatedSum.toFixed(2)} vs total ${totalNum.toFixed(2)}`}
       </span>
     );
 
   return (
     <div className="space-y-8">
       <Link href="/dashboard/private-clinic/receipts" className="text-sm text-sky-400">
-        ← Receipts
+        {isHebrew ? "חזרה לקבלות →" : "← Receipts"}
       </Link>
       {sp?.updated && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          Saved.
+          {isHebrew ? "נשמר." : "Saved."}
         </p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Receipt {receipt.receipt_number}</h2>
+        <h2 className="text-lg font-medium text-slate-200">
+          {isHebrew ? `קבלה ${receipt.receipt_number}` : `Receipt ${receipt.receipt_number}`}
+        </h2>
         <p className="text-sm text-slate-400">{match}</p>
         <form
           action={updateTherapyReceipt}
@@ -128,8 +135,8 @@ export default async function ReceiptDetailPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="client">Client</option>
-            <option value="organization">Organization</option>
+            <option value="client">{isHebrew ? "לקוח" : "Client"}</option>
+            <option value="organization">{isHebrew ? "ארגון" : "Organization"}</option>
           </select>
           <select
             name="payment_method"
@@ -137,19 +144,25 @@ export default async function ReceiptDetailPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank transfer</option>
-            <option value="digital_card">Digital card</option>
-            <option value="credit_card">Credit card</option>
+            <option value="cash">{isHebrew ? "מזומן" : "Cash"}</option>
+            <option value="bank_transfer">{isHebrew ? "העברה בנקאית" : "Bank transfer"}</option>
+            <option value="digital_card">{isHebrew ? "כרטיס דיגיטלי" : "Digital card"}</option>
+            <option value="credit_card">{isHebrew ? "כרטיס אשראי" : "Credit card"}</option>
           </select>
           <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">Link bank transaction (optional)</label>
+            <label className="block text-xs text-slate-400">
+              {isHebrew ? "קישור תנועת בנק (אופציונלי)" : "Link bank transaction (optional)"}
+            </label>
             <TherapyTransactionLinkSelect
               name="linked_transaction_id"
               householdId={householdId}
               currentId={receipt.linked_transaction_id}
-              label="Payment received (bank)"
-              hint="Optional: link the credit that matches this receipt."
+              label={isHebrew ? "תשלום שהתקבל (בנק)" : "Payment received (bank)"}
+              hint={
+                isHebrew
+                  ? "אופציונלי: קשרו לזיכוי שמתאים לקבלה זו."
+                  : "Optional: link the credit that matches this receipt."
+              }
             />
           </div>
           <textarea
@@ -161,13 +174,15 @@ export default async function ReceiptDetailPage({
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Save receipt
+            {isHebrew ? "שמירת קבלה" : "Save receipt"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-md font-medium text-slate-200">Allocations to treatments</h3>
+        <h3 className="text-md font-medium text-slate-200">
+          {isHebrew ? "שיוכים לטיפולים" : "Allocations to treatments"}
+        </h3>
         <form
           action={upsertReceiptAllocation}
           className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
@@ -178,7 +193,7 @@ export default async function ReceiptDetailPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Treatment</option>
+            <option value="">{isHebrew ? "טיפול" : "Treatment"}</option>
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
                 {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name}{" "}
@@ -188,7 +203,7 @@ export default async function ReceiptDetailPage({
           </select>
           <input
             name="amount"
-            placeholder="Amount"
+            placeholder={isHebrew ? "סכום" : "Amount"}
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -196,7 +211,7 @@ export default async function ReceiptDetailPage({
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
           >
-            Add / update
+            {isHebrew ? "הוספה / עדכון" : "Add / update"}
           </button>
         </form>
 
@@ -204,9 +219,9 @@ export default async function ReceiptDetailPage({
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-700 bg-slate-800/80">
-                <th className="px-3 py-2 text-slate-300">Treatment</th>
-                <th className="px-3 py-2 text-slate-300">Amount</th>
-                <th className="px-3 py-2 text-slate-300">Remove</th>
+                <th className="px-3 py-2 text-slate-300">{isHebrew ? "טיפול" : "Treatment"}</th>
+                <th className="px-3 py-2 text-slate-300">{isHebrew ? "סכום" : "Amount"}</th>
+                <th className="px-3 py-2 text-slate-300">{isHebrew ? "הסרה" : "Remove"}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,7 +237,7 @@ export default async function ReceiptDetailPage({
                       <input type="hidden" name="receipt_id" value={receipt.id} />
                       <input type="hidden" name="treatment_id" value={a.treatment_id} />
                       <button type="submit" className="text-xs text-rose-400">
-                        Remove
+                        {isHebrew ? "הסרה" : "Remove"}
                       </button>
                     </ConfirmDeleteForm>
                   </td>

@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ImportUploadForm } from "./ImportUploadForm";
@@ -9,6 +9,8 @@ export default async function ImportPage() {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const [documents, bankAccounts] = await Promise.all([
     prisma.documents.findMany({
@@ -34,7 +36,7 @@ export default async function ImportPage() {
             href="/"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">
             Import bank statements
@@ -45,13 +47,13 @@ export default async function ImportPage() {
           </p>
         </header>
 
-        <ImportUploadForm bankAccounts={bankAccounts} />
+        <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Recent imports</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "יבואים אחרונים" : "Recent imports"}</h2>
           {documents.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No imports yet. Upload a file above.
+              {isHebrew ? "אין יבואים עדיין. ניתן להעלות קובץ למעלה." : "No imports yet. Upload a file above."}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -72,13 +74,13 @@ export default async function ImportPage() {
                       href={`/dashboard/import/review/${doc.id}`}
                       className="rounded bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
                     >
-                      Review
+                      {isHebrew ? "סקירה" : "Review"}
                     </Link>
                     <Link
                       href={`/dashboard/import/assist/${doc.id}`}
                       className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-500"
                     >
-                      Assisted
+                      {isHebrew ? "מונחה" : "Assisted"}
                     </Link>
                   </div>
                 </li>

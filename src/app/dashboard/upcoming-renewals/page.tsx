@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -70,6 +71,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const today = startOfToday();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const categoryFilter = resolvedSearchParams?.category ?? "all";
@@ -394,7 +397,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       <div className="w-full max-w-6xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
           <p className="text-sm text-slate-400">
@@ -408,7 +411,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         <form method="get" className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col">
             <label htmlFor="category" className="mb-1 text-xs font-medium text-slate-400">
-              Category
+              {isHebrew ? "קטגוריה" : "Category"}
             </label>
             <select
               id="category"
@@ -416,7 +419,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
               defaultValue={effectiveCategoryFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">All</option>
+              <option value="all">{isHebrew ? "הכל" : "All"}</option>
               {categories.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -427,7 +430,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
 
           <div className="flex flex-col">
             <label htmlFor="owner" className="mb-1 text-xs font-medium text-slate-400">
-              Owner (= Family Member)
+              {isHebrew ? "בעלים (= בן משפחה)" : "Owner (= Family Member)"}
             </label>
             <select
               id="owner"
@@ -435,7 +438,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
               defaultValue={effectiveOwnerFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">All</option>
+              <option value="all">{isHebrew ? "הכל" : "All"}</option>
               {familyMembers.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.full_name}
@@ -448,7 +451,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
             type="submit"
             className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
           >
-            Apply
+            {isHebrew ? "החל" : "Apply"}
           </button>
         </form>
 
@@ -496,7 +499,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                     <td className="px-4 py-3 text-slate-400">{row.owner}</td>
                     <td className="px-4 py-3">
                       <Link href={row.href} className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                        Open
+                        {isHebrew ? "פתח" : "Open"}
                       </Link>
                     </td>
                   </tr>

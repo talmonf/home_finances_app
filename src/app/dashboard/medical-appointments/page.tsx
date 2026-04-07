@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import {
   formatHouseholdDate,
@@ -17,6 +18,7 @@ import {
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createMedicalAppointment } from "./actions";
+import { medicalPaymentLabel, reimbursementSourceLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -52,20 +54,6 @@ function formatMoneyWithCurrency(value: unknown, currency: string) {
   return `${amount} ${currency}`;
 }
 
-const REIMBURSEMENT_SOURCE_LABELS: Record<MedicalReimbursementSource, string> = {
-  kupat_holim: "Kupat holim",
-  private_insurance: "Private insurance",
-};
-
-const PAYMENT_LABELS: Record<MedicalAppointmentPaymentMethod, string> = {
-  cash: "Cash",
-  credit_card: "Credit card",
-  bank_account: "Bank account / transfer",
-  digital_wallet: "Digital wallet",
-  kupat_holim_benefit: "Kupat holim (covered / no out-of-pocket)",
-  other: "Other",
-};
-
 function formatScheme(scheme: string) {
   if (scheme === "amex") return "Amex";
   if (scheme === "diners_club") return "Diners Club";
@@ -77,6 +65,7 @@ function formatScheme(scheme: string) {
 
 function formatPaymentDetail(
   method: MedicalAppointmentPaymentMethod | null,
+  language: "en" | "he",
   row: {
     credit_card: {
       card_name: string;
@@ -89,9 +78,9 @@ function formatPaymentDetail(
   },
 ) {
   if (!method) {
-    return "Not specified yet";
+    return language === "he" ? "טרם צוין" : "Not specified yet";
   }
-  const base = PAYMENT_LABELS[method];
+  const base = medicalPaymentLabel(language, method);
   if (method === "credit_card" && row.credit_card) {
     const c = row.credit_card;
     return `${base}: ${c.card_name} (${formatScheme(c.scheme)}) · ****${c.card_last_four}`;
@@ -133,6 +122,7 @@ function formatReimbursementPaid(
   source: MedicalReimbursementSource | null,
   amount: unknown,
   dateDisplayFormat: HouseholdDateDisplayFormat,
+  language: "en" | "he",
 ) {
   if (receivedAt == null && source == null && amount == null) {
     return <span className="text-slate-500">—</span>;
@@ -145,7 +135,7 @@ function formatReimbursementPaid(
     parts.push(`received ${formatHouseholdDate(receivedAt, dateDisplayFormat)}`);
   }
   if (source) {
-    parts.push(`via ${REIMBURSEMENT_SOURCE_LABELS[source]}`);
+    parts.push(`${language === "he" ? "דרך" : "via"} ${reimbursementSourceLabel(language, source)}`);
   }
   return <span className="whitespace-pre-wrap text-slate-300">{parts.join(" · ")}</span>;
 }
@@ -156,6 +146,8 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -201,7 +193,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
         <header className="space-y-3">
           <div>
             <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to dashboard
+              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
             </Link>
             <h1 className="text-2xl font-semibold text-slate-50">Medical appointments</h1>
             <p className="text-sm text-slate-400">
@@ -231,7 +223,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add appointment</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת תור" : "Add appointment"}</h2>
           <form
             action={createMedicalAppointment}
             className="space-y-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
@@ -297,11 +289,11 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
             </div>
 
             <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Payment</h3>
+              <h3 className="mb-3 text-sm font-medium text-slate-300">{isHebrew ? "תשלום" : "Payment"}</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label htmlFor="amount_out_of_pocket" className="mb-1 block text-xs font-medium text-slate-400">
-                    Amount out of pocket (optional)
+                    {isHebrew ? "השתתפות עצמית (אופציונלי)" : "Amount out of pocket (optional)"}
                   </label>
                   <input
                     id="amount_out_of_pocket"
@@ -326,7 +318,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     <option value="">Not specified yet</option>
                     {Object.values(PaymentMethodValues).map((value) => (
                       <option key={value} value={value}>
-                        {PAYMENT_LABELS[value]}
+                        {medicalPaymentLabel(uiLanguage, value)}
                       </option>
                     ))}
                   </select>
@@ -439,7 +431,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     htmlFor="reimbursement_amount_received"
                     className="mb-1 block text-xs font-medium text-slate-400"
                   >
-                    Amount received (optional)
+                    {isHebrew ? "סכום שהתקבל (אופציונלי)" : "Amount received (optional)"}
                   </label>
                   <input
                     id="reimbursement_amount_received"
@@ -455,7 +447,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     htmlFor="reimbursement_received_at"
                     className="mb-1 block text-xs font-medium text-slate-400"
                   >
-                    Date received (optional)
+                    {isHebrew ? "תאריך קבלה (אופציונלי)" : "Date received (optional)"}
                   </label>
                   <input
                     id="reimbursement_received_at"
@@ -472,7 +464,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                     <option value="">—</option>
                     {Object.values(ReimbursementSourceValues).map((value) => (
                       <option key={value} value={value}>
-                        {REIMBURSEMENT_SOURCE_LABELS[value]}
+                        {reimbursementSourceLabel(uiLanguage, value)}
                       </option>
                     ))}
                   </select>
@@ -485,7 +477,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add appointment
+                {isHebrew ? "הוספת תור" : "Add appointment"}
               </button>
             </div>
           </form>
@@ -495,23 +487,23 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
           <h2 className="text-lg font-medium text-slate-200">History</h2>
           {appointments.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No appointments yet. Add one above.
+              {isHebrew ? "אין תורים עדיין. אפשר להוסיף למעלה." : "No appointments yet. Add one above."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
               <table className="w-full min-w-[1040px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Date</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "תאריך" : "Date"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Provider</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Member</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Visit notes</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Out of pocket</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Payment</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "תשלום" : "Payment"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Kupat holim (claim)</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Private insurance (claim)</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Reimbursement paid</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Edit</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "עריכה" : "Edit"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -538,7 +530,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                         {formatMoneyWithCurrency(row.amount_out_of_pocket, row.currency)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs text-slate-300">
-                        {formatPaymentDetail(row.payment_method, row)}
+                        {formatPaymentDetail(row.payment_method, uiLanguage, row)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
@@ -561,6 +553,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           row.reimbursement_source,
                           row.reimbursement_amount_received,
                           dateDisplayFormat,
+                          uiLanguage,
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -568,7 +561,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           href={`/dashboard/medical-appointments/${row.id}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
                     </tr>

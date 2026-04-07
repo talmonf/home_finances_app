@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
@@ -10,6 +11,7 @@ import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment 
 import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function TreatmentsPage({
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
   const sp = searchParams ? await searchParams : {};
   const paidFilter = sp.paid || "all";
   const jobFilter = sp.job || "";
@@ -106,32 +109,32 @@ export default async function TreatmentsPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Filters</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "סינון" : "Filters"}</h2>
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           method="get"
         >
           <div>
-            <label className="block text-xs text-slate-400">Payment</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "תשלום" : "Payment"}</label>
             <select
               name="paid"
               defaultValue={paidFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">All</option>
-              <option value="paid">Paid</option>
-              <option value="partial">Partial</option>
-              <option value="unpaid">Unpaid</option>
+              <option value="all">{uiLanguage === "he" ? "הכל" : "All"}</option>
+              <option value="paid">{uiLanguage === "he" ? "שולם" : "Paid"}</option>
+              <option value="partial">{uiLanguage === "he" ? "חלקי" : "Partial"}</option>
+              <option value="unpaid">{uiLanguage === "he" ? "לא שולם" : "Unpaid"}</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Job</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "עבודה" : "Job"}</label>
             <select
               name="job"
               defaultValue={jobFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">Any</option>
+              <option value="">{uiLanguage === "he" ? "כלשהו" : "Any"}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.job_title}
@@ -140,13 +143,13 @@ export default async function TreatmentsPage({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Program</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "תכנית" : "Program"}</label>
             <select
               name="program"
               defaultValue={programFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">Any</option>
+              <option value="">{uiLanguage === "he" ? "כלשהי" : "Any"}</option>
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.job.job_title} — {p.name}
@@ -176,25 +179,25 @@ export default async function TreatmentsPage({
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
           >
-            Apply
+            {uiLanguage === "he" ? "החל" : "Apply"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Log treatment</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "רישום טיפול" : "Log treatment"}</h2>
         <form
           action={createTherapyTreatment}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
         >
           <div>
-            <label className="block text-xs text-slate-400">Client</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "לקוח" : "Client"}</label>
             <select
               name="client_id"
               required
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">Select</option>
+              <option value="">{uiLanguage === "he" ? "בחירה" : "Select"}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.first_name} {c.last_name ?? ""}
@@ -203,7 +206,7 @@ export default async function TreatmentsPage({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Job</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "עבודה" : "Job"}</label>
             <select
               name="job_id"
               required
@@ -217,7 +220,7 @@ export default async function TreatmentsPage({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Program</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "תכנית" : "Program"}</label>
             <select
               name="program_id"
               required
@@ -231,7 +234,7 @@ export default async function TreatmentsPage({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Date & time</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "תאריך ושעה" : "Date & time"}</label>
             <input
               name="occurred_at"
               type="datetime-local"
@@ -240,7 +243,7 @@ export default async function TreatmentsPage({
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400">Amount</label>
+            <label className="block text-xs text-slate-400">{uiLanguage === "he" ? "סכום" : "Amount"}</label>
             <input
               name="amount"
               type="text"
@@ -266,7 +269,7 @@ export default async function TreatmentsPage({
             >
               {visitOptions.map((v) => (
                 <option key={v} value={v}>
-                  {v}
+                  {therapyVisitTypeLabel(uiLanguage, v)}
                 </option>
               ))}
             </select>
@@ -299,26 +302,28 @@ export default async function TreatmentsPage({
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Save treatment
+            {uiLanguage === "he" ? "שמירת טיפול" : "Save treatment"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Treatments ({filtered.length})</h2>
+        <h2 className="text-lg font-medium text-slate-200">
+          {uiLanguage === "he" ? `טיפולים (${filtered.length})` : `Treatments (${filtered.length})`}
+        </h2>
         {filtered.length === 0 ? (
-          <p className="text-sm text-slate-500">No rows match.</p>
+          <p className="text-sm text-slate-500">{uiLanguage === "he" ? "אין רשומות מתאימות." : "No rows match."}</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
                   <th className="px-3 py-2 text-slate-300">When</th>
-                  <th className="px-3 py-2 text-slate-300">Client</th>
-                  <th className="px-3 py-2 text-slate-300">Job</th>
-                  <th className="px-3 py-2 text-slate-300">Amount</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "לקוח" : "Client"}</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "עבודה" : "Job"}</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "סכום" : "Amount"}</th>
                   <th className="px-3 py-2 text-slate-300">Paid</th>
-                  <th className="px-3 py-2 text-slate-300">Edit</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "עריכה" : "Edit"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -340,7 +345,7 @@ export default async function TreatmentsPage({
                       <td className="px-3 py-2 text-slate-400">{st}</td>
                       <td className="px-3 py-2 align-top">
                         <details>
-                          <summary className="cursor-pointer text-xs text-sky-400">Edit</summary>
+                          <summary className="cursor-pointer text-xs text-sky-400">{uiLanguage === "he" ? "עריכה" : "Edit"}</summary>
                           <form action={updateTherapyTreatment} className="mt-2 space-y-2 rounded border border-slate-700 p-2">
                             <input type="hidden" name="id" value={t.id} />
                             <select
@@ -384,7 +389,7 @@ export default async function TreatmentsPage({
                             <select name="visit_type" defaultValue={t.visit_type} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs">
                               {visitOptions.map((v) => (
                                 <option key={v} value={v}>
-                                  {v}
+                                  {therapyVisitTypeLabel(uiLanguage, v)}
                                 </option>
                               ))}
                             </select>
@@ -398,13 +403,13 @@ export default async function TreatmentsPage({
                             <textarea name="note_2" defaultValue={t.note_2 ?? ""} placeholder={note2} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
                             <textarea name="note_3" defaultValue={t.note_3 ?? ""} placeholder={note3} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
                             <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                              Save
+                              {uiLanguage === "he" ? "שמירה" : "Save"}
                             </button>
                           </form>
                           <ConfirmDeleteForm action={deleteTherapyTreatment} className="mt-2">
                             <input type="hidden" name="id" value={t.id} />
                             <button type="submit" className="text-xs text-rose-400">
-                              Delete
+                              {uiLanguage === "he" ? "מחיקה" : "Delete"}
                             </button>
                           </ConfirmDeleteForm>
                         </details>

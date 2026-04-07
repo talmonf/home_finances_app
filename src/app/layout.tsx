@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
-import { getAuthSession } from "@/lib/auth";
+import { getAuthSession, getCurrentUiLanguage } from "@/lib/auth";
+import { uiLanguageDirection } from "@/lib/ui-language";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +29,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getAuthSession();
+  const uiLanguage =
+    session?.user?.householdId && !session.user.isSuperAdmin ? await getCurrentUiLanguage() : "en";
+  const dir = uiLanguageDirection(uiLanguage);
 
   return (
-    <html lang="en">
+    <html lang={uiLanguage} dir={dir}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-50`}
       >

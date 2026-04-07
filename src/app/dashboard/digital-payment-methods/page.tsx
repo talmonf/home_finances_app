@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
@@ -35,6 +36,8 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
   }
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const [methods, bankAccounts, familyMembers, creditCards] = await Promise.all([
@@ -78,7 +81,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 href="/"
                 className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
               >
-                ← Back to dashboard
+                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
               </Link>
               <h1 className="text-2xl font-semibold text-slate-50">Digital payment methods</h1>
               <p className="text-sm text-slate-400">
@@ -109,7 +112,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createDigitalPaymentMethod}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2"
@@ -258,14 +261,14 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add method
+                {isHebrew ? "הוספת אמצעי" : "Add method"}
               </button>
             </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
           {methods.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No digital payment methods yet. Add one above.
@@ -340,14 +343,14 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                             href={`/dashboard/digital-payment-methods/${m.id}`}
                             className="text-xs font-medium text-sky-400 hover:text-sky-300"
                           >
-                            Edit
+                            {isHebrew ? "עריכה" : "Edit"}
                           </Link>
                           <form action={toggleDigitalPaymentMethodActive.bind(null, m.id, !m.is_active)}>
                             <button
                               type="submit"
                               className="text-xs font-medium text-slate-400 hover:text-slate-200"
                             >
-                              {m.is_active ? "Deactivate" : "Activate"}
+                              {m.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
                             </button>
                           </form>
                         </div>

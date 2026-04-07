@@ -4,6 +4,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
@@ -13,6 +14,7 @@ import {
   deleteTherapyAppointmentSeries,
   updateTherapyAppointmentStatus,
 } from "../actions";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function AppointmentsPage() {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
   const now = new Date();
 
   const [jobs, programs, clients, upcoming, series] = await Promise.all([
@@ -69,7 +72,9 @@ export default async function AppointmentsPage() {
   return (
     <div className="space-y-10">
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">One-off appointment</h2>
+        <h2 className="text-lg font-medium text-slate-200">
+          {uiLanguage === "he" ? "תור חד פעמי" : "One-off appointment"}
+        </h2>
         <form
           action={createTherapyAppointment}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -79,7 +84,7 @@ export default async function AppointmentsPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Client</option>
+            <option value="">{uiLanguage === "he" ? "לקוח" : "Client"}</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.first_name} {c.last_name ?? ""}
@@ -98,7 +103,7 @@ export default async function AppointmentsPage() {
             ))}
           </select>
           <select name="program_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Program (optional)</option>
+            <option value="">{uiLanguage === "he" ? "תכנית (אופציונלי)" : "Program (optional)"}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.job.job_title} — {p.name}
@@ -112,7 +117,7 @@ export default async function AppointmentsPage() {
           >
             {visitOptions.map((v) => (
               <option key={v} value={v}>
-                {v}
+                {therapyVisitTypeLabel(uiLanguage, v)}
               </option>
             ))}
           </select>
@@ -131,19 +136,21 @@ export default async function AppointmentsPage() {
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Schedule
+            {uiLanguage === "he" ? "תזמון" : "Schedule"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Recurring series</h2>
+        <h2 className="text-lg font-medium text-slate-200">
+          {uiLanguage === "he" ? "סדרה חוזרת" : "Recurring series"}
+        </h2>
         <form
           action={createTherapyAppointmentSeries}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
         >
           <select name="client_id" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Client</option>
+            <option value="">{uiLanguage === "he" ? "לקוח" : "Client"}</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.first_name} {c.last_name ?? ""}
@@ -158,7 +165,7 @@ export default async function AppointmentsPage() {
             ))}
           </select>
           <select name="program_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Program (optional)</option>
+            <option value="">{uiLanguage === "he" ? "תכנית (אופציונלי)" : "Program (optional)"}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.job.job_title} — {p.name}
@@ -172,7 +179,7 @@ export default async function AppointmentsPage() {
           >
             {visitOptions.map((v) => (
               <option key={v} value={v}>
-                {v}
+                {therapyVisitTypeLabel(uiLanguage, v)}
               </option>
             ))}
           </select>
@@ -181,8 +188,8 @@ export default async function AppointmentsPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Every 2 weeks</option>
+            <option value="weekly">{uiLanguage === "he" ? "שבועי" : "Weekly"}</option>
+            <option value="biweekly">{uiLanguage === "he" ? "כל שבועיים" : "Every 2 weeks"}</option>
           </select>
           <select
             name="day_of_week"
@@ -212,15 +219,15 @@ export default async function AppointmentsPage() {
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Create series &amp; generate
+            {uiLanguage === "he" ? "יצירת סדרה והפקת תורים" : "Create series & generate"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Recurring rules</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "כללים חוזרים" : "Recurring rules"}</h2>
         {series.length === 0 ? (
-          <p className="text-sm text-slate-500">None.</p>
+          <p className="text-sm text-slate-500">{uiLanguage === "he" ? "אין." : "None."}</p>
         ) : (
           <ul className="space-y-2">
             {series.map((s) => (
@@ -234,7 +241,7 @@ export default async function AppointmentsPage() {
                 <ConfirmDeleteForm action={deleteTherapyAppointmentSeries}>
                   <input type="hidden" name="id" value={s.id} />
                   <button type="submit" className="text-xs text-rose-400">
-                    Delete series
+                    {uiLanguage === "he" ? "מחיקת סדרה" : "Delete series"}
                   </button>
                 </ConfirmDeleteForm>
               </li>
@@ -244,18 +251,18 @@ export default async function AppointmentsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Upcoming</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "קרובים" : "Upcoming"}</h2>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-slate-500">No upcoming appointments.</p>
+          <p className="text-sm text-slate-500">{uiLanguage === "he" ? "אין תורים קרובים." : "No upcoming appointments."}</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-3 py-2 text-slate-300">Start</th>
-                  <th className="px-3 py-2 text-slate-300">Client</th>
-                  <th className="px-3 py-2 text-slate-300">Job</th>
-                  <th className="px-3 py-2 text-slate-300">Status</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "התחלה" : "Start"}</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "לקוח" : "Client"}</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "עבודה" : "Job"}</th>
+                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "סטטוס" : "Status"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,12 +281,12 @@ export default async function AppointmentsPage() {
                           defaultValue={a.status}
                           className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                         >
-                          <option value="scheduled">scheduled</option>
-                          <option value="cancelled">cancelled</option>
-                          <option value="completed">completed</option>
+                          <option value="scheduled">{uiLanguage === "he" ? "מתוזמן" : "scheduled"}</option>
+                          <option value="cancelled">{uiLanguage === "he" ? "בוטל" : "cancelled"}</option>
+                          <option value="completed">{uiLanguage === "he" ? "הושלם" : "completed"}</option>
                         </select>
                         <button type="submit" className="text-xs text-sky-400">
-                          Set
+                          {uiLanguage === "he" ? "החל" : "Set"}
                         </button>
                       </form>
                     </td>

@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -18,6 +18,8 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -39,7 +41,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
             href="/"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Homes &amp; properties</h1>
           <p className="text-sm text-slate-400">
@@ -65,7 +67,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createProperty}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -149,14 +151,14 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add property
+                {isHebrew ? "הוספת נכס" : "Add property"}
               </button>
             </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
           {properties.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No properties yet. Add one above, then open it to add utility companies.
@@ -195,7 +197,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                           href={`/dashboard/properties/${p.id}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
                     </tr>

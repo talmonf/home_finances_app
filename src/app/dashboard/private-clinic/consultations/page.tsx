@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
@@ -26,6 +27,7 @@ export default async function ConsultationsPage({
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
   const sp = searchParams ? await searchParams : undefined;
 
   const [jobs, types, rows] = await Promise.all([
@@ -63,7 +65,9 @@ export default async function ConsultationsPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Add consultation / meeting</h2>
+        <h2 className="text-lg font-medium text-slate-200">
+          {uiLanguage === "he" ? "הוספת ייעוץ / פגישה" : "Add consultation / meeting"}
+        </h2>
         <form
           action={createTherapyConsultation}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -158,13 +162,13 @@ export default async function ConsultationsPage({
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Save
+            {uiLanguage === "he" ? "שמירה" : "Save"}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Recent</h2>
+        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "אחרונים" : "Recent"}</h2>
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">No entries yet.</p>
         ) : (

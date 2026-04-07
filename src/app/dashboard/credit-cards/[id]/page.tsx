@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateCreditCard } from "../actions";
@@ -24,6 +24,8 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -54,9 +56,9 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             href="/dashboard/credit-cards"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to credit cards
+            {isHebrew ? "חזרה לכרטיסי אשראי →" : "← Back to credit cards"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Edit credit card</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת כרטיס אשראי" : "Edit credit card"}</h1>
 
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
@@ -315,7 +317,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               type="submit"
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
             >
-              Save changes
+              {isHebrew ? "שמירת שינויים" : "Save changes"}
             </button>
           </div>
         </form>

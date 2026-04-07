@@ -6,7 +6,7 @@ import { CarLicenseReceiptDeleteButton } from "@/components/car-license-receipt-
 import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { useHouseholdDateFormat, useUiLanguage } from "@/components/household-preferences-context";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
 type CardOpt = { id: string; label: string };
@@ -48,6 +48,7 @@ export function CarLicenseRow({
 }) {
   const [editing, setEditing] = useState(false);
   const dateFmt = useHouseholdDateFormat();
+  const isHebrew = useUiLanguage() === "he";
 
   const field =
     "rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500";
@@ -80,11 +81,11 @@ export function CarLicenseRow({
               onClick={() => setEditing((e) => !e)}
               className="text-xs text-amber-400 hover:text-amber-300"
             >
-              {editing ? "Cancel" : "Edit"}
+              {editing ? (isHebrew ? "ביטול" : "Cancel") : isHebrew ? "עריכה" : "Edit"}
             </button>
             <ConfirmDeleteForm action={deleteCarLicense.bind(null, license.id, carId)} className="inline">
               <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                Delete
+                {isHebrew ? "מחיקה" : "Delete"}
               </button>
             </ConfirmDeleteForm>
           </div>
@@ -104,7 +105,7 @@ export function CarLicenseRow({
               <input type="hidden" name="car_id" value={carId} />
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`renewed-${license.id}`}>
-                  Renewal / payment date
+                  {isHebrew ? "תאריך חידוש / תשלום" : "Renewal / payment date"}
                 </label>
                 <input
                   id={`renewed-${license.id}`}
@@ -116,7 +117,7 @@ export function CarLicenseRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`expires-${license.id}`}>
-                  Expires on
+                  {isHebrew ? "תאריך תפוגה" : "Expires on"}
                 </label>
                 <input
                   id={`expires-${license.id}`}
@@ -129,7 +130,7 @@ export function CarLicenseRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`cost-${license.id}`}>
-                  Cost
+                  {isHebrew ? "עלות" : "Cost"}
                 </label>
                 <input
                   id={`cost-${license.id}`}
@@ -146,7 +147,7 @@ export function CarLicenseRow({
                 defaultValue={license.creditCardId}
                 className={field}
               >
-                <option value="">Credit card (optional)</option>
+                <option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
@@ -158,7 +159,7 @@ export function CarLicenseRow({
                 defaultValue={license.bankAccountId}
                 className={field}
               >
-                <option value="">Bank account (optional)</option>
+                <option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.label}
@@ -167,12 +168,14 @@ export function CarLicenseRow({
               </select>
               <input
                 name="notes"
-                placeholder="License notes"
+                placeholder={isHebrew ? "הערות רישיון" : "License notes"}
                 defaultValue={license.notes}
                 className={`md:col-span-2 ${field}`}
               />
               <div className="space-y-3 md:col-span-3 rounded-lg border border-slate-600/80 bg-slate-900/30 p-3">
-                <p className="text-xs font-medium text-slate-300">License receipt (optional)</p>
+                <p className="text-xs font-medium text-slate-300">
+                  {isHebrew ? "קובץ רישיון/קבלה (אופציונלי)" : "License receipt (optional)"}
+                </p>
                 <p className="text-xs text-slate-500">
                   PDF or image of the renewed license. Stored securely with your household.
                 </p>
@@ -216,14 +219,14 @@ export function CarLicenseRow({
                   type="submit"
                   className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
                 >
-                  Save changes
+                  {isHebrew ? "שמירת שינויים" : "Save changes"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditing(false)}
                   className="text-sm text-slate-400 hover:text-slate-200"
                 >
-                  Cancel
+                  {isHebrew ? "ביטול" : "Cancel"}
                 </button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DonationForm } from "../DonationForm";
@@ -22,6 +22,8 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -130,10 +132,12 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
         <header className="space-y-3">
           <div>
             <Link href="/dashboard/donations" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to donations
+              {isHebrew ? "חזרה לתרומות →" : "← Back to donations"}
             </Link>
-            <h1 className="text-2xl font-semibold text-slate-50">Edit donation</h1>
-            <p className="text-sm text-slate-400">Update amounts, organization details, and status.</p>
+            <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת תרומה" : "Edit donation"}</h1>
+            <p className="text-sm text-slate-400">
+              {isHebrew ? "עדכון סכומים, פרטי הארגון וסטטוס." : "Update amounts, organization details, and status."}
+            </p>
           </div>
 
           {resolvedSearchParams?.error && (
@@ -158,6 +162,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
             label: `${a.account_name} · ${a.bank_name}`,
           }))}
           digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
+          uiLanguage={uiLanguage}
         />
       </div>
     </div>

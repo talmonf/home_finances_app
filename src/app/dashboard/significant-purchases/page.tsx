@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -66,6 +67,8 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -97,7 +100,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
           <div className="flex items-center justify-between gap-4">
             <div>
               <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-                ← Back to dashboard
+                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
               </Link>
               <h1 className="text-2xl font-semibold text-slate-50">Significant purchases</h1>
               <p className="text-sm text-slate-400">
@@ -126,7 +129,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add new</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
           <form
             action={createSignificantPurchase}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -259,14 +262,14 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                Add significant purchase
+                {isHebrew ? "הוספת רכישה משמעותית" : "Add significant purchase"}
               </button>
             </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">List</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
           {purchases.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               No significant purchases yet. Add one above.
@@ -309,7 +312,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                           className="inline"
                         >
                           <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                            {p.is_active ? "Deactivate" : "Activate"}
+                            {p.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
                           </button>
                         </form>
                       </td>

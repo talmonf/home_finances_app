@@ -64,6 +64,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 052 | `052_user_level_preferences.sql` | CREATE/ALTER | `users.date_display_format` override + `user_enabled_sections` table for per-user section visibility overrides. |
 | 053 | `053_loans_interest_rate_fields.sql` | ALTER | `loans`: add fixed rate percent and index-linked rate fields (`interest_rate_linked_index` + delta percent). |
 | 054 | `054_therapy_clients_default_program_nullable.sql` | ALTER | `therapy_clients`: make `default_program_id` nullable (default program optional). |
+| 055 | `055_ui_language_preferences.sql` | ALTER | `households`: add `ui_language` default (`en`); `users`: add nullable `ui_language` override. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -121,6 +122,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 052_user_level_preferences.sql
 - [x] 053_loans_interest_rate_fields.sql
 - [x] 054_therapy_clients_default_program_nullable.sql
+- [x] 055_ui_language_preferences.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

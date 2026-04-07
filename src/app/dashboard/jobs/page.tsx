@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
@@ -37,6 +38,8 @@ export default async function JobsPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolved = searchParams ? await searchParams : undefined;
 
   const [jobs, familyMembers] = await Promise.all([
@@ -60,9 +63,9 @@ export default async function JobsPage({ searchParams }: PageProps) {
             redirectPath="/dashboard/jobs"
           />
           <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            ← Back to dashboard
+            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Jobs</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "משרות" : "Jobs"}</h1>
           <p className="text-sm text-slate-400">
             Record jobs, payroll history, benefits, and employment documents per family member.
           </p>
@@ -84,7 +87,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Add job</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת משרה" : "Add job"}</h2>
           <form action={createJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <select name="family_member_id" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
               <option value="">Family member</option>
@@ -114,12 +117,12 @@ export default async function JobsPage({ searchParams }: PageProps) {
               Active
             </label>
             <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add job</button>
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת משרה" : "Add job"}</button>
           </form>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Jobs list</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימת משרות" : "Jobs list"}</h2>
           {jobs.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-sm text-slate-400">
               No jobs yet.
@@ -150,7 +153,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-3 py-2">
                         <Link href={`/dashboard/jobs/${job.id}`} className="text-xs text-sky-400 hover:text-sky-300">
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
                     </tr>

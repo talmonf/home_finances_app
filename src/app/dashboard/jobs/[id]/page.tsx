@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -35,6 +36,8 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -68,7 +71,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
       <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-2">
           <Link href="/dashboard/jobs" className="inline-block text-sm text-slate-400 hover:text-slate-200">
-            ← Back to jobs
+            {isHebrew ? "חזרה לעבודות →" : "← Back to jobs"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{job.job_title}</h1>
           {resolved?.error && (
@@ -79,50 +82,52 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Job details</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "פרטי עבודה" : "Job details"}</h2>
           <form action={updateJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="id" value={job.id} />
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Family member</label>
+              <label className="block text-xs text-slate-400">{isHebrew ? "בן משפחה" : "Family member"}</label>
               <select name="family_member_id" defaultValue={job.family_member_id} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Employment type</label>
+              <label className="block text-xs text-slate-400">{isHebrew ? "סוג העסקה" : "Employment type"}</label>
               <select name="employment_type" defaultValue={job.employment_type} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                <option value="employee">Regular employee</option>
-                <option value="freelancer">Freelancer</option>
-                <option value="self_employed">Self-employed</option>
-                <option value="contractor_via_company">Contractor via company</option>
+                <option value="employee">{isHebrew ? "שכיר" : "Regular employee"}</option>
+                <option value="freelancer">{isHebrew ? "פרילנסר" : "Freelancer"}</option>
+                <option value="self_employed">{isHebrew ? "עצמאי" : "Self-employed"}</option>
+                <option value="contractor_via_company">{isHebrew ? "קבלן דרך חברה" : "Contractor via company"}</option>
               </select>
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Job title</label>
+              <label className="block text-xs text-slate-400">{isHebrew ? "תפקיד" : "Job title"}</label>
               <input name="job_title" defaultValue={job.job_title} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Start date</label>
+              <label className="block text-xs text-slate-400">{isHebrew ? "תאריך התחלה" : "Start date"}</label>
               <input name="start_date" type="date" defaultValue={isoDateOnly(job.start_date)} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">End date</label>
+              <label className="block text-xs text-slate-400">{isHebrew ? "תאריך סיום" : "End date"}</label>
               <input name="end_date" type="date" defaultValue={isoDateOnly(job.end_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
-              Active
+              {isHebrew ? "פעיל" : "Active"}
             </label>
             <input name="employer_name" defaultValue={job.employer_name ?? ""} placeholder="Employer (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} placeholder="Employer tax number (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="employer_address" defaultValue={job.employer_address ?? ""} placeholder="Employer address (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <textarea name="notes" defaultValue={job.notes ?? ""} placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Save job</button>
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+              {isHebrew ? "שמירת עבודה" : "Save job"}
+            </button>
           </form>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Benefits</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הטבות" : "Benefits"}</h2>
           <form action={createJobBenefit} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="job_id" value={job.id} />
             <input name="benefit_type" required placeholder="Benefit type (e.g. pension)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -131,7 +136,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             <input name="policy_number" placeholder="Policy number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="terms" placeholder="Terms (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="notes" placeholder="Notes (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add benefit</button>
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+              {isHebrew ? "הוספת הטבה" : "Add benefit"}
+            </button>
           </form>
           {benefits.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -146,7 +153,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-300">{b.policy_number ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{b.terms ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{b.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobBenefit.bind(null, b.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
+                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobBenefit.bind(null, b.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">{isHebrew ? "מחיקה" : "Delete"}</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,7 +163,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Payroll entries</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשומות שכר" : "Payroll entries"}</h2>
           <form action={createJobPayrollEntry} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="job_id" value={job.id} />
             <input name="effective_date" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -177,7 +184,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             <input name="bonus_amount" type="number" step="0.01" placeholder="Bonus amount" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="equity_amount" type="number" step="0.01" placeholder="Equity amount" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="notes" placeholder="Notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add payroll entry</button>
+            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+              {isHebrew ? "הוספת רשומת שכר" : "Add payroll entry"}
+            </button>
           </form>
           {payrollEntries.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -199,7 +208,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       <td className="px-3 py-2 text-slate-300">{p.net_amount?.toString() ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">{p.currency}</td>
                       <td className="px-3 py-2 text-slate-300">{p.notes ?? "—"}</td>
-                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobPayrollEntry.bind(null, p.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">Delete</button></ConfirmDeleteForm></td>
+                      <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobPayrollEntry.bind(null, p.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">{isHebrew ? "מחיקה" : "Delete"}</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,7 +218,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">Documents</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "מסמכים" : "Documents"}</h2>
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <JobDocumentUpload jobId={job.id} />
           </div>
@@ -232,9 +241,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                       </td>
                       <td className="px-3 py-2">
                         <ConfirmDeleteForm action={deleteJobDocument.bind(null, d.id, job.id)}>
-                          <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                            Delete
-                          </button>
+                          <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">{isHebrew ? "מחיקה" : "Delete"}</button>
                         </ConfirmDeleteForm>
                       </td>
                     </tr>

@@ -6,7 +6,7 @@ import { CarServiceAttachmentDeleteButton } from "@/components/car-service-attac
 import { CarServiceAttachmentUpload } from "@/components/car-service-attachment-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { useHouseholdDateFormat, useUiLanguage } from "@/components/household-preferences-context";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
 type CardOpt = { id: string; label: string };
@@ -50,6 +50,7 @@ export function CarServiceRow({
 }) {
   const [editing, setEditing] = useState(false);
   const dateFmt = useHouseholdDateFormat();
+  const isHebrew = useUiLanguage() === "he";
 
   const field =
     "rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500";
@@ -84,11 +85,11 @@ export function CarServiceRow({
               onClick={() => setEditing((e) => !e)}
               className="text-xs text-amber-400 hover:text-amber-300"
             >
-              {editing ? "Cancel" : "Edit"}
+              {editing ? (isHebrew ? "ביטול" : "Cancel") : isHebrew ? "עריכה" : "Edit"}
             </button>
             <ConfirmDeleteForm action={deleteCarService.bind(null, service.id, carId)} className="inline">
               <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                Delete
+                {isHebrew ? "מחיקה" : "Delete"}
               </button>
             </ConfirmDeleteForm>
           </div>
@@ -108,7 +109,7 @@ export function CarServiceRow({
               <input type="hidden" name="car_id" value={carId} />
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`svc-at-${service.id}`}>
-                  Service date
+                  {isHebrew ? "תאריך טיפול" : "Service date"}
                 </label>
                 <input
                   id={`svc-at-${service.id}`}
@@ -121,7 +122,7 @@ export function CarServiceRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`next-svc-${service.id}`}>
-                  Next service date (optional)
+                  {isHebrew ? "תאריך טיפול הבא (אופציונלי)" : "Next service date (optional)"}
                 </label>
                 <input
                   id={`next-svc-${service.id}`}
@@ -133,7 +134,7 @@ export function CarServiceRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`provider-${service.id}`}>
-                  Provider / location
+                  {isHebrew ? "ספק / מיקום" : "Provider / location"}
                 </label>
                 <input
                   id={`provider-${service.id}`}
@@ -145,7 +146,7 @@ export function CarServiceRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`cost-${service.id}`}>
-                  Cost
+                  {isHebrew ? "עלות" : "Cost"}
                 </label>
                 <input
                   id={`cost-${service.id}`}
@@ -159,7 +160,7 @@ export function CarServiceRow({
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`odo-${service.id}`}>
-                  Odometer km
+                  {isHebrew ? "קילומטראז'" : "Odometer km"}
                 </label>
                 <input
                   id={`odo-${service.id}`}
@@ -175,7 +176,7 @@ export function CarServiceRow({
                 defaultValue={service.creditCardId}
                 className={field}
               >
-                <option value="">Credit card (optional)</option>
+                <option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
@@ -187,7 +188,7 @@ export function CarServiceRow({
                 defaultValue={service.bankAccountId}
                 className={field}
               >
-                <option value="">Bank account (optional)</option>
+                <option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.label}
@@ -196,12 +197,14 @@ export function CarServiceRow({
               </select>
               <input
                 name="notes"
-                placeholder="Service notes"
+                placeholder={isHebrew ? "הערות טיפול" : "Service notes"}
                 defaultValue={service.notes}
                 className={`md:col-span-2 ${field}`}
               />
               <div className="space-y-3 md:col-span-3 rounded-lg border border-slate-600/80 bg-slate-900/30 p-3">
-                <p className="text-xs font-medium text-slate-300">Service details file (optional)</p>
+                <p className="text-xs font-medium text-slate-300">
+                  {isHebrew ? "קובץ פרטי טיפול (אופציונלי)" : "Service details file (optional)"}
+                </p>
                 <p className="text-xs text-slate-500">
                   PDF or image (invoice, work order, etc.). Stored securely with your household.
                 </p>
@@ -245,14 +248,14 @@ export function CarServiceRow({
                   type="submit"
                   className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
                 >
-                  Save changes
+                  {isHebrew ? "שמירת שינויים" : "Save changes"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditing(false)}
                   className="text-sm text-slate-400 hover:text-slate-200"
                 >
-                  Cancel
+                  {isHebrew ? "ביטול" : "Cancel"}
                 </button>
               </div>
             </form>

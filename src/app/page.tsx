@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getAuthSession, prisma } from "@/lib/auth";
-import { DASHBOARD_SECTIONS, type SetupCounts } from "@/lib/dashboard-sections";
+import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
@@ -30,6 +30,7 @@ export default async function Home() {
   }
 
   const isSuperAdmin = session.user.isSuperAdmin;
+  const uiLanguage = isSuperAdmin ? "en" : await getCurrentUiLanguage();
   const householdId = session.user.householdId ?? null;
   const userId = session.user.id;
 
@@ -82,7 +83,7 @@ export default async function Home() {
     enabledSections.map((s) => [s.sectionId, s.enabled] as const),
   );
 
-  const visibleSections = DASHBOARD_SECTIONS.filter(
+  const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
   );
 

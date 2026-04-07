@@ -25,11 +25,14 @@ export function LoanForm({
   action,
   loanId,
   initial,
+  uiLanguage = "en",
 }: {
   action: (formData: FormData) => void | Promise<void>;
   loanId?: string;
   initial?: LoanFormInitialValues;
+  uiLanguage?: "en" | "he";
 }) {
+  const isHebrew = uiLanguage === "he";
   const initialStatus = initial?.is_active === false ? "historic" : "active";
   const [status, setStatus] = useState<"active" | "historic">(initialStatus);
   const [interestRateMode, setInterestRateMode] = useState<"none" | "fixed" | "indexed">(
@@ -274,7 +277,7 @@ export function LoanForm({
 
       <div>
         <label htmlFor="status" className="mb-1 block text-xs font-medium text-slate-400">
-          Status
+          {isHebrew ? "סטטוס" : "Status"}
         </label>
         <select
           id="status"
@@ -283,8 +286,8 @@ export function LoanForm({
           onChange={(e) => setStatus(e.target.value as "active" | "historic")}
           className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="active">Active</option>
-          <option value="historic">Paid off / historic</option>
+          <option value="active">{isHebrew ? "פעיל" : "Active"}</option>
+          <option value="historic">{isHebrew ? "היסטורי / סולק" : "Paid off / historic"}</option>
         </select>
       </div>
 
@@ -293,7 +296,7 @@ export function LoanForm({
           type="submit"
           className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
         >
-          {loanId ? "Save changes" : "Add loan"}
+          {loanId ? (isHebrew ? "שמירת שינויים" : "Save changes") : isHebrew ? "הוספת הלוואה" : "Add loan"}
         </button>
       </div>
     </form>

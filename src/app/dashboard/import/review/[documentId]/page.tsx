@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
@@ -46,6 +47,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -115,9 +118,9 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
             href="/dashboard/import"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to import
+            {isHebrew ? "חזרה ליבוא →" : "← Back to import"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Review transactions</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "סקירת תנועות" : "Review transactions"}</h1>
           <p className="mt-1 text-sm text-slate-400">
             {doc.file_name}
             {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
@@ -143,7 +146,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
               type="submit"
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
             >
-              Confirm all
+              {isHebrew ? "אישור הכל" : "Confirm all"}
             </button>
           </form>
         </div>
@@ -152,7 +155,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
         <div className="flex flex-wrap gap-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <form action={createCategory} className="flex items-end gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-400">New category</label>
+              <label className="mb-1 block text-xs text-slate-400">{isHebrew ? "קטגוריה חדשה" : "New category"}</label>
               <input
                 name="name"
                 placeholder="Category name"
@@ -160,12 +163,12 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
               />
             </div>
             <button type="submit" className="rounded bg-slate-600 px-3 py-1.5 text-xs text-white hover:bg-slate-500">
-              Add
+              {isHebrew ? "הוספה" : "Add"}
             </button>
           </form>
           <form action={createPayee} className="flex items-end gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-400">New payee</label>
+              <label className="mb-1 block text-xs text-slate-400">{isHebrew ? "מוטב חדש" : "New payee"}</label>
               <input
                 name="name"
                 placeholder="Payee name"
@@ -173,7 +176,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
               />
             </div>
             <button type="submit" className="rounded bg-slate-600 px-3 py-1.5 text-xs text-white hover:bg-slate-500">
-              Add
+              {isHebrew ? "הוספה" : "Add"}
             </button>
           </form>
         </div>
@@ -182,8 +185,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-700 bg-slate-800/80">
-                <th className="px-2 py-2 font-medium text-slate-300">Date</th>
-                <th className="px-2 py-2 font-medium text-slate-300">Amount</th>
+                <th className="px-2 py-2 font-medium text-slate-300">{isHebrew ? "תאריך" : "Date"}</th>
+                <th className="px-2 py-2 font-medium text-slate-300">{isHebrew ? "סכום" : "Amount"}</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Description</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase · Rental · Trip · Car</th>
               </tr>
@@ -338,7 +341,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         type="submit"
                         className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500"
                       >
-                        Save row
+                        {isHebrew ? "שמירת שורה" : "Save row"}
                       </button>
                     </form>
                   </td>

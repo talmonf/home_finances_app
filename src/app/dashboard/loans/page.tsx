@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
@@ -72,6 +73,8 @@ export default async function LoansPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const rows = await prisma.loans.findMany({
@@ -85,7 +88,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
         <header className="space-y-3">
           <div>
             <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-              ← Back to dashboard
+              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
             </Link>
             <h1 className="text-2xl font-semibold text-slate-50">Loans</h1>
             <p className="text-sm text-slate-400">
@@ -112,15 +115,15 @@ export default async function LoansPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Add loan</h2>
-          <LoanForm action={createLoan} />
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת הלוואה" : "Add loan"}</h2>
+          <LoanForm action={createLoan} uiLanguage={uiLanguage} />
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">Your loans</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "ההלוואות שלך" : "Your loans"}</h2>
           {rows.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No loans yet. Add one above.
+              {isHebrew ? "אין הלוואות עדיין. ניתן להוסיף למעלה." : "No loans yet. Add one above."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -130,13 +133,13 @@ export default async function LoansPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Institution</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Loan #</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Loan date</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Amount</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סכום" : "Amount"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Interest</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Monthly</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Day / Maturity</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Total repay</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Purpose</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סטטוס" : "Status"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -180,7 +183,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
                           href={`/dashboard/loans/${loan.id}`}
                           className="text-xs font-medium text-sky-400 hover:text-sky-300"
                         >
-                          Edit
+                          {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
                     </tr>

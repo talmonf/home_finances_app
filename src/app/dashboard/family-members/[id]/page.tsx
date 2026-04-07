@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateFamilyMember } from "../actions";
@@ -14,6 +14,8 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -43,9 +45,9 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
             href="/dashboard/family-members"
             className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to family members
+            {isHebrew ? "חזרה לבני משפחה →" : "← Back to family members"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Edit family member</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת בן משפחה" : "Edit family member"}</h1>
           <p className="text-sm text-slate-400">
             Update details and optionally link a household user account.
           </p>
@@ -174,13 +176,13 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               href="/dashboard/family-members"
               className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
             >
-              Cancel
+              {isHebrew ? "ביטול" : "Cancel"}
             </Link>
             <button
               type="submit"
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
             >
-              Save changes
+              {isHebrew ? "שמירת שינויים" : "Save changes"}
             </button>
           </div>
         </form>

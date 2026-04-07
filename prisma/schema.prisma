@@ -27,6 +27,7 @@ model households {
   country               String                     @default("IL")
   primary_currency      String                     @default("ILS")
   date_display_format   HouseholdDateDisplayFormat @default(YMD)
+  ui_language           String                     @default("en")
   created_at            DateTime                   @default(now())
   updated_at            DateTime                   @updatedAt
   is_active             Boolean                    @default(true)
@@ -1098,6 +1099,7 @@ model users {
   user_type            UserType
   user_type_description String?
   date_display_format  HouseholdDateDisplayFormat?
+  ui_language          String?
   family_member_id     String?
   is_active            Boolean  @default(true)
   created_at           DateTime @default(now())
