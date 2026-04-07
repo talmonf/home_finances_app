@@ -23,6 +23,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const role = (formData.get("role") as string | null)?.trim();
   const userType = (formData.get("user_type") as string | null)?.trim();
   const rawDateDisplayFormat = (formData.get("date_display_format") as string | null)?.trim();
+  const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
 
   if (!householdId || !userId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
@@ -54,6 +55,22 @@ export async function updateHouseholdUser(formData: FormData) {
     redirect(`/admin/households/${householdId}?error=${encodeURIComponent("User not found")}`);
   }
 
+  if (familyMemberId) {
+    const linkedMember = await prisma.family_members.findFirst({
+      where: {
+        id: familyMemberId,
+        household_id: householdId,
+        is_active: true,
+      },
+      select: { id: true },
+    });
+    if (!linkedMember) {
+      redirect(
+        `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("Invalid family member selection")}`,
+      );
+    }
+  }
+
   await prisma.users.update({
     where: { id: userId },
     data: {
@@ -61,6 +78,7 @@ export async function updateHouseholdUser(formData: FormData) {
       full_name: fullName,
       role,
       user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
+      family_member_id: familyMemberId,
       date_display_format: rawDateDisplayFormat
         ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
         : null,

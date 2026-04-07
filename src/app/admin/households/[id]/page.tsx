@@ -43,6 +43,11 @@ export default async function HouseholdUsersPage({
     where: { household_id: householdId },
     orderBy: { created_at: "asc" },
   });
+  const familyMembers = await prisma.family_members.findMany({
+    where: { household_id: householdId, is_active: true },
+    orderBy: { first_name: "asc" },
+    select: { id: true, first_name: true, last_name: true },
+  });
 
   async function createUser(formData: FormData) {
     "use server";
@@ -54,6 +59,7 @@ export default async function HouseholdUsersPage({
     const fullName = (formData.get("full_name") as string | null)?.trim();
     const role = (formData.get("role") as string | null)?.trim();
     const userType = (formData.get("user_type") as string | null)?.trim();
+    const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
     const password = (formData.get("password") as string | null) ?? "";
 
     if (!email || !fullName || !role || !userType || !password) {
@@ -84,6 +90,21 @@ export default async function HouseholdUsersPage({
     }
 
     const userTypeValue = userType as (typeof allowedUserTypes)[number];
+    if (familyMemberId) {
+      const linkedMember = await prisma.family_members.findFirst({
+        where: {
+          id: familyMemberId,
+          household_id: householdId,
+          is_active: true,
+        },
+        select: { id: true },
+      });
+      if (!linkedMember) {
+        redirect(
+          `/admin/households/${householdId}?error=${encodeURIComponent("Invalid family member selection")}`,
+        );
+      }
+    }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
@@ -96,6 +117,7 @@ export default async function HouseholdUsersPage({
         full_name: fullName,
         role: role as "admin" | "member",
         user_type: userTypeValue,
+        family_member_id: familyMemberId,
         is_active: true,
       },
     });
@@ -239,6 +261,23 @@ export default async function HouseholdUsersPage({
                 required
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-300">
+                Linked family member (optional)
+              </label>
+              <select
+                name="family_member_id"
+                defaultValue=""
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              >
+                <option value="">None</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {[m.first_name, m.last_name].filter(Boolean).join(" ").trim() || "(Unnamed)"}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-end justify-end md:col-span-2 lg:col-span-3">
               <button

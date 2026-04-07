@@ -46,10 +46,15 @@ export default async function EditHouseholdUserPage({
   const householdId = resolvedParams.id;
   const userId = resolvedParams.userId;
 
-  const [household, user] = await Promise.all([
+  const [household, user, familyMembers] = await Promise.all([
     prisma.households.findUnique({ where: { id: householdId } }),
     prisma.users.findFirst({
       where: { id: userId, household_id: householdId },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { first_name: "asc" },
+      select: { id: true, first_name: true, last_name: true },
     }),
   ]);
 
@@ -205,6 +210,27 @@ export default async function EditHouseholdUserPage({
                 {(["YMD", "DMY", "MDY"] as const).map((value) => (
                   <option key={value} value={value}>
                     {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="family_member_id"
+                className="mb-1 block text-xs font-medium text-slate-300"
+              >
+                Linked family member (optional)
+              </label>
+              <select
+                id="family_member_id"
+                name="family_member_id"
+                defaultValue={user.family_member_id ?? ""}
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              >
+                <option value="">None</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {[m.first_name, m.last_name].filter(Boolean).join(" ").trim() || "(Unnamed)"}
                   </option>
                 ))}
               </select>
