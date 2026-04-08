@@ -3,8 +3,16 @@ import { redirect } from "next/navigation";
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
+import { countOpenMedicalReimbursementRequestsForHousehold } from "@/lib/medical-open-reimbursement-requests";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
+
+function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"): string {
+  if (language === "he") {
+    return n === 1 ? "בקשת החזר פתוחה אחת" : `${n} בקשות החזר פתוחות`;
+  }
+  return n === 1 ? "1 open reimbursement request" : `${n} open reimbursement requests`;
+}
 
 export default async function Home() {
   const session = await getAuthSession();
@@ -83,6 +91,13 @@ export default async function Home() {
   const enabledBySectionId = new Map(
     enabledSections.map((s) => [s.sectionId, s.enabled] as const),
   );
+
+  const medicalAppointmentsEnabled = enabledBySectionId.get("medicalAppointments") ?? true;
+
+  const openMedicalReimbursementRequestCount =
+    !isSuperAdmin && householdId && medicalAppointmentsEnabled
+      ? await countOpenMedicalReimbursementRequestsForHousehold(householdId)
+      : 0;
 
   const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
@@ -252,20 +267,36 @@ export default async function Home() {
                         Manage your finances
                       </div>
                       <div className="grid gap-4 md:grid-cols-3">
-                        {ongoingSections.map((section) => (
-                          <Link
-                            key={section.id}
-                            href={section.href}
-                            className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                          >
-                            <h2 className="mb-1 text-sm font-semibold text-slate-200">
-                              {section.title}
-                            </h2>
-                            <p className="mt-2 text-xs text-slate-400">
-                              {section.description}
-                            </p>
-                          </Link>
-                        ))}
+                        {ongoingSections.map((section) => {
+                          const reimbursementNote =
+                            section.id === "medicalAppointments" &&
+                            openMedicalReimbursementRequestCount > 0
+                              ? formatOpenReimbursementRequestsLabel(
+                                  openMedicalReimbursementRequestCount,
+                                  uiLanguage,
+                                )
+                              : null;
+
+                          return (
+                            <Link
+                              key={section.id}
+                              href={section.href}
+                              className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            >
+                              <h2 className="mb-1 text-sm font-semibold text-slate-200">
+                                {section.title}
+                              </h2>
+                              <p className="mt-2 text-xs text-slate-400">
+                                {section.description}
+                              </p>
+                              {reimbursementNote && (
+                                <p className="mt-2 text-xs font-medium text-amber-200/90">
+                                  {reimbursementNote}
+                                </p>
+                              )}
+                            </Link>
+                          );
+                        })}
                       </div>
                     </>
                   )}
