@@ -1,6 +1,6 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
-import { privateClinicCommon, privateClinicPrograms } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicJobs, privateClinicPrograms } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyProgram, deleteTherapyProgram } from "../actions";
 
@@ -17,6 +17,7 @@ export default async function ProgramsPage({
   const uiLanguage = await getCurrentUiLanguage();
   const c = privateClinicCommon(uiLanguage);
   const pr = privateClinicPrograms(uiLanguage);
+  const j = privateClinicJobs(uiLanguage);
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -28,14 +29,18 @@ export default async function ProgramsPage({
 
   const [jobs, programs] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true, ...(familyMemberId ? { family_member_id: familyMemberId } : { id: "__none__" }) },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+      },
       orderBy: { start_date: "desc" },
       include: { family_member: true },
     }),
     prisma.therapy_service_programs.findMany({
       where: {
         household_id: householdId,
-        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : { id: "__none__" }),
+        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : {}),
       },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },
@@ -108,9 +113,10 @@ export default async function ProgramsPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{pr.programsHeading}</h2>
-        {!familyMemberId ? (
-          <p className="text-sm text-slate-500">{c.programsNoFm}</p>
-        ) : programs.length === 0 ? (
+        {!familyMemberId && (
+          <p className="rounded-lg border border-sky-700/50 bg-sky-950/30 px-3 py-2 text-sm text-sky-100">{j.clinicUnlinkedHint}</p>
+        )}
+        {programs.length === 0 ? (
           <p className="text-sm text-slate-500">{c.programsEmpty}</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">

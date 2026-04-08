@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/auth";
+import { getDashboardSections } from "@/lib/dashboard-sections";
+import type { UiLanguage } from "@/lib/ui-language";
 
 export type EnabledSection = {
   sectionId: string;
@@ -120,3 +122,18 @@ export async function upsertUserEnabledSections(params: {
   );
 }
 
+/** True when the user’s effective dashboard has only the Private clinic section (same rule as home redirect). */
+export async function householdUserOnlyPrivateClinicSection(
+  householdId: string,
+  userId: string,
+  uiLanguage: UiLanguage,
+): Promise<boolean> {
+  const enabledSections = await getEffectiveEnabledSections({ householdId, userId });
+  const enabledBySectionId = new Map(
+    enabledSections.map((s) => [s.sectionId, s.enabled] as const),
+  );
+  const visibleSections = getDashboardSections(uiLanguage).filter(
+    (s) => enabledBySectionId.get(s.id) ?? true,
+  );
+  return visibleSections.length === 1 && visibleSections[0].id === "privateClinic";
+}

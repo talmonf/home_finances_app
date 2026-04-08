@@ -1,5 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
-import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
+import { privateClinicClients, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
@@ -18,6 +18,7 @@ export default async function ClientsPage({
   const uiLanguage = await getCurrentUiLanguage();
   const c = privateClinicCommon(uiLanguage);
   const cl = privateClinicClients(uiLanguage);
+  const j = privateClinicJobs(uiLanguage);
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -32,7 +33,7 @@ export default async function ClientsPage({
       where: {
         household_id: householdId,
         is_active: true,
-        ...(familyMemberId ? { family_member_id: familyMemberId } : { id: "__none__" }),
+        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
       },
       orderBy: { start_date: "desc" },
       include: { family_member: true },
@@ -41,7 +42,7 @@ export default async function ClientsPage({
       where: {
         household_id: householdId,
         is_active: true,
-        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : { id: "__none__" }),
+        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : {}),
       },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },
@@ -99,9 +100,7 @@ export default async function ClientsPage({
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{cl.addClientTitle}</h2>
         {!familyMemberId && (
-          <p className="rounded-lg border border-amber-700/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
-            {c.noFamilyMemberBanner}
-          </p>
+          <p className="rounded-lg border border-sky-700/50 bg-sky-950/30 px-3 py-2 text-sm text-sky-100">{j.clinicUnlinkedHint}</p>
         )}
         <form
           action={createTherapyClient}
@@ -156,8 +155,8 @@ export default async function ClientsPage({
           <ClientJobProgramFields jobs={jobOptions} programs={programOptions} labels={jobFieldLabels} />
           <button
             type="submit"
-            disabled={!familyMemberId}
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            disabled={jobs.length === 0}
+            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {cl.addClientBtn}
           </button>

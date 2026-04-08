@@ -6,6 +6,7 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ export default async function ExpensesPage() {
             <option value="">{c.category}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.name}
+                {therapyLocalizedCategoryName(cat, uiLanguage)}
               </option>
             ))}
           </select>
@@ -120,7 +121,8 @@ export default async function ExpensesPage() {
               >
                 <div className="flex flex-wrap justify-between gap-2 text-sm text-slate-300">
                   <span>
-                    {String(e.expense_date)} — {e.job.job_title} — {e.category.name}
+                    {String(e.expense_date)} — {e.job.job_title} —{" "}
+                    {therapyLocalizedCategoryName(e.category, uiLanguage)}
                   </span>
                   <span className="text-slate-100">
                     {e.amount.toString()} {e.currency}
@@ -158,7 +160,7 @@ export default async function ExpensesPage() {
                     >
                       {categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
-                          {cat.name}
+                          {therapyLocalizedCategoryName(cat, uiLanguage)}
                         </option>
                       ))}
                     </select>

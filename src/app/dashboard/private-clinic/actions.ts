@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, requireSuperAdmin } from "@/lib/auth";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
@@ -16,6 +16,14 @@ import type {
 } from "@/generated/prisma/enums";
 
 const BASE = "/dashboard/private-clinic";
+const ADMIN_HOUSEHOLDS = "/admin/households";
+
+async function requireSuperAdminHouseholdFromForm(formData: FormData): Promise<string> {
+  await requireSuperAdmin();
+  const householdId = (formData.get("household_id") as string | null)?.trim();
+  if (!householdId) redirect(ADMIN_HOUSEHOLDS);
+  return householdId;
+}
 
 async function householdIdOrRedirect(): Promise<string> {
   await requireHouseholdMember();
@@ -135,6 +143,49 @@ async function getCurrentUserFamilyMemberId(householdId: string): Promise<string
   return user?.family_member_id ?? null;
 }
 
+async function validateFamilyMemberInHousehold(householdId: string, familyMemberId: string): Promise<boolean> {
+  const m = await prisma.family_members.findFirst({
+    where: { id: familyMemberId, household_id: householdId, is_active: true },
+    select: { id: true },
+  });
+  return !!m;
+}
+
+/** Job create: use linked member, or `family_member_id` from form when user is not linked. */
+async function resolveFamilyMemberIdForJobCreate(
+  householdId: string,
+  formData: FormData,
+): Promise<{ ok: true; family_member_id: string } | { ok: false; code: "family" | "member" }> {
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  if (userFm) return { ok: true, family_member_id: userFm };
+  const raw = (formData.get("family_member_id") as string | null)?.trim() || "";
+  if (!raw) return { ok: false, code: "family" };
+  if (!(await validateFamilyMemberInHousehold(householdId, raw))) return { ok: false, code: "member" };
+  return { ok: true, family_member_id: raw };
+}
+
+async function assertJobForCurrentUserScope(
+  householdId: string,
+  userFamilyMemberId: string | null,
+  jobId: string,
+): Promise<boolean> {
+  if (userFamilyMemberId) {
+    return !!(await assertJobForFamilyMember(householdId, userFamilyMemberId, jobId));
+  }
+  return !!(await assertJob(householdId, jobId));
+}
+
+async function jobIdsForCurrentUserScope(householdId: string, userFamilyMemberId: string | null): Promise<Set<string>> {
+  const rows = await prisma.jobs.findMany({
+    where: {
+      household_id: householdId,
+      ...(userFamilyMemberId ? { family_member_id: userFamilyMemberId } : {}),
+    },
+    select: { id: true },
+  });
+  return new Set(rows.map((r) => r.id));
+}
+
 async function validateCarInHousehold(householdId: string, carId: string): Promise<boolean> {
   const car = await prisma.cars.findFirst({
     where: { id: carId, household_id: householdId },
@@ -176,7 +227,7 @@ async function resolveTankedUpByFamilyMemberId(
 // --- Settings ---
 
 export async function updateTherapySettings(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   await ensureTherapySettings(householdId);
 
   const note_1_label = (formData.get("note_1_label") as string)?.trim() || "Note 1";
@@ -188,12 +239,13 @@ export async function updateTherapySettings(formData: FormData) {
     data: { note_1_label, note_2_label, note_3_label },
   });
 
-  revalidatePath(`${BASE}/settings`);
-  redirect(`${BASE}/settings?updated=1`);
+  revalidatePath(BASE, "layout");
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
 }
 
 export async function updateTherapyNavTabs(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   await ensureTherapySettings(householdId);
 
   const nav: Record<string, boolean> = {};
@@ -206,17 +258,20 @@ export async function updateTherapyNavTabs(formData: FormData) {
     data: { nav_tabs_json: nav },
   });
 
-  revalidatePath(BASE);
-  revalidatePath(`${BASE}/settings`);
-  redirect(`${BASE}/settings?updated=nav`);
+  revalidatePath(BASE, "layout");
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=nav`);
 }
 
 // --- Jobs ---
 
 export async function createTherapyJob(formData: FormData) {
   const householdId = await householdIdOrRedirect();
-  const family_member_id = await getCurrentUserFamilyMemberId(householdId);
-  if (!family_member_id) redirect(`${BASE}/jobs?error=family`);
+  const resolvedFm = await resolveFamilyMemberIdForJobCreate(householdId, formData);
+  if (!resolvedFm.ok) {
+    redirect(`${BASE}/jobs?error=${resolvedFm.code}`);
+  }
+  const { family_member_id } = resolvedFm;
 
   const employment_type = parseEmploymentType((formData.get("employment_type") as string)?.trim() || null);
   const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
@@ -256,14 +311,15 @@ export async function createTherapyJob(formData: FormData) {
 
 export async function updateTherapyJob(formData: FormData) {
   const householdId = await householdIdOrRedirect();
-  const family_member_id = await getCurrentUserFamilyMemberId(householdId);
-  if (!family_member_id) redirect(`${BASE}/jobs?error=family`);
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
 
   const id = (formData.get("id") as string)?.trim() || "";
   if (!id) redirect(`${BASE}/jobs?error=id`);
 
   const row = await prisma.jobs.findFirst({
-    where: { id, household_id: householdId, family_member_id },
+    where: userFm
+      ? { id, household_id: householdId, family_member_id: userFm }
+      : { id, household_id: householdId },
     select: { id: true },
   });
   if (!row) redirect(`${BASE}/jobs?error=notfound`);
@@ -502,15 +558,14 @@ export async function deleteTherapyProgram(formData: FormData) {
 
 export async function createTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
-  const familyMemberId = await getCurrentUserFamilyMemberId(householdId);
-  if (!familyMemberId) redirect(`${BASE}/clients?error=family`);
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
   const first_name = (formData.get("first_name") as string)?.trim() || "";
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
   if (!first_name || !default_job_id) {
     redirect(`${BASE}/clients?error=missing`);
   }
-  if (!(await assertJobForFamilyMember(householdId, familyMemberId, default_job_id))) {
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, default_job_id))) {
     redirect(`${BASE}/clients?error=job`);
   }
   let default_program_id: string | null = null;
@@ -523,14 +578,7 @@ export async function createTherapyClient(formData: FormData) {
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
   if (!jobIds.includes(default_job_id)) jobIds.push(default_job_id);
-  const allowedJobIds = new Set(
-    (
-      await prisma.jobs.findMany({
-        where: { household_id: householdId, family_member_id: familyMemberId },
-        select: { id: true },
-      })
-    ).map((j) => j.id),
-  );
+  const allowedJobIds = await jobIdsForCurrentUserScope(householdId, userFamilyMemberId);
 
   const id = crypto.randomUUID();
   const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
@@ -575,15 +623,14 @@ export async function createTherapyClient(formData: FormData) {
 
 export async function updateTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
-  const familyMemberId = await getCurrentUserFamilyMemberId(householdId);
-  if (!familyMemberId) redirect(`${BASE}/clients?error=family`);
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
   if (!(await assertClient(householdId, id))) redirect(`${BASE}/clients?error=notfound`);
 
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
   if (!default_job_id) redirect(`${BASE}/clients?error=missing`);
-  if (!(await assertJobForFamilyMember(householdId, familyMemberId, default_job_id))) {
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, default_job_id))) {
     redirect(`${BASE}/clients?error=job`);
   }
   let default_program_id: string | null = null;
@@ -596,14 +643,7 @@ export async function updateTherapyClient(formData: FormData) {
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
   if (!jobIds.includes(default_job_id)) jobIds.push(default_job_id);
-  const allowedJobIds = new Set(
-    (
-      await prisma.jobs.findMany({
-        where: { household_id: householdId, family_member_id: familyMemberId },
-        select: { id: true },
-      })
-    ).map((j) => j.id),
-  );
+  const allowedJobIds = await jobIdsForCurrentUserScope(householdId, userFamilyMemberId);
   const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
   const home = (formData.get("home_phone") as string)?.trim() || "";
   const phones = [mobile, home].filter(Boolean).join("\n") || null;
@@ -911,62 +951,66 @@ export async function deleteReceiptAllocation(formData: FormData) {
 // --- Expenses ---
 
 export async function createTherapyExpenseCategory(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   await ensureDefaultExpenseCategories(householdId);
   const name = (formData.get("name") as string)?.trim() || "";
-  if (!name) redirect(`${BASE}/settings?error=cat`);
+  const name_he = (formData.get("name_he") as string)?.trim() || null;
+  if (!name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
 
   await prisma.therapy_expense_categories.create({
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
       name,
+      name_he,
       is_system: false,
       sort_order: 100,
     },
   });
 
-  revalidatePath(`${BASE}/settings`);
-  redirect(`${BASE}/settings?cat=1`);
+  revalidatePath(`${BASE}/expenses`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=cat`);
 }
 
 export async function updateTherapyExpenseCategory(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   const id = (formData.get("id") as string)?.trim() || "";
   const name = (formData.get("name") as string)?.trim() || "";
-  if (!id || !name) redirect(`${BASE}/settings?error=cat`);
+  const name_he = (formData.get("name_he") as string)?.trim() || null;
+  if (!id || !name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
 
   await prisma.therapy_expense_categories.updateMany({
     where: { id, household_id: householdId },
-    data: { name },
+    data: { name, name_he },
   });
 
-  revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/expenses`);
-  redirect(`${BASE}/settings?updated=1`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
 }
 
 export async function deleteTherapyExpenseCategory(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/settings?error=cat`);
+  if (!id) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
 
   const category = await prisma.therapy_expense_categories.findFirst({
     where: { id, household_id: householdId },
     select: { id: true, is_system: true },
   });
-  if (!category || category.is_system) redirect(`${BASE}/settings?error=cat`);
+  if (!category || category.is_system) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
 
   const usageCount = await prisma.therapy_job_expenses.count({
     where: { household_id: householdId, category_id: id },
   });
-  if (usageCount > 0) redirect(`${BASE}/settings?error=cat-in-use`);
+  if (usageCount > 0) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat-in-use`);
 
   await prisma.therapy_expense_categories.delete({ where: { id } });
 
-  revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/expenses`);
-  redirect(`${BASE}/settings?updated=1`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
 }
 
 export async function createTherapyJobExpense(formData: FormData) {
@@ -1220,62 +1264,65 @@ async function assertTreatmentForHousehold(householdId: string, treatmentId: str
 // --- Consultation types ---
 
 export async function createTherapyConsultationType(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   const name = (formData.get("name") as string)?.trim() || "";
-  if (!name) redirect(`${BASE}/settings?error=ctype`);
+  const name_he = (formData.get("name_he") as string)?.trim() || null;
+  if (!name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
 
   await prisma.therapy_consultation_types.create({
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
       name,
+      name_he,
       is_system: false,
       sort_order: 200,
     },
   });
 
-  revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/settings?ctype=1`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=ctype`);
 }
 
 export async function updateTherapyConsultationType(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   const id = (formData.get("id") as string)?.trim() || "";
   const name = (formData.get("name") as string)?.trim() || "";
-  if (!id || !name) redirect(`${BASE}/settings?error=ctype`);
+  const name_he = (formData.get("name_he") as string)?.trim() || null;
+  if (!id || !name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
 
   await prisma.therapy_consultation_types.updateMany({
     where: { id, household_id: householdId },
-    data: { name },
+    data: { name, name_he },
   });
 
-  revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/settings?updated=1`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
 }
 
 export async function deleteTherapyConsultationType(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
+  const householdId = await requireSuperAdminHouseholdFromForm(formData);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/settings?error=ctype`);
+  if (!id) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
   const type = await prisma.therapy_consultation_types.findFirst({
     where: { id, household_id: householdId },
     select: { id: true, is_system: true },
   });
-  if (!type || type.is_system) redirect(`${BASE}/settings?error=ctype`);
+  if (!type || type.is_system) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
 
   const usageCount = await prisma.therapy_consultations.count({
     where: { household_id: householdId, consultation_type_id: id },
   });
-  if (usageCount > 0) redirect(`${BASE}/settings?error=ctype-in-use`);
+  if (usageCount > 0) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype-in-use`);
 
   await prisma.therapy_consultation_types.deleteMany({
     where: { id, household_id: householdId, is_system: false },
   });
-  revalidatePath(`${BASE}/settings`);
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/settings?updated=1`);
+  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
 }
 
 // --- Consultations (meetings) ---

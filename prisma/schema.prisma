@@ -1246,6 +1246,7 @@ model therapy_expense_categories {
   id           String   @id @default(uuid())
   household_id String
   name         String
+  name_he      String?
   sort_order   Int      @default(0)
   is_system    Boolean  @default(false)
   created_at   DateTime @default(now())
@@ -1470,6 +1471,7 @@ model therapy_consultation_types {
   id           String   @id @default(uuid())
   household_id String
   name         String
+  name_he      String?
   sort_order   Int      @default(0)
   is_system    Boolean  @default(false)
   created_at   DateTime @default(now())

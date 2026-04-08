@@ -11,6 +11,7 @@ type PageProps = {
   searchParams?: Promise<{
     created?: string;
     updated?: string;
+    member?: string;
     error?: string;
   }>;
 };
@@ -126,6 +127,43 @@ export default async function HouseholdUsersPage({
     redirect(`/admin/households/${householdId}?created=1`);
   }
 
+  async function createHouseholdFamilyMember(formData: FormData) {
+    "use server";
+
+    await requireSuperAdmin();
+
+    const hid = (formData.get("household_id") as string | null)?.trim();
+    const fullName = (formData.get("full_name") as string | null)?.trim();
+    const dobRaw = (formData.get("date_of_birth") as string | null)?.trim();
+
+    if (!hid || !fullName) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("Name is required for a family member.")}`,
+      );
+    }
+
+    const date_of_birth = dobRaw ? new Date(dobRaw) : null;
+    if (dobRaw && date_of_birth && Number.isNaN(date_of_birth.getTime())) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent("Invalid date of birth.")}`,
+      );
+    }
+
+    await prisma.family_members.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: hid,
+        full_name: fullName,
+        date_of_birth: date_of_birth && !Number.isNaN(date_of_birth.getTime()) ? date_of_birth : null,
+        is_active: true,
+      },
+    });
+
+    revalidatePath(`/admin/households/${hid}`);
+    revalidatePath(`/admin/households/${hid}/edit`);
+    redirect(`/admin/households/${hid}?member=1`);
+  }
+
   async function toggleUserActive(userId: string, nextActive: boolean) {
     "use server";
 
@@ -178,7 +216,10 @@ export default async function HouseholdUsersPage({
             </div>
           </div>
 
-          {(resolvedSearchParams?.created || resolvedSearchParams?.updated || resolvedSearchParams?.error) && (
+          {(resolvedSearchParams?.created ||
+            resolvedSearchParams?.updated ||
+            resolvedSearchParams?.member ||
+            resolvedSearchParams?.error) && (
             <div
               className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
                 resolvedSearchParams.error
@@ -189,13 +230,63 @@ export default async function HouseholdUsersPage({
               <span>
                 {resolvedSearchParams.error
                   ? decodeURIComponent(resolvedSearchParams.error)
-                  : resolvedSearchParams.created
-                    ? "User created successfully."
-                    : "User updated successfully."}
+                  : resolvedSearchParams.member
+                    ? "Family member added."
+                    : resolvedSearchParams.created
+                      ? "User created successfully."
+                      : "User updated successfully."}
               </span>
             </div>
           )}
         </header>
+
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-200">Family members</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            People in this household (for jobs, clinic, petrol tanker, etc.). You can link users to a member when
+            creating or editing a user.
+          </p>
+          {familyMembers.length > 0 ? (
+            <ul className="mb-4 space-y-1 text-sm text-slate-300">
+              {familyMembers.map((m) => (
+                <li key={m.id}>
+                  {m.full_name?.trim() || "(Unnamed)"}{" "}
+                  <span className="text-xs text-slate-600">{m.id}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mb-4 text-sm text-slate-500">No family members yet.</p>
+          )}
+          <form action={createHouseholdFamilyMember} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <input type="hidden" name="household_id" value={household.id} />
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-300">Full name</label>
+              <input
+                name="full_name"
+                required
+                placeholder="e.g. Clinic holder"
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-300">Date of birth (optional)</label>
+              <input
+                name="date_of_birth"
+                type="date"
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600 sm:w-auto"
+              >
+                Add family member
+              </button>
+            </div>
+          </form>
+        </section>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">

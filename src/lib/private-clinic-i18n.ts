@@ -14,7 +14,6 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   consultations: "ייעוצים",
   travel: "נסיעות",
   petrol: "דלק",
-  settings: "הגדרות",
   importExport: "יבוא / ייצוא",
 };
 
@@ -221,6 +220,21 @@ export function privateClinicJobs(lang: UiLanguage) {
     employerTaxOptional: p("Employer tax number (optional)", "מספר עוסק מעסיק (אופציונלי)"),
     employerAddressOptional: p("Employer address (optional)", "כתובת מעסיק (אופציונלי)"),
     saveJob: c.save,
+    employedPerson: p("Employed person", "עובד/ת"),
+    employedPersonHelp: p(
+      "Each job must be tied to someone in your household list (Family members).",
+      "כל משרה חייבת להיות משויכת למישהו מרשימת בני המשפחה.",
+    ),
+    invalidEmployedPerson: p("Choose a valid employed person.", "בחרו עובד/ת תקין/ה."),
+    needMemberBeforeJob: p(
+      "Add at least one person under Family members before you can add a job.",
+      "הוסיפו לפחות בן משפחה אחד לפני הוספת משרה.",
+    ),
+    clinicUnlinkedHint: p(
+      "Your user is not linked to a family member — you can still use Private clinic for the whole household. When adding a job, choose which household member holds that employment.",
+      "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה הפרטית לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
+    ),
+    noJobsInHousehold: p("No jobs in this household yet. Add one above.", "אין עדיין משרות במשקה. הוסיפו למעלה."),
   };
 }
 

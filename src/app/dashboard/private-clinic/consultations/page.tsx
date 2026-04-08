@@ -13,6 +13,7 @@ import {
   deleteTherapyConsultation,
   updateTherapyConsultation,
 } from "../actions";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
@@ -90,7 +91,7 @@ export default async function ConsultationsPage({
             <option value="">{c.type}</option>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}
+                {therapyLocalizedCategoryName(t, uiLanguage)}
               </option>
             ))}
           </select>
@@ -179,8 +180,8 @@ export default async function ConsultationsPage({
                 className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
               >
                 <summary className="cursor-pointer text-sm text-slate-200">
-                  {formatHouseholdDateUtcWithTime(r.occurred_at, dateDisplayFormat)} — {r.consultation_type.name}{" "}
-                  — {r.job.job_title}
+                  {formatHouseholdDateUtcWithTime(r.occurred_at, dateDisplayFormat)} —{" "}
+                  {therapyLocalizedCategoryName(r.consultation_type, uiLanguage)} — {r.job.job_title}
                 </summary>
                 <form action={updateTherapyConsultation} className="mt-3 grid gap-2 md:grid-cols-2">
                   <input type="hidden" name="id" value={r.id} />
@@ -204,7 +205,7 @@ export default async function ConsultationsPage({
                   >
                     {types.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.name}
+                        {therapyLocalizedCategoryName(t, uiLanguage)}
                       </option>
                     ))}
                   </select>

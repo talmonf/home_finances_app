@@ -40,9 +40,17 @@ export async function saveHouseholdSettings(formData: FormData) {
   for (const item of PRIVATE_CLINIC_NAV_ITEMS) {
     navTabs[item.key] = formData.get(`pc_nav_${item.key}`) === "on";
   }
+  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() || "Note 1";
+  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() || "Note 2";
+  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() || "Note 3";
   await prisma.therapy_settings.update({
     where: { household_id: householdId },
-    data: { nav_tabs_json: navTabs },
+    data: {
+      nav_tabs_json: navTabs,
+      note_1_label,
+      note_2_label,
+      note_3_label,
+    },
   });
 
   revalidatePath("/admin/households");
