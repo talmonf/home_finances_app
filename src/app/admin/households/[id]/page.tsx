@@ -157,6 +157,13 @@ export default async function HouseholdUsersPage({
                 >
                   Edit household
                 </Link>
+                <span className="text-slate-600">·</span>
+                <Link
+                  href={`/admin/households/${householdId}/edit#private-clinic-tabs`}
+                  className="hover:text-slate-200"
+                >
+                  Private clinic tabs
+                </Link>
               </div>
               <h1 className="text-2xl font-semibold text-slate-50">
                 Household users

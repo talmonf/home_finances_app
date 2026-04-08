@@ -4,6 +4,8 @@ import { prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
+import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
+import { ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -33,10 +35,21 @@ export async function saveHouseholdSettings(formData: FormData) {
 
   await upsertHouseholdEnabledSections({ householdId, enabledBySectionId });
 
+  await ensureTherapySettings(householdId);
+  const navTabs: Record<string, boolean> = {};
+  for (const item of PRIVATE_CLINIC_NAV_ITEMS) {
+    navTabs[item.key] = formData.get(`pc_nav_${item.key}`) === "on";
+  }
+  await prisma.therapy_settings.update({
+    where: { household_id: householdId },
+    data: { nav_tabs_json: navTabs },
+  });
+
   revalidatePath("/admin/households");
   revalidatePath(`/admin/households/${householdId}/edit`);
   revalidatePath("/");
   revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/private-clinic", "layout");
 
   redirect(`/admin/households/${householdId}/edit?saved=1`);
 }

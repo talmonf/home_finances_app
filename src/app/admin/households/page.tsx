@@ -216,6 +216,12 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                           Edit
                         </Link>
                         <Link
+                          href={`/admin/households/${h.id}/edit#private-clinic-tabs`}
+                          className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                        >
+                          Private clinic
+                        </Link>
+                        <Link
                           href={`/admin/households/${h.id}`}
                           className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
                         >

@@ -1,7 +1,7 @@
 import { prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
-import { getUserEnabledSections } from "@/lib/household-sections";
+import { getHouseholdEnabledSections, getUserEnabledSections } from "@/lib/household-sections";
 import { UI_LANGUAGE_LABELS, UI_LANGUAGES } from "@/lib/ui-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -63,10 +63,24 @@ export default async function EditHouseholdUserPage({
     notFound();
   }
 
-  const userEnabledRows = await getUserEnabledSections({ householdId, userId });
+  const [userEnabledRows, householdEnabledRows] = await Promise.all([
+    getUserEnabledSections({ householdId, userId }),
+    getHouseholdEnabledSections(householdId),
+  ]);
   const userEnabledBySectionId = new Map(
     userEnabledRows.map((row) => [row.sectionId, row.enabled] as const),
   );
+  const householdEnabledBySectionId = new Map(
+    householdEnabledRows.map((row) => [row.sectionId, row.enabled] as const),
+  );
+
+  function defaultSectionChecked(sectionId: string): boolean {
+    if (userEnabledBySectionId.has(sectionId)) {
+      return userEnabledBySectionId.get(sectionId)!;
+    }
+    return householdEnabledBySectionId.get(sectionId) ?? true;
+  }
+
   const setupSections = DASHBOARD_SECTIONS.filter((s) => s.group === "setup");
   const ongoingSections = DASHBOARD_SECTIONS.filter((s) => s.group === "ongoing");
 
@@ -258,12 +272,33 @@ export default async function EditHouseholdUserPage({
               </select>
             </div>
 
+            <div>
+              <label
+                htmlFor="new_password"
+                className="mb-1 block text-xs font-medium text-slate-300"
+              >
+                New password (optional)
+              </label>
+              <input
+                id="new_password"
+                name="new_password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current password"
+                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Minimum 8 characters when set. Only super admins can change passwords here.
+              </p>
+            </div>
+
             <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
               <h3 className="mb-2 text-sm font-semibold text-slate-200">
                 Enabled sections override
               </h3>
               <p className="mb-4 text-xs text-slate-500">
-                These checkboxes are user-level overrides. Household defaults apply when no user override exists yet.
+                Checked values follow the household unless you change and save — then they become user-specific
+                overrides. A new user inherits the household until you save this form.
               </p>
               <div className="space-y-6">
                 <div>
@@ -277,7 +312,7 @@ export default async function EditHouseholdUserPage({
                           type="checkbox"
                           id={`section_${section.id}`}
                           name={`section_${section.id}`}
-                          defaultChecked={userEnabledBySectionId.get(section.id) ?? true}
+                          defaultChecked={defaultSectionChecked(section.id)}
                           className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
                         />
                         <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">
@@ -299,7 +334,7 @@ export default async function EditHouseholdUserPage({
                           type="checkbox"
                           id={`section_${section.id}`}
                           name={`section_${section.id}`}
-                          defaultChecked={userEnabledBySectionId.get(section.id) ?? true}
+                          defaultChecked={defaultSectionChecked(section.id)}
                           className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
                         />
                         <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">

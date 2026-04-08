@@ -5,6 +5,7 @@ import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertUserEnabledSections } from "@/lib/household-sections";
 import { normalizeUiLanguage } from "@/lib/ui-language";
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,6 +27,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const rawDateDisplayFormat = (formData.get("date_display_format") as string | null)?.trim();
   const rawUiLanguage = (formData.get("ui_language") as string | null)?.trim();
   const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
+  const newPassword = (formData.get("new_password") as string | null)?.trim() || "";
 
   if (!householdId || !userId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
@@ -73,6 +75,16 @@ export async function updateHouseholdUser(formData: FormData) {
     }
   }
 
+  if (newPassword) {
+    if (newPassword.length < 8) {
+      redirect(
+        `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("New password must be at least 8 characters.")}`,
+      );
+    }
+  }
+
+  const password_hash = newPassword ? await bcrypt.hash(newPassword, 12) : undefined;
+
   await prisma.users.update({
     where: { id: userId },
     data: {
@@ -85,6 +97,7 @@ export async function updateHouseholdUser(formData: FormData) {
         ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
         : null,
       ui_language: rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null,
+      ...(password_hash ? { password_hash } : {}),
     },
   });
 
