@@ -16,3 +16,23 @@ export const UI_LANGUAGE_LABELS: Record<UiLanguage, string> = {
   en: "English",
   he: "עברית",
 };
+
+/** Top shell header (root layout) — matches household UI language when available */
+export function appHeaderStrings(lang: UiLanguage) {
+  if (lang === "he") {
+    return {
+      appTitle: "ניהול כספי הבית",
+      signedInAs: "מחובר כ־",
+      signOut: "התנתק",
+      signIn: "התחבר",
+      superAdmin: "מנהל על",
+    };
+  }
+  return {
+    appTitle: "Home Finance Management",
+    signedInAs: "Signed in as",
+    signOut: "Sign out",
+    signIn: "Sign in",
+    superAdmin: "Super admin",
+  };
+}
