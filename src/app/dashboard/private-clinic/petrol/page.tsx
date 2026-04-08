@@ -19,11 +19,8 @@ import { PetrolFillupFormFields } from "@/components/petrol-fillup-form-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import {
   createPrivateClinicPetrolFillup,
-  createPrivateClinicPetrolVehicle,
   deletePrivateClinicPetrolFillup,
-  deletePrivateClinicPetrolVehicle,
   updatePrivateClinicPetrolFillup,
-  updatePrivateClinicPetrolVehicle,
 } from "../actions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -38,7 +35,6 @@ type PageProps = {
     deleted?: string;
     error?: string;
     edit?: string;
-    vehicleEdit?: string;
     vehicleSaved?: string;
     vehicleUpdated?: string;
     vehicleDeleted?: string;
@@ -76,7 +72,6 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
   const resolved = searchParams ? await searchParams : {};
   const requestedCarId = resolved.carId?.trim() || null;
   const editFillupId = resolved.edit?.trim() || null;
-  const editVehicleId = resolved.vehicleEdit?.trim() || null;
 
   const cars = await prisma.cars.findMany({
     where: { household_id: householdId, is_active: true },
@@ -96,7 +91,6 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
       if (resolved.saved) p.set("saved", typeof resolved.saved === "string" ? resolved.saved : "1");
       if (resolved.deleted) p.set("deleted", typeof resolved.deleted === "string" ? resolved.deleted : "1");
       if (resolved.error) p.set("error", resolved.error);
-      if (resolved.vehicleEdit) p.set("vehicleEdit", resolved.vehicleEdit);
       if (resolved.vehicleSaved) p.set("vehicleSaved", resolved.vehicleSaved);
       if (resolved.vehicleUpdated) p.set("vehicleUpdated", resolved.vehicleUpdated);
       if (resolved.vehicleDeleted) p.set("vehicleDeleted", resolved.vehicleDeleted);
@@ -129,8 +123,6 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
   const editingFillup =
     selectedCarId && editFillupId ? fillups.find((f) => f.id === editFillupId) || null : null;
 
-  const editingCar = editVehicleId ? cars.find((c) => c.id === editVehicleId) ?? null : null;
-
   const cancelEditHref =
     selectedCarId != null
       ? `/dashboard/private-clinic/petrol?carId=${encodeURIComponent(selectedCarId)}`
@@ -143,225 +135,49 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
         <p className="text-sm text-slate-400">{pp.subtitle}</p>
       </header>
 
-      <section className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4 sm:p-5">
-        <h2 className="text-lg font-medium text-slate-200">{pp.vehicles}</h2>
-        <p className="mt-1 text-sm text-slate-500">{pp.vehiclesHelp}</p>
-        {resolved.vehicleSaved && (
-          <p className="mt-3 rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-            {pp.vehicleAdded}
-          </p>
-        )}
-        {resolved.vehicleUpdated && (
-          <p className="mt-3 rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-            {pp.vehicleUpdated}
-          </p>
-        )}
-        {resolved.vehicleDeleted && (
-          <p className="mt-3 rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-200">
-            {pp.vehicleRemoved}
-          </p>
-        )}
-        <form
-          action={createPrivateClinicPetrolVehicle}
-          className="mt-4 grid gap-3 sm:grid-cols-2"
+      {resolved.vehicleSaved && (
+        <div className="rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {pp.vehicleAdded}
+        </div>
+      )}
+      {resolved.vehicleUpdated && (
+        <div className="rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {pp.vehicleUpdated}
+        </div>
+      )}
+      {resolved.vehicleDeleted && (
+        <div className="rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-200">
+          {pp.vehicleRemoved}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <Suspense
+            fallback={
+              <div className="h-[52px] w-full animate-pulse rounded-xl bg-slate-800/80" aria-hidden />
+            }
+          >
+            <PetrolCarPicker
+              options={carOptions}
+              selectedCarId={selectedCarId}
+              basePath="/dashboard/private-clinic/petrol"
+              vehicleLabel={pp.vehiclePickerLabel}
+              selectPlaceholder={pp.selectVehiclePlaceholder}
+            />
+          </Suspense>
+        </div>
+        <Link
+          href="/dashboard/private-clinic/petrol/vehicle/new"
+          className="inline-flex min-h-[52px] shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-slate-600 bg-slate-800/80 px-4 text-sm font-semibold text-slate-100 hover:bg-slate-800"
         >
-          <div className="sm:col-span-2">
-            <label className={labelClass} htmlFor="new-vehicle-name">
-              {pp.displayNameOptional}
-            </label>
-            <input
-              id="new-vehicle-name"
-              name="custom_name"
-              placeholder={pp.phWorkCar}
-              className={inputClass}
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="new-maker">
-              {pp.maker}
-            </label>
-            <input
-              id="new-maker"
-              name="maker"
-              required
-              placeholder={pp.phToyota}
-              className={inputClass}
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="new-model">
-              {pp.model}
-            </label>
-            <input
-              id="new-model"
-              name="model"
-              required
-              placeholder={pp.phCorolla}
-              className={inputClass}
-              autoComplete="off"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass} htmlFor="new-plate">
-              {pp.plateOptional}
-            </label>
-            <input
-              id="new-plate"
-              name="plate_number"
-              placeholder={pp.licensePlate}
-              className={inputClass}
-              autoComplete="off"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-600"
-            >
-              {pp.addVehicle}
-            </button>
-          </div>
-        </form>
+          {pp.addVehicle}
+        </Link>
+      </div>
 
-        {cars.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">{pp.noVehicles}</p>
-        ) : (
-          <ul className="mt-6 space-y-3">
-            {cars.map((car) => {
-              const editQs = new URLSearchParams();
-              if (requestedCarId) editQs.set("carId", requestedCarId);
-              editQs.set("vehicleEdit", car.id);
-              const editHref = `/dashboard/private-clinic/petrol?${editQs.toString()}`;
-              const cancelVehicleHref = requestedCarId
-                ? `/dashboard/private-clinic/petrol?carId=${encodeURIComponent(requestedCarId)}`
-                : "/dashboard/private-clinic/petrol";
-
-              if (editingCar?.id === car.id) {
-                return (
-                  <li
-                    key={car.id}
-                    className="rounded-xl border border-sky-700/50 bg-slate-900/80 p-4"
-                  >
-                    <form action={updatePrivateClinicPetrolVehicle} className="grid gap-3 sm:grid-cols-2">
-                      <input type="hidden" name="car_id" value={car.id} />
-                      <div className="sm:col-span-2">
-                        <label className={labelClass} htmlFor={`edit-name-${car.id}`}>
-                          {pp.displayNameOptional}
-                        </label>
-                        <input
-                          id={`edit-name-${car.id}`}
-                          name="custom_name"
-                          defaultValue={car.custom_name ?? ""}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label className={labelClass} htmlFor={`edit-maker-${car.id}`}>
-                          {pp.maker}
-                        </label>
-                        <input
-                          id={`edit-maker-${car.id}`}
-                          name="maker"
-                          required
-                          defaultValue={car.maker}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label className={labelClass} htmlFor={`edit-model-${car.id}`}>
-                          {pp.model}
-                        </label>
-                        <input
-                          id={`edit-model-${car.id}`}
-                          name="model"
-                          required
-                          defaultValue={car.model}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className={labelClass} htmlFor={`edit-plate-${car.id}`}>
-                          {pp.plateOptional}
-                        </label>
-                        <input
-                          id={`edit-plate-${car.id}`}
-                          name="plate_number"
-                          defaultValue={car.plate_number ?? ""}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2 sm:col-span-2">
-                        <button
-                          type="submit"
-                          className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-                        >
-                          {pp.saveVehicle}
-                        </button>
-                        <Link
-                          href={cancelVehicleHref}
-                          className="inline-flex items-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
-                        >
-                          {c.cancel}
-                        </Link>
-                      </div>
-                    </form>
-                  </li>
-                );
-              }
-
-              return (
-                <li
-                  key={car.id}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-100">{carDisplayLabel(car)}</p>
-                    {car.plate_number ? (
-                      <p className="text-xs text-slate-500">{car.plate_number}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={editHref}
-                      className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-sky-400 hover:bg-slate-800"
-                    >
-                      {pp.edit}
-                    </Link>
-                    <ConfirmDeleteForm
-                      action={deletePrivateClinicPetrolVehicle}
-                      message={pp.removeConfirm}
-                    >
-                      <input type="hidden" name="car_id" value={car.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-rose-700/50 px-3 py-1.5 text-sm text-rose-400 hover:bg-rose-950/40"
-                      >
-                        {pp.remove}
-                      </button>
-                    </ConfirmDeleteForm>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <Suspense
-        fallback={
-          <div className="h-[52px] w-full animate-pulse rounded-xl bg-slate-800/80" aria-hidden />
-        }
-      >
-        <PetrolCarPicker
-          options={carOptions}
-          selectedCarId={selectedCarId}
-          basePath="/dashboard/private-clinic/petrol"
-          vehicleLabel={pp.vehiclePickerLabel}
-          selectPlaceholder={pp.selectVehiclePlaceholder}
-        />
-      </Suspense>
+      {cars.length === 0 ? (
+        <p className="text-sm text-slate-500">{pp.noVehicles}</p>
+      ) : null}
 
       {resolved.saved && (
         <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">

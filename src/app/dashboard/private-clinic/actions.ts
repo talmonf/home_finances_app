@@ -1519,12 +1519,17 @@ export async function deleteTherapyTravelEntry(formData: FormData) {
 
 export async function createPrivateClinicPetrolVehicle(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const redirectOnError =
+    (formData.get("redirect_on_error") as string)?.trim() || `${BASE}/petrol`;
   const maker = (formData.get("maker") as string)?.trim();
   const model = (formData.get("model") as string)?.trim();
   const custom_name = (formData.get("custom_name") as string)?.trim() || null;
   const plate_number = (formData.get("plate_number") as string)?.trim() || null;
   if (!maker || !model) {
-    redirect(`${BASE}/petrol?error=${encodeURIComponent("Maker and model are required.")}`);
+    const sep = redirectOnError.includes("?") ? "&" : "?";
+    redirect(
+      `${redirectOnError}${sep}error=${encodeURIComponent("Maker and model are required.")}`,
+    );
   }
 
   const car = await prisma.cars.create({

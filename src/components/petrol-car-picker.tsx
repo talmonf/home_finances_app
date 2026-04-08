@@ -36,6 +36,10 @@ export function PetrolCarPicker({
           p.delete("deleted");
           p.delete("error");
           p.delete("edit");
+          p.delete("vehicleEdit");
+          p.delete("vehicleSaved");
+          p.delete("vehicleUpdated");
+          p.delete("vehicleDeleted");
           if (v) p.set("carId", v);
           else p.delete("carId");
           const q = p.toString();
