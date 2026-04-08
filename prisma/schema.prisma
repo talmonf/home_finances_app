@@ -1230,13 +1230,14 @@ enum TherapyAppointmentRecurrence {
 }
 
 model therapy_settings {
-  id           String   @id @default(uuid())
-  household_id String   @unique
-  note_1_label String   @default("Note 1")
-  note_2_label String   @default("Note 2")
-  note_3_label String   @default("Note 3")
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  household_id   String   @unique
+  note_1_label   String   @default("Note 1")
+  note_2_label   String   @default("Note 2")
+  note_3_label   String   @default("Note 3")
+  nav_tabs_json  Json?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
 }

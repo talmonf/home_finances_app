@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
@@ -86,6 +87,15 @@ export default async function Home() {
   const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
   );
+
+  if (
+    !isSuperAdmin &&
+    householdId &&
+    visibleSections.length === 1 &&
+    visibleSections[0].id === "privateClinic"
+  ) {
+    redirect("/dashboard/private-clinic");
+  }
 
   const setupSections = visibleSections.filter((s) => s.group === "setup");
   const ongoingSections = visibleSections.filter((s) => s.group === "ongoing");

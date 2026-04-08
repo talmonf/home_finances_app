@@ -8,8 +8,10 @@ import {
   deleteTherapyConsultationType,
   updateTherapyConsultationType,
   updateTherapyExpenseCategory,
+  updateTherapyNavTabs,
   updateTherapySettings,
 } from "../actions";
+import { mergePrivateClinicNavVisibility, PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,15 @@ export default async function TherapySettingsPage({
   const sp = searchParams ? await searchParams : undefined;
 
   const [settings, categories, consultationTypes] = await Promise.all([
-    prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
+    prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: {
+        note_1_label: true,
+        note_2_label: true,
+        note_3_label: true,
+        nav_tabs_json: true,
+      },
+    }),
     prisma.therapy_expense_categories.findMany({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
@@ -34,6 +44,8 @@ export default async function TherapySettingsPage({
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
   ]);
+
+  const navVisibility = mergePrivateClinicNavVisibility(settings?.nav_tabs_json);
 
   return (
     <div className="space-y-8">
@@ -48,9 +60,44 @@ export default async function TherapySettingsPage({
       )}
       {sp?.updated && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          Saved.
+          {sp.updated === "nav" ? "Tab visibility saved." : "Saved."}
         </p>
       )}
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-slate-200">Private clinic tabs</h2>
+        <p className="text-sm text-slate-500">
+          Choose which sections appear in the Private clinic navigation. You can still open a hidden tab if you know
+          the URL.
+        </p>
+        <form
+          action={updateTherapyNavTabs}
+          className="max-w-xl space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+        >
+          <ul className="space-y-2">
+            {PRIVATE_CLINIC_NAV_ITEMS.map((item) => (
+                <li key={item.key} className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id={`nav_${item.key}`}
+                    name={`nav_${item.key}`}
+                    defaultChecked={navVisibility[item.key]}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                  />
+                  <label htmlFor={`nav_${item.key}`} className="text-sm text-slate-200">
+                    {item.label}
+                  </label>
+                </li>
+            ))}
+          </ul>
+          <button
+            type="submit"
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            Save tab visibility
+          </button>
+        </form>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">Treatment note labels</h2>

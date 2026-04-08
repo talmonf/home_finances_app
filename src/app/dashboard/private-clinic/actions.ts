@@ -6,6 +6,7 @@ import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize"
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import type {
   TherapyAppointmentRecurrence,
   TherapyAppointmentStatus,
@@ -189,6 +190,25 @@ export async function updateTherapySettings(formData: FormData) {
 
   revalidatePath(`${BASE}/settings`);
   redirect(`${BASE}/settings?updated=1`);
+}
+
+export async function updateTherapyNavTabs(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  await ensureTherapySettings(householdId);
+
+  const nav: Record<string, boolean> = {};
+  for (const item of PRIVATE_CLINIC_NAV_ITEMS) {
+    nav[item.key] = formData.get(`nav_${item.key}`) === "on";
+  }
+
+  await prisma.therapy_settings.update({
+    where: { household_id: householdId },
+    data: { nav_tabs_json: nav },
+  });
+
+  revalidatePath(BASE);
+  revalidatePath(`${BASE}/settings`);
+  redirect(`${BASE}/settings?updated=nav`);
 }
 
 // --- Jobs ---
@@ -1493,4 +1513,79 @@ export async function deleteTherapyTravelEntry(formData: FormData) {
   });
   revalidatePath(`${BASE}/travel`);
   redirect(`${BASE}/travel?updated=1`);
+}
+
+// --- Petrol: minimal vehicle CRUD (no full Cars module) ---
+
+export async function createPrivateClinicPetrolVehicle(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const maker = (formData.get("maker") as string)?.trim();
+  const model = (formData.get("model") as string)?.trim();
+  const custom_name = (formData.get("custom_name") as string)?.trim() || null;
+  const plate_number = (formData.get("plate_number") as string)?.trim() || null;
+  if (!maker || !model) {
+    redirect(`${BASE}/petrol?error=${encodeURIComponent("Maker and model are required.")}`);
+  }
+
+  const car = await prisma.cars.create({
+    data: {
+      id: crypto.randomUUID(),
+      household_id: householdId,
+      maker,
+      model,
+      custom_name,
+      plate_number,
+    },
+  });
+
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/cars");
+  revalidatePath("/");
+  redirect(`${BASE}/petrol?carId=${encodeURIComponent(car.id)}&vehicleSaved=1`);
+}
+
+export async function updatePrivateClinicPetrolVehicle(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const car_id = (formData.get("car_id") as string)?.trim() || "";
+  if (!car_id || !(await validateCarInHousehold(householdId, car_id))) {
+    redirect(`${BASE}/petrol?error=${encodeURIComponent("Invalid vehicle.")}`);
+  }
+
+  const maker = (formData.get("maker") as string)?.trim();
+  const model = (formData.get("model") as string)?.trim();
+  const custom_name = (formData.get("custom_name") as string)?.trim() || null;
+  const plate_number = (formData.get("plate_number") as string)?.trim() || null;
+  if (!maker || !model) {
+    redirect(
+      `${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Maker and model are required.")}`,
+    );
+  }
+
+  await prisma.cars.update({
+    where: { id: car_id, household_id: householdId },
+    data: { maker, model, custom_name, plate_number },
+  });
+
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/cars");
+  revalidatePath("/");
+  redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&vehicleUpdated=1`);
+}
+
+export async function deletePrivateClinicPetrolVehicle(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const car_id = (formData.get("car_id") as string)?.trim() || "";
+  if (!car_id || !(await validateCarInHousehold(householdId, car_id))) {
+    redirect(`${BASE}/petrol?error=${encodeURIComponent("Invalid vehicle.")}`);
+  }
+
+  await prisma.cars.update({
+    where: { id: car_id, household_id: householdId },
+    data: { is_active: false },
+  });
+
+  revalidatePath(`${BASE}/petrol`);
+  revalidatePath("/dashboard/cars");
+  revalidatePath("/");
+  redirect(`${BASE}/petrol?vehicleDeleted=1`);
 }

@@ -123,6 +123,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 053_loans_interest_rate_fields.sql
 - [x] 054_therapy_clients_default_program_nullable.sql
 - [x] 055_ui_language_preferences.sql
+- [x] 056_therapy_settings_nav_tabs.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
