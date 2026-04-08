@@ -1,32 +1,43 @@
 import { TherapyImportForm } from "@/components/therapy-import-form";
+import { getCurrentHouseholdId, getCurrentUiLanguage, requireHouseholdMember } from "@/lib/auth";
+import { privateClinicImportExport } from "@/lib/private-clinic-i18n";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function ImportExportPage() {
+export default async function ImportExportPage() {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const uiLanguage = await getCurrentUiLanguage();
+  const ie = privateClinicImportExport(uiLanguage);
+  const locale = uiLanguage === "he" ? "he" : "en";
+
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Export</h2>
-        <p className="text-sm text-slate-500">
-          Download one Excel workbook with multiple sheets (jobs, programs, clients, treatments,
-          receipts, expenses, etc.).
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{ie.exportTitle}</h2>
+        <p className="text-sm text-slate-500">{ie.exportHelp}</p>
         <a
           href="/api/private-clinic/export"
           className="inline-flex rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
         >
-          Download .xlsx
+          {ie.downloadXlsx}
         </a>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Import</h2>
-        <p className="text-sm text-slate-500">
-          Upload an Excel file in the same shape as the export (sheet names include Programs,
-          Clients, Treatments, Receipts, ConsultationTypes, Consultations, Travel, Expenses, etc.).
-          Existing rows are upserted when <code className="text-slate-400">id</code> is present.
-        </p>
-        <TherapyImportForm />
+        <h2 className="text-lg font-medium text-slate-200">{ie.importTitle}</h2>
+        <p className="text-sm text-slate-500">{ie.importHelp}</p>
+        <TherapyImportForm
+          locale={locale}
+          labels={{
+            importWorkbook: ie.importWorkbook,
+            importFailed: ie.importFailed,
+            importedRows: ie.importedRows,
+          }}
+        />
       </section>
     </div>
   );

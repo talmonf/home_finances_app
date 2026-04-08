@@ -1,5 +1,6 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { privateClinicCommon, privateClinicNavLabel, privateClinicSettings } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
   createTherapyConsultationType,
@@ -24,6 +25,10 @@ export default async function TherapySettingsPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const sp = searchParams ? await searchParams : undefined;
+
+  const uiLanguage = await getCurrentUiLanguage();
+  const st = privateClinicSettings(uiLanguage);
+  const c = privateClinicCommon(uiLanguage);
 
   const [settings, categories, consultationTypes] = await Promise.all([
     prisma.therapy_settings.findUnique({
@@ -52,24 +57,21 @@ export default async function TherapySettingsPage({
       {sp?.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error === "ctype-in-use"
-            ? "Cannot delete consultation type because it is already used by one or more consultations."
+            ? st.errCtypeInUse
             : sp.error === "cat-in-use"
-              ? "Cannot delete expense category because it is already used by one or more expenses."
-              : "Could not complete the action."}
+              ? st.errCatInUse
+              : st.errGeneric}
         </p>
       )}
       {sp?.updated && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          {sp.updated === "nav" ? "Tab visibility saved." : "Saved."}
+          {sp.updated === "nav" ? st.tabSaved : c.saved}
         </p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Private clinic tabs</h2>
-        <p className="text-sm text-slate-500">
-          Choose which sections appear in the Private clinic navigation. You can still open a hidden tab if you know
-          the URL.
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{st.tabsTitle}</h2>
+        <p className="text-sm text-slate-500">{st.tabsHelp}</p>
         <form
           action={updateTherapyNavTabs}
           className="max-w-xl space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
@@ -85,7 +87,7 @@ export default async function TherapySettingsPage({
                     className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
                   />
                   <label htmlFor={`nav_${item.key}`} className="text-sm text-slate-200">
-                    {item.label}
+                    {privateClinicNavLabel(item.key, uiLanguage)}
                   </label>
                 </li>
             ))}
@@ -94,69 +96,65 @@ export default async function TherapySettingsPage({
             type="submit"
             className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Save tab visibility
+            {st.saveTabVisibility}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Treatment note labels</h2>
-        <p className="text-sm text-slate-500">
-          These titles appear next to the three note fields when logging treatments.
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{st.noteLabelsTitle}</h2>
+        <p className="text-sm text-slate-500">{st.noteLabelsHelp}</p>
         <form
           action={updateTherapySettings}
           className="grid max-w-xl gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
         >
           <input
             name="note_1_label"
-            defaultValue={settings?.note_1_label ?? "Note 1"}
+            defaultValue={settings?.note_1_label ?? st.note1Default}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="note_2_label"
-            defaultValue={settings?.note_2_label ?? "Note 2"}
+            defaultValue={settings?.note_2_label ?? st.note2Default}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="note_3_label"
-            defaultValue={settings?.note_3_label ?? "Note 3"}
+            defaultValue={settings?.note_3_label ?? st.note3Default}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <button
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Save labels
+            {st.saveLabels}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Consultation / meeting types</h2>
-        <p className="text-sm text-slate-500">
-          Used when logging meetings on the Consultations page (separate from visit types on sessions).
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{st.consultTypesTitle}</h2>
+        <p className="text-sm text-slate-500">{st.consultTypesHelp}</p>
         <ul className="space-y-1 text-sm text-slate-400">
-          {consultationTypes.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-2">
+          {consultationTypes.map((row) => (
+            <li key={row.id} className="flex flex-wrap items-center gap-2">
               <form action={updateTherapyConsultationType} className="flex flex-wrap items-center gap-2">
-                <input type="hidden" name="id" value={c.id} />
+                <input type="hidden" name="id" value={row.id} />
                 <input
                   name="name"
-                  defaultValue={c.name}
+                  defaultValue={row.name}
                   className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
                 />
                 <button type="submit" className="text-xs text-sky-400 hover:text-sky-300">
-                  Save
+                  {c.save}
                 </button>
               </form>
-              {c.is_system ? <span className="text-xs text-slate-600">(default)</span> : null}
-              {!c.is_system && (
+              {row.is_system ? <span className="text-xs text-slate-600">{st.defaultTag}</span> : null}
+              {!row.is_system && (
                 <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
-                  <input type="hidden" name="id" value={c.id} />
+                  <input type="hidden" name="id" value={row.id} />
                   <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                    Remove
+                    {st.remove}
                   </button>
                 </ConfirmDeleteForm>
               )}
@@ -169,7 +167,7 @@ export default async function TherapySettingsPage({
         >
           <input
             name="name"
-            placeholder="New type name"
+            placeholder={st.newTypeName}
             required
             className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -177,33 +175,33 @@ export default async function TherapySettingsPage({
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
           >
-            Add
+            {st.add}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Expense categories</h2>
+        <h2 className="text-lg font-medium text-slate-200">{st.expenseCatsTitle}</h2>
         <ul className="space-y-1 text-sm text-slate-400">
-          {categories.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-2">
+          {categories.map((row) => (
+            <li key={row.id} className="flex flex-wrap items-center gap-2">
               <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-center gap-2">
-                <input type="hidden" name="id" value={c.id} />
+                <input type="hidden" name="id" value={row.id} />
                 <input
                   name="name"
-                  defaultValue={c.name}
+                  defaultValue={row.name}
                   className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
                 />
                 <button type="submit" className="text-xs text-sky-400 hover:text-sky-300">
-                  Save
+                  {c.save}
                 </button>
               </form>
-              {c.is_system ? <span className="text-xs text-slate-600">(default)</span> : null}
-              {!c.is_system && (
+              {row.is_system ? <span className="text-xs text-slate-600">{st.defaultTag}</span> : null}
+              {!row.is_system && (
                 <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
-                  <input type="hidden" name="id" value={c.id} />
+                  <input type="hidden" name="id" value={row.id} />
                   <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                    Remove
+                    {st.remove}
                   </button>
                 </ConfirmDeleteForm>
               )}
@@ -216,7 +214,7 @@ export default async function TherapySettingsPage({
         >
           <input
             name="name"
-            placeholder="New category name"
+            placeholder={st.newCatName}
             required
             className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -224,7 +222,7 @@ export default async function TherapySettingsPage({
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
           >
-            Add
+            {st.add}
           </button>
         </form>
       </section>

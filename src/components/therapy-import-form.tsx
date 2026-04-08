@@ -3,7 +3,19 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
-export function TherapyImportForm() {
+type Locale = "en" | "he";
+
+export function TherapyImportForm({
+  locale = "en",
+  labels,
+}: {
+  locale?: Locale;
+  labels: {
+    importWorkbook: string;
+    importFailed: string;
+    importedRows: (n: number, issues: number, errText: string) => string;
+  };
+}) {
   const [msg, setMsg] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -22,14 +34,11 @@ export function TherapyImportForm() {
       error?: string;
     };
     if (!res.ok) {
-      setMsg(j.error || "Import failed");
+      setMsg(j.error || labels.importFailed);
       return;
     }
-    setMsg(
-      `Imported ${j.imported ?? 0} row(s). ${j.errorCount ? `${j.errorCount} issue(s).` : ""} ${
-        j.errors?.length ? j.errors.join("; ") : ""
-      }`,
-    );
+    const errText = j.errors?.length ? j.errors.join("; ") : "";
+    setMsg(labels.importedRows(j.imported ?? 0, j.errorCount ?? 0, errText));
   }
 
   return (
@@ -39,7 +48,7 @@ export function TherapyImportForm() {
         type="submit"
         className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
       >
-        Import workbook
+        {labels.importWorkbook}
       </button>
       {msg && <p className="text-sm text-slate-300 whitespace-pre-wrap">{msg}</p>}
     </form>

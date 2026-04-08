@@ -5,6 +5,22 @@ import { useEffect, useMemo, useState } from "react";
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
 
+export type ClientJobProgramFieldLabels = {
+  defaultJob: string;
+  defaultProgramOptional: string;
+  selectJob: string;
+  none: string;
+  alsoSeenUnder: string;
+};
+
+const DEFAULT_LABELS: ClientJobProgramFieldLabels = {
+  defaultJob: "Default job",
+  defaultProgramOptional: "Default program (optional)",
+  selectJob: "Select job",
+  none: "None",
+  alsoSeenUnder: "Also seen under these jobs (includes default)",
+};
+
 export function ClientJobProgramFields({
   jobs,
   programs,
@@ -12,6 +28,7 @@ export function ClientJobProgramFields({
   defaultProgramId,
   defaultCheckedJobIds,
   requiredProgram,
+  labels = DEFAULT_LABELS,
 }: {
   jobs: JobOption[];
   programs: ProgramOption[];
@@ -19,6 +36,7 @@ export function ClientJobProgramFields({
   defaultProgramId?: string | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
+  labels?: ClientJobProgramFieldLabels;
 }) {
   const [jobId, setJobId] = useState(defaultJobId ?? "");
   const [programId, setProgramId] = useState(defaultProgramId ?? "");
@@ -57,7 +75,7 @@ export function ClientJobProgramFields({
   return (
     <>
       <div className="md:col-span-2 space-y-1">
-        <label className="block text-xs text-slate-400">Default job</label>
+        <label className="block text-xs text-slate-400">{labels.defaultJob}</label>
         <select
           name="default_job_id"
           value={jobId}
@@ -65,7 +83,7 @@ export function ClientJobProgramFields({
           required
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="">Select job</option>
+          <option value="">{labels.selectJob}</option>
           {jobs.map((j) => (
             <option key={j.id} value={j.id}>
               {j.label}
@@ -75,7 +93,7 @@ export function ClientJobProgramFields({
       </div>
 
       <div className="md:col-span-2 space-y-1">
-        <label className="block text-xs text-slate-400">Default program (optional)</label>
+        <label className="block text-xs text-slate-400">{labels.defaultProgramOptional}</label>
         <select
           name="default_program_id"
           value={programId}
@@ -83,7 +101,7 @@ export function ClientJobProgramFields({
           required={!!requiredProgram}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="">None</option>
+          <option value="">{labels.none}</option>
           {filteredPrograms.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
@@ -93,7 +111,7 @@ export function ClientJobProgramFields({
       </div>
 
       <div className="md:col-span-2 space-y-2">
-        <p className="text-xs text-slate-400">Also seen under these jobs (includes default)</p>
+        <p className="text-xs text-slate-400">{labels.alsoSeenUnder}</p>
         <div className="flex flex-wrap gap-3">
           {jobs.map((j) => (
             <label key={j.id} className="flex items-center gap-2 text-sm text-slate-300">

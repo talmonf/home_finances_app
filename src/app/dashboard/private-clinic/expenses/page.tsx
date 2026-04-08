@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { privateClinicCommon, privateClinicExpenses } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -13,6 +14,8 @@ export default async function ExpensesPage() {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const ex = privateClinicExpenses(uiLanguage);
 
   const [jobs, categories, expenses] = await Promise.all([
     prisma.jobs.findMany({
@@ -34,7 +37,7 @@ export default async function ExpensesPage() {
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "הוספת הוצאה" : "Add expense"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{ex.addExpense}</h2>
         <form
           action={createTherapyJobExpense}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -44,7 +47,7 @@ export default async function ExpensesPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Job</option>
+            <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.job_title}
@@ -56,10 +59,10 @@ export default async function ExpensesPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Category</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+            <option value="">{c.category}</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
               </option>
             ))}
           </select>
@@ -71,7 +74,7 @@ export default async function ExpensesPage() {
           />
           <input
             name="amount"
-            placeholder="Amount"
+            placeholder={c.amount}
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -81,32 +84,33 @@ export default async function ExpensesPage() {
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">Link bank transaction (optional)</label>
+            <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
             <TherapyTransactionLinkSelect
               name="linked_transaction_id"
               householdId={householdId}
-              label="Link bank transaction — clinic expense"
-              hint="Optional: link a debit or outgoing payment for this expense."
+              label={ex.linkTxExpense}
+              hint={ex.linkTxExpenseHint}
+              noneOptionLabel={c.txNoneLinked}
             />
           </div>
           <textarea
             name="notes"
-            placeholder="Notes"
+            placeholder={c.notes}
             className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <button
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            {uiLanguage === "he" ? "שמירת הוצאה" : "Save expense"}
+            {c.saveExpense}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "הוצאות" : "Expenses"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
         {expenses.length === 0 ? (
-          <p className="text-sm text-slate-500">No expenses yet.</p>
+          <p className="text-sm text-slate-500">{c.expensesEmpty}</p>
         ) : (
           <div className="space-y-6">
             {expenses.map((e) => (
@@ -131,7 +135,7 @@ export default async function ExpensesPage() {
                 ) : null}
                 <TherapyExpenseImageUpload expenseId={e.id} />
                 <details>
-                  <summary className="cursor-pointer text-xs text-slate-500">Edit / delete</summary>
+                  <summary className="cursor-pointer text-xs text-slate-500">{c.editDelete}</summary>
                   <form action={updateTherapyJobExpense} className="mt-2 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={e.id} />
                     <select
@@ -152,9 +156,9 @@ export default async function ExpensesPage() {
                       required
                       className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                     >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
                         </option>
                       ))}
                     </select>
@@ -181,7 +185,8 @@ export default async function ExpensesPage() {
                         name="linked_transaction_id"
                         householdId={householdId}
                         currentId={e.linked_transaction_id}
-                        label="Clinic expense (optional)"
+                        label={ex.clinicExpenseOptional}
+                        noneOptionLabel={c.txNoneLinked}
                       />
                     </div>
                     <textarea
@@ -190,13 +195,13 @@ export default async function ExpensesPage() {
                       className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                     />
                     <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                      Save
+                      {c.save}
                     </button>
                   </form>
                   <ConfirmDeleteForm action={deleteTherapyJobExpense} className="mt-2">
                     <input type="hidden" name="id" value={e.id} />
                     <button type="submit" className="text-xs text-rose-400">
-                      Delete expense
+                      {c.deleteExpense}
                     </button>
                   </ConfirmDeleteForm>
                 </details>

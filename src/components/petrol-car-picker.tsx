@@ -2,12 +2,21 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+const DEFAULT_BASE = "/dashboard/petrol-fillups";
+
 export function PetrolCarPicker({
   options,
   selectedCarId,
+  basePath = DEFAULT_BASE,
+  vehicleLabel = "Vehicle",
+  selectPlaceholder = "Select a vehicle…",
 }: {
   options: { id: string; label: string }[];
   selectedCarId: string | null;
+  /** Defaults to household petrol-fillups page */
+  basePath?: string;
+  vehicleLabel?: string;
+  selectPlaceholder?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -15,7 +24,7 @@ export function PetrolCarPicker({
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-slate-300" htmlFor="petrol-car-picker">
-        Vehicle
+        {vehicleLabel}
       </label>
       <select
         id="petrol-car-picker"
@@ -30,11 +39,11 @@ export function PetrolCarPicker({
           if (v) p.set("carId", v);
           else p.delete("carId");
           const q = p.toString();
-          router.push(q ? `/dashboard/petrol-fillups?${q}` : "/dashboard/petrol-fillups");
+          router.push(q ? `${basePath}?${q}` : basePath);
         }}
         className="w-full min-h-[52px] rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-base text-slate-100 shadow-inner shadow-slate-950/40 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
       >
-        <option value="">Select a vehicle…</option>
+        <option value="">{selectPlaceholder}</option>
         {options.map((c) => (
           <option key={c.id} value={c.id}>
             {c.label}

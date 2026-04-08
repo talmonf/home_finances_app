@@ -3,7 +3,9 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
 } from "@/lib/auth";
+import { privateClinicCommon, privateClinicPetrol } from "@/lib/private-clinic-i18n";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
   carDisplayLabel,
@@ -68,6 +70,9 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const pp = privateClinicPetrol(uiLanguage);
   const resolved = searchParams ? await searchParams : {};
   const requestedCarId = resolved.carId?.trim() || null;
   const editFillupId = resolved.edit?.trim() || null;
@@ -134,30 +139,26 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">Petrol fill-up</h1>
-        <p className="text-sm text-slate-400">
-          Choose the car, then enter the pump readout. Delta km and km/L use the previous fill with a lower odometer.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">{pp.title}</h1>
+        <p className="text-sm text-slate-400">{pp.subtitle}</p>
       </header>
 
       <section className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4 sm:p-5">
-        <h2 className="text-lg font-medium text-slate-200">Vehicles</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Add or rename vehicles here for petrol tracking only — no insurance, services, or other car records.
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{pp.vehicles}</h2>
+        <p className="mt-1 text-sm text-slate-500">{pp.vehiclesHelp}</p>
         {resolved.vehicleSaved && (
           <p className="mt-3 rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-            Vehicle added.
+            {pp.vehicleAdded}
           </p>
         )}
         {resolved.vehicleUpdated && (
           <p className="mt-3 rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-            Vehicle updated.
+            {pp.vehicleUpdated}
           </p>
         )}
         {resolved.vehicleDeleted && (
           <p className="mt-3 rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-200">
-            Vehicle removed from this list.
+            {pp.vehicleRemoved}
           </p>
         )}
         <form
@@ -166,50 +167,50 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
         >
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="new-vehicle-name">
-              Display name (optional)
+              {pp.displayNameOptional}
             </label>
             <input
               id="new-vehicle-name"
               name="custom_name"
-              placeholder="e.g. Work car"
+              placeholder={pp.phWorkCar}
               className={inputClass}
               autoComplete="off"
             />
           </div>
           <div>
             <label className={labelClass} htmlFor="new-maker">
-              Maker
+              {pp.maker}
             </label>
             <input
               id="new-maker"
               name="maker"
               required
-              placeholder="e.g. Toyota"
+              placeholder={pp.phToyota}
               className={inputClass}
               autoComplete="off"
             />
           </div>
           <div>
             <label className={labelClass} htmlFor="new-model">
-              Model
+              {pp.model}
             </label>
             <input
               id="new-model"
               name="model"
               required
-              placeholder="e.g. Corolla"
+              placeholder={pp.phCorolla}
               className={inputClass}
               autoComplete="off"
             />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="new-plate">
-              Plate (optional)
+              {pp.plateOptional}
             </label>
             <input
               id="new-plate"
               name="plate_number"
-              placeholder="License plate"
+              placeholder={pp.licensePlate}
               className={inputClass}
               autoComplete="off"
             />
@@ -219,13 +220,13 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
               type="submit"
               className="rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-600"
             >
-              Add vehicle
+              {pp.addVehicle}
             </button>
           </div>
         </form>
 
         {cars.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No vehicles yet — add one above to log fill-ups.</p>
+          <p className="mt-4 text-sm text-slate-500">{pp.noVehicles}</p>
         ) : (
           <ul className="mt-6 space-y-3">
             {cars.map((car) => {
@@ -247,7 +248,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                       <input type="hidden" name="car_id" value={car.id} />
                       <div className="sm:col-span-2">
                         <label className={labelClass} htmlFor={`edit-name-${car.id}`}>
-                          Display name (optional)
+                          {pp.displayNameOptional}
                         </label>
                         <input
                           id={`edit-name-${car.id}`}
@@ -258,7 +259,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                       </div>
                       <div>
                         <label className={labelClass} htmlFor={`edit-maker-${car.id}`}>
-                          Maker
+                          {pp.maker}
                         </label>
                         <input
                           id={`edit-maker-${car.id}`}
@@ -270,7 +271,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                       </div>
                       <div>
                         <label className={labelClass} htmlFor={`edit-model-${car.id}`}>
-                          Model
+                          {pp.model}
                         </label>
                         <input
                           id={`edit-model-${car.id}`}
@@ -282,7 +283,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                       </div>
                       <div className="sm:col-span-2">
                         <label className={labelClass} htmlFor={`edit-plate-${car.id}`}>
-                          Plate (optional)
+                          {pp.plateOptional}
                         </label>
                         <input
                           id={`edit-plate-${car.id}`}
@@ -296,13 +297,13 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                           type="submit"
                           className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-sky-400"
                         >
-                          Save vehicle
+                          {pp.saveVehicle}
                         </button>
                         <Link
                           href={cancelVehicleHref}
                           className="inline-flex items-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
                         >
-                          Cancel
+                          {c.cancel}
                         </Link>
                       </div>
                     </form>
@@ -326,18 +327,18 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                       href={editHref}
                       className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-sky-400 hover:bg-slate-800"
                     >
-                      Edit
+                      {pp.edit}
                     </Link>
                     <ConfirmDeleteForm
                       action={deletePrivateClinicPetrolVehicle}
-                      message="Remove this vehicle from the petrol list? It will be hidden here; existing fill-ups stay in the database."
+                      message={pp.removeConfirm}
                     >
                       <input type="hidden" name="car_id" value={car.id} />
                       <button
                         type="submit"
                         className="rounded-lg border border-rose-700/50 px-3 py-1.5 text-sm text-rose-400 hover:bg-rose-950/40"
                       >
-                        Remove
+                        {pp.remove}
                       </button>
                     </ConfirmDeleteForm>
                   </div>
@@ -353,17 +354,23 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
           <div className="h-[52px] w-full animate-pulse rounded-xl bg-slate-800/80" aria-hidden />
         }
       >
-        <PetrolCarPicker options={carOptions} selectedCarId={selectedCarId} />
+        <PetrolCarPicker
+          options={carOptions}
+          selectedCarId={selectedCarId}
+          basePath="/dashboard/private-clinic/petrol"
+          vehicleLabel={pp.vehiclePickerLabel}
+          selectPlaceholder={pp.selectVehiclePlaceholder}
+        />
       </Suspense>
 
       {resolved.saved && (
         <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
-          Fill-up saved.
+          {c.fillUpSaved}
         </div>
       )}
       {resolved.deleted && (
         <div className="rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-3 text-sm text-slate-200">
-          Record removed.
+          {c.deleted}
         </div>
       )}
       {resolved.error && (
@@ -376,16 +383,16 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
         <>
           {editFillupId && !editingFillup ? (
             <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
-              That fill-up could not be loaded.{" "}
+              {c.couldNotLoadFillup}{" "}
               <Link href={cancelEditHref} className="text-sky-400 underline hover:text-sky-300">
-                Clear edit
+                {c.clearEdit}
               </Link>
             </div>
           ) : null}
 
           <section className="mx-auto w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/50 ring-1 ring-slate-700/80">
             <h2 className="mb-4 text-lg font-medium text-slate-200">
-              {editingFillup ? "Edit fill-up" : "New fill-up"}
+              {editingFillup ? pp.editFillUp : pp.newFillUp}
             </h2>
             <form
               key={editingFillup?.id ?? "new-fillup"}
@@ -396,6 +403,14 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                 members={familyMembers}
                 defaultFilledAt={editingFillup ? dateInputValue(editingFillup.filled_at) : today}
                 defaultTankerId={editingFillup?.tanked_up_by_family_member_id ?? null}
+                labels={{
+                  date: c.date,
+                  tankedUpBy: c.tankedBy,
+                  select: pp.selectEllipsis,
+                  tankerAgeHint: pp.tankerAgeHint,
+                  tankerNoEligible: pp.tankerNoEligible,
+                  tankerNoDob: pp.tankerNoDob,
+                }}
               />
               <PetrolFillupFormFields
                 carId={selectedCarId}
@@ -414,19 +429,26 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                         odometer_km: "",
                       }
                 }
+                labels={{
+                  amountPaid: pp.amountPaid,
+                  litres: pp.litres,
+                  costPerLitrePreview: pp.costPerLitrePreview,
+                  odometerKm: pp.odometerKm,
+                }}
               />
               <div className="[&_select]:min-h-[52px] [&_select]:text-base [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3">
                 <TherapyTransactionLinkSelect
                   name="linked_transaction_id"
                   householdId={householdId}
                   currentId={editingFillup?.transaction_id ?? null}
-                  label="Linked transaction (optional)"
-                  hint="One bank transaction can link to only one petrol record."
+                  label={pp.linkTxOptional}
+                  hint={pp.linkTxHint}
+                  noneOptionLabel={c.txNoneLinked}
                 />
               </div>
               <div className="space-y-2">
                 <label className={labelClass} htmlFor="notes">
-                  Notes (optional)
+                  {pp.notesOptional}
                 </label>
                 <textarea
                   id="notes"
@@ -441,14 +463,14 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                   type="submit"
                   className="min-h-[56px] rounded-xl bg-sky-500 px-5 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500 sm:flex-1"
                 >
-                  {editingFillup ? "Save changes" : "Save fill-up"}
+                  {editingFillup ? pp.saveChanges : pp.saveFillUp}
                 </button>
                 {editingFillup ? (
                   <Link
                     href={cancelEditHref}
                     className="inline-flex min-h-[56px] items-center justify-center rounded-xl border border-slate-600 px-5 text-base font-medium text-slate-200 hover:bg-slate-800"
                   >
-                    Cancel
+                    {c.cancel}
                   </Link>
                 ) : null}
               </div>
@@ -456,10 +478,10 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-medium text-slate-200">Recent fill-ups</h2>
+            <h2 className="text-lg font-medium text-slate-200">{c.recentFillUps}</h2>
             {fillups.length === 0 ? (
               <p className="rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-6 text-center text-sm text-slate-500">
-                No fill-ups for this vehicle yet.
+                {pp.noFillUpsForVehicle}
               </p>
             ) : (
               <>
@@ -479,7 +501,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                               {formatHouseholdDate(p.filled_at, dateDisplayFormat)}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {p.tanked_up_by_family_member?.full_name ?? "—"} · Paid {formatMoney(p.amount_paid)}
+                              {p.tanked_up_by_family_member?.full_name ?? "—"} · {c.paid} {formatMoney(p.amount_paid)}
                             </p>
                           </div>
                           <div className="flex shrink-0 gap-2">
@@ -487,21 +509,21 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                               href={editHref}
                               className="text-xs font-medium text-sky-400 hover:text-sky-300"
                             >
-                              Edit
+                              {pp.edit}
                             </Link>
                             <ConfirmDeleteForm action={deletePrivateClinicPetrolFillup.bind(null, p.id, selectedCarId)}>
                               <button
                                 type="submit"
                                 className="text-xs font-medium text-rose-400 hover:text-rose-300"
                               >
-                                Delete
+                                {c.delete}
                               </button>
                             </ConfirmDeleteForm>
                           </div>
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-slate-300 sm:grid-cols-3">
                           <div>
-                            <dt className="text-slate-500">Litres</dt>
+                            <dt className="text-slate-500">{pp.litres}</dt>
                             <dd className="tabular-nums">
                               {Number(p.litres.toString()).toLocaleString("en", {
                                 minimumFractionDigits: 3,
@@ -510,33 +532,33 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">Odo (km)</dt>
+                            <dt className="text-slate-500">{pp.odo}</dt>
                             <dd className="tabular-nums">{p.odometer_km.toLocaleString("en")}</dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">Delta km</dt>
+                            <dt className="text-slate-500">{pp.deltaKm}</dt>
                             <dd className="tabular-nums">
                               {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">Cost/L</dt>
+                            <dt className="text-slate-500">{pp.costPerL}</dt>
                             <dd>{formatCostPerLitre(m?.costPerLitre ?? null)}</dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">km/L</dt>
+                            <dt className="text-slate-500">{pp.kmPerL}</dt>
                             <dd className="tabular-nums">
                               {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">Bank tx</dt>
+                            <dt className="text-slate-500">{c.bankTx}</dt>
                             <dd className="text-slate-400" title={
                                 tx
                                   ? `${formatHouseholdDate(tx.transaction_date, dateDisplayFormat)} ${tx.amount.toString()}`
                                   : undefined
                               }>
-                              {tx ? "Linked" : "—"}
+                              {tx ? c.linked : "—"}
                             </dd>
                           </div>
                         </dl>
@@ -551,16 +573,16 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-700 bg-slate-800/80">
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Date</th>
-                      <th className="min-w-[7rem] px-3 py-2 font-medium text-slate-300">Tanked by</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Paid</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">L</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Odo (km)</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Delta km</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Cost/L</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">km/L</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">Tx</th>
-                      <th className="min-w-[6rem] px-3 py-2 font-medium text-slate-300">Notes</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.tableDate}</th>
+                      <th className="min-w-[7rem] px-3 py-2 font-medium text-slate-300">{c.tankedBy}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{c.paid}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.litres}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.odo}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.deltaKm}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.costPerL}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.kmPerL}</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300">{pp.tx}</th>
+                      <th className="min-w-[6rem] px-3 py-2 font-medium text-slate-300">{c.notes}</th>
                       <th className="whitespace-nowrap px-3 py-2 font-medium text-slate-300"> </th>
                     </tr>
                   </thead>
@@ -615,14 +637,14 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                                 href={editHref}
                                 className="text-xs font-medium text-sky-400 hover:text-sky-300"
                               >
-                                Edit
+                                {pp.edit}
                               </Link>
                               <ConfirmDeleteForm action={deletePrivateClinicPetrolFillup.bind(null, p.id, selectedCarId)}>
                                 <button
                                   type="submit"
                                   className="text-xs font-medium text-rose-400 hover:text-rose-300"
                                 >
-                                  Delete
+                                  {c.delete}
                                 </button>
                               </ConfirmDeleteForm>
                             </div>
@@ -639,17 +661,17 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
 
           <p className="text-center text-xs text-slate-600">
             <Link href={`/dashboard/cars/${selectedCarId}`} className="text-sky-400 hover:text-sky-300">
-              Car details & services
+              {c.carDetailsLink}
             </Link>
             {" · "}
             <Link href="/dashboard/cars" className="text-sky-400 hover:text-sky-300">
-              All cars
+              {c.allCars}
             </Link>
           </p>
         </>
       ) : (
         <p className="rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-8 text-center text-sm text-slate-400">
-          Select a vehicle above to log a fill-up and see history.
+          {c.selectVehiclePrompt}
         </p>
       )}
     </div>

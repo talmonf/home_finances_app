@@ -13,6 +13,13 @@ const inputClass =
   "w-full min-h-[52px] rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-base text-slate-100 shadow-inner shadow-slate-950/40 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40";
 const labelClass = "block text-sm font-medium text-slate-300";
 
+const defaultFormLabels = {
+  amountPaid: "Amount paid",
+  litres: "Litres",
+  costPerLitrePreview: "Cost per litre (from amount ÷ litres)",
+  odometerKm: "Odometer (km)",
+};
+
 type Props = {
   carId: string;
   /** Set when editing an existing fill-up */
@@ -23,9 +30,11 @@ type Props = {
     litres: string;
     odometer_km: string;
   };
+  labels?: Partial<typeof defaultFormLabels>;
 };
 
-export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defaults }: Props) {
+export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defaults, labels }: Props) {
+  const L = { ...defaultFormLabels, ...labels };
   const [amount, setAmount] = useState(defaults.amount_paid);
   const [litres, setLitres] = useState(defaults.litres);
 
@@ -38,7 +47,7 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
       <input type="hidden" name="currency" value={currency} />
       <div className="space-y-2">
         <label className={labelClass} htmlFor="amount_paid">
-          Amount paid
+          {L.amountPaid}
         </label>
         <input
           id="amount_paid"
@@ -57,7 +66,7 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
       </div>
       <div className="space-y-2">
         <label className={labelClass} htmlFor="litres">
-          Litres
+          {L.litres}
         </label>
         <input
           id="litres"
@@ -74,14 +83,14 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
         />
       </div>
       <div className="rounded-xl border border-slate-600/80 bg-slate-800/50 px-4 py-3 text-sm">
-        <span className="text-slate-400">Cost per litre (from amount ÷ litres)</span>
+        <span className="text-slate-400">{L.costPerLitrePreview}</span>
         <p className="mt-1 text-lg font-medium tabular-nums text-slate-100">
           {costPreview != null ? `${costPreview}` : "—"}
         </p>
       </div>
       <div className="space-y-2">
         <label className={labelClass} htmlFor="odometer_km">
-          Odometer (km)
+          {L.odometerKm}
         </label>
         <input
           id="odometer_km"

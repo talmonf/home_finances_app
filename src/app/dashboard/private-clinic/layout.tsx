@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { getAuthSession, prisma } from "@/lib/auth";
+import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import {
+  privateClinicLayoutStrings,
+  privateClinicNavLabel,
+} from "@/lib/private-clinic-i18n";
 import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
 import {
   ensureDefaultConsultationTypes,
@@ -13,6 +17,8 @@ export default async function PrivateClinicLayout({
   children: React.ReactNode;
 }) {
   const session = await getAuthSession();
+  const uiLanguage = await getCurrentUiLanguage();
+  const layoutCopy = privateClinicLayoutStrings(uiLanguage);
   const householdId = session?.user?.householdId;
   if (householdId && !session?.user?.isSuperAdmin) {
     await ensureTherapySettings(householdId);
@@ -37,17 +43,17 @@ export default async function PrivateClinicLayout({
             href="/"
             className="inline-block text-sm text-slate-400 hover:text-slate-200"
           >
-            ← Back to dashboard
+            {layoutCopy.backToDashboard}
           </Link>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
-            Private clinic
+            {layoutCopy.title}
           </h1>
           <p className="text-sm text-slate-400">
-            Manage clients, sessions, receipts, and clinic expenses per employment job.
+            {layoutCopy.description}
           </p>
           <nav
             className="-mx-1 flex gap-2 overflow-x-auto border-b border-slate-800 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap [&::-webkit-scrollbar]:hidden"
-            aria-label="Private clinic sections"
+            aria-label={layoutCopy.navAriaLabel}
           >
             {navItems.map((item) => (
               <Link
@@ -55,7 +61,7 @@ export default async function PrivateClinicLayout({
                 href={item.href}
                 className="shrink-0 whitespace-nowrap rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800"
               >
-                {item.label}
+                {privateClinicNavLabel(item.key, uiLanguage)}
               </Link>
             ))}
           </nav>

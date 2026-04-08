@@ -6,6 +6,11 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import {
+  privateClinicAppointments,
+  privateClinicCommon,
+  weekdayLongLabel,
+} from "@/lib/private-clinic-i18n";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import {
@@ -25,6 +30,8 @@ export default async function AppointmentsPage() {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const ap = privateClinicAppointments(uiLanguage);
   const now = new Date();
 
   const [jobs, programs, clients, upcoming, series] = await Promise.all([
@@ -59,22 +66,18 @@ export default async function AppointmentsPage() {
   ]);
 
   const visitOptions = ["clinic", "home", "phone", "video"] as const;
-  const dow = [
-    { v: 0, l: "Sunday" },
-    { v: 1, l: "Monday" },
-    { v: 2, l: "Tuesday" },
-    { v: 3, l: "Wednesday" },
-    { v: 4, l: "Thursday" },
-    { v: 5, l: "Friday" },
-    { v: 6, l: "Saturday" },
-  ];
+  const dow = [0, 1, 2, 3, 4, 5, 6].map((v) => ({ v, l: weekdayLongLabel(uiLanguage, v) }));
+
+  function recurrenceLabel(r: string): string {
+    if (r === "weekly") return ap.weekly;
+    if (r === "biweekly") return ap.biweekly;
+    return r;
+  }
 
   return (
     <div className="space-y-10">
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">
-          {uiLanguage === "he" ? "תור חד פעמי" : "One-off appointment"}
-        </h2>
+        <h2 className="text-lg font-medium text-slate-200">{ap.oneOff}</h2>
         <form
           action={createTherapyAppointment}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -84,10 +87,10 @@ export default async function AppointmentsPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{uiLanguage === "he" ? "לקוח" : "Client"}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.first_name} {c.last_name ?? ""}
+            <option value="">{c.client}</option>
+            {clients.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                {cl.first_name} {cl.last_name ?? ""}
               </option>
             ))}
           </select>
@@ -103,7 +106,7 @@ export default async function AppointmentsPage() {
             ))}
           </select>
           <select name="program_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">{uiLanguage === "he" ? "תכנית (אופציונלי)" : "Program (optional)"}</option>
+            <option value="">{ap.programOptional}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.job.job_title} — {p.name}
@@ -136,24 +139,22 @@ export default async function AppointmentsPage() {
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            {uiLanguage === "he" ? "תזמון" : "Schedule"}
+            {ap.schedule}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">
-          {uiLanguage === "he" ? "סדרה חוזרת" : "Recurring series"}
-        </h2>
+        <h2 className="text-lg font-medium text-slate-200">{ap.recurringSeries}</h2>
         <form
           action={createTherapyAppointmentSeries}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
         >
           <select name="client_id" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">{uiLanguage === "he" ? "לקוח" : "Client"}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.first_name} {c.last_name ?? ""}
+            <option value="">{c.client}</option>
+            {clients.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                {cl.first_name} {cl.last_name ?? ""}
               </option>
             ))}
           </select>
@@ -165,7 +166,7 @@ export default async function AppointmentsPage() {
             ))}
           </select>
           <select name="program_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">{uiLanguage === "he" ? "תכנית (אופציונלי)" : "Program (optional)"}</option>
+            <option value="">{ap.programOptional}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.job.job_title} — {p.name}
@@ -188,8 +189,8 @@ export default async function AppointmentsPage() {
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="weekly">{uiLanguage === "he" ? "שבועי" : "Weekly"}</option>
-            <option value="biweekly">{uiLanguage === "he" ? "כל שבועיים" : "Every 2 weeks"}</option>
+            <option value="weekly">{ap.weekly}</option>
+            <option value="biweekly">{ap.biweekly}</option>
           </select>
           <select
             name="day_of_week"
@@ -219,15 +220,15 @@ export default async function AppointmentsPage() {
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            {uiLanguage === "he" ? "יצירת סדרה והפקת תורים" : "Create series & generate"}
+            {ap.createSeriesGenerate}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "כללים חוזרים" : "Recurring rules"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{ap.recurringRules}</h2>
         {series.length === 0 ? (
-          <p className="text-sm text-slate-500">{uiLanguage === "he" ? "אין." : "None."}</p>
+          <p className="text-sm text-slate-500">{ap.noneShort}</p>
         ) : (
           <ul className="space-y-2">
             {series.map((s) => (
@@ -236,12 +237,13 @@ export default async function AppointmentsPage() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-300"
               >
                 <span>
-                  {s.client.first_name} — {s.job.job_title} — {s.recurrence} — DOW {s.day_of_week}
+                  {s.client.first_name} — {s.job.job_title} — {recurrenceLabel(s.recurrence)} —{" "}
+                  {weekdayLongLabel(uiLanguage, s.day_of_week)}
                 </span>
                 <ConfirmDeleteForm action={deleteTherapyAppointmentSeries}>
                   <input type="hidden" name="id" value={s.id} />
                   <button type="submit" className="text-xs text-rose-400">
-                    {uiLanguage === "he" ? "מחיקת סדרה" : "Delete series"}
+                    {ap.deleteSeries}
                   </button>
                 </ConfirmDeleteForm>
               </li>
@@ -251,18 +253,18 @@ export default async function AppointmentsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "קרובים" : "Upcoming"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{ap.upcoming}</h2>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-slate-500">{uiLanguage === "he" ? "אין תורים קרובים." : "No upcoming appointments."}</p>
+          <p className="text-sm text-slate-500">{ap.noUpcoming}</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "התחלה" : "Start"}</th>
-                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "לקוח" : "Client"}</th>
-                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "עבודה" : "Job"}</th>
-                  <th className="px-3 py-2 text-slate-300">{uiLanguage === "he" ? "סטטוס" : "Status"}</th>
+                  <th className="px-3 py-2 text-slate-300">{ap.startCol}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.client}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.job}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.status}</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,12 +283,12 @@ export default async function AppointmentsPage() {
                           defaultValue={a.status}
                           className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                         >
-                          <option value="scheduled">{uiLanguage === "he" ? "מתוזמן" : "scheduled"}</option>
-                          <option value="cancelled">{uiLanguage === "he" ? "בוטל" : "cancelled"}</option>
-                          <option value="completed">{uiLanguage === "he" ? "הושלם" : "completed"}</option>
+                          <option value="scheduled">{ap.statusScheduled}</option>
+                          <option value="cancelled">{ap.statusCancelled}</option>
+                          <option value="completed">{ap.statusCompleted}</option>
                         </select>
                         <button type="submit" className="text-xs text-sky-400">
-                          {uiLanguage === "he" ? "החל" : "Set"}
+                          {ap.setStatus}
                         </button>
                       </form>
                     </td>

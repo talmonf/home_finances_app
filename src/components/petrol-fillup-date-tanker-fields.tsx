@@ -13,11 +13,24 @@ export type PetrolTankerMember = {
   date_of_birth: Date | string | null;
 };
 
+const defaultDateTankerLabels = {
+  date: "Date",
+  tankedUpBy: "Tanked up by",
+  select: "Select…",
+  tankerAgeHint:
+    "Family members aged 16 or older on the fill date (requires date of birth). Change the date above to update who appears here.",
+  tankerNoEligible:
+    "No one is aged 16+ on this fill date. Pick a different date or add/update dates of birth for family members.",
+  tankerNoDob:
+    "Add a date of birth for each family member who should appear here. You need at least one person aged 16+ on the fill date to record who tanked up.",
+};
+
 type Props = {
   members: PetrolTankerMember[];
   defaultFilledAt: string;
   /** Stored tanker when editing (always shown in list if missing from age filter) */
   defaultTankerId?: string | null;
+  labels?: Partial<typeof defaultDateTankerLabels>;
 };
 
 function asDate(d: Date | string | null): Date | null {
@@ -26,7 +39,8 @@ function asDate(d: Date | string | null): Date | null {
   return Number.isNaN(x.getTime()) ? null : x;
 }
 
-export function PetrolFillupDateTankerFields({ members, defaultFilledAt, defaultTankerId }: Props) {
+export function PetrolFillupDateTankerFields({ members, defaultFilledAt, defaultTankerId, labels }: Props) {
+  const L = { ...defaultDateTankerLabels, ...labels };
   const [filledAt, setFilledAt] = useState(defaultFilledAt);
   const [tankerId, setTankerId] = useState(defaultTankerId ?? "");
 
@@ -67,7 +81,7 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
     <>
       <div className="space-y-2">
         <label className={labelClass} htmlFor="filled_at">
-          Date
+          {L.date}
         </label>
         <input
           id="filled_at"
@@ -82,7 +96,7 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
       {eligibleTankers.length > 0 ? (
         <div className="space-y-2">
           <label className={labelClass} htmlFor="tanked_up_by_family_member_id">
-            Tanked up by
+            {L.tankedUpBy}
           </label>
           <select
             id="tanked_up_by_family_member_id"
@@ -92,23 +106,18 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
             onChange={(e) => setTankerId(e.target.value)}
             className={inputClass}
           >
-            <option value="">Select…</option>
+            <option value="">{L.select}</option>
             {eligibleTankers.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.full_name}
               </option>
             ))}
           </select>
-          <p className="text-xs text-slate-500">
-            Family members aged 16 or older on the fill date (requires date of birth). Change the date above to update
-            who appears here.
-          </p>
+          <p className="text-xs text-slate-500">{L.tankerAgeHint}</p>
         </div>
       ) : (
         <p className="rounded-xl border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-sm text-slate-500">
-          {anyDob
-            ? "No one is aged 16+ on this fill date. Pick a different date or add/update dates of birth for family members."
-            : "Add a date of birth for each family member who should appear here. You need at least one person aged 16+ on the fill date to record who tanked up."}
+          {anyDob ? L.tankerNoEligible : L.tankerNoDob}
         </p>
       )}
     </>

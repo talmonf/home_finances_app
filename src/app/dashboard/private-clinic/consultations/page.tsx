@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { privateClinicCommon, privateClinicConsultations } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
   createTherapyConsultation,
@@ -28,6 +29,8 @@ export default async function ConsultationsPage({
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const co = privateClinicConsultations(uiLanguage);
   const sp = searchParams ? await searchParams : undefined;
 
   const [jobs, types, rows] = await Promise.all([
@@ -49,10 +52,7 @@ export default async function ConsultationsPage({
 
   return (
     <div className="space-y-8">
-      <p className="text-sm text-slate-500">
-        Log meetings and consultations: expected income, costs, type, and job. Manage custom
-        types under Settings. Link bank lines separately for money in vs money out.
-      </p>
+      <p className="text-sm text-slate-500">{co.intro}</p>
       {sp?.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error}
@@ -60,14 +60,12 @@ export default async function ConsultationsPage({
       )}
       {(sp?.created || sp?.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          Saved.
+          {c.saved}
         </p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">
-          {uiLanguage === "he" ? "הוספת ייעוץ / פגישה" : "Add consultation / meeting"}
-        </h2>
+        <h2 className="text-lg font-medium text-slate-200">{co.addTitle}</h2>
         <form
           action={createTherapyConsultation}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -77,7 +75,7 @@ export default async function ConsultationsPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Job</option>
+            <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.job_title}
@@ -89,7 +87,7 @@ export default async function ConsultationsPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Type</option>
+            <option value="">{c.type}</option>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -97,7 +95,7 @@ export default async function ConsultationsPage({
             ))}
           </select>
           <div>
-            <label className="block text-xs text-slate-400">Date &amp; time</label>
+            <label className="block text-xs text-slate-400">{co.dateTime}</label>
             <input
               name="occurred_at"
               type="datetime-local"
@@ -107,7 +105,7 @@ export default async function ConsultationsPage({
           </div>
           <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-xs text-slate-400">Amount to receive (income)</label>
+              <label className="block text-xs text-slate-400">{co.incomeLabel}</label>
               <div className="mt-1 flex gap-2">
                 <input
                   name="income_amount"
@@ -122,7 +120,7 @@ export default async function ConsultationsPage({
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-400">Amount it cost you</label>
+              <label className="block text-xs text-slate-400">{co.costLabel}</label>
               <div className="mt-1 flex gap-2">
                 <input
                   name="cost_amount"
@@ -141,36 +139,38 @@ export default async function ConsultationsPage({
             <TherapyTransactionLinkSelect
               name="linked_income_transaction_id"
               householdId={householdId}
-              label="Link transaction — clinic income"
-              hint="Usually a credit (incoming) on your bank statement."
+              label={co.linkIncome}
+              hint={co.linkIncomeHint}
+              noneOptionLabel={c.txNoneLinked}
             />
           </div>
           <div className="md:col-span-2">
             <TherapyTransactionLinkSelect
               name="linked_cost_transaction_id"
               householdId={householdId}
-              label="Link transaction — cost / expense"
-              hint="Usually a debit (payment) for this meeting."
+              label={co.linkCost}
+              hint={co.linkCostHint}
+              noneOptionLabel={c.txNoneLinked}
             />
           </div>
           <textarea
             name="notes"
-            placeholder="Notes"
+            placeholder={c.notes}
             className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <button
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            {uiLanguage === "he" ? "שמירה" : "Save"}
+            {c.save}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "אחרונים" : "Recent"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{co.recent}</h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-slate-500">No entries yet.</p>
+          <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
         ) : (
           <div className="space-y-4">
             {rows.map((r) => (
@@ -244,7 +244,8 @@ export default async function ConsultationsPage({
                       name="linked_income_transaction_id"
                       householdId={householdId}
                       currentId={r.linked_income_transaction_id}
-                      label="Income transaction"
+                      label={co.incomeTx}
+                      noneOptionLabel={c.txNoneLinked}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -252,7 +253,8 @@ export default async function ConsultationsPage({
                       name="linked_cost_transaction_id"
                       householdId={householdId}
                       currentId={r.linked_cost_transaction_id}
-                      label="Cost transaction"
+                      label={co.costTx}
+                      noneOptionLabel={c.txNoneLinked}
                     />
                   </div>
                   <textarea
@@ -261,13 +263,13 @@ export default async function ConsultationsPage({
                     className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                   />
                   <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                    Save
+                    {c.save}
                   </button>
                 </form>
                 <ConfirmDeleteForm action={deleteTherapyConsultation} className="mt-2">
                   <input type="hidden" name="id" value={r.id} />
                   <button type="submit" className="text-xs text-rose-400">
-                    Delete
+                    {c.delete}
                   </button>
                 </ConfirmDeleteForm>
               </details>

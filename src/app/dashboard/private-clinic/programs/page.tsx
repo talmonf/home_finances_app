@@ -1,5 +1,6 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { privateClinicCommon, privateClinicPrograms } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyProgram, deleteTherapyProgram } from "../actions";
 
@@ -14,6 +15,8 @@ export default async function ProgramsPage({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const pr = privateClinicPrograms(uiLanguage);
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -48,12 +51,12 @@ export default async function ProgramsPage({
       )}
       {(resolved?.created || resolved?.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          Saved.
+          {c.saved}
         </p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "הוספת תכנית" : "Add program"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{pr.addProgramTitle}</h2>
         <form
           action={createTherapyProgram}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -63,7 +66,7 @@ export default async function ProgramsPage({
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{uiLanguage === "he" ? "עבודה" : "Job"}</option>
+            <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.job_title} {j.employer_name ? `- ${j.employer_name}` : ""} — {j.family_member.full_name}
@@ -72,7 +75,7 @@ export default async function ProgramsPage({
           </select>
           <input
             name="name"
-            placeholder={uiLanguage === "he" ? "שם תכנית" : "Program name"}
+            placeholder={pr.programName}
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -80,47 +83,45 @@ export default async function ProgramsPage({
             <input
               name="sort_order"
               type="number"
-              placeholder="Sort order (optional)"
+              placeholder={c.sortOrderPh}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
-            <p className="text-xs text-slate-400">
-              Lower values appear first (for example: 10, 20, 30). Leave empty to use 0.
-            </p>
+            <p className="text-xs text-slate-400">{c.sortOrderHint}</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="checkbox" name="is_active" defaultChecked />
-            Active
+            {pr.active}
           </label>
           <textarea
             name="description"
-            placeholder="Description (optional)"
+            placeholder={c.description}
             className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <button
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            {uiLanguage === "he" ? "הוספת תכנית" : "Add program"}
+            {pr.addProgramBtn}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{uiLanguage === "he" ? "תכניות" : "Programs"}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{pr.programsHeading}</h2>
         {!familyMemberId ? (
-          <p className="text-sm text-slate-500">Your user is not linked to a family member, so jobs cannot be loaded.</p>
+          <p className="text-sm text-slate-500">{c.programsNoFm}</p>
         ) : programs.length === 0 ? (
-          <p className="text-sm text-slate-500">No programs yet. Add a job under Jobs, then define programs here.</p>
+          <p className="text-sm text-slate-500">{c.programsEmpty}</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-700">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-3 py-2 text-slate-300">Name</th>
-                  <th className="px-3 py-2 text-slate-300">Job</th>
-                  <th className="px-3 py-2 text-slate-300">Sort</th>
-                  <th className="px-3 py-2 text-slate-300">Active</th>
-                  <th className="px-3 py-2 text-slate-300">Delete</th>
+                  <th className="px-3 py-2 text-slate-300">{pr.tableName}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.job}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.tableSort}</th>
+                  <th className="px-3 py-2 text-slate-300">{pr.tableActive}</th>
+                  <th className="px-3 py-2 text-slate-300">{c.tableDelete}</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,12 +132,12 @@ export default async function ProgramsPage({
                       {p.job.job_title} {p.job.employer_name ? `- ${p.job.employer_name}` : ""}
                     </td>
                     <td className="px-3 py-2 text-slate-400">{p.sort_order}</td>
-                    <td className="px-3 py-2 text-slate-400">{p.is_active ? "Yes" : "No"}</td>
+                    <td className="px-3 py-2 text-slate-400">{p.is_active ? c.yes : c.no}</td>
                     <td className="px-3 py-2">
                       <ConfirmDeleteForm action={deleteTherapyProgram}>
                         <input type="hidden" name="id" value={p.id} />
                         <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                          {uiLanguage === "he" ? "מחיקה" : "Delete"}
+                          {c.delete}
                         </button>
                       </ConfirmDeleteForm>
                     </td>

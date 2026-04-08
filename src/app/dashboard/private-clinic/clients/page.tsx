@@ -1,4 +1,5 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
@@ -13,6 +14,10 @@ export default async function ClientsPage({
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const cl = privateClinicClients(uiLanguage);
 
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -70,6 +75,14 @@ export default async function ClientsPage({
     return { mobile: parts[0] ?? "", home: parts[1] ?? "" };
   }
 
+  const jobFieldLabels = {
+    defaultJob: cl.defaultJob,
+    defaultProgramOptional: cl.defaultProgramOptional,
+    selectJob: cl.selectJob,
+    none: c.none,
+    alsoSeenUnder: cl.alsoSeenUnder,
+  };
+
   return (
     <div className="space-y-8">
       {resolved?.error && (
@@ -79,15 +92,15 @@ export default async function ClientsPage({
       )}
       {(resolved?.created || resolved?.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          Saved.
+          {c.saved}
         </p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Add client</h2>
+        <h2 className="text-lg font-medium text-slate-200">{cl.addClientTitle}</h2>
         {!familyMemberId && (
           <p className="rounded-lg border border-amber-700/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
-            Your user is not linked to a family member. Link the user to a family member to manage clients.
+            {c.noFamilyMemberBanner}
           </p>
         )}
         <form
@@ -96,108 +109,108 @@ export default async function ClientsPage({
         >
           <input
             name="first_name"
-            placeholder="First name"
+            placeholder={cl.firstName}
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="last_name"
-            placeholder="Last name (optional)"
+            placeholder={cl.lastNameOptional}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="id_number"
-            placeholder="ID (optional)"
+            placeholder={cl.idOptional}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">Start date</label>
+            <label className="block text-xs text-slate-400">{c.startDate}</label>
             <input name="start_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
           </div>
           <input
             name="email"
             type="email"
-            placeholder="Email"
+            placeholder={cl.email}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="mobile_phone"
-            placeholder="Mobile phone"
+            placeholder={cl.mobilePhone}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="home_phone"
-            placeholder="Home phone"
+            placeholder={cl.homePhone}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <input
             name="address"
-            placeholder="Address"
+            placeholder={cl.address}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <textarea
             name="notes"
-            placeholder="Notes"
+            placeholder={c.notes}
             className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
-          <ClientJobProgramFields jobs={jobOptions} programs={programOptions} />
+          <ClientJobProgramFields jobs={jobOptions} programs={programOptions} labels={jobFieldLabels} />
           <button
             type="submit"
             disabled={!familyMemberId}
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
-            Add client
+            {cl.addClientBtn}
           </button>
         </form>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">Clients</h2>
+        <h2 className="text-lg font-medium text-slate-200">{cl.clientsHeading}</h2>
         {clients.length === 0 ? (
-          <p className="text-sm text-slate-500">No clients yet.</p>
+          <p className="text-sm text-slate-500">{c.clientsEmpty}</p>
         ) : (
           <div className="space-y-6">
-            {clients.map((c) => {
-              const phones = splitPhones(c.phones);
+            {clients.map((row) => {
+              const phones = splitPhones(row.phones);
               return (
                 <form
-                  key={c.id}
+                  key={row.id}
                   action={updateTherapyClient}
                   className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid md:grid-cols-2 md:gap-3"
                 >
-                <input type="hidden" name="id" value={c.id} />
-                <input
-                  name="first_name"
-                  defaultValue={c.first_name}
-                  required
-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <input
-                  name="last_name"
-                  defaultValue={c.last_name ?? ""}
-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <input
-                  name="id_number"
-                  defaultValue={c.id_number ?? ""}
-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <input
-                  name="start_date"
-                  type="date"
-                  defaultValue={c.start_date ? c.start_date.toISOString().slice(0, 10) : ""}
-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
+                  <input type="hidden" name="id" value={row.id} />
+                  <input
+                    name="first_name"
+                    defaultValue={row.first_name}
+                    required
+                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
+                  <input
+                    name="last_name"
+                    defaultValue={row.last_name ?? ""}
+                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
+                  <input
+                    name="id_number"
+                    defaultValue={row.id_number ?? ""}
+                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
+                  <input
+                    name="start_date"
+                    type="date"
+                    defaultValue={row.start_date ? row.start_date.toISOString().slice(0, 10) : ""}
+                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
                   <div className="space-y-1">
                     <input
                       name="email"
-                      defaultValue={c.email ?? ""}
-                      placeholder="Email"
+                      defaultValue={row.email ?? ""}
+                      placeholder={cl.email}
                       className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     />
-                    {c.email && (
-                      <a href={`mailto:${c.email}`} className="text-xs text-sky-400 hover:text-sky-300">
-                        {c.email}
+                    {row.email && (
+                      <a href={`mailto:${row.email}`} className="text-xs text-sky-400 hover:text-sky-300">
+                        {row.email}
                       </a>
                     )}
                   </div>
@@ -205,7 +218,7 @@ export default async function ClientsPage({
                     <input
                       name="mobile_phone"
                       defaultValue={phones.mobile}
-                      placeholder="Mobile phone"
+                      placeholder={cl.mobilePhone}
                       className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     />
                     {phones.mobile && (
@@ -218,7 +231,7 @@ export default async function ClientsPage({
                     <input
                       name="home_phone"
                       defaultValue={phones.home}
-                      placeholder="Home phone"
+                      placeholder={cl.homePhone}
                       className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     />
                     {phones.home && (
@@ -227,33 +240,36 @@ export default async function ClientsPage({
                       </a>
                     )}
                   </div>
-                <input
-                  name="address"
-                  defaultValue={c.address ?? ""}
-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <textarea
-                  name="notes"
-                  defaultValue={c.notes ?? ""}
-                  className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
+                  <input
+                    name="address"
+                    defaultValue={row.address ?? ""}
+                    placeholder={cl.address}
+                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
+                  <textarea
+                    name="notes"
+                    defaultValue={row.notes ?? ""}
+                    placeholder={c.notes}
+                    className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
                   <ClientJobProgramFields
                     jobs={jobOptions}
                     programs={programOptions}
-                    defaultJobId={c.default_job_id}
-                    defaultProgramId={c.default_program_id}
-                    defaultCheckedJobIds={c.client_jobs.map((x) => x.job_id)}
+                    defaultJobId={row.default_job_id}
+                    defaultProgramId={row.default_program_id}
+                    defaultCheckedJobIds={row.client_jobs.map((x) => x.job_id)}
+                    labels={jobFieldLabels}
                   />
-                <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" name="is_active" defaultChecked={c.is_active} />
-                  Active
-                </label>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-                >
-                  Save client
-                </button>
+                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" name="is_active" defaultChecked={row.is_active} />
+                    {c.active}
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  >
+                    {cl.saveClient}
+                  </button>
                 </form>
               );
             })}
