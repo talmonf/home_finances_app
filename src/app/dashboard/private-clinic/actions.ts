@@ -599,6 +599,116 @@ export async function deleteTherapyProgram(formData: FormData) {
   redirect(`${BASE}/programs?updated=1`);
 }
 
+const THERAPY_VISIT_TYPES: TherapyVisitType[] = ["clinic", "home", "phone", "video"];
+
+export async function saveTherapyJobVisitTypeDefaults(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const job_id = (formData.get("job_id") as string)?.trim() || "";
+  if (!job_id) redirect(`${BASE}/jobs?error=missing`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, job_id))) {
+    redirect(`${BASE}/jobs?error=job`);
+  }
+
+  for (const vt of THERAPY_VISIT_TYPES) {
+    const amountStr = parseMoney(formData.get(`amount_${vt}`) as string);
+    const currencyRaw = (formData.get(`currency_${vt}`) as string)?.trim() || "ILS";
+    const currency = currencyRaw.slice(0, 12) || "ILS";
+
+    const existing = await prisma.therapy_visit_type_default_amounts.findFirst({
+      where: {
+        household_id: householdId,
+        job_id,
+        program_id: null,
+        visit_type: vt,
+      },
+    });
+
+    if (!amountStr) {
+      if (existing) {
+        await prisma.therapy_visit_type_default_amounts.delete({ where: { id: existing.id } });
+      }
+    } else if (existing) {
+      await prisma.therapy_visit_type_default_amounts.update({
+        where: { id: existing.id },
+        data: { amount: amountStr, currency },
+      });
+    } else {
+      await prisma.therapy_visit_type_default_amounts.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          job_id,
+          program_id: null,
+          visit_type: vt,
+          amount: amountStr,
+          currency,
+        },
+      });
+    }
+  }
+
+  revalidatePath(`${BASE}/jobs`);
+  revalidatePath(`${BASE}/treatments`);
+  redirect(`${BASE}/jobs?updated=1`);
+}
+
+export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const program_id = (formData.get("program_id") as string)?.trim() || "";
+  if (!program_id) redirect(`${BASE}/programs?error=missing`);
+
+  const prog = await assertProgram(householdId, program_id);
+  if (!prog) redirect(`${BASE}/programs?error=notfound`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, prog.job_id))) {
+    redirect(`${BASE}/programs?error=job`);
+  }
+
+  const job_id = prog.job_id;
+
+  for (const vt of THERAPY_VISIT_TYPES) {
+    const amountStr = parseMoney(formData.get(`amount_${vt}`) as string);
+    const currencyRaw = (formData.get(`currency_${vt}`) as string)?.trim() || "ILS";
+    const currency = currencyRaw.slice(0, 12) || "ILS";
+
+    const existing = await prisma.therapy_visit_type_default_amounts.findFirst({
+      where: {
+        household_id: householdId,
+        program_id,
+        visit_type: vt,
+      },
+    });
+
+    if (!amountStr) {
+      if (existing) {
+        await prisma.therapy_visit_type_default_amounts.delete({ where: { id: existing.id } });
+      }
+    } else if (existing) {
+      await prisma.therapy_visit_type_default_amounts.update({
+        where: { id: existing.id },
+        data: { amount: amountStr, currency, job_id },
+      });
+    } else {
+      await prisma.therapy_visit_type_default_amounts.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          job_id,
+          program_id,
+          visit_type: vt,
+          amount: amountStr,
+          currency,
+        },
+      });
+    }
+  }
+
+  revalidatePath(`${BASE}/programs`);
+  revalidatePath(`${BASE}/treatments`);
+  redirect(`${BASE}/programs?updated=1`);
+}
+
 // --- Clients ---
 
 export async function createTherapyClient(formData: FormData) {

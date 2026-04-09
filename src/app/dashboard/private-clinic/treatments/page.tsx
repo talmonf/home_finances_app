@@ -8,6 +8,7 @@ import {
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
+import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
 import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
@@ -45,7 +46,7 @@ export default async function TreatmentsPage({
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
 
-  const [jobs, programs, clients, settings, allocGroups, treatments] = await Promise.all([
+  const [jobs, programs, clients, settings, allocGroups, treatments, visitDefaultsRows] = await Promise.all([
     prisma.jobs.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { start_date: "desc" },
@@ -82,7 +83,25 @@ export default async function TreatmentsPage({
       include: { client: true, job: true, program: true },
       take: 500,
     }),
+    prisma.therapy_visit_type_default_amounts.findMany({
+      where: { household_id: householdId },
+      select: {
+        job_id: true,
+        program_id: true,
+        visit_type: true,
+        amount: true,
+        currency: true,
+      },
+    }),
   ]);
+
+  const visitDefaults = visitDefaultsRows.map((r) => ({
+    job_id: r.job_id,
+    program_id: r.program_id,
+    visit_type: r.visit_type,
+    amount: r.amount.toString(),
+    currency: r.currency,
+  }));
 
   const sumMap = new Map(
     allocGroups.map((g) => [g.treatment_id, decimalToNumber(g._sum.amount)]),
@@ -214,82 +233,33 @@ export default async function TreatmentsPage({
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.select}</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.first_name} {c.last_name ?? ""}
+              {clients.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.first_name} {cl.last_name ?? ""}
                 </option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.job}</label>
-            <select
-              name="job_id"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.job_title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.program}</label>
-            <select
-              name="program_id"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.job.job_title} — {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{tr.dateTime}</label>
-            <input
-              name="occurred_at"
-              type="datetime-local"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.amount}</label>
-            <input
-              name="amount"
-              type="text"
-              required
-              placeholder="0.00"
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.currency}</label>
-            <input
-              name="currency"
-              defaultValue="ILS"
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{tr.visitType}</label>
-            <select
-              name="visit_type"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {visitOptions.map((v) => (
-                <option key={v} value={v}>
-                  {therapyVisitTypeLabel(uiLanguage, v)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <TherapyTreatmentDefaultAmountFields
+            uiLanguage={uiLanguage}
+            jobs={jobs.map((j) => ({ id: j.id, job_title: j.job_title }))}
+            programs={programs.map((p) => ({
+              id: p.id,
+              job_id: p.job_id,
+              name: p.name,
+              job: { job_title: p.job.job_title },
+            }))}
+            visitDefaults={visitDefaults}
+            labels={{
+              job: c.job,
+              program: c.program,
+              dateTime: tr.dateTime,
+              amount: c.amount,
+              currency: c.currency,
+              visitType: tr.visitType,
+              select: c.select,
+            }}
+          />
           <div className="md:col-span-2">
             <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
             <TherapyTransactionLinkSelect

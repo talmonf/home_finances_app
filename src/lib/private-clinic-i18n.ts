@@ -176,6 +176,12 @@ export function privateClinicCommon(lang: UiLanguage) {
     tankedBy: p("Tanked by", "תדלק על ידי"),
     bankTx: p("Bank tx", "תנועת בנק"),
     linked: p("Linked", "מקושר"),
+    defaultFeesByVisitType: p("Default session fees by visit type", "תעריפי ברירת מחדל לפי סוג ביקור"),
+    defaultFeesByVisitTypeHint: p(
+      "Used when logging a treatment. Program defaults override job defaults.",
+      "משמש בעת רישום טיפול. ברירות מחדל לתכנית גוברות על ברירות המחדל של המשרה.",
+    ),
+    saveDefaults: p("Save defaults", "שמירת ברירות מחדל"),
   };
 }
 

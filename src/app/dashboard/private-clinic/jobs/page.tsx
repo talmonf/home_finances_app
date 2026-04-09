@@ -2,7 +2,9 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentHouseh
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
-import { createTherapyJob, updateTherapyJob } from "../actions";
+import { createTherapyJob, saveTherapyJobVisitTypeDefaults, updateTherapyJob } from "../actions";
+import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,24 @@ export default async function PrivateClinicJobsPage({
       select: { id: true, full_name: true },
     }),
   ]);
+
+  const jobVisitDefaults =
+    jobs.length > 0
+      ? await prisma.therapy_visit_type_default_amounts.findMany({
+          where: {
+            household_id: householdId,
+            program_id: null,
+            job_id: { in: jobs.map((j) => j.id) },
+          },
+        })
+      : [];
+
+  const visitTypes = therapyVisitTypesOrdered();
+
+  function jobDefaultFor(jobId: string, vt: (typeof visitTypes)[number]) {
+    const row = jobVisitDefaults.find((r) => r.job_id === jobId && r.visit_type === vt);
+    return row ? { amount: row.amount.toString(), currency: row.currency } : { amount: "", currency: "ILS" };
+  }
 
   const canAddJob = familyMemberId ? true : householdMembers.length > 0;
   const errorMessage =
@@ -241,6 +261,39 @@ export default async function PrivateClinicJobsPage({
                     </button>
                   </div>
                 </form>
+                <div className="mt-4 border-t border-slate-700 pt-3">
+                  <h3 className="mb-2 text-sm font-medium text-slate-200">{c.defaultFeesByVisitType}</h3>
+                  <p className="mb-2 text-xs text-slate-500">{c.defaultFeesByVisitTypeHint}</p>
+                  <form action={saveTherapyJobVisitTypeDefaults} className="space-y-2">
+                    <input type="hidden" name="job_id" value={job.id} />
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {visitTypes.map((vt) => {
+                        const d = jobDefaultFor(job.id, vt);
+                        return (
+                          <div key={vt} className="rounded border border-slate-700/80 bg-slate-950/40 p-2">
+                            <label className="block text-xs text-slate-400">{therapyVisitTypeLabel(uiLanguage, vt)}</label>
+                            <input
+                              name={`amount_${vt}`}
+                              type="text"
+                              defaultValue={d.amount}
+                              placeholder="0.00"
+                              className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                            />
+                            <input
+                              name={`currency_${vt}`}
+                              type="text"
+                              defaultValue={d.currency}
+                              className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button type="submit" className="rounded bg-slate-600 px-2 py-1 text-xs text-white hover:bg-slate-500">
+                      {c.saveDefaults}
+                    </button>
+                  </form>
+                </div>
               </details>
             ))}
           </div>

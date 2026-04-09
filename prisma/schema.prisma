@@ -81,6 +81,7 @@ model households {
   therapy_consultation_types        therapy_consultation_types[]
   therapy_consultations             therapy_consultations[]
   therapy_travel_entries            therapy_travel_entries[]
+  therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
 }
 
 model loans {
@@ -462,6 +463,7 @@ model jobs {
   therapy_appointments       therapy_appointments[]
   therapy_consultations      therapy_consultations[]
   therapy_travel_entries     therapy_travel_entries[]
+  therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
 }
 
 model job_benefits {
@@ -1278,6 +1280,26 @@ model therapy_service_programs {
   treatments          therapy_treatments[]
   appointment_series  therapy_appointment_series[]
   appointments        therapy_appointments[]
+  visit_type_default_amounts therapy_visit_type_default_amounts[]
+}
+
+model therapy_visit_type_default_amounts {
+  id           String   @id @default(uuid())
+  household_id String
+  job_id       String
+  program_id   String?
+  visit_type   TherapyVisitType
+  amount       Decimal  @db.Decimal(15, 2)
+  currency     String   @default("ILS")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  household households                 @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job       jobs                       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  program   therapy_service_programs?  @relation(fields: [program_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id, job_id])
+  @@index([program_id])
 }
 
 model therapy_clients {
