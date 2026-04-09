@@ -61,6 +61,9 @@ export default async function EditHouseholdPage({
         note_1_label: true,
         note_2_label: true,
         note_3_label: true,
+        note_1_label_he: true,
+        note_2_label_he: true,
+        note_3_label_he: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -274,27 +277,56 @@ export default async function EditHouseholdPage({
               Private clinic — treatment note labels
             </h2>
             <p className="mb-3 text-xs text-slate-500">
-              Titles next to the three note fields when logging treatments.
+              English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
             </p>
-            <div className="grid max-w-xl gap-3">
-              <input
-                name="note_1_label"
-                defaultValue={therapySettings?.note_1_label ?? "Note 1"}
-                placeholder="Note 1"
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <input
-                name="note_2_label"
-                defaultValue={therapySettings?.note_2_label ?? "Note 2"}
-                placeholder="Note 2"
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <input
-                name="note_3_label"
-                defaultValue={therapySettings?.note_3_label ?? "Note 3"}
-                placeholder="Note 3"
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
+            <div className="grid max-w-2xl gap-4">
+              {(
+                [
+                  {
+                    n: 1,
+                    en: "note_1_label",
+                    he: "note_1_label_he",
+                    enDef: therapySettings?.note_1_label ?? "Note 1",
+                    heDef: therapySettings?.note_1_label_he ?? "",
+                  },
+                  {
+                    n: 2,
+                    en: "note_2_label",
+                    he: "note_2_label_he",
+                    enDef: therapySettings?.note_2_label ?? "Note 2",
+                    heDef: therapySettings?.note_2_label_he ?? "",
+                  },
+                  {
+                    n: 3,
+                    en: "note_3_label",
+                    he: "note_3_label_he",
+                    enDef: therapySettings?.note_3_label ?? "Note 3",
+                    heDef: therapySettings?.note_3_label_he ?? "",
+                  },
+                ] as const
+              ).map((row) => (
+                <div
+                  key={row.en}
+                  className="grid gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2"
+                >
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Note {row.n} — English</label>
+                    <input
+                      name={row.en}
+                      defaultValue={row.enDef}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Note {row.n} — Hebrew (optional)</label>
+                    <input
+                      name={row.he}
+                      defaultValue={row.heDef}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 

@@ -226,6 +226,41 @@ async function resolveTankedUpByFamilyMemberId(
 
 // --- Settings ---
 
+function trimOptionalNoteHe(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  return t ? t : null;
+}
+
+/** Household users: treatment note labels only (English + optional Hebrew). Tab visibility is super-admin only. */
+export async function updateTherapyNoteLabelsFromDashboard(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  await ensureTherapySettings(householdId);
+
+  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() || "Note 1";
+  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() || "Note 2";
+  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() || "Note 3";
+  const note_1_label_he = trimOptionalNoteHe(formData.get("note_1_label_he") as string | null);
+  const note_2_label_he = trimOptionalNoteHe(formData.get("note_2_label_he") as string | null);
+  const note_3_label_he = trimOptionalNoteHe(formData.get("note_3_label_he") as string | null);
+
+  await prisma.therapy_settings.update({
+    where: { household_id: householdId },
+    data: {
+      note_1_label,
+      note_2_label,
+      note_3_label,
+      note_1_label_he,
+      note_2_label_he,
+      note_3_label_he,
+    },
+  });
+
+  revalidatePath(BASE, "layout");
+  revalidatePath(`${BASE}/settings`);
+  revalidatePath(`${BASE}/treatments`);
+  redirect(`${BASE}/settings?saved=1`);
+}
+
 export async function updateTherapySettings(formData: FormData) {
   const householdId = await requireSuperAdminHouseholdFromForm(formData);
   await ensureTherapySettings(householdId);
@@ -233,10 +268,20 @@ export async function updateTherapySettings(formData: FormData) {
   const note_1_label = (formData.get("note_1_label") as string)?.trim() || "Note 1";
   const note_2_label = (formData.get("note_2_label") as string)?.trim() || "Note 2";
   const note_3_label = (formData.get("note_3_label") as string)?.trim() || "Note 3";
+  const note_1_label_he = trimOptionalNoteHe(formData.get("note_1_label_he") as string | null);
+  const note_2_label_he = trimOptionalNoteHe(formData.get("note_2_label_he") as string | null);
+  const note_3_label_he = trimOptionalNoteHe(formData.get("note_3_label_he") as string | null);
 
   await prisma.therapy_settings.update({
     where: { household_id: householdId },
-    data: { note_1_label, note_2_label, note_3_label },
+    data: {
+      note_1_label,
+      note_2_label,
+      note_3_label,
+      note_1_label_he,
+      note_2_label_he,
+      note_3_label_he,
+    },
   });
 
   revalidatePath(BASE, "layout");

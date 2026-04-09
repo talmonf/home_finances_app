@@ -290,6 +290,9 @@ export async function GET() {
               note_1_label: settings.note_1_label,
               note_2_label: settings.note_2_label,
               note_3_label: settings.note_3_label,
+              note_1_label_he: settings.note_1_label_he ?? "",
+              note_2_label_he: settings.note_2_label_he ?? "",
+              note_3_label_he: settings.note_3_label_he ?? "",
             },
           ]
         : [],

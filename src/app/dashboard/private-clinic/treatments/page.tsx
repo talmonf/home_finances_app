@@ -12,6 +12,7 @@ import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { privateClinicCommon, privateClinicTreatments, treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
+import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
@@ -97,9 +98,21 @@ export default async function TreatmentsPage({
     return true;
   });
 
-  const note1 = settings?.note_1_label ?? "Note 1";
-  const note2 = settings?.note_2_label ?? "Note 2";
-  const note3 = settings?.note_3_label ?? "Note 3";
+  const note1 = therapyLocalizedNoteLabel(
+    settings?.note_1_label ?? "Note 1",
+    settings?.note_1_label_he,
+    uiLanguage,
+  );
+  const note2 = therapyLocalizedNoteLabel(
+    settings?.note_2_label ?? "Note 2",
+    settings?.note_2_label_he,
+    uiLanguage,
+  );
+  const note3 = therapyLocalizedNoteLabel(
+    settings?.note_3_label ?? "Note 3",
+    settings?.note_3_label_he,
+    uiLanguage,
+  );
 
   const visitOptions = ["clinic", "home", "phone", "video"] as const;
 

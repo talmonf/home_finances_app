@@ -11,3 +11,16 @@ export function therapyLocalizedCategoryName(
   }
   return row.name;
 }
+
+/** Treatment note field titles: English is canonical; Hebrew optional for Hebrew UI. */
+export function therapyLocalizedNoteLabel(
+  en: string,
+  he: string | null | undefined,
+  lang: UiLanguage,
+): string {
+  if (lang === "he") {
+    const h = he?.trim();
+    if (h) return h;
+  }
+  return en;
+}

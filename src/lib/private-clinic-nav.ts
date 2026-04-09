@@ -10,6 +10,7 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
   { key: "consultations", href: "/dashboard/private-clinic/consultations", label: "Consultations" },
   { key: "travel", href: "/dashboard/private-clinic/travel", label: "Travel" },
   { key: "petrol", href: "/dashboard/private-clinic/petrol", label: "Petrol" },
+  { key: "settings", href: "/dashboard/private-clinic/settings", label: "Settings" },
   { key: "importExport", href: "/dashboard/private-clinic/import-export", label: "Import / Export" },
 ] as const;
 

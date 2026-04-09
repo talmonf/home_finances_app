@@ -43,6 +43,13 @@ export async function saveHouseholdSettings(formData: FormData) {
   const note_1_label = (formData.get("note_1_label") as string | null)?.trim() || "Note 1";
   const note_2_label = (formData.get("note_2_label") as string | null)?.trim() || "Note 2";
   const note_3_label = (formData.get("note_3_label") as string | null)?.trim() || "Note 3";
+  const trimHe = (k: string) => {
+    const t = (formData.get(k) as string | null)?.trim();
+    return t ? t : null;
+  };
+  const note_1_label_he = trimHe("note_1_label_he");
+  const note_2_label_he = trimHe("note_2_label_he");
+  const note_3_label_he = trimHe("note_3_label_he");
   await prisma.therapy_settings.update({
     where: { household_id: householdId },
     data: {
@@ -50,6 +57,9 @@ export async function saveHouseholdSettings(formData: FormData) {
       note_1_label,
       note_2_label,
       note_3_label,
+      note_1_label_he,
+      note_2_label_he,
+      note_3_label_he,
     },
   });
 

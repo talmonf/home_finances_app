@@ -67,6 +67,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 055 | `055_ui_language_preferences.sql` | ALTER | `households`: add `ui_language` default (`en`); `users`: add nullable `ui_language` override. |
 | 056 | `056_therapy_settings_nav_tabs.sql` | ALTER | `therapy_settings`: optional `nav_tabs_json` (JSONB) for per-tab private clinic nav visibility. |
 | 057 | `057_therapy_category_name_he.sql` | ALTER | `therapy_consultation_types`, `therapy_expense_categories`: nullable `name_he`; backfill Hebrew for default English rows. |
+| 058 | `058_therapy_note_labels_he.sql` | ALTER | `therapy_settings`: nullable `note_1_label_he`, `note_2_label_he`, `note_3_label_he`; optional backfill for default English labels. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -127,6 +128,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 055_ui_language_preferences.sql
 - [x] 056_therapy_settings_nav_tabs.sql
 - [x] 057_therapy_category_name_he.sql
+- [x] 058_therapy_note_labels_he.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

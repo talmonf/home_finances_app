@@ -14,6 +14,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   consultations: "ייעוצים",
   travel: "נסיעות",
   petrol: "דלק",
+  settings: "הגדרות",
   importExport: "יבוא / ייצוא",
 };
 
@@ -503,13 +504,11 @@ export function privateClinicPetrol(lang: UiLanguage) {
 export function privateClinicSettings(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
-    tabsTitle: p("Private clinic tabs", "לשוניות קליניקה פרטית"),
-    tabsHelp: p(
-      "Choose which sections appear in the Private clinic navigation. You can still open a hidden tab if you know the URL.",
-      "בחרו אילו אזורים יופיעו בניווט הקליניקה. עדיין אפשר לפתוח לשונית מוסתרת אם מכירים את הכתובת.",
+    pageTitle: p("Settings", "הגדרות"),
+    pageIntro: p(
+      "Set the English and optional Hebrew titles for the three treatment note fields. Which sections appear in the Private clinic navigation is configured by the household administrator.",
+      "הגדירו את הכותרות באנגלית ובעברית (אופציונלי) לשלושת שדות ההערות בטיפולים. אילו אזורים מופיעים בניווט הקליניקה נקבע על ידי מנהל המשקה.",
     ),
-    saveTabVisibility: p("Save tab visibility", "שמירת נראות לשוניות"),
-    tabSaved: p("Tab visibility saved.", "נראות הלשוניות נשמרה."),
     noteLabelsTitle: p("Treatment note labels", "כותרות להערות טיפול"),
     noteLabelsHelp: p(
       "These titles appear next to the three note fields when logging treatments.",
@@ -519,6 +518,10 @@ export function privateClinicSettings(lang: UiLanguage) {
     note1Default: p("Note 1", "הערה 1"),
     note2Default: p("Note 2", "הערה 2"),
     note3Default: p("Note 3", "הערה 3"),
+    noteFieldEnglish: (n: 1 | 2 | 3) =>
+      p(`Note ${n} — English`, `הערה ${n} — אנגלית`),
+    noteFieldHebrew: (n: 1 | 2 | 3) =>
+      p(`Note ${n} — Hebrew (optional)`, `הערה ${n} — עברית (אופציונלי)`),
     consultTypesTitle: p("Consultation / meeting types", "סוגי ייעוץ / פגישה"),
     consultTypesHelp: p(
       "Used when logging meetings on the Consultations page (separate from visit types on sessions).",
