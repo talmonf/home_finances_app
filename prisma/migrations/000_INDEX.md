@@ -69,6 +69,9 @@ Run scripts in order by number. Check off each script after you run it.
 | 057 | `057_therapy_category_name_he.sql` | ALTER | `therapy_consultation_types`, `therapy_expense_categories`: nullable `name_he`; backfill Hebrew for default English rows. |
 | 058 | `058_therapy_note_labels_he.sql` | ALTER | `therapy_settings`: nullable `note_1_label_he`, `note_2_label_he`, `note_3_label_he`; optional backfill for default English labels. |
 | 059 | `059_therapy_visit_type_default_amounts.sql` | CREATE | Table `therapy_visit_type_default_amounts`: default session fee per `therapy_visit_type` at job scope (`program_id` NULL) or program scope; partial unique indexes. |
+| 060 | `060_insurance_types_savings_policies.sql` | ALTER/CREATE | `insurance_policies`: enum `insurance_policy_type`, optional `car_id`, `family_member_id`, `policy_number`; table `savings_policies` (balances, contributions, renewal/maturity). |
+| 061 | `061_entity_urls_polymorphic.sql` | CREATE | Table `entity_urls`: polymorphic links (`entity_kind`, `entity_id`) per household; URL, optional title/notes, `sort_order`. Initial kinds: `insurance_policy`, `savings_policy`. |
+| 062 | `062_useful_links.sql` | CREATE | Table `useful_links`: `scope` (`system` / `household` / `user`), `section_id` (dashboard section), optional `household_id` / `user_id`, URL + metadata. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -131,6 +134,9 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 057_therapy_category_name_he.sql
 - [x] 058_therapy_note_labels_he.sql
 - [x] 059_therapy_visit_type_default_amounts.sql
+- [x] 060_insurance_types_savings_policies.sql
+- [x] 061_entity_urls_polymorphic.sql
+- [x] 062_useful_links.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

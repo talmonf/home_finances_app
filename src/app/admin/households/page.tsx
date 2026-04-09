@@ -77,6 +77,18 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-semibold text-slate-50">
               Households (Super Admin)
             </h1>
+            <p className="mt-2 text-sm">
+              <Link
+                href="/admin/useful-links"
+                className="font-medium text-sky-400 hover:text-sky-300"
+              >
+                System useful links
+              </Link>
+              <span className="text-slate-500"> — </span>
+              <span className="text-slate-400">
+                Per-section links for all households (shown when each section is enabled).
+              </span>
+            </p>
             <p className="text-sm text-slate-400">
               Create and manage all households on the platform.
             </p>

@@ -1,4 +1,4 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -14,15 +14,15 @@ type PageProps = {
   }>;
 };
 
-function formatMoney(value: unknown) {
+function formatMoney(value: unknown, currencySuffix?: string) {
   if (value == null) return "—";
   const n =
     typeof value === "object" && value !== null && "toNumber" in value
       ? (value as { toNumber(): number }).toNumber()
       : Number(value);
-  return Number.isNaN(n)
-    ? "—"
-    : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (Number.isNaN(n)) return "—";
+  const s = n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currencySuffix ? `${s} ${currencySuffix}` : s;
 }
 
 export default async function ReportsPage({ searchParams }: PageProps) {
@@ -63,7 +63,10 @@ export default async function ReportsPage({ searchParams }: PageProps) {
   if (accountId) where.bank_account_id = accountId;
   if (memberId) where.family_member_id = memberId;
 
-  const [rows, accounts, members] = await Promise.all([
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
+
+  const [rows, accounts, members, activeInsurance, activeSavings, householdRow] = await Promise.all([
     prisma.transactions.groupBy({
       by: ["category_id", "transaction_direction"],
       where,
@@ -79,7 +82,27 @@ export default async function ReportsPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
+    prisma.insurance_policies.findMany({
+      where: { household_id: householdId, is_active: true },
+      select: { id: true },
+    }),
+    prisma.savings_policies.findMany({
+      where: { household_id: householdId, is_active: true },
+      select: { current_balance: true, monthly_contribution: true, currency: true },
+    }),
+    prisma.households.findFirst({
+      where: { id: householdId },
+      select: { primary_currency: true },
+    }),
   ]);
+
+  const primaryCurrency = householdRow?.primary_currency ?? "ILS";
+  const savingsBalanceTotal = activeSavings
+    .filter((s) => s.currency === primaryCurrency && s.current_balance != null)
+    .reduce((sum, s) => sum + Number(s.current_balance!.toString()), 0);
+  const savingsMonthlyTotal = activeSavings
+    .filter((s) => s.currency === primaryCurrency && s.monthly_contribution != null)
+    .reduce((sum, s) => sum + Number(s.monthly_contribution!.toString()), 0);
 
   const categories = await prisma.categories.findMany({
     where: {
@@ -116,6 +139,46 @@ export default async function ReportsPage({ searchParams }: PageProps) {
             </div>
           </div>
         </header>
+
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <div>
+            <div className="text-xs text-slate-400">
+              {isHebrew ? "פוליסות ביטוח פעילות" : "Active insurance policies"}
+            </div>
+            <div className="mt-1 text-lg font-semibold text-slate-100">{activeInsurance.length}</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400">
+              {isHebrew ? "חסכונות / תוכניות פעילות" : "Active savings policies"}
+            </div>
+            <div className="mt-1 text-lg font-semibold text-slate-100">{activeSavings.length}</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400">
+              {isHebrew
+                ? `סה״כ יתרה חסכונות (${primaryCurrency})`
+                : `Total savings balance (${primaryCurrency})`}
+            </div>
+            <div className="mt-1 text-lg font-semibold text-emerald-400 tabular-nums">
+              {formatMoney(savingsBalanceTotal || null, primaryCurrency)}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400">
+              {isHebrew
+                ? `הפקדות חודשיות (${primaryCurrency})`
+                : `Monthly savings contributions (${primaryCurrency})`}
+            </div>
+            <div className="mt-1 text-lg font-semibold text-sky-300 tabular-nums">
+              {formatMoney(savingsMonthlyTotal || null, primaryCurrency)}
+            </div>
+          </div>
+          <p className="sm:col-span-2 lg:col-span-4 text-xs text-slate-500">
+            {isHebrew
+              ? "סיכומי חסכונות כוללים רק רשומות במטבע ראשי של המשק הבית. פירוט מלא בדפי הביטוח והחסכונות."
+              : "Savings totals include only policies in your household primary currency. See Insurance and Savings pages for details."}
+          </p>
+        </section>
 
         <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="text-sm font-medium text-slate-200">Filters</h2>
@@ -198,15 +261,11 @@ export default async function ReportsPage({ searchParams }: PageProps) {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Income (credits)</div>
-              <div className="mt-1 text-xl font-semibold text-emerald-400">
-                {formatMoney(income)}
-              </div>
+              <div className="mt-1 text-xl font-semibold text-emerald-400">{formatMoney(income)}</div>
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Expenses (debits)</div>
-              <div className="mt-1 text-xl font-semibold text-rose-400">
-                {formatMoney(expenses)}
-              </div>
+              <div className="mt-1 text-xl font-semibold text-rose-400">{formatMoney(expenses)}</div>
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Net</div>
@@ -257,9 +316,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                         <td className="px-4 py-2 text-slate-400">
                           {r.transaction_direction}
                         </td>
-                        <td className="px-4 py-2 text-slate-200">
-                          {formatMoney(amount)}
-                        </td>
+                        <td className="px-4 py-2 text-slate-200">{formatMoney(amount)}</td>
                       </tr>
                     );
                   })

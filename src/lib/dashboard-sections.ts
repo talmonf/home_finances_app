@@ -13,6 +13,8 @@ export type SectionId =
   | "subscriptions"
   | "donations"
   | "loans"
+  | "insurancePolicies"
+  | "savingsPolicies"
   | "cars"
   | "petrolFillups"
   | "jobs"
@@ -165,6 +167,20 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     description: "Mortgages and loans with repayment schedule and maturity.",
   },
   {
+    id: "insurancePolicies",
+    group: "ongoing",
+    title: "Insurance policies",
+    href: "/dashboard/insurance-policies",
+    description: "Car, health, home, life, and other insurance with premiums and renewal dates.",
+  },
+  {
+    id: "savingsPolicies",
+    group: "ongoing",
+    title: "Savings policies",
+    href: "/dashboard/savings-policies",
+    description: "Long-term savings and investment plans: balances, contributions, maturity and renewals.",
+  },
+  {
     id: "upcomingRenewals",
     group: "ongoing",
     title: "Upcoming Renewals & Deadlines",
@@ -214,6 +230,14 @@ const HE_TRANSLATIONS: Record<SectionId, { title: string; description: string; c
   subscriptions: { title: "מנויים", description: "מנויים חוזרים, תאריכי חידוש ותשלומים." },
   donations: { title: "תרומות", description: "ניהול תרומות חד פעמיות ומתמשכות." },
   loans: { title: "הלוואות", description: "משכנתאות והלוואות כולל מועדי החזר." },
+  insurancePolicies: {
+    title: "פוליסות ביטוח",
+    description: "ביטוח רכב, בריאות, דירה, חיים ועוד — פרמיות ותאריכי חידוש.",
+  },
+  savingsPolicies: {
+    title: "חסכונות וחיסכון ארוך טווח",
+    description: "תוכניות חיסכון והשקעה: יתרות, הפקדות חודשיות, מועדי פרעון וחידוש.",
+  },
   cars: { title: "רכבים", description: "רכבים כולל טיפולים, רישוי וביטוח.", countSuffix: "רכבים" },
   petrolFillups: { title: "תדלוקים", description: "רישום תדלוקים: רכב, קילומטראז', ליטרים וסכום." },
   jobs: { title: "משרות", description: "היסטוריית עבודה ושינויי שכר.", countSuffix: "משרות" },

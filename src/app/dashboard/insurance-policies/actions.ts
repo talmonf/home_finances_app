@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { parseInsurancePolicyType } from "@/lib/insurance-policy-type-labels";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,17 +27,66 @@ export async function createInsurancePolicy(formData: FormData) {
     redirect("/dashboard/insurance-policies?error=No+household");
   }
 
+  const policy_type =
+    parseInsurancePolicyType(formData.get("policy_type") as string | null) ?? "car";
+
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
   const policy_name = (formData.get("policy_name") as string | null)?.trim();
-  const car_id = (formData.get("car_id") as string | null)?.trim() || null;
+  const policy_number_raw = (formData.get("policy_number") as string | null)?.trim();
+  const policy_number = policy_number_raw || null;
+
+  const car_id_raw = (formData.get("car_id") as string | null)?.trim() || null;
+  const family_member_id_raw =
+    (formData.get("family_member_id") as string | null)?.trim() || null;
+
   const policy_start_date = parseDateInput(formData.get("policy_start_date") as string | null);
   const expiration_date = parseDateInput(formData.get("expiration_date") as string | null);
   const premium_paid = parseMoney(formData.get("premium_paid") as string | null);
   const premium_currency = ((formData.get("premium_currency") as string | null)?.trim() || "ILS").toUpperCase();
 
-  if (!provider_name || !policy_name || !car_id || !policy_start_date || !expiration_date || !premium_paid) {
+  let car_id: string | null = null;
+  let family_member_id: string | null = null;
+
+  if (policy_type === "car") {
+    if (!car_id_raw) {
+      redirect(
+        "/dashboard/insurance-policies?error=Car+insurance+requires+a+vehicle",
+      );
+    }
+    const car = await prisma.cars.findFirst({
+      where: { id: car_id_raw, household_id: householdId },
+    });
+    if (!car) {
+      redirect("/dashboard/insurance-policies?error=Invalid+car");
+    }
+    car_id = car_id_raw;
+    if (family_member_id_raw) {
+      const m = await prisma.family_members.findFirst({
+        where: { id: family_member_id_raw, household_id: householdId, is_active: true },
+      });
+      if (!m) {
+        redirect("/dashboard/insurance-policies?error=Invalid+family+member");
+      }
+      family_member_id = family_member_id_raw;
+    }
+  } else {
+    if (car_id_raw) {
+      redirect("/dashboard/insurance-policies?error=Only+car+policies+can+be+linked+to+a+vehicle");
+    }
+    if (family_member_id_raw) {
+      const m = await prisma.family_members.findFirst({
+        where: { id: family_member_id_raw, household_id: householdId, is_active: true },
+      });
+      if (!m) {
+        redirect("/dashboard/insurance-policies?error=Invalid+family+member");
+      }
+      family_member_id = family_member_id_raw;
+    }
+  }
+
+  if (!provider_name || !policy_name || !policy_start_date || !expiration_date || !premium_paid) {
     redirect(
-      "/dashboard/insurance-policies?error=Provider%2C+policy%2C+car%2C+start+date%2C+expiration%2C+and+premium+are+required",
+      "/dashboard/insurance-policies?error=Provider%2C+policy+name%2C+start+date%2C+expiration%2C+and+premium+are+required",
     );
   }
 
@@ -44,20 +94,16 @@ export async function createInsurancePolicy(formData: FormData) {
     redirect("/dashboard/insurance-policies?error=Use+a+3-letter+currency+code+%28e.g.+ILS%29");
   }
 
-  const car = await prisma.cars.findFirst({
-    where: { id: car_id, household_id: householdId },
-  });
-  if (!car) {
-    redirect("/dashboard/insurance-policies?error=Invalid+car");
-  }
-
   await prisma.insurance_policies.create({
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
+      policy_type,
       car_id,
+      family_member_id,
       provider_name,
       policy_name,
+      policy_number,
       policy_start_date,
       expiration_date,
       premium_paid,
@@ -68,7 +114,10 @@ export async function createInsurancePolicy(formData: FormData) {
 
   revalidatePath("/dashboard/insurance-policies");
   revalidatePath("/dashboard/upcoming-renewals");
-  revalidatePath(`/dashboard/cars/${car_id}`);
+  revalidatePath("/dashboard/reports");
+  if (car_id) {
+    revalidatePath(`/dashboard/cars/${car_id}`);
+  }
   redirect("/dashboard/insurance-policies?created=1");
 }
 
@@ -91,7 +140,8 @@ export async function toggleInsurancePolicyActive(id: string, nextActive: boolea
 
   revalidatePath("/dashboard/insurance-policies");
   revalidatePath("/dashboard/upcoming-renewals");
-  if (row) {
+  revalidatePath("/dashboard/reports");
+  if (row?.car_id) {
     revalidatePath(`/dashboard/cars/${row.car_id}`);
   }
   redirect("/dashboard/insurance-policies?updated=1");

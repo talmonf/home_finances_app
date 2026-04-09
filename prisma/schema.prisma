@@ -51,6 +51,9 @@ model households {
   properties            properties[]
   property_utilities    property_utilities[]
   insurance_policies    insurance_policies[]
+  savings_policies      savings_policies[]
+  entity_urls           entity_urls[]
+  useful_links          useful_links[]
   donations             donations[]
   significant_purchases significant_purchases[]
   digital_payment_methods digital_payment_methods[]
@@ -164,6 +167,8 @@ model family_members {
   main_driver_cars     cars[]
   jobs                 jobs[]
   petrol_fillups_tanked_up car_petrol_fillups[] @relation("PetrolFillupTanker")
+  insurance_policies   insurance_policies[]
+  savings_policies     savings_policies[]
 }
 
 model bank_accounts {
@@ -196,6 +201,7 @@ model bank_accounts {
   car_purchase_payments           cars[]
   car_service_payments            car_services[]
   car_license_payments            car_licenses[]
+  savings_policies                savings_policies[]
 }
 
 model credit_cards {
@@ -709,22 +715,111 @@ enum IdentityType {
   @@map("identity_type")
 }
 
-model insurance_policies {
-  id                 String   @id @default(uuid())
-  household_id       String
-  car_id             String
-  provider_name      String
-  policy_name        String
-  policy_start_date  DateTime
-  expiration_date    DateTime
-  premium_paid       Decimal  @db.Decimal(15, 2)
-  premium_currency   String   @default("ILS")
-  is_active          Boolean  @default(true)
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+enum InsurancePolicyType {
+  car
+  health
+  home
+  life
+  other
+
+  @@map("insurance_policy_type")
+}
+
+enum EntityUrlEntityKind {
+  insurance_policy
+  savings_policy
+
+  @@map("entity_url_entity_kind")
+}
+
+model entity_urls {
+  id           String              @id @default(uuid())
+  household_id String
+  entity_kind  EntityUrlEntityKind
+  entity_id    String
+  url          String
+  title        String?
+  notes        String?
+  sort_order   Int                 @default(0)
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @updatedAt
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
-  car       cars       @relation(fields: [car_id], references: [id], onDelete: Cascade)
+}
+
+enum UsefulLinkScope {
+  system
+  household
+  user
+
+  @@map("useful_link_scope")
+}
+
+model useful_links {
+  id           String          @id @default(uuid())
+  scope        UsefulLinkScope
+  section_id   String
+  household_id String?
+  user_id      String?
+  url          String
+  title        String?
+  notes        String?
+  sort_order   Int             @default(0)
+  is_active    Boolean         @default(true)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+
+  household households? @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model insurance_policies {
+  id                 String              @id @default(uuid())
+  household_id       String
+  policy_type        InsurancePolicyType @default(car)
+  car_id             String?
+  family_member_id   String?
+  provider_name      String
+  policy_name        String
+  policy_number      String?
+  policy_start_date  DateTime
+  expiration_date    DateTime
+  premium_paid       Decimal             @db.Decimal(15, 2)
+  premium_currency   String              @default("ILS")
+  is_active          Boolean             @default(true)
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+
+  household     households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  car           cars?           @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+}
+
+model savings_policies {
+  id                        String   @id @default(uuid())
+  household_id              String
+  provider_name             String
+  policy_name               String
+  policy_number             String?
+  owner_family_member_id    String?
+  current_balance           Decimal? @db.Decimal(15, 2)
+  target_amount             Decimal? @db.Decimal(15, 2)
+  monthly_contribution      Decimal? @db.Decimal(15, 2)
+  currency                  String   @default("ILS")
+  start_date                DateTime?
+  maturity_date             DateTime?
+  renewal_date              DateTime?
+  bank_account_id           String?
+  digital_payment_method_id String?
+  notes                     String?
+  is_active                 Boolean  @default(true)
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  household              households               @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  owner                  family_members?          @relation(fields: [owner_family_member_id], references: [id], onDelete: SetNull)
+  bank_account           bank_accounts?           @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+  digital_payment_method digital_payment_methods? @relation(fields: [digital_payment_method_id], references: [id], onDelete: SetNull)
 }
 
 enum DonationKind {
@@ -853,6 +948,7 @@ model digital_payment_methods {
   medical_appointments medical_appointments[]
   donations             donations[]
   subscriptions         subscriptions[]
+  savings_policies      savings_policies[]
 }
 
 model medical_appointments {
@@ -1111,6 +1207,7 @@ model users {
   family_member        family_members? @relation(fields: [family_member_id], references: [id])
   user_enabled_sections user_enabled_sections[]
   tasks_assigned       tasks[]
+  useful_links         useful_links[]
 }
 
 model user_enabled_sections {

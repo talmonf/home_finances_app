@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -92,6 +93,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     carLicenses,
     carServicesNext,
     loansForRenewals,
+    savingsPoliciesForRenewals,
   ] = await Promise.all([
     prisma.subscriptions.findMany({
       where: {
@@ -122,7 +124,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     }),
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
-      include: { car: true },
+      include: { car: true, family_member: true },
     }),
     prisma.rentals.findMany({
       where: { household_id: householdId, end_date: { not: null, gte: today } },
@@ -184,7 +186,20 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         ],
       },
     }),
+    prisma.savings_policies.findMany({
+      where: {
+        household_id: householdId,
+        is_active: true,
+        OR: [
+          { renewal_date: { not: null, gte: today } },
+          { maturity_date: { not: null, gte: today } },
+        ],
+      },
+      include: { owner: true },
+    }),
   ]);
+
+  const renewalsLang: "en" | "he" = isHebrew ? "he" : "en";
 
   const rows: RenewalRow[] = [
     ...subscriptions.map((s) => ({
@@ -236,16 +251,60 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         renewalType: "—",
         href: "/dashboard/credit-cards",
       })),
-    ...insurancePolicies.map((p) => ({
-      id: `insurance-${p.id}`,
-      category: "Car insurance",
-      itemName: `${p.provider_name} — ${p.policy_name} (${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""})`,
-      owner: `${p.car.maker} ${p.car.model}`,
-      ownerId: null,
-      renewalDate: p.expiration_date,
-      renewalType: "—",
-      href: "/dashboard/insurance-policies",
-    })),
+    ...insurancePolicies.map((p) => {
+      const typeLabel = getInsurancePolicyTypeLabel(p.policy_type, renewalsLang);
+      const carPart =
+        p.car != null
+          ? `${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""}`
+          : null;
+      const itemName = `${typeLabel}: ${p.provider_name} — ${p.policy_name}${
+        carPart ? ` (${carPart})` : p.policy_number ? ` (#${p.policy_number})` : ""
+      }`;
+      const owner =
+        p.family_member?.full_name ??
+        (carPart ?? (isHebrew ? "משק הבית" : "Household"));
+      return {
+        id: `insurance-${p.id}`,
+        category: "Insurance",
+        itemName,
+        owner,
+        ownerId: p.family_member_id,
+        renewalDate: p.expiration_date,
+        renewalType: "—",
+        href: "/dashboard/insurance-policies",
+      };
+    }),
+    ...savingsPoliciesForRenewals.flatMap((s) => {
+      const parts: RenewalRow[] = [];
+      const baseName = `${s.provider_name} — ${s.policy_name}`;
+      const owner = s.owner?.full_name ?? (isHebrew ? "משק הבית" : "Household");
+      const ownerId = s.owner_family_member_id;
+      if (s.renewal_date && dateOnlyLocal(s.renewal_date as Date) >= today) {
+        parts.push({
+          id: `savings-renewal-${s.id}`,
+          category: "Savings policy",
+          itemName: baseName,
+          owner,
+          ownerId,
+          renewalDate: s.renewal_date as Date,
+          renewalType: isHebrew ? "חידוש" : "Renewal",
+          href: "/dashboard/savings-policies",
+        });
+      }
+      if (s.maturity_date && dateOnlyLocal(s.maturity_date as Date) >= today) {
+        parts.push({
+          id: `savings-maturity-${s.id}`,
+          category: "Savings policy",
+          itemName: `${baseName} (${isHebrew ? "פרעון" : "maturity"})`,
+          owner,
+          ownerId,
+          renewalDate: s.maturity_date as Date,
+          renewalType: isHebrew ? "פרעון" : "Maturity",
+          href: "/dashboard/savings-policies",
+        });
+      }
+      return parts;
+    }),
     ...carLicenses.map((l) => ({
       id: `car-license-${l.id}`,
       category: "Car license",
@@ -371,7 +430,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     "Identity",
     "Credit card",
     "Insurance",
-    "Car insurance",
+    "Savings policy",
     "Car license",
     "Car service",
     "Rental",
@@ -402,9 +461,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
           <p className="text-sm text-slate-400">
             Renewal and expiration dates across subscriptions (including past subscription renewal
-            dates you may have missed), identity, cards, insurance, car licenses, scheduled car
-            services, rental end dates, utilities, task due dates, donations, loans (monthly repayment
-            and maturity), and warranty-bearing significant purchases.
+            dates you may have missed), identity, cards, insurance policies, savings policy renewals
+            and maturities, car licenses, scheduled car services, rental end dates, utilities, task due
+            dates, donations, loans (monthly repayment and maturity), and warranty-bearing significant
+            purchases.
           </p>
         </header>
 

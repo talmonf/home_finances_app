@@ -21,12 +21,13 @@ import {
   ensureTherapySettings,
 } from "@/lib/therapy/bootstrap";
 import { saveHouseholdSettings } from "./actions";
+import { createHouseholdUsefulLink, deleteHouseholdUsefulLink } from "@/lib/useful-links/admin-actions";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ saved?: string }>;
+  searchParams?: Promise<{ saved?: string; usefulSaved?: string; usefulError?: string }>;
 };
 
 export default async function EditHouseholdPage({
@@ -56,7 +57,7 @@ export default async function EditHouseholdPage({
   await ensureDefaultExpenseCategories(householdId);
   await ensureDefaultConsultationTypes(householdId);
 
-  const [therapySettings, consultationTypes, expenseCategories] = await Promise.all([
+  const [therapySettings, consultationTypes, expenseCategories, householdUsefulLinks] = await Promise.all([
     prisma.therapy_settings.findUnique({
       where: { household_id: householdId },
       select: {
@@ -76,6 +77,10 @@ export default async function EditHouseholdPage({
     prisma.therapy_expense_categories.findMany({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+    }),
+    prisma.useful_links.findMany({
+      where: { scope: "household", household_id: householdId, is_active: true },
+      orderBy: [{ section_id: "asc" }, { sort_order: "asc" }, { created_at: "asc" }],
     }),
   ]);
   const privateClinicNavVisibility = mergePrivateClinicNavVisibility(therapySettings?.nav_tabs_json);
@@ -491,6 +496,126 @@ export default async function EditHouseholdPage({
             >
               Add category
             </button>
+          </form>
+        </section>
+
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-slate-200">Household useful links</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            Shown to members of this household on matching dashboard sections (when the section is enabled for them).
+            System-wide links are managed under{" "}
+            <Link href="/admin/useful-links" className="text-sky-400 hover:text-sky-300">
+              System useful links
+            </Link>
+            .
+          </p>
+          {resolvedSearchParams?.usefulSaved === "1" ? (
+            <div className="mb-3 rounded-lg border border-emerald-600 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100">
+              Useful links updated.
+            </div>
+          ) : null}
+          {resolvedSearchParams?.usefulError === "section" ? (
+            <div className="mb-3 rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              Choose a valid section.
+            </div>
+          ) : null}
+          {resolvedSearchParams?.usefulError === "url" ? (
+            <div className="mb-3 rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              Enter a valid http(s) URL.
+            </div>
+          ) : null}
+          {householdUsefulLinks.length === 0 ? (
+            <p className="mb-3 text-sm text-slate-500">No household-specific links yet.</p>
+          ) : (
+            <ul className="mb-4 space-y-2 text-sm">
+              {householdUsefulLinks.map((l) => (
+                <li
+                  key={l.id}
+                  className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-slate-500">{l.section_id}</div>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-sky-400 hover:text-sky-300"
+                    >
+                      {l.title?.trim() || l.url}
+                    </a>
+                    {l.title?.trim() ? (
+                      <div className="break-all text-xs text-slate-500">{l.url}</div>
+                    ) : null}
+                  </div>
+                  <form action={deleteHouseholdUsefulLink}>
+                    <input type="hidden" name="id" value={l.id} />
+                    <input type="hidden" name="household_id" value={householdId} />
+                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                      Remove
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form action={createHouseholdUsefulLink} className="grid gap-2 border-t border-slate-800 pt-3 sm:grid-cols-2">
+            <input type="hidden" name="household_id" value={householdId} />
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-slate-400">Dashboard section</label>
+              <select
+                name="section_id"
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                {DASHBOARD_SECTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title} ({s.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-slate-400">URL *</label>
+              <input
+                name="url"
+                type="url"
+                required
+                placeholder="https://…"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Title</label>
+              <input
+                name="title"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Sort order</label>
+              <input
+                name="sort_order"
+                type="number"
+                min={0}
+                defaultValue={0}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-slate-400">Notes</label>
+              <input
+                name="notes"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+              >
+                Add household link
+              </button>
+            </div>
           </form>
         </section>
       </div>
