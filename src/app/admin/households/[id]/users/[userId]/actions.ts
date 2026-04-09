@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { getAuthSession, prisma } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertUserEnabledSections } from "@/lib/household-sections";
@@ -16,7 +16,10 @@ const ALLOWED_USER_TYPES = [
 ] as const;
 
 export async function updateHouseholdUser(formData: FormData) {
-  await requireSuperAdmin();
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
 
   const householdId = (formData.get("household_id") as string | null)?.trim();
   const userId = (formData.get("user_id") as string | null)?.trim();

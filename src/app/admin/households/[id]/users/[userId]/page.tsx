@@ -1,10 +1,10 @@
-import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { getAuthSession, prisma } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { getHouseholdEnabledSections, getUserEnabledSections } from "@/lib/household-sections";
 import { UI_LANGUAGE_LABELS, UI_LANGUAGES } from "@/lib/ui-language";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { updateHouseholdUser } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,10 @@ export default async function EditHouseholdUserPage({
   params,
   searchParams,
 }: PageProps) {
-  await requireSuperAdmin();
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
 
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;

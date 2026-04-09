@@ -1,4 +1,4 @@
-import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -14,7 +14,10 @@ type PageProps = {
 };
 
 export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
-  await requireSuperAdmin();
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 

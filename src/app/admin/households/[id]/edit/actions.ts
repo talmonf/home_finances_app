@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { getAuthSession, prisma } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
@@ -11,7 +11,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function saveHouseholdSettings(formData: FormData) {
-  await requireSuperAdmin();
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
 
   const householdId = (formData.get("household_id") as string | null)?.trim();
   if (!householdId) {

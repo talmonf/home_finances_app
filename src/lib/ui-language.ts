@@ -24,6 +24,7 @@ export function appHeaderStrings(lang: UiLanguage) {
       appTitle: "ניהול כספי הבית",
       signedInAs: "מחובר כ־",
       signOut: "התנתק",
+      signOutConfirm: "האם להתנתק עכשיו?",
       signIn: "התחבר",
       superAdmin: "מנהל על",
     };
@@ -32,6 +33,7 @@ export function appHeaderStrings(lang: UiLanguage) {
     appTitle: "Home Finance Management",
     signedInAs: "Signed in as",
     signOut: "Sign out",
+    signOutConfirm: "Do you want to sign out now?",
     signIn: "Sign in",
     superAdmin: "Super admin",
   };

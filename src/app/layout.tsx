@@ -4,6 +4,7 @@ import "./globals.css";
 import Link from "next/link";
 import { getAuthSession, getCurrentUiLanguage } from "@/lib/auth";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
+import { SignOutButton } from "@/components/sign-out-button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,12 +59,7 @@ export default async function RootLayout({
                       </span>
                     )}
                   </span>
-                  <a
-                    href="/api/auth/signout?callbackUrl=/"
-                    className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-                  >
-                    {h.signOut}
-                  </a>
+                  <SignOutButton label={h.signOut} confirmMessage={h.signOutConfirm} />
                 </div>
               ) : (
                 <Link

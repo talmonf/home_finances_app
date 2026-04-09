@@ -1,6 +1,6 @@
-import { prisma, requireSuperAdmin } from "@/lib/auth";
+import { getAuthSession, prisma } from "@/lib/auth";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { getHouseholdEnabledSections } from "@/lib/household-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
@@ -33,7 +33,10 @@ export default async function EditHouseholdPage({
   params,
   searchParams,
 }: PageProps) {
-  await requireSuperAdmin();
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
 
   const resolvedParams = await params;
   if (!resolvedParams?.id) notFound();
