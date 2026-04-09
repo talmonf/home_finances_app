@@ -1,6 +1,12 @@
 "use server";
 
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, requireSuperAdmin } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  requireSuperAdmin,
+  getAuthSession,
+} from "@/lib/auth";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
@@ -23,6 +29,35 @@ async function requireSuperAdminHouseholdFromForm(formData: FormData): Promise<s
   const householdId = (formData.get("household_id") as string | null)?.trim();
   if (!householdId) redirect(ADMIN_HOUSEHOLDS);
   return householdId;
+}
+
+/** Super admin (admin UI): household from form. Household users: current household from session (ignores form). */
+async function householdIdForTherapyHouseholdScopedForms(formData: FormData): Promise<{
+  householdId: string;
+  isSuperAdminContext: boolean;
+}> {
+  const session = await getAuthSession();
+  if (session?.user?.isSuperAdmin) {
+    await requireSuperAdmin();
+    const householdId = (formData.get("household_id") as string | null)?.trim();
+    if (!householdId) redirect(ADMIN_HOUSEHOLDS);
+    return { householdId, isSuperAdminContext: true };
+  }
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+  return { householdId, isSuperAdminContext: false };
+}
+
+function redirectAfterTherapyHouseholdScopedSave(
+  isSuperAdminContext: boolean,
+  householdId: string,
+  query: string,
+): never {
+  if (isSuperAdminContext) {
+    redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?${query}`);
+  }
+  redirect(`${BASE}/settings?${query}`);
 }
 
 async function householdIdOrRedirect(): Promise<string> {
@@ -1106,11 +1141,11 @@ export async function deleteReceiptAllocation(formData: FormData) {
 // --- Expenses ---
 
 export async function createTherapyExpenseCategory(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   await ensureDefaultExpenseCategories(householdId);
   const name = (formData.get("name") as string)?.trim() || "";
   const name_he = (formData.get("name_he") as string)?.trim() || null;
-  if (!name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
+  if (!name) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=cat");
 
   await prisma.therapy_expense_categories.create({
     data: {
@@ -1124,16 +1159,19 @@ export async function createTherapyExpenseCategory(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/expenses`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=cat`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=cat");
 }
 
 export async function updateTherapyExpenseCategory(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const id = (formData.get("id") as string)?.trim() || "";
   const name = (formData.get("name") as string)?.trim() || "";
   const name_he = (formData.get("name_he") as string)?.trim() || null;
-  if (!id || !name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
+  if (!id || !name) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=cat");
 
   await prisma.therapy_expense_categories.updateMany({
     where: { id, household_id: householdId },
@@ -1141,31 +1179,39 @@ export async function updateTherapyExpenseCategory(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/expenses`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=1");
 }
 
 export async function deleteTherapyExpenseCategory(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
+  if (!id) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=cat");
 
   const category = await prisma.therapy_expense_categories.findFirst({
     where: { id, household_id: householdId },
     select: { id: true, is_system: true },
   });
-  if (!category || category.is_system) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat`);
+  if (!category || category.is_system) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=cat");
 
   const usageCount = await prisma.therapy_job_expenses.count({
     where: { household_id: householdId, category_id: id },
   });
-  if (usageCount > 0) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=cat-in-use`);
+  if (usageCount > 0) {
+    redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=cat-in-use");
+  }
 
   await prisma.therapy_expense_categories.delete({ where: { id } });
 
   revalidatePath(`${BASE}/expenses`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=1");
 }
 
 export async function createTherapyJobExpense(formData: FormData) {
@@ -1419,10 +1465,10 @@ async function assertTreatmentForHousehold(householdId: string, treatmentId: str
 // --- Consultation types ---
 
 export async function createTherapyConsultationType(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const name = (formData.get("name") as string)?.trim() || "";
   const name_he = (formData.get("name_he") as string)?.trim() || null;
-  if (!name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
+  if (!name) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
 
   await prisma.therapy_consultation_types.create({
     data: {
@@ -1436,16 +1482,19 @@ export async function createTherapyConsultationType(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/consultations`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=ctype`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=ctype");
 }
 
 export async function updateTherapyConsultationType(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const id = (formData.get("id") as string)?.trim() || "";
   const name = (formData.get("name") as string)?.trim() || "";
   const name_he = (formData.get("name_he") as string)?.trim() || null;
-  if (!id || !name) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
+  if (!id || !name) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
 
   await prisma.therapy_consultation_types.updateMany({
     where: { id, household_id: householdId },
@@ -1453,31 +1502,39 @@ export async function updateTherapyConsultationType(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/consultations`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=1");
 }
 
 export async function deleteTherapyConsultationType(formData: FormData) {
-  const householdId = await requireSuperAdminHouseholdFromForm(formData);
+  const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
+  if (!id) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
   const type = await prisma.therapy_consultation_types.findFirst({
     where: { id, household_id: householdId },
     select: { id: true, is_system: true },
   });
-  if (!type || type.is_system) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype`);
+  if (!type || type.is_system) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
 
   const usageCount = await prisma.therapy_consultations.count({
     where: { household_id: householdId, consultation_type_id: id },
   });
-  if (usageCount > 0) redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?error=ctype-in-use`);
+  if (usageCount > 0) {
+    redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype-in-use");
+  }
 
   await prisma.therapy_consultation_types.deleteMany({
     where: { id, household_id: householdId, is_system: false },
   });
   revalidatePath(`${BASE}/consultations`);
-  revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
-  redirect(`${ADMIN_HOUSEHOLDS}/${householdId}/edit?saved=1`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=1");
 }
 
 // --- Consultations (meetings) ---

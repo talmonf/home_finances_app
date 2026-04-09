@@ -512,8 +512,8 @@ export function privateClinicSettings(lang: UiLanguage) {
   return {
     pageTitle: p("Settings", "הגדרות"),
     pageIntro: p(
-      "Set the English and optional Hebrew titles for the three treatment note fields. Which sections appear in the Private clinic navigation is configured by the household administrator.",
-      "הגדירו את הכותרות באנגלית ובעברית (אופציונלי) לשלושת שדות ההערות בטיפולים. אילו אזורים מופיעים בניווט הקליניקה נקבע על ידי מנהל המשקה.",
+      "Configure treatment note titles, consultation / meeting types, and clinic expense categories. Which links appear in the Private clinic navigation bar is set by the platform super admin, not here.",
+      "הגדירו כותרות להערות טיפול, סוגי ייעוץ / פגישה וקטגוריות הוצאות לקליניקה. אילו קישורים מופיעים בשורת הניווט של הקליניקה הפרטית נקבעים על ידי מנהל העל של המערכת — לא כאן.",
     ),
     noteLabelsTitle: p("Treatment note labels", "כותרות להערות טיפול"),
     noteLabelsHelp: p(
@@ -538,7 +538,17 @@ export function privateClinicSettings(lang: UiLanguage) {
     add: p("Add", "הוספה"),
     newTypeName: p("New type name", "שם סוג חדש"),
     expenseCatsTitle: p("Expense categories", "קטגוריות הוצאה"),
+    expenseCatsHelp: p(
+      "English names are used in exports; Hebrew is shown when the household interface language is Hebrew.",
+      "שמות באנגלית משמשים בייצוא; עברית מוצגת כששפת הממשק של המשקה היא עברית.",
+    ),
+    fieldEnglish: p("English", "אנגלית"),
+    fieldHebrew: p("Hebrew", "עברית"),
+    addConsultationTypeBtn: p("Add type", "הוספת סוג"),
+    addExpenseCategoryBtn: p("Add category", "הוספת קטגוריה"),
     newCatName: p("New category name", "שם קטגוריה חדשה"),
+    savedConsultType: p("Consultation type saved.", "סוג הייעוץ נשמר."),
+    savedExpenseCat: p("Expense category saved.", "קטגוריית ההוצאה נשמרה."),
     errCtypeInUse: p(
       "Cannot delete consultation type because it is already used by one or more consultations.",
       "לא ניתן למחוק את סוג הייעוץ כי הוא כבר בשימוש.",
