@@ -14,7 +14,7 @@ import { verifyEntityUrlParent } from "@/lib/entity-urls/verify-parent";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-function redirectWithError(redirectTo: string, message: string) {
+function redirectWithError(redirectTo: string, message: string): never {
   const q = new URLSearchParams({ error: message });
   redirect(`${redirectTo}?${q.toString()}`);
 }
