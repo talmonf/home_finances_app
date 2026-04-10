@@ -76,6 +76,10 @@ function formatSubscriptionPaymentSummary(s: {
   return parts.length ? parts.join(" · ") : "—";
 }
 
+function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
+  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+}
+
 export default async function SubscriptionsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -89,10 +93,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
-  const [subscriptions, creditCards, digitalPaymentMethods, familyMembers] = await Promise.all([
+  const [subscriptions, creditCards, digitalPaymentMethods, familyMembers, jobs] = await Promise.all([
     prisma.subscriptions.findMany({
       where: { household_id: householdId },
-      include: { credit_card: true, digital_payment_method: true, family_member: true },
+      include: { credit_card: true, digital_payment_method: true, family_member: true, job: true },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.credit_cards.findMany({
@@ -110,6 +114,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.jobs.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);
   return (
@@ -324,6 +332,24 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               </select>
             </div>
             <div>
+              <label htmlFor="job_id" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
+              </label>
+              <select
+                id="job_id"
+                name="job_id"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="">None</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobLabel(j)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label
                 htmlFor="digital_payment_method_id"
                 className="mb-1 block text-xs font-medium text-slate-400"
@@ -425,6 +451,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">
                       Family member
                     </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Job</th>
                     <th className="px-4 py-3 font-medium text-slate-300">
                       Payment method
                     </th>
@@ -462,6 +489,18 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                             className="text-sky-400 hover:text-sky-300"
                           >
                             {s.family_member.full_name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {s.job ? (
+                          <Link
+                            href={`/dashboard/jobs/${s.job.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {formatJobLabel(s.job)}
                           </Link>
                         ) : (
                           "—"

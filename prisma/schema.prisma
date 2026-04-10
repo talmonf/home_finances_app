@@ -471,6 +471,8 @@ model jobs {
   therapy_consultations      therapy_consultations[]
   therapy_travel_entries     therapy_travel_entries[]
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
+  subscriptions                    subscriptions[]
+  transactions                     transactions[]
 }
 
 model job_benefits {
@@ -1079,6 +1081,8 @@ model transactions {
   rental_id             String?
   trip_id               String?
   car_id                String?
+  job_id                String?
+  subscription_id     String?
   import_status         TransactionImportStatus @default(pending_review)
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
@@ -1095,6 +1099,8 @@ model transactions {
   rental         rentals?         @relation(fields: [rental_id], references: [id], onDelete: SetNull)
   trip           trips?           @relation(fields: [trip_id], references: [id], onDelete: SetNull)
   car            cars?            @relation(fields: [car_id], references: [id], onDelete: SetNull)
+  job            jobs?            @relation(fields: [job_id], references: [id], onDelete: SetNull)
+  subscription   subscriptions?   @relation(fields: [subscription_id], references: [id], onDelete: SetNull)
   therapy_treatments_linked  therapy_treatments[] @relation("TherapyTreatmentTransaction")
   therapy_receipts_linked    therapy_receipts[]   @relation("TherapyReceiptTransaction")
   therapy_job_expenses_linked therapy_job_expenses[] @relation("TherapyExpenseTransaction")
@@ -1151,6 +1157,7 @@ model subscriptions {
   credit_card_id   String?
   digital_payment_method_id String?
   family_member_id String?
+  job_id           String?
   description      String?
   website_url      String?
   is_active        Boolean                    @default(true)
@@ -1162,6 +1169,8 @@ model subscriptions {
   credit_card            credit_cards?           @relation(fields: [credit_card_id], references: [id])
   digital_payment_method digital_payment_methods? @relation(fields: [digital_payment_method_id], references: [id], onDelete: SetNull)
   family_member          family_members?         @relation(fields: [family_member_id], references: [id])
+  job                    jobs?                  @relation(fields: [job_id], references: [id], onDelete: SetNull)
+  linked_transactions    transactions[]
 }
 
 enum StudyOrClassType {

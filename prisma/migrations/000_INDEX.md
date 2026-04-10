@@ -72,6 +72,8 @@ Run scripts in order by number. Check off each script after you run it.
 | 060 | `060_insurance_types_savings_policies.sql` | ALTER/CREATE | `insurance_policies`: enum `insurance_policy_type`, optional `car_id`, `family_member_id`, `policy_number`; table `savings_policies` (balances, contributions, renewal/maturity). |
 | 061 | `061_entity_urls_polymorphic.sql` | CREATE | Table `entity_urls`: polymorphic links (`entity_kind`, `entity_id`) per household; URL, optional title/notes, `sort_order`. Initial kinds: `insurance_policy`, `savings_policy`. |
 | 062 | `062_useful_links.sql` | CREATE | Table `useful_links`: `scope` (`system` / `household` / `user`), `section_id` (dashboard section), optional `household_id` / `user_id`, URL + metadata. |
+| 063 | `063_therapy_treatment_attachments.sql` | CREATE | `therapy_treatment_attachments`: S3 file metadata + optional transcription fields per treatment. |
+| 064 | `064_subscriptions_transactions_jobs.sql` | ALTER | `subscriptions`: optional `job_id` → `jobs`; `transactions`: optional `job_id`, `subscription_id` → `subscriptions`; indexes. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -138,6 +140,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 061_entity_urls_polymorphic.sql
 - [x] 062_useful_links.sql
 - [x] 063_therapy_treatment_attachments.sql
+- [x] 064_subscriptions_transactions_jobs.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

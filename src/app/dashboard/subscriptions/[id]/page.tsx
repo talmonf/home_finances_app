@@ -33,6 +33,10 @@ function formatScheme(scheme: string) {
   return "Other";
 }
 
+function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
+  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+}
+
 function buildCreditCardLabel(card: {
   card_name: string;
   scheme: string;
@@ -66,7 +70,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
     redirect("/dashboard/subscriptions?error=Not+found");
   }
 
-  const [creditCards, digitalPaymentMethods, familyMembers] = await Promise.all([
+  const [creditCards, digitalPaymentMethods, familyMembers, jobs] = await Promise.all([
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
@@ -101,6 +105,16 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
         ],
       },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.jobs.findMany({
+      where: {
+        household_id: householdId,
+        OR: [
+          ...(subscription.job_id ? [{ id: subscription.job_id }] : []),
+          { is_active: true },
+        ],
+      },
+      orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);
 
@@ -264,6 +278,25 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                   <option key={m.id} value={m.id}>
                     {m.full_name}
                     {!m.is_active ? " (inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="job_id" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
+              </label>
+              <select
+                id="job_id"
+                name="job_id"
+                defaultValue={subscription.job_id ?? ""}
+                className={inputClass}
+              >
+                <option value="">None</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobLabel(j)}
+                    {!j.is_active ? " (inactive)" : ""}
                   </option>
                 ))}
               </select>

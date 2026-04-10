@@ -15,6 +15,7 @@ import {
   createCategory,
   createPayee,
 } from "../../actions";
+import { ImportReviewSubscriptionJobFields } from "@/components/import-review-subscription-job-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,10 @@ const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
+  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+}
+
 export default async function ImportReviewPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -52,7 +57,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases, rentals, trips, cars] = await Promise.all([
+  const [doc, transactions, categories, payees, familyMembers, studies, significantPurchases, rentals, trips, cars, subscriptions] =
+    await Promise.all([
     prisma.documents.findFirst({
       where: { id: documentId, household_id: householdId },
       include: { bank_account: true },
@@ -67,6 +73,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
         rental: true,
         trip: true,
         car: true,
+        job: true,
+        subscription: true,
       },
       orderBy: { transaction_date: "asc" },
     }),
@@ -104,9 +112,37 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
       where: { household_id: householdId, is_active: true },
       orderBy: [{ maker: "asc" }, { model: "asc" }],
     }),
+    prisma.subscriptions.findMany({
+      where: { household_id: householdId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, job_id: true },
+    }),
   ]);
 
   if (!doc) notFound();
+
+  const txJobIds = [
+    ...new Set(transactions.map((t) => t.job_id).filter((id): id is string => Boolean(id))),
+  ];
+  const subJobIds = [
+    ...new Set(subscriptions.map((s) => s.job_id).filter((id): id is string => Boolean(id))),
+  ];
+  const extraJobIds = [...new Set([...txJobIds, ...subJobIds])];
+
+  const jobs = await prisma.jobs.findMany({
+    where: {
+      household_id: householdId,
+      OR: [{ is_active: true }, ...(extraJobIds.length > 0 ? [{ id: { in: extraJobIds } }] : [])],
+    },
+    orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
+  });
+
+  const jobOptions = jobs.map((j) => ({ id: j.id, label: formatJobLabel(j) }));
+  const subscriptionOptions = subscriptions.map((s) => ({
+    id: s.id,
+    name: s.name,
+    jobId: s.job_id,
+  }));
 
   const significantPurchaseById = new Map(significantPurchases.map((sp) => [sp.id, sp]));
 
@@ -188,7 +224,9 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                 <th className="px-2 py-2 font-medium text-slate-300">{isHebrew ? "תאריך" : "Date"}</th>
                 <th className="px-2 py-2 font-medium text-slate-300">{isHebrew ? "סכום" : "Amount"}</th>
                 <th className="px-2 py-2 font-medium text-slate-300">Description</th>
-                <th className="px-2 py-2 font-medium text-slate-300">Category · Payee · Notes · Family · Course · Purchase · Rental · Trip · Car</th>
+                <th className="px-2 py-2 font-medium text-slate-300">
+                  Category · Payee · Notes · Family · Course · Purchase · Rental · Trip · Car · Sub · Job
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -336,6 +374,15 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                           </option>
                         ))}
                       </select>
+
+                      <ImportReviewSubscriptionJobFields
+                        subscriptions={subscriptionOptions}
+                        jobs={jobOptions}
+                        initialSubscriptionId={tx.subscription_id ?? ""}
+                        initialJobId={tx.job_id ?? ""}
+                        subscriptionPlaceholder={isHebrew ? "— מנוי —" : "— Subscription —"}
+                        jobPlaceholder={isHebrew ? "— עבודה —" : "— Job —"}
+                      />
 
                       <button
                         type="submit"

@@ -23,8 +23,14 @@ type PageProps = {
     rentalId?: string;
     tripId?: string;
     carId?: string;
+    jobId?: string;
+    subscriptionId?: string;
   }>;
 };
+
+function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
+  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -53,6 +59,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const rentalId = resolved.rentalId || "";
   const tripId = resolved.tripId || "";
   const carId = resolved.carId || "";
+  const jobId = resolved.jobId || "";
+  const subscriptionId = resolved.subscriptionId || "";
   const direction = resolved.direction && resolved.direction !== "all" ? resolved.direction : undefined;
   const from = resolved.from ? new Date(resolved.from) : undefined;
   const to = resolved.to ? new Date(resolved.to) : undefined;
@@ -67,6 +75,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     rental_id?: string;
     trip_id?: string;
     car_id?: string;
+    job_id?: string;
+    subscription_id?: string;
     transaction_direction?: "debit" | "credit";
     transaction_date?: { gte?: Date; lte?: Date };
   } = {
@@ -81,6 +91,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   if (rentalId) where.rental_id = rentalId;
   if (tripId) where.trip_id = tripId;
   if (carId) where.car_id = carId;
+  if (jobId) where.job_id = jobId;
+  if (subscriptionId) where.subscription_id = subscriptionId;
   if (direction) where.transaction_direction = direction;
   if (from || to) {
     where.transaction_date = {};
@@ -88,7 +100,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     if (to) where.transaction_date.lte = to;
   }
 
-  const [transactions, accounts, categories, payees, members, rentals, trips, cars] = await Promise.all([
+  const [transactions, accounts, categories, payees, members, rentals, trips, cars, jobs, subscriptions] =
+    await Promise.all([
     prisma.transactions.findMany({
       where,
       include: {
@@ -99,6 +112,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         rental: { include: { property: true } },
         trip: true,
         car: true,
+        job: true,
+        subscription: true,
       },
       orderBy: { transaction_date: "desc" },
       take: 500,
@@ -131,6 +146,14 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     prisma.cars.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: [{ maker: "asc" }, { model: "asc" }],
+    }),
+    prisma.jobs.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
+    }),
+    prisma.subscriptions.findMany({
+      where: { household_id: householdId },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -265,6 +288,36 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
               </select>
             </div>
             <div>
+              <label className="mb-1 block text-xs text-slate-400">Job</label>
+              <select
+                name="jobId"
+                defaultValue={jobId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobLabel(j)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Subscription</label>
+              <select
+                name="subscriptionId"
+                defaultValue={subscriptionId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All</option>
+                {subscriptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="mb-1 block text-xs text-slate-400">From date</label>
               <input
                 type="date"
@@ -324,6 +377,8 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                     <th className="px-3 py-2 font-medium text-slate-300">Rental</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Trip</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Car</th>
+                    <th className="px-3 py-2 font-medium text-slate-300">Job</th>
+                    <th className="px-3 py-2 font-medium text-slate-300">Subscription</th>
                     <th className="px-3 py-2 font-medium text-slate-300">Description</th>
                   </tr>
                 </thead>
@@ -359,6 +414,30 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.car ? `${tx.car.maker} ${tx.car.model}${tx.car.plate_number ? ` · ${tx.car.plate_number}` : ""}` : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                        {tx.job ? (
+                          <Link
+                            href={`/dashboard/jobs/${tx.job.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {formatJobLabel(tx.job)}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={tx.subscription?.name ?? undefined}>
+                        {tx.subscription ? (
+                          <Link
+                            href={`/dashboard/subscriptions/${tx.subscription.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {tx.subscription.name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="max-w-[240px] truncate px-3 py-2 text-slate-400" title={tx.description ?? ""}>
                         {tx.description ?? "—"}

@@ -25,6 +25,8 @@ export async function updateTransactionRow(formData: FormData) {
   const rental_id = (formData.get("rental_id") as string)?.trim() || null;
   const trip_id = (formData.get("trip_id") as string)?.trim() || null;
   const car_id = (formData.get("car_id") as string)?.trim() || null;
+  const job_id_raw = (formData.get("job_id") as string)?.trim() || null;
+  const subscription_id_raw = (formData.get("subscription_id") as string)?.trim() || null;
 
   const significant_purchase_id = (formData.get("significant_purchase_id") as string)?.trim() || null;
   const purchase_category_raw = (formData.get("purchase_category") as string)?.trim() || null;
@@ -36,6 +38,30 @@ export async function updateTransactionRow(formData: FormData) {
       ? (purchase_category_raw as PurchaseCategory)
       : null;
 
+  let subscription_id: string | null = null;
+  let subscriptionDefaults: { job_id: string | null; family_member_id: string | null } | null = null;
+  if (subscription_id_raw) {
+    const sub = await prisma.subscriptions.findFirst({
+      where: { id: subscription_id_raw, household_id: householdId },
+      select: { id: true, job_id: true, family_member_id: true },
+    });
+    if (sub) {
+      subscription_id = sub.id;
+      subscriptionDefaults = { job_id: sub.job_id, family_member_id: sub.family_member_id };
+    }
+  }
+
+  let resolved_job_id: string | null = null;
+  if (job_id_raw) {
+    const jobRow = await prisma.jobs.findFirst({
+      where: { id: job_id_raw, household_id: householdId },
+    });
+    if (jobRow) resolved_job_id = jobRow.id;
+  }
+  if (subscription_id && subscriptionDefaults) {
+    resolved_job_id = resolved_job_id ?? subscriptionDefaults.job_id ?? null;
+  }
+
   const data: Record<string, string | null> & { significant_purchase_id?: string | null } = {
     notes,
     category_id: category_id || null,
@@ -46,6 +72,8 @@ export async function updateTransactionRow(formData: FormData) {
     rental_id,
     trip_id,
     car_id,
+    job_id: resolved_job_id,
+    subscription_id,
   };
 
   if (category_id) {
@@ -65,6 +93,14 @@ export async function updateTransactionRow(formData: FormData) {
       where: { id: family_member_id, household_id: householdId },
     });
     if (!fm) data.family_member_id = null;
+  }
+  if (subscription_id && subscriptionDefaults && !data.family_member_id) {
+    if (subscriptionDefaults.family_member_id) {
+      const fm = await prisma.family_members.findFirst({
+        where: { id: subscriptionDefaults.family_member_id, household_id: householdId },
+      });
+      data.family_member_id = fm ? fm.id : null;
+    }
   }
   if (study_or_class_id) {
     const sc = await prisma.studies_and_classes.findFirst({
@@ -114,6 +150,7 @@ export async function updateTransactionRow(formData: FormData) {
   revalidatePath("/dashboard/import");
   revalidatePath("/dashboard/import/review");
   revalidatePath("/dashboard/significant-purchases");
+  revalidatePath("/dashboard/transactions");
 }
 
 export async function confirmAllTransactionsForDocument(documentId: string) {

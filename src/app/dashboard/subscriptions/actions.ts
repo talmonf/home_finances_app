@@ -39,6 +39,7 @@ export async function createSubscription(formData: FormData) {
   const digital_payment_method_id =
     (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
+  const job_id_raw = (formData.get("job_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
@@ -112,6 +113,18 @@ export async function createSubscription(formData: FormData) {
     }
   }
 
+  let job_id: string | null = null;
+  if (job_id_raw) {
+    const jobRow = await prisma.jobs.findFirst({
+      where: { id: job_id_raw, household_id: householdId },
+      select: { id: true },
+    });
+    if (!jobRow) {
+      redirect("/dashboard/subscriptions?error=Invalid+job");
+    }
+    job_id = jobRow.id;
+  }
+
   let start_date: Date | null = null;
   if (start_date_raw) {
     start_date = new Date(start_date_raw);
@@ -153,6 +166,7 @@ export async function createSubscription(formData: FormData) {
       credit_card_id,
       digital_payment_method_id,
       family_member_id,
+      job_id,
       description,
       website_url,
       is_active: status === "active",
@@ -183,6 +197,7 @@ export async function updateSubscription(formData: FormData) {
   const digital_payment_method_id =
     (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
+  const job_id_raw = (formData.get("job_id") as string | null)?.trim() || null;
   const status = (formData.get("status") as string | null)?.trim() || "active";
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
@@ -268,6 +283,18 @@ export async function updateSubscription(formData: FormData) {
     }
   }
 
+  let job_id: string | null = null;
+  if (job_id_raw) {
+    const jobRow = await prisma.jobs.findFirst({
+      where: { id: job_id_raw, household_id: householdId },
+      select: { id: true },
+    });
+    if (!jobRow) {
+      redirect(`/dashboard/subscriptions/${id}?error=Invalid+job`);
+    }
+    job_id = jobRow.id;
+  }
+
   let start_date: Date | null = null;
   if (start_date_raw) {
     start_date = new Date(start_date_raw);
@@ -308,6 +335,7 @@ export async function updateSubscription(formData: FormData) {
       credit_card_id,
       digital_payment_method_id,
       family_member_id,
+      job_id,
       description,
       website_url,
       is_active: status === "active",
