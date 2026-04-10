@@ -85,6 +85,7 @@ model households {
   therapy_consultations             therapy_consultations[]
   therapy_travel_entries            therapy_travel_entries[]
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
+  therapy_treatment_attachments      therapy_treatment_attachments[]
 }
 
 model loans {
@@ -1328,6 +1329,15 @@ enum TherapyAppointmentRecurrence {
   @@map("therapy_appointment_recurrence")
 }
 
+enum TherapyTreatmentAttachmentTranscriptionStatus {
+  none
+  pending
+  completed
+  failed
+
+  @@map("therapy_treatment_attachment_transcription_status")
+}
+
 model therapy_settings {
   id               String   @id @default(uuid())
   household_id     String   @unique
@@ -1468,9 +1478,34 @@ model therapy_treatments {
   receipt_allocations therapy_receipt_allocations[]
   appointments_completed therapy_appointments[]
   travel_entries       therapy_travel_entries[]
+  attachments          therapy_treatment_attachments[]
 
   @@index([household_id, job_id])
   @@index([household_id, occurred_at])
+}
+
+model therapy_treatment_attachments {
+  id                       String   @id @default(uuid())
+  household_id             String
+  treatment_id             String
+  file_name                String
+  mime_type                String
+  byte_size                Int?
+  storage_bucket           String
+  storage_key              String
+  transcription_text     String?
+  transcription_language   String?
+  transcription_status     TherapyTreatmentAttachmentTranscriptionStatus @default(none)
+  transcription_error    String?
+  transcribed_at           DateTime?
+  transcription_provider   String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  household households         @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  treatment therapy_treatments @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id, treatment_id])
 }
 
 model therapy_receipts {

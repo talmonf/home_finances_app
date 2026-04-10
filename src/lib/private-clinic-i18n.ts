@@ -309,6 +309,33 @@ export function privateClinicTreatments(lang: UiLanguage) {
   };
 }
 
+export function privateClinicTreatmentAttachments(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    heading: p("Attachments", "קבצים מצורפים"),
+    uploadFile: p("Upload file", "העלאת קובץ"),
+    uploading: p("Uploading…", "מעלה…"),
+    download: p("Download", "הורדה"),
+    open: p("Open", "פתיחה"),
+    remove: p("Remove", "הסרה"),
+    transcribeEn: p("Transcribe (English)", "תמלול (אנגלית)"),
+    transcribeHe: p("Transcribe (Hebrew)", "תמלול (עברית)"),
+    transcribing: p("Transcribing…", "מתמלל…"),
+    transcript: p("Transcript", "תמליל"),
+    privacyNotice: p(
+      "Transcription sends audio to a third-party service. Review the text before using it in clinical notes.",
+      "תמלול שולח את האודיו לשירות חיצוני. יש לעבור על הטקסט לפני שימוש בערות קליניות.",
+    ),
+    statusPending: p("Transcription in progress…", "תמלול בתהליך…"),
+    statusFailed: p("Transcription failed", "התמלול נכשל"),
+    copyTranscript: p("Copy transcript", "העתקת תמליל"),
+    copied: p("Copied.", "הועתק."),
+    noAttachments: p("No attachments yet.", "אין עדיין קבצים מצורפים."),
+    uploadFailed: p("Upload failed", "ההעלאה נכשלה"),
+    transcribeFailed: p("Transcription failed", "התמלול נכשל"),
+  };
+}
+
 export function privateClinicReceipts(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   const c = privateClinicCommon(lang);

@@ -15,6 +15,7 @@ import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-l
 import { privateClinicCommon, privateClinicTreatments, treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,12 @@ export default async function TreatmentsPage({
           : {}),
       },
       orderBy: { occurred_at: "desc" },
-      include: { client: true, job: true, program: true },
+      include: {
+        client: true,
+        job: true,
+        program: true,
+        attachments: { orderBy: { created_at: "asc" } },
+      },
       take: 500,
     }),
     prisma.therapy_visit_type_default_amounts.findMany({
@@ -400,6 +406,20 @@ export default async function TreatmentsPage({
                               {c.delete}
                             </button>
                           </ConfirmDeleteForm>
+                          <TherapyTreatmentAttachments
+                            treatmentId={t.id}
+                            uiLanguage={uiLanguage}
+                            attachments={t.attachments.map((a) => ({
+                              id: a.id,
+                              file_name: a.file_name,
+                              mime_type: a.mime_type,
+                              byte_size: a.byte_size,
+                              transcription_status: a.transcription_status,
+                              transcription_text: a.transcription_text,
+                              transcription_error: a.transcription_error,
+                              transcription_language: a.transcription_language,
+                            }))}
+                          />
                         </details>
                       </td>
                     </tr>

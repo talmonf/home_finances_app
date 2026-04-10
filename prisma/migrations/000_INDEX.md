@@ -137,6 +137,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 060_insurance_types_savings_policies.sql
 - [x] 061_entity_urls_polymorphic.sql
 - [x] 062_useful_links.sql
+- [x] 063_therapy_treatment_attachments.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

@@ -1,0 +1,213 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { UiLanguage } from "@/lib/ui-language";
+import { privateClinicTreatmentAttachments } from "@/lib/private-clinic-i18n";
+
+export type TherapyTreatmentAttachmentRow = {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  byte_size: number | null;
+  transcription_status: string;
+  transcription_text: string | null;
+  transcription_error: string | null;
+  transcription_language: string | null;
+};
+
+type Props = {
+  treatmentId: string;
+  uiLanguage: UiLanguage;
+  attachments: TherapyTreatmentAttachmentRow[];
+};
+
+function isAudioMime(mime: string): boolean {
+  return mime.toLowerCase().startsWith("audio/");
+}
+
+export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachments }: Props) {
+  const router = useRouter();
+  const s = privateClinicTreatmentAttachments(uiLanguage);
+  const [busyUpload, setBusyUpload] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function onUpload(formData: FormData) {
+    setBusyUpload(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data?.error ?? s.uploadFailed);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError(s.uploadFailed);
+    } finally {
+      setBusyUpload(false);
+    }
+  }
+
+  async function removeAttachment(id: string) {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/private-clinic/treatment-attachments/${id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data?.error ?? s.uploadFailed);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError(s.uploadFailed);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function transcribe(id: string, language: "en" | "he") {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/private-clinic/treatment-attachments/${id}/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data?.error ?? s.transcribeFailed);
+        router.refresh();
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError(s.transcribeFailed);
+      router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function copyText(text: string, id: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setError(s.transcribeFailed);
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-2 border-t border-slate-700/80 pt-2">
+      <div className="text-xs font-medium text-slate-400">{s.heading}</div>
+      <p className="text-[11px] leading-snug text-slate-500">{s.privacyNotice}</p>
+      <form action={onUpload} className="flex flex-wrap items-center gap-2">
+        <input type="file" name="file" required className="max-w-[200px] text-[11px] text-slate-200" />
+        <button
+          type="submit"
+          disabled={busyUpload}
+          className="rounded bg-slate-600 px-2 py-1 text-[11px] text-white hover:bg-slate-500 disabled:opacity-60"
+        >
+          {busyUpload ? s.uploading : s.uploadFile}
+        </button>
+      </form>
+      {error ? <p className="text-[11px] text-rose-400">{error}</p> : null}
+      {attachments.length === 0 ? (
+        <p className="text-[11px] text-slate-500">{s.noAttachments}</p>
+      ) : (
+        <ul className="space-y-2">
+          {attachments.map((a) => {
+            const audio = isAudioMime(a.mime_type);
+            const busy = busyId === a.id;
+            const canTranscribe =
+              audio && (a.transcription_status === "none" || a.transcription_status === "failed");
+            return (
+              <li key={a.id} className="rounded border border-slate-700/80 bg-slate-900/40 p-2 text-[11px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-slate-200">{a.file_name}</span>
+                  <a
+                    href={`/api/private-clinic/treatment-attachments/${a.id}/download`}
+                    className="text-sky-400 hover:underline"
+                  >
+                    {s.download}
+                  </a>
+                  <a
+                    href={`/api/private-clinic/treatment-attachments/${a.id}/download?disposition=inline`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-400 hover:underline"
+                  >
+                    {s.open}
+                  </a>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => removeAttachment(a.id)}
+                    className="text-rose-400 hover:underline disabled:opacity-50"
+                  >
+                    {s.remove}
+                  </button>
+                </div>
+                {audio ? (
+                  <div className="mt-2 space-y-1">
+                    {a.transcription_status === "pending" ? (
+                      <p className="text-slate-500">{s.statusPending}</p>
+                    ) : null}
+                    {a.transcription_status === "failed" && a.transcription_error ? (
+                      <p className="text-rose-400">{a.transcription_error}</p>
+                    ) : null}
+                    {canTranscribe ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => transcribe(a.id, "en")}
+                          className="rounded bg-indigo-700 px-2 py-0.5 text-white hover:bg-indigo-600 disabled:opacity-50"
+                        >
+                          {busy ? s.transcribing : s.transcribeEn}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => transcribe(a.id, "he")}
+                          className="rounded bg-indigo-700 px-2 py-0.5 text-white hover:bg-indigo-600 disabled:opacity-50"
+                        >
+                          {busy ? s.transcribing : s.transcribeHe}
+                        </button>
+                      </div>
+                    ) : null}
+                    {a.transcription_status === "completed" && a.transcription_text ? (
+                      <div className="mt-1 space-y-1">
+                        <div className="text-slate-400">{s.transcript}</div>
+                        <p className="whitespace-pre-wrap text-slate-200">{a.transcription_text}</p>
+                        <button
+                          type="button"
+                          onClick={() => copyText(a.transcription_text!, a.id)}
+                          className="text-sky-400 hover:underline"
+                        >
+                          {copiedId === a.id ? s.copied : s.copyTranscript}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}

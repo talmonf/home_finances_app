@@ -64,7 +64,7 @@ export async function uploadRentalContractObject(
  * Job documents can use dedicated JOB_STORAGE_* env vars, or fall back to RENTAL_STORAGE_*
  * so a single S3 bucket/credential set on Vercel works for both (keys are prefixed per domain).
  */
-function getJobDocumentStorageConfig(): {
+export function getJobDocumentStorageConfig(): {
   region: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -274,6 +274,49 @@ export async function uploadTherapyExpenseImage(
 ): Promise<UploadTherapyExpenseImageResult> {
   const cfg = getJobDocumentStorageConfig();
   const key = `${householdId}/therapy-expenses/${expenseId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/octet-stream",
+    }),
+  );
+
+  const publicUrl = cfg.publicBaseUrl
+    ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
+    : null;
+  return { bucket: cfg.bucket, key, publicUrl };
+}
+
+export type UploadTherapyTreatmentAttachmentResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
+/** Same bucket/credentials as job documents; keys under `therapy-treatments/{treatmentId}/`. */
+export async function uploadTherapyTreatmentAttachment(
+  householdId: string,
+  treatmentId: string,
+  attachmentId: string,
+  fileName: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadTherapyTreatmentAttachmentResult> {
+  const cfg = getJobDocumentStorageConfig();
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `${householdId}/therapy-treatments/${treatmentId}/${attachmentId}-${safe}`;
   const client = new S3Client({
     region: cfg.region,
     endpoint: cfg.endpoint,
