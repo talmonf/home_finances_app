@@ -84,6 +84,15 @@ export default async function ClientsPage({
     alsoSeenUnder: cl.alsoSeenUnder,
   };
 
+  function toDateInputValue(d: Date | null | undefined) {
+    if (!d) return "";
+    const z = new Date(d);
+    const y = z.getFullYear();
+    const m = String(z.getMonth() + 1).padStart(2, "0");
+    const day = String(z.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   return (
     <div className="space-y-8">
       {resolved?.error && (
@@ -125,6 +134,10 @@ export default async function ClientsPage({
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <input name="start_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{cl.endDate}</label>
+            <input name="end_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
           </div>
           <input
             name="email"
@@ -194,12 +207,24 @@ export default async function ClientsPage({
                     defaultValue={row.id_number ?? ""}
                     className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
-                  <input
-                    name="start_date"
-                    type="date"
-                    defaultValue={row.start_date ? row.start_date.toISOString().slice(0, 10) : ""}
-                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{c.startDate}</label>
+                    <input
+                      name="start_date"
+                      type="date"
+                      defaultValue={toDateInputValue(row.start_date)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{cl.endDate}</label>
+                    <input
+                      name="end_date"
+                      type="date"
+                      defaultValue={toDateInputValue(row.end_date)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  </div>
                   <div className="space-y-1">
                     <input
                       name="email"
@@ -259,9 +284,12 @@ export default async function ClientsPage({
                     defaultCheckedJobIds={row.client_jobs.map((x) => x.job_id)}
                     labels={jobFieldLabels}
                   />
-                  <label className="flex items-center gap-2 text-sm text-slate-300">
-                    <input type="checkbox" name="is_active" defaultChecked={row.is_active} />
-                    {c.active}
+                  <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+                    <span className="flex items-center gap-2">
+                      <input type="checkbox" name="is_active" defaultChecked={row.is_active} />
+                      {cl.statusLabel}
+                    </span>
+                    <span className="text-xs font-normal text-slate-500">{cl.statusHelp}</span>
                   </label>
                   <button
                     type="submit"

@@ -74,6 +74,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 062 | `062_useful_links.sql` | CREATE | Table `useful_links`: `scope` (`system` / `household` / `user`), `section_id` (dashboard section), optional `household_id` / `user_id`, URL + metadata. |
 | 063 | `063_therapy_treatment_attachments.sql` | CREATE | `therapy_treatment_attachments`: S3 file metadata + optional transcription fields per treatment. |
 | 064 | `064_subscriptions_transactions_jobs.sql` | ALTER | `subscriptions`: optional `job_id` → `jobs`; `transactions`: optional `job_id`, `subscription_id` → `subscriptions`; indexes. |
+| 065 | `065_private_clinic_insurance_reminders.sql` | ALTER/CREATE | `insurance_policy_type`: `professional_liability`, `clinic_premises`; `insurance_policies`: contact + website; `therapy_clients.end_date`; `rentals.is_clinic_lease`; table `private_clinic_reminders`. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -141,6 +142,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 062_useful_links.sql
 - [x] 063_therapy_treatment_attachments.sql
 - [x] 064_subscriptions_transactions_jobs.sql
+- [x] 065_private_clinic_insurance_reminders.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

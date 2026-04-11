@@ -9,6 +9,17 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function subscriptionFormContext(formData: FormData): "main" | "private_clinic_work" {
+  const v = (formData.get("subscription_form_context") as string | null)?.trim();
+  return v === "private_clinic_work" ? "private_clinic_work" : "main";
+}
+
+function revalidateSubscriptionPaths() {
+  revalidatePath("/dashboard/subscriptions");
+  revalidatePath("/dashboard/private-clinic/work-subscriptions");
+  revalidatePath("/dashboard/private-clinic/reminders");
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -40,42 +51,74 @@ export async function createSubscription(formData: FormData) {
     (formData.get("digital_payment_method_id") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim() || null;
   const job_id_raw = (formData.get("job_id") as string | null)?.trim() || null;
+  const formCtx = subscriptionFormContext(formData);
+  if (formCtx === "private_clinic_work" && !job_id_raw) {
+    redirect("/dashboard/private-clinic/work-subscriptions?error=Job+is+required");
+  }
   const status = (formData.get("status") as string | null)?.trim() || "active";
   const cancelled_at_raw = (formData.get("cancelled_at") as string | null)?.trim() || null;
   const description = (formData.get("description") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
 
   if (!name || !fee_amount_raw || !billing_interval) {
-    redirect("/dashboard/subscriptions?error=Required+fields+missing");
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Required+fields+missing"
+        : "/dashboard/subscriptions?error=Required+fields+missing",
+    );
   }
   if (status !== "active" && status !== "cancelled") {
-    redirect("/dashboard/subscriptions?error=Invalid+status");
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+status"
+        : "/dashboard/subscriptions?error=Invalid+status",
+    );
   }
   if (billing_interval !== "monthly" && billing_interval !== "annual") {
-    redirect("/dashboard/subscriptions?error=Invalid+billing+interval");
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+billing+interval"
+        : "/dashboard/subscriptions?error=Invalid+billing+interval",
+    );
   }
 
   let monthly_day_of_month: number | null = null;
   if (billing_interval === "monthly") {
     if (!monthly_day_of_month_raw) {
-      redirect("/dashboard/subscriptions?error=Monthly+day+is+required");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Monthly+day+is+required"
+          : "/dashboard/subscriptions?error=Monthly+day+is+required",
+      );
     }
     const parsedDay = Number.parseInt(monthly_day_of_month_raw, 10);
     if (Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 31) {
-      redirect("/dashboard/subscriptions?error=Monthly+day+must+be+between+1+and+31");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Monthly+day+must+be+between+1+and+31"
+          : "/dashboard/subscriptions?error=Monthly+day+must+be+between+1+and+31",
+      );
     }
     monthly_day_of_month = parsedDay;
   }
 
   const fee_amount = parseFloat(fee_amount_raw);
   if (Number.isNaN(fee_amount) || fee_amount < 0) {
-    redirect("/dashboard/subscriptions?error=Invalid+fee+amount");
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+fee+amount"
+        : "/dashboard/subscriptions?error=Invalid+fee+amount",
+    );
   }
   let website_url: string | null = null;
   try {
     website_url = normalizeWebsiteUrl(website_url_raw);
   } catch {
-    redirect("/dashboard/subscriptions?error=Invalid+website+URL");
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+website+URL"
+        : "/dashboard/subscriptions?error=Invalid+website+URL",
+    );
   }
 
   if (credit_card_id) {
@@ -89,7 +132,11 @@ export async function createSubscription(formData: FormData) {
       },
     });
     if (!card) {
-      redirect("/dashboard/subscriptions?error=Credit+card+must+be+active+and+not+expired");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Credit+card+must+be+active+and+not+expired"
+          : "/dashboard/subscriptions?error=Credit+card+must+be+active+and+not+expired",
+      );
     }
   }
 
@@ -99,7 +146,11 @@ export async function createSubscription(formData: FormData) {
       select: { id: true },
     });
     if (!dpm) {
-      redirect("/dashboard/subscriptions?error=Invalid+digital+payment+method");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+digital+payment+method"
+          : "/dashboard/subscriptions?error=Invalid+digital+payment+method",
+      );
     }
   }
 
@@ -109,7 +160,11 @@ export async function createSubscription(formData: FormData) {
       select: { id: true },
     });
     if (!member) {
-      redirect("/dashboard/subscriptions?error=Invalid+family+member");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+family+member"
+          : "/dashboard/subscriptions?error=Invalid+family+member",
+      );
     }
   }
 
@@ -120,7 +175,11 @@ export async function createSubscription(formData: FormData) {
       select: { id: true },
     });
     if (!jobRow) {
-      redirect("/dashboard/subscriptions?error=Invalid+job");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+job"
+          : "/dashboard/subscriptions?error=Invalid+job",
+      );
     }
     job_id = jobRow.id;
   }
@@ -129,7 +188,11 @@ export async function createSubscription(formData: FormData) {
   if (start_date_raw) {
     start_date = new Date(start_date_raw);
     if (Number.isNaN(start_date.getTime())) {
-      redirect("/dashboard/subscriptions?error=Invalid+start+date");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+start+date"
+          : "/dashboard/subscriptions?error=Invalid+start+date",
+      );
     }
   }
 
@@ -137,18 +200,30 @@ export async function createSubscription(formData: FormData) {
   if (renewal_date_raw) {
     renewal_date = new Date(renewal_date_raw);
     if (Number.isNaN(renewal_date.getTime())) {
-      redirect("/dashboard/subscriptions?error=Invalid+renewal+date");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+renewal+date"
+          : "/dashboard/subscriptions?error=Invalid+renewal+date",
+      );
     }
   }
 
   let cancelled_at: Date | null = null;
   if (status === "cancelled") {
     if (!cancelled_at_raw) {
-      redirect("/dashboard/subscriptions?error=Cancellation+date+required");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Cancellation+date+required"
+          : "/dashboard/subscriptions?error=Cancellation+date+required",
+      );
     }
     cancelled_at = new Date(cancelled_at_raw);
     if (Number.isNaN(cancelled_at.getTime())) {
-      redirect("/dashboard/subscriptions?error=Invalid+cancelled+date");
+      redirect(
+        formCtx === "private_clinic_work"
+          ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+cancelled+date"
+          : "/dashboard/subscriptions?error=Invalid+cancelled+date",
+      );
     }
   }
 
@@ -174,7 +249,10 @@ export async function createSubscription(formData: FormData) {
     },
   });
 
-  revalidatePath("/dashboard/subscriptions");
+  revalidateSubscriptionPaths();
+  if (formCtx === "private_clinic_work") {
+    redirect("/dashboard/private-clinic/work-subscriptions?created=1");
+  }
   redirect("/dashboard/subscriptions?created=1");
 }
 
@@ -343,7 +421,7 @@ export async function updateSubscription(formData: FormData) {
     },
   });
 
-  revalidatePath("/dashboard/subscriptions");
+  revalidateSubscriptionPaths();
   revalidatePath(`/dashboard/subscriptions/${id}`);
   redirect("/dashboard/subscriptions?updated=1");
 }

@@ -32,6 +32,7 @@ export async function GET() {
     consultationTypes,
     consultations,
     travelEntries,
+    privateClinicReminders,
   ] = await Promise.all([
     prisma.jobs.findMany({
       where: { household_id: householdId },
@@ -88,6 +89,10 @@ export async function GET() {
       where: { household_id: householdId },
       orderBy: { created_at: "desc" },
     }),
+    prisma.private_clinic_reminders.findMany({
+      where: { household_id: householdId },
+      orderBy: { reminder_date: "asc" },
+    }),
   ]);
 
   const wb = XLSX.utils.book_new();
@@ -127,6 +132,7 @@ export async function GET() {
         last_name: c.last_name ?? "",
         id_number: c.id_number ?? "",
         start_date: c.start_date ? String(c.start_date) : "",
+        end_date: c.end_date ? String(c.end_date) : "",
         notes: c.notes ?? "",
         default_job_id: c.default_job_id,
         default_program_id: c.default_program_id,
@@ -280,6 +286,16 @@ export async function GET() {
         currency: t.currency,
         notes: t.notes ?? "",
         linked_transaction_id: t.linked_transaction_id ?? "",
+      })),
+    ),
+    sheet(
+      "PrivateClinicReminders",
+      privateClinicReminders.map((r) => ({
+        id: r.id,
+        reminder_date: String(r.reminder_date),
+        category: r.category,
+        description: r.description ?? "",
+        created_at: r.created_at.toISOString(),
       })),
     ),
     sheet(

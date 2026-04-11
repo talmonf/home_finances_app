@@ -14,6 +14,9 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   consultations: "ייעוצים",
   travel: "נסיעות",
   petrol: "דלק",
+  clinicInsurance: "ביטוח קליניקה",
+  workSubscriptions: "מנויים מקצועיים",
+  reminders: "תזכורות",
   settings: "הגדרות",
   importExport: "יבוא / ייצוא",
 };
@@ -282,6 +285,12 @@ export function privateClinicClients(lang: UiLanguage) {
     alsoSeenUnder: p(
       "Also seen under these jobs (includes default)",
       "מופיע גם תחת המשרות הבאות (כולל ברירת המחדל)",
+    ),
+    endDate: p("End date (optional)", "תאריך סיום (אופציונלי)"),
+    statusLabel: p("Status: Active", "סטטוס: פעיל"),
+    statusHelp: p(
+      "Uncheck for inactive — client is hidden from default lists and end-date reminders are not shown.",
+      "בטלו סימון ללקוח לא פעיל — לא יופיע ברשימות ברירת מחדל ולא יוצגו תזכורות לפי תאריך סיום.",
     ),
   };
 }
@@ -585,6 +594,121 @@ export function privateClinicSettings(lang: UiLanguage) {
       "לא ניתן למחוק את קטגוריית ההוצאה כי היא כבר בשימוש.",
     ),
     errGeneric: p("Could not complete the action.", "לא ניתן להשלים את הפעולה."),
+  };
+}
+
+export function privateClinicClinicInsurance(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    title: p("Clinic insurance", "ביטוח קליניקה"),
+    blurb: p(
+      "Professional liability and clinic premises coverage: provider, contacts, website, annual premium, and renewal date. Stored with your household insurance policies.",
+      "ביטוח אחריות מקצועית ונכס הקליניקה: ספק, יצירת קשר, אתר, פרמיה שנתית ותאריך חידוש. נשמר יחד עם פוליסות הביטוח של המשקה.",
+    ),
+    allHouseholdPolicies: p("All household insurance policies →", "כל פוליסות הביטוח של המשקה ←"),
+    urlsUpdated: p("Links updated.", "הקישורים עודכנו."),
+    created: p("Policy added.", "הפוליסה נוספה."),
+    updated: p("Updated.", "עודכן."),
+    addTitle: p("Add policy", "הוספת פוליסה"),
+    policyType: p("Policy type", "סוג פוליסה"),
+    policyHolderOptional: p("Policy holder (optional)", "בעל פוליסה (אופציונלי)"),
+    notSet: p("Not set", "לא הוגדר"),
+    provider: p("Provider", "ספק"),
+    policyName: p("Policy name", "שם הפוליסה"),
+    policyNumber: p("Policy number", "מספר פוליסה"),
+    contactPhone: p("Contact phone", "טלפון"),
+    contactEmail: p("Contact email", "אימייל"),
+    website: p("Website", "אתר"),
+    startDate: p("Policy start", "תאריך התחלה"),
+    renewalDate: p("Renewal date", "תאריך חידוש"),
+    annualPremium: p("Annual premium", "פרמיה שנתית"),
+    currency: p("Currency", "מטבע"),
+    addPolicy: p("Add policy", "הוספת פוליסה"),
+    listTitle: p("Your clinic policies", "פוליסות הקליניקה"),
+    empty: p("No clinic policies yet. Add one above.", "אין פוליסות קליניקה. הוסיפו למעלה."),
+    colType: p("Type", "סוג"),
+    colProvider: p("Provider", "ספק"),
+    colPolicy: p("Policy", "פוליסה"),
+    colAnnual: p("Annual premium", "פרמיה שנתית"),
+    colRenewal: p("Renewal", "חידוש"),
+    colStatus: p("Status", "סטטוס"),
+    colActions: p("Actions", "פעולות"),
+    statusActive: p("Active", "פעיל"),
+    statusInactive: p("Inactive", "לא פעיל"),
+    deactivate: p("Deactivate", "השבתה"),
+    activate: p("Activate", "הפעלה"),
+    editPolicy: p("Edit policy", "עריכת פוליסה"),
+    save: p("Save changes", "שמירה"),
+  };
+}
+
+export function privateClinicWorkSubscriptions(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    title: p("Work subscriptions", "מנויים מקצועיים"),
+    blurb: p(
+      "Subscriptions linked to a job (e.g. Zoom, annual memberships). Annual fee and renewal apply.",
+      "מנויים המקושרים למשרה (למשל זום, חברות שנתיות). תשלום שנתי ותאריך חידוש.",
+    ),
+    mainSubscriptionsLink: p("All household subscriptions →", "כל המנויים של המשקה ←"),
+    addTitle: p("Add work subscription", "הוספת מנוי מקצועי"),
+    listTitle: p("Work-linked subscriptions", "מנויים מקושרים למשרה"),
+    empty: p("No work subscriptions yet.", "אין עדיין מנויים מקצועיים."),
+    colName: p("Name", "שם"),
+    colJob: p("Job", "משרה"),
+    colFee: p("Fee", "תשלום"),
+    colRenewal: p("Renewal", "חידוש"),
+    colWebsite: p("Website", "אתר"),
+    open: p("Open", "פתיחה"),
+    jobRequired: p("Job", "משרה"),
+    selectJob: p("Select job…", "בחירת משרה…"),
+    name: p("Name", "שם"),
+    description: p("Description (optional)", "תיאור (אופציונלי)"),
+    billing: p("Billing", "חיוב"),
+    annual: p("Annual", "שנתי"),
+    monthly: p("Monthly", "חודשי"),
+    monthlyDay: p("Day of month (1–31)", "יום בחודש (1–31)"),
+    renewalDate: p("Renewal date (annual)", "תאריך חידוש (שנתי)"),
+    feeAmount: p("Fee amount", "סכום"),
+    currency: p("Currency", "מטבע"),
+    website: p("Website (optional)", "אתר (אופציונלי)"),
+    addBtn: p("Add subscription", "הוספת מנוי"),
+    errJob: p("Add a job under Private clinic → Jobs first.", "הוסיפו משרה תחת קליניקה פרטית → משרות תחילה."),
+    createdMsg: p("Subscription added.", "המנוי נוסף."),
+  };
+}
+
+export function privateClinicReminders(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    title: p("Reminders", "תזכורות"),
+    blurb: p(
+      "Manual reminders plus upcoming renewals: work subscriptions, active clients with an end date, clinic insurance, and clinic lease end.",
+      "תזכורות ידניות ותאריכי חידוש קרובים: מנויים מקצועיים, לקוחות פעילים עם תאריך סיום, ביטוח קליניקה וסיום חוזה שכירות הקליניקה.",
+    ),
+    addManual: p("Add reminder", "הוספת תזכורת"),
+    category: p("Category", "קטגוריה"),
+    description: p("Description", "תיאור"),
+    reminderDate: p("Reminder date", "תאריך תזכורת"),
+    created: p("Created", "נוצר"),
+    save: p("Save", "שמירה"),
+    deleteBtn: p("Delete", "מחיקה"),
+    editManual: p("Edit reminder", "עריכת תזכורת"),
+    empty: p("No reminders in this window.", "אין תזכורות בטווח זה."),
+    sourceManual: p("Manual", "ידני"),
+    sourceSubscription: p("Subscription", "מנוי"),
+    sourceClient: p("Client end", "סיום לקוח"),
+    sourceInsurance: p("Clinic insurance", "ביטוח קליניקה"),
+    sourceRental: p("Clinic lease", "חוזה קליניקה"),
+    openRelated: p("Open", "פתיחה"),
+    editRelated: p("Edit", "עריכה"),
+    tableSource: p("Source", "מקור"),
+    tableDate: p("Date", "תאריך"),
+    tableSummary: p("Summary", "תיאור"),
+    tableActions: p("Actions", "פעולות"),
+    upcomingTitle: p("Upcoming (next 60 days, including overdue)", "קרוב (60 יום, כולל באיחור)"),
+    deletedMsg: p("Reminder deleted.", "התזכורת נמחקה."),
+    cancelEdit: p("Cancel", "ביטול"),
   };
 }
 

@@ -10,6 +10,17 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
   { key: "consultations", href: "/dashboard/private-clinic/consultations", label: "Consultations" },
   { key: "travel", href: "/dashboard/private-clinic/travel", label: "Travel" },
   { key: "petrol", href: "/dashboard/private-clinic/petrol", label: "Petrol" },
+  {
+    key: "clinicInsurance",
+    href: "/dashboard/private-clinic/clinic-insurance",
+    label: "Clinic insurance",
+  },
+  {
+    key: "workSubscriptions",
+    href: "/dashboard/private-clinic/work-subscriptions",
+    label: "Work subscriptions",
+  },
+  { key: "reminders", href: "/dashboard/private-clinic/reminders", label: "Reminders" },
   { key: "settings", href: "/dashboard/private-clinic/settings", label: "Settings" },
   { key: "importExport", href: "/dashboard/private-clinic/import-export", label: "Import / Export" },
 ] as const;

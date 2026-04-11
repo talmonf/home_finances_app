@@ -9,6 +9,8 @@ const EN: Record<InsurancePolicyType, string> = {
   home: "Home / property",
   life: "Life",
   other: "Other",
+  professional_liability: "Professional liability (practice)",
+  clinic_premises: "Clinic premises / rent",
 };
 
 const HE: Record<InsurancePolicyType, string> = {
@@ -17,6 +19,8 @@ const HE: Record<InsurancePolicyType, string> = {
   home: "דירה / נכס",
   life: "חיים",
   other: "אחר",
+  professional_liability: "אחריות מקצועית / ביטוח מקצועי",
+  clinic_premises: "ביטוח מבנה / שכירות קליניקה",
 };
 
 export function getInsurancePolicyTypeLabel(

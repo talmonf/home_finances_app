@@ -11,6 +11,7 @@ import {
   ensureDefaultExpenseCategories,
   ensureTherapySettings,
 } from "@/lib/therapy/bootstrap";
+import { getPrivateClinicReminderBadgeCount } from "@/lib/private-clinic/reminder-badge";
 
 export default async function PrivateClinicLayout({
   children,
@@ -43,6 +44,15 @@ export default async function PrivateClinicLayout({
     !session?.user?.isSuperAdmin &&
     (await householdUserOnlyPrivateClinicSection(householdId, userId, uiLanguage));
 
+  let reminderBadgeCount: number | null = null;
+  if (
+    householdId &&
+    !session?.user?.isSuperAdmin &&
+    navItems.some((i) => i.key === "reminders")
+  ) {
+    reminderBadgeCount = await getPrivateClinicReminderBadgeCount(prisma, householdId);
+  }
+
   return (
     <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-6 sm:px-4 sm:py-10">
       <div className="w-full min-w-0 max-w-6xl space-y-4 sm:space-y-6">
@@ -69,9 +79,23 @@ export default async function PrivateClinicLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800"
               >
-                {privateClinicNavLabel(item.key, uiLanguage)}
+                <span>{privateClinicNavLabel(item.key, uiLanguage)}</span>
+                {item.key === "reminders" &&
+                reminderBadgeCount != null &&
+                reminderBadgeCount > 0 ? (
+                  <span
+                    className="inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600/90 px-1 text-[10px] font-semibold text-white tabular-nums"
+                    aria-label={
+                      uiLanguage === "he"
+                        ? `${reminderBadgeCount} תזכורות קרובות`
+                        : `${reminderBadgeCount} upcoming reminders`
+                    }
+                  >
+                    {reminderBadgeCount > 99 ? "99+" : reminderBadgeCount}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </nav>

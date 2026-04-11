@@ -14,7 +14,11 @@ import {
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Fragment } from "react";
-import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
+import {
+  createInsurancePolicy,
+  toggleInsurancePolicyActive,
+  updateInsurancePolicy,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,14 @@ function formatPremium(paid: { toString(): string }, currency: string) {
   const n = Number(paid.toString());
   if (Number.isNaN(n)) return "—";
   return `${n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
+function toDateInputValue(d: Date) {
+  const z = new Date(d);
+  const y = z.getFullYear();
+  const m = String(z.getMonth() + 1).padStart(2, "0");
+  const day = String(z.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export default async function InsurancePoliciesPage({ searchParams }: PageProps) {
@@ -139,6 +151,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
             action={createInsurancePolicy}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
+            <input type="hidden" name="insurance_form_context" value="main" />
             <div>
               <label htmlFor="policy_type" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "סוג ביטוח" : "Policy type"} <span className="text-rose-400">*</span>
@@ -236,6 +249,42 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 name="policy_number"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
+              />
+            </div>
+            <div>
+              <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "טלפון ליצירת קשר" : "Contact phone"}
+              </label>
+              <input
+                id="contact_phone"
+                name="contact_phone"
+                type="tel"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+              />
+            </div>
+            <div>
+              <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "אימייל ליצירת קשר" : "Contact email"}
+              </label>
+              <input
+                id="contact_email"
+                name="contact_email"
+                type="email"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "אתר אינטרנט" : "Website"}
+              </label>
+              <input
+                id="website_url"
+                name="website_url"
+                type="url"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder="https://"
               />
             </div>
             <div>
@@ -401,10 +450,10 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <form
-                            action={toggleInsurancePolicyActive.bind(null, p.id, !p.is_active)}
-                            className="inline"
-                          >
+                          <form action={toggleInsurancePolicyActive} className="inline">
+                            <input type="hidden" name="policy_id" value={p.id} />
+                            <input type="hidden" name="next_active" value={p.is_active ? "0" : "1"} />
+                            <input type="hidden" name="insurance_form_context" value="main" />
                             <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
                               {p.is_active
                                 ? isHebrew
@@ -426,6 +475,206 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                             urls={urlsByInsurancePolicyId.get(p.id) ?? []}
                             isHebrew={isHebrew}
                           />
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-700/80 bg-slate-900/40">
+                        <td colSpan={9} className="px-4 py-4">
+                          <p className="mb-3 text-xs font-medium text-slate-400">
+                            {isHebrew ? "עריכת פוליסה" : "Edit policy"}
+                          </p>
+                          <form
+                            action={updateInsurancePolicy}
+                            className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-950/50 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                          >
+                            <input type="hidden" name="insurance_form_context" value="main" />
+                            <input type="hidden" name="policy_id" value={p.id} />
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "סוג ביטוח" : "Policy type"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <select
+                                name="policy_type"
+                                required
+                                defaultValue={p.policy_type}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              >
+                                {INSURANCE_POLICY_TYPE_VALUES.map((t) => (
+                                  <option key={t} value={t}>
+                                    {getInsurancePolicyTypeLabel(t, lang)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "רכב (ביטוח רכב בלבד)" : "Car (car only)"}
+                              </label>
+                              <select
+                                name="car_id"
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                                disabled={cars.length === 0}
+                                defaultValue={p.car_id ?? ""}
+                              >
+                                <option value="">{isHebrew ? "ללא" : "None"}</option>
+                                {cars.map((car) => (
+                                  <option key={car.id} value={car.id}>
+                                    {car.maker} {car.model}
+                                    {car.plate_number ? ` (${car.plate_number})` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "בן משפחה (אופציונלי)" : "Policy holder (optional)"}
+                              </label>
+                              <select
+                                name="family_member_id"
+                                defaultValue={p.family_member_id ?? ""}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              >
+                                <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
+                                {familyMembers.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.full_name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "ספק" : "Provider"} <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                name="provider_name"
+                                required
+                                defaultValue={p.provider_name}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "שם הפוליסה" : "Policy name"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                name="policy_name"
+                                required
+                                defaultValue={p.policy_name}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "מספר פוליסה" : "Policy number"}
+                              </label>
+                              <input
+                                name="policy_number"
+                                defaultValue={p.policy_number ?? ""}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "טלפון" : "Contact phone"}
+                              </label>
+                              <input
+                                name="contact_phone"
+                                type="tel"
+                                defaultValue={p.contact_phone ?? ""}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "אימייל" : "Contact email"}
+                              </label>
+                              <input
+                                name="contact_email"
+                                type="email"
+                                defaultValue={p.contact_email ?? ""}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "אתר" : "Website"}
+                              </label>
+                              <input
+                                name="website_url"
+                                type="url"
+                                defaultValue={p.website_url ?? ""}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "תאריך התחלה" : "Policy start"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                name="policy_start_date"
+                                type="date"
+                                required
+                                defaultValue={toDateInputValue(p.policy_start_date)}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "תאריך חידוש" : "Renewal / expiration"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                name="expiration_date"
+                                type="date"
+                                required
+                                defaultValue={toDateInputValue(p.expiration_date)}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "פרמיה" : "Premium"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                name="premium_paid"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                required
+                                defaultValue={p.premium_paid.toString()}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-400">
+                                {isHebrew ? "מטבע" : "Currency"}{" "}
+                                <span className="text-rose-400">*</span>
+                              </label>
+                              <select
+                                name="premium_currency"
+                                required
+                                defaultValue={p.premium_currency}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                              >
+                                <option value="ILS">ILS</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                              </select>
+                            </div>
+                            <div className="flex items-end">
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                              >
+                                {isHebrew ? "שמירה" : "Save changes"}
+                              </button>
+                            </div>
+                          </form>
                         </td>
                       </tr>
                     </Fragment>

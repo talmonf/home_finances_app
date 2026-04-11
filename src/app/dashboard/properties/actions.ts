@@ -264,6 +264,7 @@ export async function createRental(formData: FormData) {
   let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const is_clinic_lease = formData.has("is_clinic_lease");
 
   if (rental_type === "lease_monthly" && !monthly_payment) return;
   if (rental_type === "short_stay" && !period_total_payment) return;
@@ -301,12 +302,14 @@ export async function createRental(formData: FormData) {
       credit_card_id,
       bank_account_id,
       notes,
+      is_clinic_lease,
     },
   });
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
   revalidatePath(`/dashboard/properties/${property_id}/rentals`);
+  revalidatePath("/dashboard/private-clinic/reminders");
 }
 
 export async function updateRental(formData: FormData) {
@@ -334,6 +337,7 @@ export async function updateRental(formData: FormData) {
   let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const is_clinic_lease = formData.has("is_clinic_lease");
 
   if (rental_type === "lease_monthly" && !monthly_payment) return;
   if (rental_type === "short_stay" && !period_total_payment) return;
@@ -369,11 +373,14 @@ export async function updateRental(formData: FormData) {
       credit_card_id,
       bank_account_id,
       notes,
+      is_clinic_lease,
     },
   });
 
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
+  revalidatePath(`/dashboard/properties/${property_id}/rentals`);
+  revalidatePath("/dashboard/private-clinic/reminders");
 }
 
 export async function deleteRental(id: string, property_id: string) {

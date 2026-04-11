@@ -784,6 +784,7 @@ export async function createTherapyClient(formData: FormData) {
         last_name: (formData.get("last_name") as string)?.trim() || null,
         id_number: (formData.get("id_number") as string)?.trim() || null,
         start_date: parseDate((formData.get("start_date") as string) || null),
+        end_date: parseDate((formData.get("end_date") as string) || null),
         notes: (formData.get("notes") as string)?.trim() || null,
         default_job_id,
         default_program_id,
@@ -808,6 +809,7 @@ export async function createTherapyClient(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?created=1`);
 }
 
@@ -846,6 +848,7 @@ export async function updateTherapyClient(formData: FormData) {
         last_name: (formData.get("last_name") as string)?.trim() || null,
         id_number: (formData.get("id_number") as string)?.trim() || null,
         start_date: parseDate((formData.get("start_date") as string) || null),
+        end_date: parseDate((formData.get("end_date") as string) || null),
         notes: (formData.get("notes") as string)?.trim() || null,
         default_job_id,
         default_program_id,
@@ -872,6 +875,7 @@ export async function updateTherapyClient(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?updated=1`);
 }
 
