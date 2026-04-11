@@ -41,10 +41,10 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
-  const [job, familyMembers, benefits, payrollEntries, documents] = await Promise.all([
+  const [job, familyMembers, benefits, payrollEntries, documents, bankAccounts, creditCards] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id, household_id: householdId },
-      include: { family_member: true },
+      include: { family_member: true, linked_bank_account: true, linked_credit_card: true },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -61,6 +61,14 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
     prisma.job_documents.findMany({
       where: { household_id: householdId, job_id: id },
       orderBy: { uploaded_at: "desc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ issuer_name: "asc" }, { card_name: "asc" }],
     }),
   ]);
 
@@ -120,6 +128,41 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} placeholder="Employer tax number (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="employer_address" defaultValue={job.employer_address ?? ""} placeholder="Employer address (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <textarea name="notes" defaultValue={job.notes ?? ""} placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">
+                {isHebrew ? "חשבון בנק מקושר (אופציונלי)" : "Linked bank account (optional)"}
+              </label>
+              <select
+                name="bank_account_id"
+                defaultValue={job.bank_account_id ?? ""}
+                className="w-full max-w-xl rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{isHebrew ? "ללא" : "None"}</option>
+                {bankAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bank_name} — {a.account_name}
+                    {a.account_number ? ` (${a.account_number})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">
+                {isHebrew ? "כרטיס אשראי מקושר (אופציונלי)" : "Linked credit card (optional)"}
+              </label>
+              <select
+                name="credit_card_id"
+                defaultValue={job.credit_card_id ?? ""}
+                className="w-full max-w-xl rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{isHebrew ? "ללא" : "None"}</option>
+                {creditCards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.card_name} — {card.issuer_name} — {card.card_last_four}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
               {isHebrew ? "שמירת עבודה" : "Save job"}
             </button>

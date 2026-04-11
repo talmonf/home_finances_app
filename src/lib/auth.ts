@@ -1,4 +1,5 @@
 import type { DefaultSession, NextAuthOptions } from "next-auth";
+import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -11,6 +12,7 @@ import {
   type HouseholdDateDisplayFormat,
 } from "@/lib/household-date-format";
 import { DEFAULT_UI_LANGUAGE, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
+import { SESSION_OBFUSCATE_COOKIE } from "@/lib/session-obfuscate-cookie";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -228,5 +230,30 @@ export async function getCurrentUiLanguage(): Promise<UiLanguage> {
     select: { ui_language: true },
   });
   return normalizeUiLanguage(row?.ui_language);
+}
+
+/** When true, Private clinic views mask client names and monetary amounts (session cookie; demo / screen sharing). */
+export async function getCurrentObfuscateSensitive(): Promise<boolean> {
+  const session = await getAuthSession();
+  if (!session?.user?.householdId || session.user.isSuperAdmin) {
+    return false;
+  }
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_OBFUSCATE_COOKIE)?.value === "1";
+}
+
+/** Super-admin can disable per-entity Links (URL) panels for a household. */
+export async function getHouseholdShowEntityUrlPanels(): Promise<boolean> {
+  const session = await getAuthSession();
+  const householdId = session?.user?.householdId ?? null;
+  if (!householdId || session?.user?.isSuperAdmin) {
+    return true;
+  }
+
+  const row = await prisma.households.findUnique({
+    where: { id: householdId },
+    select: { show_entity_url_panels: true },
+  });
+  return row?.show_entity_url_panels ?? true;
 }
 

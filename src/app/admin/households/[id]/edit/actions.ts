@@ -24,10 +24,11 @@ export async function saveHouseholdSettings(formData: FormData) {
   const raw = (formData.get("date_display_format") as string | null)?.trim();
   const date_display_format = normalizeHouseholdDateDisplayFormat(raw);
   const ui_language = normalizeUiLanguage((formData.get("ui_language") as string | null)?.trim());
+  const show_entity_url_panels = formData.get("show_entity_url_panels") === "on";
 
   await prisma.households.update({
     where: { id: householdId },
-    data: { date_display_format, ui_language },
+    data: { date_display_format, ui_language, show_entity_url_panels },
   });
 
   const enabledBySectionId: Record<string, boolean> = {};

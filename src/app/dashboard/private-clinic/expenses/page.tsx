@@ -1,4 +1,11 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicExpenses } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
@@ -15,6 +22,7 @@ export default async function ExpensesPage() {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const ex = privateClinicExpenses(uiLanguage);
 
@@ -125,7 +133,7 @@ export default async function ExpensesPage() {
                     {therapyLocalizedCategoryName(e.category, uiLanguage)}
                   </span>
                   <span className="text-slate-100">
-                    {e.amount.toString()} {e.currency}
+                    {formatDecimalAmountForDisplay(obfuscate, e.amount, e.currency)}
                   </span>
                 </div>
                 {e.notes && <p className="text-sm text-slate-400">{e.notes}</p>}

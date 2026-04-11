@@ -3,8 +3,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
@@ -29,6 +31,7 @@ export default async function TravelPage({
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tv = privateClinicTravel(uiLanguage);
   const sp = searchParams ? await searchParams : undefined;
@@ -100,7 +103,8 @@ export default async function TravelPage({
             <option value="">{tv.treatmentWhenScope}</option>
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
-                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name} — {t.job.job_title}
+                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
+                {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — {t.job.job_title}
               </option>
             ))}
           </select>
@@ -163,11 +167,13 @@ export default async function TravelPage({
                       : c.noDate}{" "}
                     —{" "}
                     {e.treatment
-                      ? `${tv.scopeTreatment} ${e.treatment.client.first_name} (${e.treatment.job.job_title})`
+                      ? `${tv.scopeTreatment} ${formatClientNameForDisplay(obfuscate, e.treatment.client.first_name, e.treatment.client.last_name)} (${e.treatment.job.job_title})`
                       : e.job
                         ? `${tv.scopeJob} ${e.job.job_title}`
                         : "—"}
-                    {e.amount != null ? ` — ${e.amount.toString()} ${e.currency}` : ""}
+                    {e.amount != null
+                      ? ` — ${formatMoneyLineForDisplay(obfuscate, e.amount.toString(), e.currency)}`
+                      : ""}
                   </summary>
                   <form action={updateTherapyTravelEntry} className="mt-3 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={e.id} />
@@ -211,7 +217,8 @@ export default async function TravelPage({
                       <option value="">{c.treatment}</option>
                       {treatments.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name}
+                          {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
+                          {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}
                         </option>
                       ))}
                     </select>

@@ -4,8 +4,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatClientNameForDisplay } from "@/lib/privacy-display";
 import {
   privateClinicAppointments,
   privateClinicCommon,
@@ -30,6 +32,7 @@ export default async function AppointmentsPage() {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const ap = privateClinicAppointments(uiLanguage);
   const now = new Date();
@@ -237,7 +240,8 @@ export default async function AppointmentsPage() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-300"
               >
                 <span>
-                  {s.client.first_name} — {s.job.job_title} — {recurrenceLabel(s.recurrence)} —{" "}
+                  {formatClientNameForDisplay(obfuscate, s.client.first_name, s.client.last_name)} —{" "}
+                  {s.job.job_title} — {recurrenceLabel(s.recurrence)} —{" "}
                   {weekdayLongLabel(uiLanguage, s.day_of_week)}
                 </span>
                 <ConfirmDeleteForm action={deleteTherapyAppointmentSeries}>
@@ -273,7 +277,9 @@ export default async function AppointmentsPage() {
                     <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
                       {formatHouseholdDateUtcWithTime(a.start_at, dateDisplayFormat)}
                     </td>
-                    <td className="px-3 py-2 text-slate-100">{a.client.first_name}</td>
+                    <td className="px-3 py-2 text-slate-100">
+                      {formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)}
+                    </td>
                     <td className="px-3 py-2 text-slate-400">{a.job.job_title}</td>
                     <td className="px-3 py-2">
                       <form action={updateTherapyAppointmentStatus} className="flex items-center gap-2">

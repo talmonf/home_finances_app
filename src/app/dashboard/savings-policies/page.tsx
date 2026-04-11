@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { formatHouseholdDate } from "@/lib/household-date-format";
@@ -41,6 +42,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -92,7 +94,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
 
   const savingsPolicyIds = policies.map((p) => p.id);
   const savingsEntityUrls =
-    savingsPolicyIds.length === 0
+    !showEntityUrlPanels || savingsPolicyIds.length === 0
       ? []
       : await prisma.entity_urls.findMany({
           where: {
@@ -484,17 +486,19 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                           </form>
                         </td>
                       </tr>
-                      <tr className="border-b border-slate-700/80 bg-slate-950/30">
-                        <td colSpan={8} className="px-4 py-3">
-                          <EntityUrlsPanel
-                            entityKind="savings_policy"
-                            entityId={p.id}
-                            redirectTo={savingsListRedirect}
-                            urls={urlsBySavingsPolicyId.get(p.id) ?? []}
-                            isHebrew={isHebrew}
-                          />
-                        </td>
-                      </tr>
+                      {showEntityUrlPanels ? (
+                        <tr className="border-b border-slate-700/80 bg-slate-950/30">
+                          <td colSpan={8} className="px-4 py-3">
+                            <EntityUrlsPanel
+                              entityKind="savings_policy"
+                              entityId={p.id}
+                              redirectTo={savingsListRedirect}
+                              urls={urlsBySavingsPolicyId.get(p.id) ?? []}
+                              isHebrew={isHebrew}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
                     </Fragment>
                   ))}
                 </tbody>

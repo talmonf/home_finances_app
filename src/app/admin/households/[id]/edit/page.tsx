@@ -153,6 +153,28 @@ export default async function EditHouseholdPage({
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-200">
+              Links (URL) panels on entity pages
+            </h2>
+            <p className="mb-3 text-xs text-slate-500">
+              When enabled, pages such as insurance policies, savings policies, and
+              clinic insurance show a &quot;Links&quot; section for attaching URLs to
+              each record. Disable this to hide those panels for this household.
+            </p>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="show_entity_url_panels"
+                defaultChecked={household.show_entity_url_panels ?? true}
+                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+              />
+              <span className="text-sm text-slate-300">
+                Show per-record Links (URL) panels
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-200">
               Date display format
             </h2>
             <p className="mb-3 text-xs text-slate-500">

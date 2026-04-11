@@ -3,8 +3,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
 import {
@@ -48,6 +50,7 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const t = privateClinicReminders(uiLanguage);
   const resolved = searchParams ? await searchParams : undefined;
   const editId = resolved?.edit?.trim() || null;
@@ -263,7 +266,9 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
                     <td className="px-4 py-3 text-slate-400">
                       {formatHouseholdDate(r.reminderDate, dateDisplayFormat)}
                     </td>
-                    <td className="px-4 py-3 text-slate-200">{r.summary}</td>
+                    <td className="px-4 py-3 text-slate-200">
+                      {r.kind === "client" && obfuscate ? OBFUSCATED : r.summary}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Link href={r.href} className="text-sky-400 hover:text-sky-300">

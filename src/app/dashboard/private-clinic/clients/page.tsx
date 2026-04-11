@@ -1,4 +1,11 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyClient, updateTherapyClient } from "../actions";
@@ -16,6 +23,7 @@ export default async function ClientsPage({
   if (!householdId) redirect("/");
 
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const cl = privateClinicClients(uiLanguage);
   const j = privateClinicJobs(uiLanguage);
@@ -191,22 +199,52 @@ export default async function ClientsPage({
                   className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid md:grid-cols-2 md:gap-3"
                 >
                   <input type="hidden" name="id" value={row.id} />
-                  <input
-                    name="first_name"
-                    defaultValue={row.first_name}
-                    required
-                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
-                  <input
-                    name="last_name"
-                    defaultValue={row.last_name ?? ""}
-                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
-                  <input
-                    name="id_number"
-                    defaultValue={row.id_number ?? ""}
-                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
+                  {obfuscate ? <input type="hidden" name="first_name" value={row.first_name} /> : null}
+                  {obfuscate ? (
+                    <input
+                      readOnly
+                      value={OBFUSCATED}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      aria-label={cl.firstName}
+                    />
+                  ) : (
+                    <input
+                      name="first_name"
+                      defaultValue={row.first_name}
+                      required
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  )}
+                  {obfuscate ? <input type="hidden" name="last_name" value={row.last_name ?? ""} /> : null}
+                  {obfuscate ? (
+                    <input
+                      readOnly
+                      value={OBFUSCATED}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      aria-label={cl.lastNameOptional}
+                    />
+                  ) : (
+                    <input
+                      name="last_name"
+                      defaultValue={row.last_name ?? ""}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  )}
+                  {obfuscate ? <input type="hidden" name="id_number" value={row.id_number ?? ""} /> : null}
+                  {obfuscate ? (
+                    <input
+                      readOnly
+                      value={row.id_number ? OBFUSCATED : ""}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      aria-label={cl.idOptional}
+                    />
+                  ) : (
+                    <input
+                      name="id_number"
+                      defaultValue={row.id_number ?? ""}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  )}
                   <div className="space-y-1">
                     <label className="block text-xs text-slate-400">{c.startDate}</label>
                     <input
@@ -226,56 +264,110 @@ export default async function ClientsPage({
                     />
                   </div>
                   <div className="space-y-1">
-                    <input
-                      name="email"
-                      defaultValue={row.email ?? ""}
-                      placeholder={cl.email}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                    {row.email && (
+                    {obfuscate ? <input type="hidden" name="email" value={row.email ?? ""} /> : null}
+                    {obfuscate ? (
+                      <input
+                        readOnly
+                        value={row.email ? OBFUSCATED : ""}
+                        placeholder={cl.email}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <input
+                        name="email"
+                        defaultValue={row.email ?? ""}
+                        placeholder={cl.email}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                    {row.email && !obfuscate ? (
                       <a href={`mailto:${row.email}`} className="text-xs text-sky-400 hover:text-sky-300">
                         {row.email}
                       </a>
-                    )}
+                    ) : null}
                   </div>
                   <div className="space-y-1">
-                    <input
-                      name="mobile_phone"
-                      defaultValue={phones.mobile}
-                      placeholder={cl.mobilePhone}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                    {phones.mobile && (
+                    {obfuscate ? (
+                      <>
+                        <input type="hidden" name="mobile_phone" value={phones.mobile} />
+                        <input
+                          readOnly
+                          value={phones.mobile ? OBFUSCATED : ""}
+                          placeholder={cl.mobilePhone}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                        />
+                      </>
+                    ) : (
+                      <input
+                        name="mobile_phone"
+                        defaultValue={phones.mobile}
+                        placeholder={cl.mobilePhone}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                    {phones.mobile && !obfuscate ? (
                       <a href={`tel:${phones.mobile}`} className="text-xs text-sky-400 hover:text-sky-300">
                         {phones.mobile}
                       </a>
-                    )}
+                    ) : null}
                   </div>
                   <div className="space-y-1">
-                    <input
-                      name="home_phone"
-                      defaultValue={phones.home}
-                      placeholder={cl.homePhone}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                    {phones.home && (
+                    {obfuscate ? (
+                      <>
+                        <input type="hidden" name="home_phone" value={phones.home} />
+                        <input
+                          readOnly
+                          value={phones.home ? OBFUSCATED : ""}
+                          placeholder={cl.homePhone}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                        />
+                      </>
+                    ) : (
+                      <input
+                        name="home_phone"
+                        defaultValue={phones.home}
+                        placeholder={cl.homePhone}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                    {phones.home && !obfuscate ? (
                       <a href={`tel:${phones.home}`} className="text-xs text-sky-400 hover:text-sky-300">
                         {phones.home}
                       </a>
-                    )}
+                    ) : null}
                   </div>
-                  <input
-                    name="address"
-                    defaultValue={row.address ?? ""}
-                    placeholder={cl.address}
-                    className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
-                  <textarea
-                    name="notes"
-                    defaultValue={row.notes ?? ""}
-                    placeholder={c.notes}
-                    className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  />
+                  {obfuscate ? <input type="hidden" name="address" value={row.address ?? ""} /> : null}
+                  {obfuscate ? (
+                    <input
+                      readOnly
+                      value={row.address ? OBFUSCATED : ""}
+                      placeholder={cl.address}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  ) : (
+                    <input
+                      name="address"
+                      defaultValue={row.address ?? ""}
+                      placeholder={cl.address}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  )}
+                  {obfuscate ? <input type="hidden" name="notes" value={row.notes ?? ""} /> : null}
+                  {obfuscate ? (
+                    <textarea
+                      readOnly
+                      value={row.notes ? OBFUSCATED : ""}
+                      placeholder={c.notes}
+                      className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  ) : (
+                    <textarea
+                      name="notes"
+                      defaultValue={row.notes ?? ""}
+                      placeholder={c.notes}
+                      className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  )}
                   <ClientJobProgramFields
                     jobs={jobOptions}
                     programs={programOptions}

@@ -3,8 +3,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
@@ -38,6 +40,7 @@ export default async function TreatmentsPage({
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
   const sp = searchParams ? await searchParams : {};
@@ -329,11 +332,11 @@ export default async function TreatmentsPage({
                         {formatHouseholdDateUtcWithTime(t.occurred_at, dateDisplayFormat)}
                       </td>
                       <td className="px-3 py-2 text-slate-100">
-                        {t.client.first_name} {t.client.last_name ?? ""}
+                        {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}
                       </td>
                       <td className="px-3 py-2 text-slate-400">{t.job.job_title}</td>
                       <td className="px-3 py-2 text-slate-200">
-                        {t.amount.toString()} {t.currency}
+                        {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
                       </td>
                       <td className="px-3 py-2 text-slate-400">{treatmentPaymentStatusLabel(uiLanguage, st)}</td>
                       <td className="px-3 py-2 align-top">

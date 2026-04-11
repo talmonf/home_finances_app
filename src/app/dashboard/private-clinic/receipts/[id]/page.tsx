@@ -4,8 +4,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatClientNameForDisplay, formatDecimalAmountForDisplay, OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -30,6 +32,7 @@ export default async function ReceiptDetailPage({
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const { id } = await params;
   const sp = searchParams ? await searchParams : undefined;
@@ -62,7 +65,9 @@ export default async function ReceiptDetailPage({
   );
   const totalNum = Number(receipt.total_amount);
   const match =
-    Math.abs(allocatedSum - totalNum) < 0.01 ? (
+    obfuscate ? (
+      <span className="text-slate-400">{OBFUSCATED}</span>
+    ) : Math.abs(allocatedSum - totalNum) < 0.01 ? (
       <span className="text-emerald-400">{isHebrew ? "השיוכים תואמים לסכום הכולל" : "Allocations match total"}</span>
     ) : (
       <span className="text-amber-400">
@@ -196,8 +201,9 @@ export default async function ReceiptDetailPage({
             <option value="">{isHebrew ? "טיפול" : "Treatment"}</option>
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
-                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — {t.client.first_name}{" "}
-                {t.amount.toString()} {t.currency}
+                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
+                {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}{" "}
+                {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
               </option>
             ))}
           </select>
@@ -229,9 +235,15 @@ export default async function ReceiptDetailPage({
                 <tr key={a.id} className="border-b border-slate-700/80">
                   <td className="px-3 py-2 text-slate-300">
                     {formatHouseholdDate(a.treatment.occurred_at, dateDisplayFormat)} —{" "}
-                    {a.treatment.client.first_name}
+                    {formatClientNameForDisplay(
+                      obfuscate,
+                      a.treatment.client.first_name,
+                      a.treatment.client.last_name,
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-slate-100">{a.amount.toString()}</td>
+                  <td className="px-3 py-2 text-slate-100">
+                    {obfuscate ? OBFUSCATED : a.amount.toString()}
+                  </td>
                   <td className="px-3 py-2">
                     <ConfirmDeleteForm action={deleteReceiptAllocation}>
                       <input type="hidden" name="receipt_id" value={receipt.id} />

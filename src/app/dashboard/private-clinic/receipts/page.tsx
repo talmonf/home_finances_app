@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyReceipt } from "../actions";
@@ -12,6 +19,7 @@ export default async function ReceiptsPage() {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
 
@@ -136,7 +144,7 @@ export default async function ReceiptsPage() {
                     <td className="px-3 py-2 text-slate-400">{String(rec.issued_at)}</td>
                     <td className="px-3 py-2 text-slate-400">{rec.job.job_title}</td>
                     <td className="px-3 py-2 text-slate-200">
-                      {rec.total_amount.toString()} {rec.currency}
+                      {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency)}
                     </td>
                     <td className="px-3 py-2">
                       <Link href={`/dashboard/private-clinic/receipts/${rec.id}`} className="text-xs text-sky-400">

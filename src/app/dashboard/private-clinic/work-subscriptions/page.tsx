@@ -3,8 +3,10 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
@@ -26,7 +28,8 @@ function formatMoney(value: unknown) {
     : n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatMoneyWithCurrency(value: unknown, currency: string) {
+function formatMoneyWithCurrency(value: unknown, currency: string, obfuscate: boolean) {
+  if (obfuscate) return OBFUSCATED;
   const amount = formatMoney(value);
   if (amount === "—") return "—";
   return `${amount} ${currency}`;
@@ -47,6 +50,7 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const t = privateClinicWorkSubscriptions(uiLanguage);
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -264,7 +268,7 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                       {s.job ? formatJobLabel(s.job) : "—"}
                     </td>
                     <td className="px-4 py-3 text-slate-300 tabular-nums">
-                      {formatMoneyWithCurrency(s.fee_amount, s.currency)}
+                      {formatMoneyWithCurrency(s.fee_amount, s.currency, obfuscate)}
                       <span className="ml-1 text-xs text-slate-500">
                         ({s.billing_interval === "annual" ? t.annual : t.monthly})
                       </span>

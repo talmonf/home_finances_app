@@ -28,6 +28,8 @@ model households {
   primary_currency      String                     @default("ILS")
   date_display_format   HouseholdDateDisplayFormat @default(YMD)
   ui_language           String                     @default("en")
+  /// When false, super-admin can hide per-entity "Links" (URL) panels on insurance, savings, etc.
+  show_entity_url_panels Boolean                  @default(true)
   created_at            DateTime                   @default(now())
   updated_at            DateTime                   @updatedAt
   is_active             Boolean                    @default(true)
@@ -193,6 +195,7 @@ model bank_accounts {
 
   household    households   @relation(fields: [household_id], references: [id])
   credit_cards credit_cards[]
+  jobs_linked_for_payment jobs[] @relation("JobLinkedBankAccount")
   documents    documents[]
   transactions transactions[]
   bank_account_members bank_account_members[]
@@ -242,6 +245,7 @@ model credit_cards {
   car_license_payments  car_licenses[]
   primary_digital_payment_methods  digital_payment_methods[] @relation("PrimaryDigitalPaymentCreditCard")
   secondary_digital_payment_methods digital_payment_methods[] @relation("SecondaryDigitalPaymentCreditCard")
+  jobs_linked_for_payment jobs[] @relation("JobLinkedCreditCard")
 }
 
 enum CardScheme {
@@ -453,11 +457,15 @@ model jobs {
   employer_address     String?
   notes                String?
   is_active            Boolean           @default(true)
+  bank_account_id      String?
+  credit_card_id       String?
   created_at           DateTime          @default(now())
   updated_at           DateTime          @updatedAt
 
   household            households        @relation(fields: [household_id], references: [id], onDelete: Cascade)
   family_member        family_members    @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
+  linked_bank_account  bank_accounts?    @relation("JobLinkedBankAccount", fields: [bank_account_id], references: [id], onDelete: SetNull)
+  linked_credit_card   credit_cards?     @relation("JobLinkedCreditCard", fields: [credit_card_id], references: [id], onDelete: SetNull)
   benefits             job_benefits[]
   documents            job_documents[]
   payroll_entries      job_payroll_entries[]

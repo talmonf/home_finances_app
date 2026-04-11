@@ -37,6 +37,29 @@ async function validateJobBelongsToHousehold(householdId: string, jobId: string)
   return !!job;
 }
 
+async function validateBankAccountForHousehold(householdId: string, bankAccountId: string | null) {
+  if (!bankAccountId) return null;
+  const row = await prisma.bank_accounts.findFirst({
+    where: { id: bankAccountId, household_id: householdId },
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
+async function validateCreditCardForHousehold(householdId: string, creditCardId: string | null) {
+  if (!creditCardId) return null;
+  const row = await prisma.credit_cards.findFirst({
+    where: { id: creditCardId, household_id: householdId },
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
+function parseOptionalLinkedId(raw: string | null | undefined): string | null {
+  const v = raw?.trim();
+  return v ? v : null;
+}
+
 function parseEmploymentType(raw: string | null): EmploymentType | null {
   if (
     raw === "freelancer" ||
@@ -72,6 +95,8 @@ export async function createJob(formData: FormData) {
   const employer_address = (formData.get("employer_address") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const is_active = formData.get("is_active") !== "off";
+  const bank_account_id_raw = parseOptionalLinkedId(formData.get("bank_account_id") as string | null);
+  const credit_card_id_raw = parseOptionalLinkedId(formData.get("credit_card_id") as string | null);
 
   if (!family_member_id || !employment_type || !job_title || !start_date_raw) {
     redirect("/dashboard/jobs?error=Required+fields+missing");
@@ -88,6 +113,15 @@ export async function createJob(formData: FormData) {
     redirect("/dashboard/jobs?error=End+date+must+be+after+start+date");
   }
 
+  const bank_account_id = await validateBankAccountForHousehold(householdId, bank_account_id_raw);
+  const credit_card_id = await validateCreditCardForHousehold(householdId, credit_card_id_raw);
+  if (bank_account_id_raw && !bank_account_id) {
+    redirect("/dashboard/jobs?error=Invalid+bank+account");
+  }
+  if (credit_card_id_raw && !credit_card_id) {
+    redirect("/dashboard/jobs?error=Invalid+credit+card");
+  }
+
   await prisma.jobs.create({
     data: {
       id: crypto.randomUUID(),
@@ -102,6 +136,8 @@ export async function createJob(formData: FormData) {
       employer_address,
       notes,
       is_active,
+      bank_account_id,
+      credit_card_id,
     },
   });
 
@@ -130,6 +166,8 @@ export async function updateJob(formData: FormData) {
   const employer_address = (formData.get("employer_address") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const is_active = formData.get("is_active") !== "off";
+  const bank_account_id_raw = parseOptionalLinkedId(formData.get("bank_account_id") as string | null);
+  const credit_card_id_raw = parseOptionalLinkedId(formData.get("credit_card_id") as string | null);
 
   if (!family_member_id || !employment_type || !job_title || !start_date_raw) {
     redirect(`/dashboard/jobs/${id}?error=Required+fields+missing`);
@@ -146,6 +184,15 @@ export async function updateJob(formData: FormData) {
     redirect(`/dashboard/jobs/${id}?error=End+date+must+be+after+start+date`);
   }
 
+  const bank_account_id = await validateBankAccountForHousehold(householdId, bank_account_id_raw);
+  const credit_card_id = await validateCreditCardForHousehold(householdId, credit_card_id_raw);
+  if (bank_account_id_raw && !bank_account_id) {
+    redirect(`/dashboard/jobs/${id}?error=Invalid+bank+account`);
+  }
+  if (credit_card_id_raw && !credit_card_id) {
+    redirect(`/dashboard/jobs/${id}?error=Invalid+credit+card`);
+  }
+
   await prisma.jobs.updateMany({
     where: { id, household_id: householdId },
     data: {
@@ -159,6 +206,8 @@ export async function updateJob(formData: FormData) {
       employer_address,
       notes,
       is_active,
+      bank_account_id,
+      credit_card_id,
     },
   });
 

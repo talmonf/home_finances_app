@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { formatHouseholdDate } from "@/lib/household-date-format";
@@ -52,6 +53,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -74,7 +76,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
   const policyIds = policies.map((p) => p.id);
   const insuranceEntityUrls =
-    policyIds.length === 0
+    !showEntityUrlPanels || policyIds.length === 0
       ? []
       : await prisma.entity_urls.findMany({
           where: {
@@ -466,17 +468,19 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                           </form>
                         </td>
                       </tr>
-                      <tr className="border-b border-slate-700/80 bg-slate-950/30">
-                        <td colSpan={9} className="px-4 py-3">
-                          <EntityUrlsPanel
-                            entityKind="insurance_policy"
-                            entityId={p.id}
-                            redirectTo={insuranceListRedirect}
-                            urls={urlsByInsurancePolicyId.get(p.id) ?? []}
-                            isHebrew={isHebrew}
-                          />
-                        </td>
-                      </tr>
+                      {showEntityUrlPanels ? (
+                        <tr className="border-b border-slate-700/80 bg-slate-950/30">
+                          <td colSpan={9} className="px-4 py-3">
+                            <EntityUrlsPanel
+                              entityKind="insurance_policy"
+                              entityId={p.id}
+                              redirectTo={insuranceListRedirect}
+                              urls={urlsByInsurancePolicyId.get(p.id) ?? []}
+                              isHebrew={isHebrew}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
                       <tr className="border-b border-slate-700/80 bg-slate-900/40">
                         <td colSpan={9} className="px-4 py-4">
                           <p className="mb-3 text-xs font-medium text-slate-400">
