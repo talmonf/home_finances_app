@@ -1,3 +1,4 @@
+import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -31,10 +32,6 @@ function formatScheme(scheme: string) {
   if (scheme === "mastercard") return "Mastercard";
   if (scheme === "visa") return "Visa";
   return "Other";
-}
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
 }
 
 function buildCreditCardLabel(card: {
@@ -263,44 +260,18 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 className={inputClass}
               />
             </div>
-            <div>
-              <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
-                Family member (optional)
-              </label>
-              <select
-                id="family_member_id"
-                name="family_member_id"
-                defaultValue={subscription.family_member_id ?? ""}
-                className={inputClass}
-              >
-                <option value="">None</option>
-                {familyMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name}
-                    {!m.is_active ? " (inactive)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="job_id" className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
-              </label>
-              <select
-                id="job_id"
-                name="job_id"
-                defaultValue={subscription.job_id ?? ""}
-                className={inputClass}
-              >
-                <option value="">None</option>
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {formatJobLabel(j)}
-                    {!j.is_active ? " (inactive)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SubscriptionFamilyJobSelects
+              key={subscription.id}
+              members={familyMembers}
+              jobs={jobs}
+              defaultFamilyMemberId={subscription.family_member_id ?? ""}
+              defaultJobId={subscription.job_id ?? ""}
+              memberLabel="Family member (optional)"
+              jobLabel={isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
+              selectClassName={inputClass}
+              showInactiveMemberSuffix
+              showInactiveJobSuffix
+            />
             <div>
               <label
                 htmlFor="digital_payment_method_id"

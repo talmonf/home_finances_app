@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -79,6 +80,9 @@ function formatSubscriptionPaymentSummary(s: {
 function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
   return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
 }
+
+const subscriptionSelectClass =
+  "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
 
 export default async function SubscriptionsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -310,45 +314,13 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
-            <div>
-              <label
-                htmlFor="family_member_id"
-                className="mb-1 block text-xs font-medium text-slate-400"
-              >
-                Family member (optional)
-              </label>
-              <select
-                id="family_member_id"
-                name="family_member_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
-              >
-                <option value="">None</option>
-                {familyMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="job_id" className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
-              </label>
-              <select
-                id="job_id"
-                name="job_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
-              >
-                <option value="">None</option>
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {formatJobLabel(j)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SubscriptionFamilyJobSelects
+              members={familyMembers}
+              jobs={jobs}
+              memberLabel="Family member (optional)"
+              jobLabel={isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
+              selectClassName={subscriptionSelectClass}
+            />
             <div>
               <label
                 htmlFor="digital_payment_method_id"
