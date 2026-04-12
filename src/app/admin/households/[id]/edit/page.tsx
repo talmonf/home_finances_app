@@ -68,6 +68,7 @@ export default async function EditHouseholdPage({
         note_1_label_he: true,
         note_2_label_he: true,
         note_3_label_he: true,
+        hebrew_transcription_provider: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -300,6 +301,27 @@ export default async function EditHouseholdPage({
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+              Private clinic — Hebrew audio transcription
+            </h2>
+            <p className="mb-3 text-xs text-slate-500">
+              When users transcribe audio with the Hebrew option, choose whether to use OpenRouter (Whisper via your
+              OpenRouter key) or Amazon Transcribe (requires{" "}
+              <code className="rounded bg-slate-800 px-1 text-slate-300">TRANSCRIBE_DATA_ACCESS_ROLE_ARN</code> in
+              deployment env). English transcription is unchanged.
+            </p>
+            <label className="mb-1 block text-xs text-slate-500">Hebrew transcription backend</label>
+            <select
+              name="hebrew_transcription_provider"
+              defaultValue={therapySettings?.hebrew_transcription_provider ?? "openrouter"}
+              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="openrouter">OpenRouter (Whisper)</option>
+              <option value="aws">Amazon Transcribe (batch, S3)</option>
+            </select>
           </section>
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">

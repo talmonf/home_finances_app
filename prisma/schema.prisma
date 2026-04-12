@@ -1362,6 +1362,13 @@ enum TherapyTreatmentAttachmentTranscriptionStatus {
   @@map("therapy_treatment_attachment_transcription_status")
 }
 
+enum TherapyHebrewTranscriptionProvider {
+  openrouter
+  aws
+
+  @@map("therapy_hebrew_transcription_provider")
+}
+
 model private_clinic_reminders {
   id             String   @id @default(uuid())
   household_id   String
@@ -1386,6 +1393,7 @@ model therapy_settings {
   note_2_label_he  String?
   note_3_label_he  String?
   nav_tabs_json    Json?
+  hebrew_transcription_provider TherapyHebrewTranscriptionProvider @default(openrouter)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

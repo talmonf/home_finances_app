@@ -70,9 +70,15 @@ export async function POST(
       return NextResponse.json({ error: 'language must be "en" or "he"' }, { status: 400 });
     }
 
-    const att = await prisma.therapy_treatment_attachments.findFirst({
-      where: { id, household_id: householdId },
-    });
+    const [att, therapySettings] = await Promise.all([
+      prisma.therapy_treatment_attachments.findFirst({
+        where: { id, household_id: householdId },
+      }),
+      prisma.therapy_settings.findUnique({
+        where: { household_id: householdId },
+        select: { hebrew_transcription_provider: true },
+      }),
+    ]);
 
     if (!att) return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
     if (!isAudioMime(att.mime_type)) {
@@ -92,10 +98,10 @@ export async function POST(
     });
 
     try {
+      const hebrewBackend = therapySettings?.hebrew_transcription_provider ?? "openrouter";
+      const roleConfigured = Boolean(process.env.TRANSCRIBE_DATA_ACCESS_ROLE_ARN?.trim());
       const useAwsHebrew =
-        language === "he" &&
-        process.env.TRANSCRIPTION_HEBREW_USE_AWS === "true" &&
-        Boolean(process.env.TRANSCRIBE_DATA_ACCESS_ROLE_ARN?.trim());
+        language === "he" && hebrewBackend === "aws" && roleConfigured;
 
       let audio: Buffer;
       if (useAwsHebrew) {
@@ -123,6 +129,7 @@ export async function POST(
         s3Key: att.storage_key,
         householdId,
         attachmentId: att.id,
+        hebrewBackend,
       });
 
       await prisma.therapy_treatment_attachments.update({

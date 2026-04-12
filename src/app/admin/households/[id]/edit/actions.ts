@@ -6,9 +6,18 @@ import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format
 import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
 import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import { ensureTherapySettings } from "@/lib/therapy/bootstrap";
+import type { TherapyHebrewTranscriptionProvider } from "@/generated/prisma/enums";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+function parseHebrewTranscriptionProvider(
+  raw: string | null | undefined,
+): TherapyHebrewTranscriptionProvider {
+  const v = raw?.trim();
+  if (v === "aws") return "aws";
+  return "openrouter";
+}
 
 export async function saveHouseholdSettings(formData: FormData) {
   const session = await getAuthSession();
@@ -54,6 +63,9 @@ export async function saveHouseholdSettings(formData: FormData) {
   const note_1_label_he = trimHe("note_1_label_he");
   const note_2_label_he = trimHe("note_2_label_he");
   const note_3_label_he = trimHe("note_3_label_he");
+  const hebrew_transcription_provider = parseHebrewTranscriptionProvider(
+    formData.get("hebrew_transcription_provider") as string | null,
+  );
   await prisma.therapy_settings.update({
     where: { household_id: householdId },
     data: {
@@ -64,6 +76,7 @@ export async function saveHouseholdSettings(formData: FormData) {
       note_1_label_he,
       note_2_label_he,
       note_3_label_he,
+      hebrew_transcription_provider,
     },
   });
 

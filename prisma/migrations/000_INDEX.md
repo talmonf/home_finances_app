@@ -145,6 +145,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 064_subscriptions_transactions_jobs.sql
 - [x] 065_private_clinic_insurance_reminders.sql
 - [x] 066_jobs_payment_links_privacy_entity_urls.sql
+- [x] 067_therapy_hebrew_transcription_provider.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
