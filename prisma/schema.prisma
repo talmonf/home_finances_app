@@ -796,15 +796,24 @@ model insurance_policies {
   family_member_id   String?
   provider_name      String
   policy_name        String
+  /// Insurer / underwriting company (distinct from agent or plan label when needed).
+  insurance_company  String?
   policy_number      String?
   contact_phone      String?
   contact_email      String?
   website_url        String?
+  notes              String?
   policy_start_date  DateTime
   expiration_date    DateTime
   premium_paid       Decimal             @db.Decimal(15, 2)
   premium_currency   String              @default("ILS")
   is_active          Boolean             @default(true)
+  policy_file_name       String?
+  policy_file_mime_type  String?
+  policy_storage_bucket  String?
+  policy_storage_key     String?
+  policy_storage_url     String?
+  policy_file_uploaded_at DateTime?
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
 

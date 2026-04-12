@@ -614,11 +614,13 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     policyHolderOptional: p("Policy holder (optional)", "בעל פוליסה (אופציונלי)"),
     notSet: p("Not set", "לא הוגדר"),
     provider: p("Provider", "ספק"),
+    insuranceCompany: p("Insurance company", "חברת ביטוח"),
     policyName: p("Policy name", "שם הפוליסה"),
     policyNumber: p("Policy number", "מספר פוליסה"),
     contactPhone: p("Contact phone", "טלפון"),
     contactEmail: p("Contact email", "אימייל"),
     website: p("Website", "אתר"),
+    notes: p("Notes", "הערות"),
     startDate: p("Policy start", "תאריך התחלה"),
     renewalDate: p("Renewal date", "תאריך חידוש"),
     annualPremium: p("Annual premium", "פרמיה שנתית"),
@@ -639,6 +641,11 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     activate: p("Activate", "הפעלה"),
     editPolicy: p("Edit policy", "עריכת פוליסה"),
     save: p("Save changes", "שמירה"),
+    policyDocument: p("Policy document", "קובץ פוליסה"),
+    policyDocumentHelp: p(
+      "Upload a PDF or image (max 15 MB). Uploading replaces any existing file.",
+      "העלאת PDF או תמונה (עד 15MB). העלאה חדשה מחליפה את הקודם.",
+    ),
   };
 }
 

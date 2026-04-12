@@ -14,6 +14,9 @@ import {
 } from "@/lib/insurance-policy-type-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { InsurancePolicyFileDeleteButton } from "@/components/insurance-policy-file-delete";
+import { InsurancePolicyFileUpload } from "@/components/insurance-policy-file-upload";
+import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import {
   toggleInsurancePolicyActive,
   updateInsurancePolicy,
@@ -228,6 +231,17 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "חברת ביטוח" : "Insurance company"}
+              </label>
+              <input
+                name="insurance_company"
+                maxLength={200}
+                defaultValue={policy.insurance_company ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "שם הפוליסה" : "Policy name"} <span className="text-rose-400">*</span>
               </label>
               <input
@@ -277,6 +291,18 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
                 name="website_url"
                 type="url"
                 defaultValue={policy.website_url ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <label className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "הערות" : "Notes"}
+              </label>
+              <textarea
+                name="notes"
+                rows={4}
+                maxLength={16000}
+                defaultValue={policy.notes ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -348,6 +374,95 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
               : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
           </p>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/40 p-4">
+          <h2 className="text-lg font-medium text-slate-200">
+            {isHebrew ? "קובץ פוליסה" : "Policy document"}
+          </h2>
+          <p className="text-xs text-slate-500">
+            {isHebrew
+              ? "העלאת PDF או תמונה (עד 15MB). העלאה חדשה מחליפה את הקודם."
+              : "Upload a PDF or image (max 15 MB). Uploading replaces any existing file."}
+          </p>
+          {policy.policy_storage_key ? (
+            <div className="space-y-2">
+              <p className="text-sm text-slate-300">
+                {policy.policy_file_name ?? (isHebrew ? "קובץ מצורף" : "Attached file")}
+              </p>
+              <ProxiedFileOpenDownloadLinks
+                downloadApiPath={`/api/insurance-policies/${id}/download`}
+                downloadFileName={policy.policy_file_name ?? undefined}
+              />
+              <div className="flex flex-wrap items-start gap-4 pt-1">
+                <InsurancePolicyFileUpload
+                  policyId={id}
+                  hasFile
+                  labels={
+                    isHebrew
+                      ? {
+                          upload: "העלאה",
+                          uploading: "מעלה…",
+                          replace: "החלפה באחסון",
+                          chooseFile: "בחרו קובץ תחילה.",
+                          error: "ההעלאה נכשלה",
+                          done: "ההעלאה הושלמה.",
+                        }
+                      : {
+                          upload: "Upload",
+                          uploading: "Uploading…",
+                          replace: "Upload and replace",
+                          chooseFile: "Choose a file first.",
+                          error: "Upload failed",
+                          done: "Upload complete.",
+                        }
+                  }
+                />
+                <InsurancePolicyFileDeleteButton
+                  policyId={id}
+                  labels={
+                    isHebrew
+                      ? {
+                          confirm: "להסיר את הקובץ מהאפליקציה ולמחוק מהאחסון? לא ניתן לבטל.",
+                          busy: "מסיר…",
+                          remove: "מחיקת קובץ",
+                          error: "המחיקה נכשלה",
+                        }
+                      : {
+                          confirm:
+                            "Remove this file from the app and delete it from storage? This cannot be undone.",
+                          busy: "Removing…",
+                          remove: "Delete file",
+                          error: "Remove failed",
+                        }
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <InsurancePolicyFileUpload
+              policyId={id}
+              labels={
+                isHebrew
+                  ? {
+                      upload: "העלאה",
+                      uploading: "מעלה…",
+                      replace: "החלפה",
+                      chooseFile: "בחרו קובץ תחילה.",
+                      error: "ההעלאה נכשלה",
+                      done: "ההעלאה הושלמה.",
+                    }
+                  : {
+                      upload: "Upload",
+                      uploading: "Uploading…",
+                      replace: "Replace",
+                      chooseFile: "Choose a file first.",
+                      error: "Upload failed",
+                      done: "Upload complete.",
+                    }
+              }
+            />
+          )}
         </section>
 
         {showEntityUrlPanels ? (

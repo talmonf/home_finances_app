@@ -214,6 +214,47 @@ export type UploadCarServiceAttachmentResult = {
   publicUrl: string | null;
 };
 
+export type UploadInsurancePolicyFileResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
+/** Same bucket as job documents; keys under `insurance-policies/{policyId}/`. */
+export async function uploadInsurancePolicyFile(
+  householdId: string,
+  policyId: string,
+  fileName: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadInsurancePolicyFileResult> {
+  const cfg = getJobDocumentStorageConfig();
+  const key = `${householdId}/insurance-policies/${policyId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/octet-stream",
+    }),
+  );
+
+  const publicUrl = cfg.publicBaseUrl
+    ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
+    : null;
+  return { bucket: cfg.bucket, key, publicUrl };
+}
+
 /** Same bucket as job documents; keys under `car-services/{serviceId}/`. */
 export async function uploadCarServiceAttachment(
   householdId: string,

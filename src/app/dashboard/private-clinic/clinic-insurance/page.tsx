@@ -7,6 +7,9 @@ import {
   getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
+import { InsurancePolicyFileDeleteButton } from "@/components/insurance-policy-file-delete";
+import { InsurancePolicyFileUpload } from "@/components/insurance-policy-file-upload";
+import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
@@ -178,6 +181,17 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
             />
           </div>
           <div>
+            <label htmlFor="insurance_company" className="mb-1 block text-xs font-medium text-slate-400">
+              {t.insuranceCompany}
+            </label>
+            <input
+              id="insurance_company"
+              name="insurance_company"
+              maxLength={200}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
             <label htmlFor="policy_name" className="mb-1 block text-xs font-medium text-slate-400">
               {t.policyName} <span className="text-rose-400">*</span>
             </label>
@@ -230,6 +244,18 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
               type="url"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="https://"
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+              {t.notes}
+            </label>
+            <textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              maxLength={16000}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div>
@@ -423,6 +449,17 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                           </div>
                           <div>
                             <label className="mb-1 block text-xs font-medium text-slate-400">
+                              {t.insuranceCompany}
+                            </label>
+                            <input
+                              name="insurance_company"
+                              maxLength={200}
+                              defaultValue={p.insurance_company ?? ""}
+                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-400">
                               {t.policyName} <span className="text-rose-400">*</span>
                             </label>
                             <input
@@ -472,6 +509,18 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                               name="website_url"
                               type="url"
                               defaultValue={p.website_url ?? ""}
+                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                            />
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <label className="mb-1 block text-xs font-medium text-slate-400">
+                              {t.notes}
+                            </label>
+                            <textarea
+                              name="notes"
+                              rows={3}
+                              maxLength={16000}
+                              defaultValue={p.notes ?? ""}
                               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                             />
                           </div>
@@ -538,6 +587,89 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                             </button>
                           </div>
                         </form>
+                        <div className="mt-4 space-y-2 rounded-lg border border-slate-700/80 bg-slate-950/40 p-3">
+                          <p className="text-xs font-medium text-slate-400">{t.policyDocument}</p>
+                          <p className="text-xs text-slate-500">{t.policyDocumentHelp}</p>
+                          {p.policy_storage_key ? (
+                            <div className="space-y-2">
+                              <p className="text-sm text-slate-300">
+                                {p.policy_file_name ?? (isHebrew ? "קובץ מצורף" : "Attached file")}
+                              </p>
+                              <ProxiedFileOpenDownloadLinks
+                                downloadApiPath={`/api/insurance-policies/${p.id}/download`}
+                                downloadFileName={p.policy_file_name ?? undefined}
+                              />
+                              <div className="flex flex-wrap items-start gap-4 pt-1">
+                                <InsurancePolicyFileUpload
+                                  policyId={p.id}
+                                  hasFile
+                                  labels={
+                                    isHebrew
+                                      ? {
+                                          upload: "העלאה",
+                                          uploading: "מעלה…",
+                                          replace: "החלפה באחסון",
+                                          chooseFile: "בחרו קובץ תחילה.",
+                                          error: "ההעלאה נכשלה",
+                                          done: "ההעלאה הושלמה.",
+                                        }
+                                      : {
+                                          upload: "Upload",
+                                          uploading: "Uploading…",
+                                          replace: "Upload and replace",
+                                          chooseFile: "Choose a file first.",
+                                          error: "Upload failed",
+                                          done: "Upload complete.",
+                                        }
+                                  }
+                                />
+                                <InsurancePolicyFileDeleteButton
+                                  policyId={p.id}
+                                  labels={
+                                    isHebrew
+                                      ? {
+                                          confirm:
+                                            "להסיר את הקובץ מהאפליקציה ולמחוק מהאחסון? לא ניתן לבטל.",
+                                          busy: "מסיר…",
+                                          remove: "מחיקת קובץ",
+                                          error: "המחיקה נכשלה",
+                                        }
+                                      : {
+                                          confirm:
+                                            "Remove this file from the app and delete it from storage? This cannot be undone.",
+                                          busy: "Removing…",
+                                          remove: "Delete file",
+                                          error: "Remove failed",
+                                        }
+                                  }
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <InsurancePolicyFileUpload
+                              policyId={p.id}
+                              labels={
+                                isHebrew
+                                  ? {
+                                      upload: "העלאה",
+                                      uploading: "מעלה…",
+                                      replace: "החלפה",
+                                      chooseFile: "בחרו קובץ תחילה.",
+                                      error: "ההעלאה נכשלה",
+                                      done: "ההעלאה הושלמה.",
+                                    }
+                                  : {
+                                      upload: "Upload",
+                                      uploading: "Uploading…",
+                                      replace: "Replace",
+                                      chooseFile: "Choose a file first.",
+                                      error: "Upload failed",
+                                      done: "Upload complete.",
+                                    }
+                              }
+                            />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   </Fragment>

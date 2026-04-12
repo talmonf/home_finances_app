@@ -27,6 +27,23 @@ function optionalText(raw: string | null | undefined): string | null {
   return v ? v : null;
 }
 
+const MAX_INSURANCE_COMPANY_LEN = 200;
+const MAX_INSURANCE_NOTES_LEN = 16000;
+
+function optionalInsuranceCompany(raw: string | null | undefined): string | null {
+  const v = raw?.trim();
+  if (!v) return null;
+  if (v.length > MAX_INSURANCE_COMPANY_LEN) return null;
+  return v;
+}
+
+function optionalInsuranceNotes(raw: string | null | undefined): string | null {
+  const v = raw?.trim();
+  if (!v) return null;
+  if (v.length > MAX_INSURANCE_NOTES_LEN) return null;
+  return v;
+}
+
 const CLINIC_POLICY_TYPE_SET = new Set<string>(CLINIC_INSURANCE_POLICY_TYPES);
 
 function insuranceFormContext(formData: FormData): "main" | "clinic" {
@@ -132,6 +149,16 @@ export async function createInsurancePolicy(formData: FormData) {
 
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
   const policy_name = (formData.get("policy_name") as string | null)?.trim();
+  const insurance_company_raw = (formData.get("insurance_company") as string | null)?.trim() ?? "";
+  const notes_raw = (formData.get("notes") as string | null)?.trim() ?? "";
+  if (insurance_company_raw.length > MAX_INSURANCE_COMPANY_LEN) {
+    redirectInsurance(context, "error=Insurance+company+is+too+long");
+  }
+  if (notes_raw.length > MAX_INSURANCE_NOTES_LEN) {
+    redirectInsurance(context, "error=Notes+are+too+long");
+  }
+  const insurance_company = optionalInsuranceCompany(insurance_company_raw);
+  const notes = optionalInsuranceNotes(notes_raw);
   const policy_number_raw = (formData.get("policy_number") as string | null)?.trim();
   const policy_number = policy_number_raw || null;
   const contact_phone = optionalText(formData.get("contact_phone") as string | null);
@@ -183,10 +210,12 @@ export async function createInsurancePolicy(formData: FormData) {
       family_member_id: resolved.family_member_id,
       provider_name: pn,
       policy_name: pnm,
+      insurance_company: insurance_company ?? undefined,
       policy_number: policy_number ?? undefined,
       contact_phone: contact_phone ?? undefined,
       contact_email: contact_email ?? undefined,
       website_url: website_url ?? undefined,
+      notes: notes ?? undefined,
       policy_start_date: psd,
       expiration_date: exp,
       premium_paid: prem,
@@ -233,6 +262,16 @@ export async function updateInsurancePolicy(formData: FormData) {
 
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
   const policy_name = (formData.get("policy_name") as string | null)?.trim();
+  const insurance_company_raw = (formData.get("insurance_company") as string | null)?.trim() ?? "";
+  const notes_raw = (formData.get("notes") as string | null)?.trim() ?? "";
+  if (insurance_company_raw.length > MAX_INSURANCE_COMPANY_LEN) {
+    redirectInsurance(context, "error=Insurance+company+is+too+long");
+  }
+  if (notes_raw.length > MAX_INSURANCE_NOTES_LEN) {
+    redirectInsurance(context, "error=Notes+are+too+long");
+  }
+  const insurance_company = optionalInsuranceCompany(insurance_company_raw);
+  const notes = optionalInsuranceNotes(notes_raw);
   const policy_number_raw = (formData.get("policy_number") as string | null)?.trim();
   const policy_number = policy_number_raw || null;
   const contact_phone = optionalText(formData.get("contact_phone") as string | null);
@@ -283,10 +322,12 @@ export async function updateInsurancePolicy(formData: FormData) {
       family_member_id: resolved.family_member_id,
       provider_name: pnU,
       policy_name: pnmU,
+      insurance_company: insurance_company ?? undefined,
       policy_number: policy_number ?? undefined,
       contact_phone: contact_phone ?? undefined,
       contact_email: contact_email ?? undefined,
       website_url: website_url ?? undefined,
+      notes: notes ?? undefined,
       policy_start_date: psdU,
       expiration_date: expU,
       premium_paid: premU,

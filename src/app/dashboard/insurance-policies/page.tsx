@@ -194,6 +194,18 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               />
             </div>
             <div>
+              <label htmlFor="insurance_company" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "חברת ביטוח" : "Insurance company"}
+              </label>
+              <input
+                id="insurance_company"
+                name="insurance_company"
+                maxLength={200}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+              />
+            </div>
+            <div>
               <label htmlFor="policy_name" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "שם הפוליסה" : "Policy name"} <span className="text-rose-400">*</span>
               </label>
@@ -250,6 +262,19 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 type="url"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="https://"
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "הערות" : "Notes"}
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                maxLength={16000}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
             </div>
             <div>
