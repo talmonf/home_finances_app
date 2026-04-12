@@ -4,24 +4,14 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
-  getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
-import { EntityUrlsPanel } from "@/components/entity-urls-panel";
-import { InsurancePolicyFileDeleteButton } from "@/components/insurance-policy-file-delete";
-import { InsurancePolicyFileUpload } from "@/components/insurance-policy-file-upload";
-import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
 import { privateClinicClinicInsurance } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Fragment } from "react";
-import {
-  createInsurancePolicy,
-  toggleInsurancePolicyActive,
-  updateInsurancePolicy,
-} from "@/app/dashboard/insurance-policies/actions";
+import { createInsurancePolicy, toggleInsurancePolicyActive } from "@/app/dashboard/insurance-policies/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +19,6 @@ function formatPremium(paid: { toString(): string }, currency: string) {
   const n = Number(paid.toString());
   if (Number.isNaN(n)) return "—";
   return `${n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
-}
-
-function toDateInputValue(d: Date) {
-  const z = new Date(d);
-  const y = z.getFullYear();
-  const m = String(z.getMonth() + 1).padStart(2, "0");
-  const day = String(z.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 type PageProps = {
@@ -55,9 +37,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
-  const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
-  const isHebrew = uiLanguage === "he";
-  const lang: "en" | "he" = isHebrew ? "he" : "en";
+  const lang: "en" | "he" = uiLanguage === "he" ? "he" : "en";
   const t = privateClinicClinicInsurance(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -72,27 +52,6 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
       orderBy: { full_name: "asc" },
     }),
   ]);
-
-  const policyIds = policies.map((p) => p.id);
-  const insuranceEntityUrls =
-    !showEntityUrlPanels || policyIds.length === 0
-      ? []
-      : await prisma.entity_urls.findMany({
-          where: {
-            household_id: householdId,
-            entity_kind: "insurance_policy",
-            entity_id: { in: policyIds },
-          },
-          orderBy: [{ sort_order: "asc" }, { created_at: "asc" }],
-        });
-  const urlsByInsurancePolicyId = new Map<string, typeof insuranceEntityUrls>();
-  for (const u of insuranceEntityUrls) {
-    const list = urlsByInsurancePolicyId.get(u.entity_id) ?? [];
-    list.push(u);
-    urlsByInsurancePolicyId.set(u.entity_id, list);
-  }
-
-  const listRedirect = "/dashboard/private-clinic/clinic-insurance";
 
   return (
     <div className="space-y-8">
@@ -322,6 +281,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
             </button>
           </div>
         </form>
+        <p className="text-xs text-slate-500">{t.listEditHint}</p>
       </section>
 
       <section className="space-y-4">
@@ -346,30 +306,36 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
               </thead>
               <tbody>
                 {policies.map((p) => (
-                  <Fragment key={p.id}>
-                    <tr className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-300">
-                        {getInsurancePolicyTypeLabel(p.policy_type, lang)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
-                      <td className="px-4 py-3 text-slate-300">
-                        {p.policy_name}
-                        {p.policy_number ? (
-                          <span className="block text-xs text-slate-500">#{p.policy_number}</span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-slate-300 tabular-nums">
-                        {formatPremium(p.premium_paid, p.premium_currency)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
-                          {p.is_active ? t.statusActive : t.statusInactive}
-                        </span>
-                      </td>
-                        <td className="px-4 py-3">
+                  <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                    <td className="px-4 py-3 text-slate-300">
+                      {getInsurancePolicyTypeLabel(p.policy_type, lang)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
+                    <td className="px-4 py-3 text-slate-300">
+                      {p.policy_name}
+                      {p.policy_number ? (
+                        <span className="block text-xs text-slate-500">#{p.policy_number}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-300 tabular-nums">
+                      {formatPremium(p.premium_paid, p.premium_currency)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
+                        {p.is_active ? t.statusActive : t.statusInactive}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <Link
+                          href={`/dashboard/insurance-policies/${p.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          {t.edit}
+                        </Link>
                         <form action={toggleInsurancePolicyActive} className="inline">
                           <input type="hidden" name="policy_id" value={p.id} />
                           <input type="hidden" name="next_active" value={p.is_active ? "0" : "1"} />
@@ -378,301 +344,9 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                             {p.is_active ? t.deactivate : t.activate}
                           </button>
                         </form>
-                      </td>
-                    </tr>
-                    {showEntityUrlPanels ? (
-                      <tr className="border-b border-slate-700/80 bg-slate-950/30">
-                        <td colSpan={7} className="px-4 py-3">
-                          <EntityUrlsPanel
-                            entityKind="insurance_policy"
-                            entityId={p.id}
-                            redirectTo={listRedirect}
-                            urls={urlsByInsurancePolicyId.get(p.id) ?? []}
-                            isHebrew={isHebrew}
-                          />
-                        </td>
-                      </tr>
-                    ) : null}
-                    <tr className="border-b border-slate-700/80 bg-slate-900/40">
-                      <td colSpan={7} className="px-4 py-4">
-                        <p className="mb-3 text-xs font-medium text-slate-400">{t.editPolicy}</p>
-                        <form
-                          action={updateInsurancePolicy}
-                          className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-950/50 p-4 sm:grid-cols-2 lg:grid-cols-3"
-                        >
-                          <input type="hidden" name="insurance_form_context" value="clinic" />
-                          <input type="hidden" name="policy_id" value={p.id} />
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.policyType} <span className="text-rose-400">*</span>
-                            </label>
-                            <select
-                              name="policy_type"
-                              required
-                              defaultValue={p.policy_type}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            >
-                              {CLINIC_INSURANCE_POLICY_TYPES.map((pt) => (
-                                <option key={pt} value={pt}>
-                                  {getInsurancePolicyTypeLabel(pt, lang)}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.policyHolderOptional}
-                            </label>
-                            <select
-                              name="family_member_id"
-                              defaultValue={p.family_member_id ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            >
-                              <option value="">{t.notSet}</option>
-                              {familyMembers.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  {m.full_name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.provider} <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              name="provider_name"
-                              required
-                              defaultValue={p.provider_name}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.insuranceCompany}
-                            </label>
-                            <input
-                              name="insurance_company"
-                              maxLength={200}
-                              defaultValue={p.insurance_company ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.policyName} <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              name="policy_name"
-                              required
-                              defaultValue={p.policy_name}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.policyNumber}
-                            </label>
-                            <input
-                              name="policy_number"
-                              defaultValue={p.policy_number ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.contactPhone}
-                            </label>
-                            <input
-                              name="contact_phone"
-                              type="tel"
-                              defaultValue={p.contact_phone ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.contactEmail}
-                            </label>
-                            <input
-                              name="contact_email"
-                              type="email"
-                              defaultValue={p.contact_email ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.website}
-                            </label>
-                            <input
-                              name="website_url"
-                              type="url"
-                              defaultValue={p.website_url ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div className="sm:col-span-2 lg:col-span-3">
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.notes}
-                            </label>
-                            <textarea
-                              name="notes"
-                              rows={3}
-                              maxLength={16000}
-                              defaultValue={p.notes ?? ""}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.startDate} <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              name="policy_start_date"
-                              type="date"
-                              required
-                              defaultValue={toDateInputValue(p.policy_start_date)}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.renewalDate} <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              name="expiration_date"
-                              type="date"
-                              required
-                              defaultValue={toDateInputValue(p.expiration_date)}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.annualPremium} <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              name="premium_paid"
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              required
-                              defaultValue={p.premium_paid.toString()}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-400">
-                              {t.currency} <span className="text-rose-400">*</span>
-                            </label>
-                            <select
-                              name="premium_currency"
-                              required
-                              defaultValue={p.premium_currency}
-                              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                            >
-                              <option value="ILS">ILS</option>
-                              <option value="USD">USD</option>
-                              <option value="EUR">EUR</option>
-                              <option value="GBP">GBP</option>
-                            </select>
-                          </div>
-                          <div className="flex items-end">
-                            <button
-                              type="submit"
-                              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-                            >
-                              {t.save}
-                            </button>
-                          </div>
-                        </form>
-                        <div className="mt-4 space-y-2 rounded-lg border border-slate-700/80 bg-slate-950/40 p-3">
-                          <p className="text-xs font-medium text-slate-400">{t.policyDocument}</p>
-                          <p className="text-xs text-slate-500">{t.policyDocumentHelp}</p>
-                          {p.policy_storage_key ? (
-                            <div className="space-y-2">
-                              <p className="text-sm text-slate-300">
-                                {p.policy_file_name ?? (isHebrew ? "קובץ מצורף" : "Attached file")}
-                              </p>
-                              <ProxiedFileOpenDownloadLinks
-                                downloadApiPath={`/api/insurance-policies/${p.id}/download`}
-                                downloadFileName={p.policy_file_name ?? undefined}
-                              />
-                              <div className="flex flex-wrap items-start gap-4 pt-1">
-                                <InsurancePolicyFileUpload
-                                  policyId={p.id}
-                                  hasFile
-                                  labels={
-                                    isHebrew
-                                      ? {
-                                          upload: "העלאה",
-                                          uploading: "מעלה…",
-                                          replace: "החלפה באחסון",
-                                          chooseFile: "בחרו קובץ תחילה.",
-                                          error: "ההעלאה נכשלה",
-                                          done: "ההעלאה הושלמה.",
-                                        }
-                                      : {
-                                          upload: "Upload",
-                                          uploading: "Uploading…",
-                                          replace: "Upload and replace",
-                                          chooseFile: "Choose a file first.",
-                                          error: "Upload failed",
-                                          done: "Upload complete.",
-                                        }
-                                  }
-                                />
-                                <InsurancePolicyFileDeleteButton
-                                  policyId={p.id}
-                                  labels={
-                                    isHebrew
-                                      ? {
-                                          confirm:
-                                            "להסיר את הקובץ מהאפליקציה ולמחוק מהאחסון? לא ניתן לבטל.",
-                                          busy: "מסיר…",
-                                          remove: "מחיקת קובץ",
-                                          error: "המחיקה נכשלה",
-                                        }
-                                      : {
-                                          confirm:
-                                            "Remove this file from the app and delete it from storage? This cannot be undone.",
-                                          busy: "Removing…",
-                                          remove: "Delete file",
-                                          error: "Remove failed",
-                                        }
-                                  }
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <InsurancePolicyFileUpload
-                              policyId={p.id}
-                              labels={
-                                isHebrew
-                                  ? {
-                                      upload: "העלאה",
-                                      uploading: "מעלה…",
-                                      replace: "החלפה",
-                                      chooseFile: "בחרו קובץ תחילה.",
-                                      error: "ההעלאה נכשלה",
-                                      done: "ההעלאה הושלמה.",
-                                    }
-                                  : {
-                                      upload: "Upload",
-                                      uploading: "Uploading…",
-                                      replace: "Replace",
-                                      chooseFile: "Choose a file first.",
-                                      error: "Upload failed",
-                                      done: "Upload complete.",
-                                    }
-                              }
-                            />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  </Fragment>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>

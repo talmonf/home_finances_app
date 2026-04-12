@@ -635,6 +635,7 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     colRenewal: p("Renewal", "חידוש"),
     colStatus: p("Status", "סטטוס"),
     colActions: p("Actions", "פעולות"),
+    edit: p("Edit", "עריכה"),
     statusActive: p("Active", "פעיל"),
     statusInactive: p("Inactive", "לא פעיל"),
     deactivate: p("Deactivate", "השבתה"),
@@ -645,6 +646,10 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     policyDocumentHelp: p(
       "Upload a PDF or image (max 15 MB). Uploading replaces any existing file.",
       "העלאת PDF או תמונה (עד 15MB). העלאה חדשה מחליפה את הקודם.",
+    ),
+    listEditHint: p(
+      "Full edit, links, and policy file: use Edit in the list below.",
+      "עריכה מלאה, קישורים וקובץ פוליסה: לחצו «עריכה» ברשימה למטה.",
     ),
   };
 }

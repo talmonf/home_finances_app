@@ -337,11 +337,9 @@ export async function updateInsurancePolicy(formData: FormData) {
 
   revalidateInsuranceRelatedPaths(resolved.car_id);
   revalidatePath(`/dashboard/insurance-policies/${policyId}`);
-  if (context === "main") {
-    const back = parsePostSaveRedirectMain(formData, policyId);
-    if (back) {
-      redirect(`${back}?updated=1`);
-    }
+  const backToDetail = parsePostSaveRedirectMain(formData, policyId);
+  if (backToDetail) {
+    redirect(`${backToDetail}?updated=1`);
   }
   const base =
     context === "clinic"
@@ -378,11 +376,9 @@ export async function toggleInsurancePolicyActive(formData: FormData) {
 
   revalidateInsuranceRelatedPaths(row?.car_id ?? null);
   revalidatePath(`/dashboard/insurance-policies/${policyId}`);
-  if (context === "main") {
-    const back = parsePostSaveRedirectMain(formData, policyId);
-    if (back) {
-      redirect(`${back}?updated=1`);
-    }
+  const backToDetail = parsePostSaveRedirectMain(formData, policyId);
+  if (backToDetail) {
+    redirect(`${backToDetail}?updated=1`);
   }
   const base =
     context === "clinic"

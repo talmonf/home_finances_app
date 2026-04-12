@@ -12,6 +12,10 @@ import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
 } from "@/lib/insurance-policy-type-labels";
+import {
+  CLINIC_INSURANCE_POLICY_TYPES,
+  isClinicInsurancePolicyType,
+} from "@/lib/private-clinic/constants";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { InsurancePolicyFileDeleteButton } from "@/components/insurance-policy-file-delete";
@@ -87,6 +91,12 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
         });
 
   const detailPath = `/dashboard/insurance-policies/${id}`;
+  const isClinicPolicy = isClinicInsurancePolicyType(policy.policy_type);
+  const listBackHref = isClinicPolicy
+    ? "/dashboard/private-clinic/clinic-insurance"
+    : "/dashboard/insurance-policies";
+  const formContext = isClinicPolicy ? "clinic" : "main";
+  const policyTypeOptions = isClinicPolicy ? CLINIC_INSURANCE_POLICY_TYPES : INSURANCE_POLICY_TYPE_VALUES;
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -94,10 +104,16 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
         <header className="space-y-3">
           <div>
             <Link
-              href="/dashboard/insurance-policies"
+              href={listBackHref}
               className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
             >
-              {isHebrew ? "חזרה לפוליסות ביטוח →" : "← Back to insurance policies"}
+              {isClinicPolicy
+                ? isHebrew
+                  ? "חזרה לביטוח קליניקה →"
+                  : "← Back to clinic insurance"
+                : isHebrew
+                  ? "חזרה לפוליסות ביטוח →"
+                  : "← Back to insurance policies"}
             </Link>
             <h1 className="text-2xl font-semibold text-slate-50">
               {isHebrew ? "עריכת פוליסת ביטוח" : "Edit insurance policy"}
@@ -144,7 +160,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
             <form action={toggleInsurancePolicyActive} className="inline">
               <input type="hidden" name="policy_id" value={policy.id} />
               <input type="hidden" name="next_active" value={policy.is_active ? "0" : "1"} />
-              <input type="hidden" name="insurance_form_context" value="main" />
+              <input type="hidden" name="insurance_form_context" value={formContext} />
               <input type="hidden" name="post_save_redirect" value={detailPath} />
               <button type="submit" className="text-sm font-medium text-sky-400 hover:text-sky-300">
                 {policy.is_active
@@ -162,7 +178,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
             action={updateInsurancePolicy}
             className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-950/50 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
-            <input type="hidden" name="insurance_form_context" value="main" />
+            <input type="hidden" name="insurance_form_context" value={formContext} />
             <input type="hidden" name="policy_id" value={policy.id} />
             <input type="hidden" name="post_save_redirect" value={detailPath} />
             <div>
@@ -175,32 +191,34 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
                 defaultValue={policy.policy_type}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
-                {INSURANCE_POLICY_TYPE_VALUES.map((t) => (
+                {policyTypeOptions.map((t) => (
                   <option key={t} value={t}>
                     {getInsurancePolicyTypeLabel(t, lang)}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "רכב (ביטוח רכב בלבד)" : "Car (car only)"}
-              </label>
-              <select
-                name="car_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                disabled={cars.length === 0}
-                defaultValue={policy.car_id ?? ""}
-              >
-                <option value="">{isHebrew ? "ללא" : "None"}</option>
-                {cars.map((car) => (
-                  <option key={car.id} value={car.id}>
-                    {car.maker} {car.model}
-                    {car.plate_number ? ` (${car.plate_number})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isClinicPolicy ? null : (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-400">
+                  {isHebrew ? "רכב (ביטוח רכב בלבד)" : "Car (car only)"}
+                </label>
+                <select
+                  name="car_id"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  disabled={cars.length === 0}
+                  defaultValue={policy.car_id ?? ""}
+                >
+                  <option value="">{isHebrew ? "ללא" : "None"}</option>
+                  {cars.map((car) => (
+                    <option key={car.id} value={car.id}>
+                      {car.maker} {car.model}
+                      {car.plate_number ? ` (${car.plate_number})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "בן משפחה (אופציונלי)" : "Policy holder (optional)"}
@@ -369,11 +387,13 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               </button>
             </div>
           </form>
-          <p className="text-xs text-slate-500">
-            {isHebrew
-              ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
-              : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
-          </p>
+          {isClinicPolicy ? null : (
+            <p className="text-xs text-slate-500">
+              {isHebrew
+                ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
+                : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
+            </p>
+          )}
         </section>
 
         <section className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/40 p-4">
