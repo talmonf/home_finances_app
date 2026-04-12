@@ -4,9 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
-  getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
-import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
   getInsurancePolicyTypeLabel,
@@ -14,12 +12,7 @@ import {
 } from "@/lib/insurance-policy-type-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Fragment } from "react";
-import {
-  createInsurancePolicy,
-  toggleInsurancePolicyActive,
-  updateInsurancePolicy,
-} from "./actions";
+import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,14 +31,6 @@ function formatPremium(paid: { toString(): string }, currency: string) {
   return `${n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 }
 
-function toDateInputValue(d: Date) {
-  const z = new Date(d);
-  const y = z.getFullYear();
-  const m = String(z.getMonth() + 1).padStart(2, "0");
-  const day = String(z.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export default async function InsurancePoliciesPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -53,7 +38,6 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
-  const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -73,27 +57,6 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
       orderBy: { full_name: "asc" },
     }),
   ]);
-
-  const policyIds = policies.map((p) => p.id);
-  const insuranceEntityUrls =
-    !showEntityUrlPanels || policyIds.length === 0
-      ? []
-      : await prisma.entity_urls.findMany({
-          where: {
-            household_id: householdId,
-            entity_kind: "insurance_policy",
-            entity_id: { in: policyIds },
-          },
-          orderBy: [{ sort_order: "asc" }, { created_at: "asc" }],
-        });
-  const urlsByInsurancePolicyId = new Map<string, typeof insuranceEntityUrls>();
-  for (const u of insuranceEntityUrls) {
-    const list = urlsByInsurancePolicyId.get(u.entity_id) ?? [];
-    list.push(u);
-    urlsByInsurancePolicyId.set(u.entity_id, list);
-  }
-
-  const insuranceListRedirect = "/dashboard/insurance-policies";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -370,7 +333,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full min-w-[880px] text-left text-sm">
+              <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">
@@ -404,54 +367,60 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 </thead>
                 <tbody>
                   {policies.map((p) => (
-                    <Fragment key={p.id}>
-                      <tr className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                        <td className="px-4 py-3 text-slate-300">
-                          {getInsurancePolicyTypeLabel(p.policy_type, lang)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-200">
-                          {p.car ? (
-                            <Link
-                              href={`/dashboard/cars/${p.car_id}`}
-                              className="text-sky-400 hover:text-sky-300"
-                            >
-                              {p.car.maker} {p.car.model}
-                              {p.car.plate_number ? ` (${p.car.plate_number})` : ""}
-                            </Link>
-                          ) : p.family_member ? (
-                            <span className="text-slate-300">{p.family_member.full_name}</span>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
-                        <td className="px-4 py-3 text-slate-300">
-                          {p.policy_name}
-                          {p.policy_number ? (
-                            <span className="block text-xs text-slate-500">#{p.policy_number}</span>
-                          ) : null}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400">
-                          {formatHouseholdDate(p.policy_start_date, dateDisplayFormat)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-300 tabular-nums">
-                          {formatPremium(p.premium_paid, p.premium_currency)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400">
-                          {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
-                            {p.is_active
-                              ? isHebrew
-                                ? "פעיל"
-                                : "Active"
-                              : isHebrew
-                                ? "לא פעיל"
-                                : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
+                    <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                      <td className="px-4 py-3 text-slate-300">
+                        {getInsurancePolicyTypeLabel(p.policy_type, lang)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-200">
+                        {p.car ? (
+                          <Link
+                            href={`/dashboard/cars/${p.car_id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {p.car.maker} {p.car.model}
+                            {p.car.plate_number ? ` (${p.car.plate_number})` : ""}
+                          </Link>
+                        ) : p.family_member ? (
+                          <span className="text-slate-300">{p.family_member.full_name}</span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {p.policy_name}
+                        {p.policy_number ? (
+                          <span className="block text-xs text-slate-500">#{p.policy_number}</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.policy_start_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300 tabular-nums">
+                        {formatPremium(p.premium_paid, p.premium_currency)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
+                          {p.is_active
+                            ? isHebrew
+                              ? "פעיל"
+                              : "Active"
+                            : isHebrew
+                              ? "לא פעיל"
+                              : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <Link
+                            href={`/dashboard/insurance-policies/${p.id}`}
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {isHebrew ? "עריכה" : "Edit"}
+                          </Link>
                           <form action={toggleInsurancePolicyActive} className="inline">
                             <input type="hidden" name="policy_id" value={p.id} />
                             <input type="hidden" name="next_active" value={p.is_active ? "0" : "1"} />
@@ -466,222 +435,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                                   : "Activate"}
                             </button>
                           </form>
-                        </td>
-                      </tr>
-                      {showEntityUrlPanels ? (
-                        <tr className="border-b border-slate-700/80 bg-slate-950/30">
-                          <td colSpan={9} className="px-4 py-3">
-                            <EntityUrlsPanel
-                              entityKind="insurance_policy"
-                              entityId={p.id}
-                              redirectTo={insuranceListRedirect}
-                              urls={urlsByInsurancePolicyId.get(p.id) ?? []}
-                              isHebrew={isHebrew}
-                            />
-                          </td>
-                        </tr>
-                      ) : null}
-                      <tr className="border-b border-slate-700/80 bg-slate-900/40">
-                        <td colSpan={9} className="px-4 py-4">
-                          <p className="mb-3 text-xs font-medium text-slate-400">
-                            {isHebrew ? "עריכת פוליסה" : "Edit policy"}
-                          </p>
-                          <form
-                            action={updateInsurancePolicy}
-                            className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-950/50 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                          >
-                            <input type="hidden" name="insurance_form_context" value="main" />
-                            <input type="hidden" name="policy_id" value={p.id} />
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "סוג ביטוח" : "Policy type"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <select
-                                name="policy_type"
-                                required
-                                defaultValue={p.policy_type}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              >
-                                {INSURANCE_POLICY_TYPE_VALUES.map((t) => (
-                                  <option key={t} value={t}>
-                                    {getInsurancePolicyTypeLabel(t, lang)}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "רכב (ביטוח רכב בלבד)" : "Car (car only)"}
-                              </label>
-                              <select
-                                name="car_id"
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                                disabled={cars.length === 0}
-                                defaultValue={p.car_id ?? ""}
-                              >
-                                <option value="">{isHebrew ? "ללא" : "None"}</option>
-                                {cars.map((car) => (
-                                  <option key={car.id} value={car.id}>
-                                    {car.maker} {car.model}
-                                    {car.plate_number ? ` (${car.plate_number})` : ""}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "בן משפחה (אופציונלי)" : "Policy holder (optional)"}
-                              </label>
-                              <select
-                                name="family_member_id"
-                                defaultValue={p.family_member_id ?? ""}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              >
-                                <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
-                                {familyMembers.map((m) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.full_name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "ספק" : "Provider"} <span className="text-rose-400">*</span>
-                              </label>
-                              <input
-                                name="provider_name"
-                                required
-                                defaultValue={p.provider_name}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "שם הפוליסה" : "Policy name"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <input
-                                name="policy_name"
-                                required
-                                defaultValue={p.policy_name}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "מספר פוליסה" : "Policy number"}
-                              </label>
-                              <input
-                                name="policy_number"
-                                defaultValue={p.policy_number ?? ""}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "טלפון" : "Contact phone"}
-                              </label>
-                              <input
-                                name="contact_phone"
-                                type="tel"
-                                defaultValue={p.contact_phone ?? ""}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "אימייל" : "Contact email"}
-                              </label>
-                              <input
-                                name="contact_email"
-                                type="email"
-                                defaultValue={p.contact_email ?? ""}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "אתר" : "Website"}
-                              </label>
-                              <input
-                                name="website_url"
-                                type="url"
-                                defaultValue={p.website_url ?? ""}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "תאריך התחלה" : "Policy start"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <input
-                                name="policy_start_date"
-                                type="date"
-                                required
-                                defaultValue={toDateInputValue(p.policy_start_date)}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "תאריך חידוש" : "Renewal / expiration"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <input
-                                name="expiration_date"
-                                type="date"
-                                required
-                                defaultValue={toDateInputValue(p.expiration_date)}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "פרמיה" : "Premium"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <input
-                                name="premium_paid"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
-                                defaultValue={p.premium_paid.toString()}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-400">
-                                {isHebrew ? "מטבע" : "Currency"}{" "}
-                                <span className="text-rose-400">*</span>
-                              </label>
-                              <select
-                                name="premium_currency"
-                                required
-                                defaultValue={p.premium_currency}
-                                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                              >
-                                <option value="ILS">ILS</option>
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                                <option value="GBP">GBP</option>
-                              </select>
-                            </div>
-                            <div className="flex items-end">
-                              <button
-                                type="submit"
-                                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-                              >
-                                {isHebrew ? "שמירה" : "Save changes"}
-                              </button>
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    </Fragment>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

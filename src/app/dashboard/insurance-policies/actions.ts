@@ -54,6 +54,15 @@ function redirectInsurance(context: "main" | "clinic", search: string) {
   redirect(`${base}${q}`);
 }
 
+/** When editing from the policy detail page, return here instead of the list. */
+function parsePostSaveRedirectMain(formData: FormData, policyId: string): string | null {
+  const raw = (formData.get("post_save_redirect") as string | null)?.trim();
+  if (!raw) return null;
+  const path = raw.split("?")[0];
+  if (path === `/dashboard/insurance-policies/${policyId}`) return path;
+  return null;
+}
+
 async function resolveCarAndFamilyMember(
   householdId: string,
   policy_type: InsurancePolicyType,
@@ -206,9 +215,10 @@ export async function updateInsurancePolicy(formData: FormData) {
   if (!id) {
     redirectInsurance(context, "error=Missing+policy+id");
   }
+  const policyId = id!;
 
   const existing = await prisma.insurance_policies.findFirst({
-    where: { id, household_id: householdId },
+    where: { id: policyId, household_id: householdId },
   });
   if (!existing) {
     redirectInsurance(context, "error=Policy+not+found");
@@ -266,7 +276,7 @@ export async function updateInsurancePolicy(formData: FormData) {
   const premU = premium_paid as string;
 
   await prisma.insurance_policies.update({
-    where: { id },
+    where: { id: policyId },
     data: {
       policy_type,
       car_id: resolved.car_id,
@@ -285,6 +295,13 @@ export async function updateInsurancePolicy(formData: FormData) {
   });
 
   revalidateInsuranceRelatedPaths(resolved.car_id);
+  revalidatePath(`/dashboard/insurance-policies/${policyId}`);
+  if (context === "main") {
+    const back = parsePostSaveRedirectMain(formData, policyId);
+    if (back) {
+      redirect(`${back}?updated=1`);
+    }
+  }
   const base =
     context === "clinic"
       ? "/dashboard/private-clinic/clinic-insurance"
@@ -305,19 +322,27 @@ export async function toggleInsurancePolicyActive(formData: FormData) {
   if (!id || (nextRaw !== "0" && nextRaw !== "1")) {
     redirectInsurance(context, "error=Invalid+toggle");
   }
+  const policyId = id!;
   const nextActive = nextRaw === "1";
 
   const row = await prisma.insurance_policies.findFirst({
-    where: { id, household_id: householdId },
+    where: { id: policyId, household_id: householdId },
     select: { car_id: true },
   });
 
   await prisma.insurance_policies.updateMany({
-    where: { id, household_id: householdId },
+    where: { id: policyId, household_id: householdId },
     data: { is_active: nextActive },
   });
 
   revalidateInsuranceRelatedPaths(row?.car_id ?? null);
+  revalidatePath(`/dashboard/insurance-policies/${policyId}`);
+  if (context === "main") {
+    const back = parsePostSaveRedirectMain(formData, policyId);
+    if (back) {
+      redirect(`${back}?updated=1`);
+    }
+  }
   const base =
     context === "clinic"
       ? "/dashboard/private-clinic/clinic-insurance"
