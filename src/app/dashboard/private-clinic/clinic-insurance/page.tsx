@@ -9,9 +9,10 @@ import { formatHouseholdDate } from "@/lib/household-date-format";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
 import { privateClinicClinicInsurance } from "@/lib/private-clinic-i18n";
+import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createInsurancePolicy, toggleInsurancePolicyActive } from "@/app/dashboard/insurance-policies/actions";
+import { createInsurancePolicy } from "@/app/dashboard/insurance-policies/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,8 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
-  const lang: "en" | "he" = uiLanguage === "he" ? "he" : "en";
+  const isHebrew = uiLanguage === "he";
+  const lang: "en" | "he" = isHebrew ? "he" : "en";
   const t = privateClinicClinicInsurance(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -298,6 +300,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colType}</th>
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colProvider}</th>
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colPolicy}</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "קובץ" : "File"}</th>
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colAnnual}</th>
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colRenewal}</th>
                   <th className="px-4 py-3 font-medium text-slate-300">{t.colStatus}</th>
@@ -316,6 +319,16 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                       {p.policy_number ? (
                         <span className="block text-xs text-slate-500">#{p.policy_number}</span>
                       ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-300">
+                      {p.policy_storage_key ? (
+                        <ProxiedFileOpenDownloadLinks
+                          downloadApiPath={`/api/insurance-policies/${p.id}/download`}
+                          downloadFileName={p.policy_file_name ?? undefined}
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-500">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-300 tabular-nums">
                       {formatPremium(p.premium_paid, p.premium_currency)}
@@ -336,14 +349,6 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                         >
                           {t.edit}
                         </Link>
-                        <form action={toggleInsurancePolicyActive} className="inline">
-                          <input type="hidden" name="policy_id" value={p.id} />
-                          <input type="hidden" name="next_active" value={p.is_active ? "0" : "1"} />
-                          <input type="hidden" name="insurance_form_context" value="clinic" />
-                          <button type="submit" className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                            {p.is_active ? t.deactivate : t.activate}
-                          </button>
-                        </form>
                       </div>
                     </td>
                   </tr>

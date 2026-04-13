@@ -10,6 +10,7 @@ import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
 } from "@/lib/insurance-policy-type-labels";
+import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
@@ -374,6 +375,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                       {isHebrew ? "פוליסה" : "Policy"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
+                      {isHebrew ? "קובץ" : "File"}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
                       {isHebrew ? "התחלה" : "Start"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
@@ -417,6 +421,16 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                         {p.policy_number ? (
                           <span className="block text-xs text-slate-500">#{p.policy_number}</span>
                         ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {p.policy_storage_key ? (
+                          <ProxiedFileOpenDownloadLinks
+                            downloadApiPath={`/api/insurance-policies/${p.id}/download`}
+                            downloadFileName={p.policy_file_name ?? undefined}
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(p.policy_start_date, dateDisplayFormat)}
