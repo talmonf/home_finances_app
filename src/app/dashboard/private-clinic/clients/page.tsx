@@ -91,6 +91,15 @@ export default async function ClientsPage({
     none: c.none,
     alsoSeenUnder: cl.alsoSeenUnder,
   };
+  const statusOptions = [
+    { value: "none", label: cl.statusNone },
+    { value: "exists", label: cl.statusExists },
+    { value: "filed_in_hospitalization", label: cl.statusFiledInHospitalization },
+    { value: "filed_recognized", label: cl.statusFiledRecognized },
+    { value: "filed_rejected", label: cl.statusFiledRejected },
+    { value: "filed_appeal", label: cl.statusFiledAppeal },
+    { value: "filed_worsening", label: cl.statusFiledWorsening },
+  ];
 
   function toDateInputValue(d: Date | null | undefined) {
     if (!d) return "";
@@ -168,6 +177,67 @@ export default async function ClientsPage({
             placeholder={cl.address}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{cl.visitFrequency}</label>
+            <div className="flex items-center gap-2">
+              <label className="sr-only" htmlFor="new_visits_per_period_count">
+                {cl.visitsPer}
+              </label>
+              <input
+                id="new_visits_per_period_count"
+                name="visits_per_period_count"
+                type="number"
+                min={1}
+                max={14}
+                step={1}
+                defaultValue={1}
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{cl.visitsPer}</span>
+              <label className="sr-only" htmlFor="new_visits_per_period_weeks">
+                {cl.weeks}
+              </label>
+              <input
+                id="new_visits_per_period_weeks"
+                name="visits_per_period_weeks"
+                type="number"
+                min={1}
+                max={12}
+                step={1}
+                defaultValue={1}
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{cl.weeks}</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{cl.disabilityStatus}</label>
+            <select
+              name="disability_status"
+              defaultValue="none"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{cl.rehabBasketStatus}</label>
+            <select
+              name="rehab_basket_status"
+              defaultValue="none"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <textarea
             name="notes"
             placeholder={c.notes}
@@ -352,6 +422,67 @@ export default async function ClientsPage({
                       className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     />
                   )}
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{cl.visitFrequency}</label>
+                    <div className="flex items-center gap-2">
+                      <label className="sr-only" htmlFor={`visits_per_period_count_${row.id}`}>
+                        {cl.visitsPer}
+                      </label>
+                      <input
+                        id={`visits_per_period_count_${row.id}`}
+                        name="visits_per_period_count"
+                        type="number"
+                        min={1}
+                        max={14}
+                        step={1}
+                        defaultValue={row.visits_per_period_count ?? 1}
+                        className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                      <span className="text-xs text-slate-400">{cl.visitsPer}</span>
+                      <label className="sr-only" htmlFor={`visits_per_period_weeks_${row.id}`}>
+                        {cl.weeks}
+                      </label>
+                      <input
+                        id={`visits_per_period_weeks_${row.id}`}
+                        name="visits_per_period_weeks"
+                        type="number"
+                        min={1}
+                        max={12}
+                        step={1}
+                        defaultValue={row.visits_per_period_weeks ?? 1}
+                        className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                      <span className="text-xs text-slate-400">{cl.weeks}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{cl.disabilityStatus}</label>
+                    <select
+                      name="disability_status"
+                      defaultValue={row.disability_status ?? "none"}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{cl.rehabBasketStatus}</label>
+                    <select
+                      name="rehab_basket_status"
+                      defaultValue={row.rehab_basket_status ?? "none"}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {obfuscate ? <input type="hidden" name="notes" value={row.notes ?? ""} /> : null}
                   {obfuscate ? (
                     <textarea

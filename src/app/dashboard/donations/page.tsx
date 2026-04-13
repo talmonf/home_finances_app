@@ -157,6 +157,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
             bankAccounts={bankAccounts.map((a) => ({ id: a.id, label: `${a.account_name} · ${a.bank_name}` }))}
             digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
             uiLanguage={uiLanguage}
+            dateDisplayFormat={dateDisplayFormat}
           />
         </section>
 

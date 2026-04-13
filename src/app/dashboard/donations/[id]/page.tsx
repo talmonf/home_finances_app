@@ -1,4 +1,10 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentUiLanguage,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DonationForm } from "../DonationForm";
@@ -23,6 +29,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -163,6 +170,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
           }))}
           digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
           uiLanguage={uiLanguage}
+          dateDisplayFormat={dateDisplayFormat}
         />
       </div>
     </div>

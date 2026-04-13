@@ -1470,6 +1470,10 @@ model therapy_clients {
   first_name         String
   last_name          String?
   id_number          String?
+  visits_per_period_count Int?
+  visits_per_period_weeks Int?
+  disability_status  String?
+  rehab_basket_status String?
   start_date         DateTime? @db.Date
   end_date           DateTime? @db.Date
   notes              String?

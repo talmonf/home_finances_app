@@ -3,6 +3,7 @@
 import { DonationKind } from "@/generated/prisma/enums";
 import { useState } from "react";
 import type { UiLanguage } from "@/lib/ui-language";
+import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 
 type PayeeOption = { id: string; name: string };
 
@@ -45,6 +46,7 @@ export function DonationForm({
   donationId,
   initial,
   uiLanguage,
+  dateDisplayFormat,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   payees: PayeeOption[];
@@ -55,6 +57,7 @@ export function DonationForm({
   donationId?: string;
   initial?: DonationFormInitialValues;
   uiLanguage: UiLanguage;
+  dateDisplayFormat: HouseholdDateDisplayFormat;
 }) {
   const initialKind = initial?.kind ?? DonationKind.one_time;
   const [kind, setKind] = useState<string>(initialKind);
@@ -64,6 +67,8 @@ export function DonationForm({
   const initialPaymentMethod = initial?.payment_method ?? "cash";
   const [paymentMethod, setPaymentMethod] = useState<string>(initialPaymentMethod);
   const isHebrew = uiLanguage === "he";
+  const dateFormatHint =
+    dateDisplayFormat === "DMY" ? "dd/mm/yyyy" : dateDisplayFormat === "MDY" ? "mm/dd/yyyy" : "yyyy-mm-dd";
 
   return (
     <form
@@ -108,7 +113,7 @@ export function DonationForm({
           </div>
           <div>
             <label htmlFor="donation_date" className="mb-1 block text-xs font-medium text-slate-400">
-              Donation date
+              Donation date ({dateFormatHint})
             </label>
             <input
               id="donation_date"
@@ -447,7 +452,7 @@ export function DonationForm({
       </div>
       <div>
         <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
-          Next renewal / reminder (optional)
+          Next renewal / reminder (optional, {dateFormatHint})
         </label>
         <input
           id="renewal_date"

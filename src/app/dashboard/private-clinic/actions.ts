@@ -23,6 +23,31 @@ import type {
 
 const BASE = "/dashboard/private-clinic";
 const ADMIN_HOUSEHOLDS = "/admin/households";
+const CLIENT_STATUS_OPTIONS = new Set([
+  "none",
+  "exists",
+  "filed_in_hospitalization",
+  "filed_recognized",
+  "filed_rejected",
+  "filed_appeal",
+  "filed_worsening",
+]);
+
+function parseVisitCount(raw: string | null | undefined): number | null {
+  const n = Number((raw ?? "").trim());
+  if (!Number.isFinite(n)) return null;
+  const int = Math.trunc(n);
+  if (int < 1 || int > 14) return null;
+  return int;
+}
+
+function parseVisitWeeks(raw: string | null | undefined): number | null {
+  const n = Number((raw ?? "").trim());
+  if (!Number.isFinite(n)) return null;
+  const int = Math.trunc(n);
+  if (int < 1 || int > 12) return null;
+  return int;
+}
 
 async function requireSuperAdminHouseholdFromForm(formData: FormData): Promise<string> {
   await requireSuperAdmin();
@@ -774,6 +799,12 @@ export async function createTherapyClient(formData: FormData) {
   const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
   const home = (formData.get("home_phone") as string)?.trim() || "";
   const phones = [mobile, home].filter(Boolean).join("\n") || null;
+  const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
+  const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  const disability_status_raw = (formData.get("disability_status") as string)?.trim() || "";
+  const rehab_basket_status_raw = (formData.get("rehab_basket_status") as string)?.trim() || "";
+  const disability_status = CLIENT_STATUS_OPTIONS.has(disability_status_raw) ? disability_status_raw : null;
+  const rehab_basket_status = CLIENT_STATUS_OPTIONS.has(rehab_basket_status_raw) ? rehab_basket_status_raw : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.create({
@@ -791,6 +822,10 @@ export async function createTherapyClient(formData: FormData) {
         email: (formData.get("email") as string)?.trim() || null,
         phones,
         address: (formData.get("address") as string)?.trim() || null,
+        visits_per_period_count,
+        visits_per_period_weeks,
+        disability_status,
+        rehab_basket_status,
       },
     });
 
@@ -839,6 +874,12 @@ export async function updateTherapyClient(formData: FormData) {
   const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
   const home = (formData.get("home_phone") as string)?.trim() || "";
   const phones = [mobile, home].filter(Boolean).join("\n") || null;
+  const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
+  const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  const disability_status_raw = (formData.get("disability_status") as string)?.trim() || "";
+  const rehab_basket_status_raw = (formData.get("rehab_basket_status") as string)?.trim() || "";
+  const disability_status = CLIENT_STATUS_OPTIONS.has(disability_status_raw) ? disability_status_raw : null;
+  const rehab_basket_status = CLIENT_STATUS_OPTIONS.has(rehab_basket_status_raw) ? rehab_basket_status_raw : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.update({
@@ -855,6 +896,10 @@ export async function updateTherapyClient(formData: FormData) {
         email: (formData.get("email") as string)?.trim() || null,
         phones,
         address: (formData.get("address") as string)?.trim() || null,
+        visits_per_period_count,
+        visits_per_period_weeks,
+        disability_status,
+        rehab_basket_status,
         is_active: formData.has("is_active"),
       },
     });

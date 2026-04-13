@@ -133,6 +133,14 @@ export async function importTherapyWorkbook(params: {
         email: str(r.email) || null,
         phones: str(r.phones) || null,
         address: str(r.address) || null,
+        visits_per_period_count: str(r.visits_per_period_count)
+          ? Math.trunc(Number(str(r.visits_per_period_count)))
+          : null,
+        visits_per_period_weeks: str(r.visits_per_period_weeks)
+          ? Math.trunc(Number(str(r.visits_per_period_weeks)))
+          : null,
+        disability_status: str(r.disability_status) || null,
+        rehab_basket_status: str(r.rehab_basket_status) || null,
         import_key: str(r.import_key) || null,
         is_active: str(r.is_active) !== "false",
       };

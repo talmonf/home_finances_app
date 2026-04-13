@@ -14,7 +14,11 @@ function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"):
   return n === 1 ? "1 open reimbursement request" : `${n} open reimbursement requests`;
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   const session = await getAuthSession();
 
   if (!session?.user) {
@@ -102,6 +106,11 @@ export default async function Home() {
   const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
   );
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const searchQuery = (resolvedSearchParams?.q ?? "").trim();
+  const searchQueryLower = searchQuery.toLowerCase();
+  const filterBySearch = (text: string) =>
+    !searchQueryLower || text.toLowerCase().includes(searchQueryLower);
 
   if (
     !isSuperAdmin &&
@@ -112,8 +121,12 @@ export default async function Home() {
     redirect("/dashboard/private-clinic");
   }
 
-  const setupSections = visibleSections.filter((s) => s.group === "setup");
-  const ongoingSections = visibleSections.filter((s) => s.group === "ongoing");
+  const setupSections = visibleSections
+    .filter((s) => s.group === "setup")
+    .filter((s) => filterBySearch(`${s.title} ${s.description}`));
+  const ongoingSections = visibleSections
+    .filter((s) => s.group === "ongoing")
+    .filter((s) => filterBySearch(`${s.title} ${s.description}`));
 
   const setupSectionIds = setupSections.map((s) => s.id);
 
@@ -138,7 +151,7 @@ export default async function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
       <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-slate-50">
               Welcome back, {session.user.name ?? "user"}
@@ -151,6 +164,21 @@ export default async function Home() {
                   : "This dashboard will show your enabled finance sections and key finance insights."}
             </p>
           </div>
+          {!isSuperAdmin && (
+            <form method="get" className="w-full max-w-[220px]">
+              <label htmlFor="dashboard-search" className="mb-1 block text-xs text-slate-400">
+                Search tiles
+              </label>
+              <input
+                id="dashboard-search"
+                name="q"
+                type="search"
+                defaultValue={searchQuery}
+                placeholder="e.g. donations"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500"
+              />
+            </form>
+          )}
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {showHouseholdsCard && (
@@ -177,7 +205,9 @@ export default async function Home() {
             <div className="col-span-full">
               {setupSections.length === 0 && ongoingSections.length === 0 ? (
                 <p className="text-sm text-slate-400">
-                  Your super admin hasn&apos;t enabled any sections yet.
+                  {searchQuery
+                    ? "No dashboard tiles match your search."
+                    : "Your super admin hasn&apos;t enabled any sections yet."}
                 </p>
               ) : (
                 <>
