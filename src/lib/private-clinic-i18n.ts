@@ -329,6 +329,23 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "Optional: link a credit/incoming payment that matches this session fee.",
       "אופציונלי: קישור לזכות/הכנסה שמתאימה לעלות המפגש.",
     ),
+    paymentDate: p("Payment date", "תאריך תשלום"),
+    paymentMethod: p("Payment method", "אמצעי תשלום"),
+    paymentMethodUnset: p("Not set", "לא הוגדר"),
+    paymentBankTransfer: p("Bank transfer", "העברה בנקאית"),
+    paymentDigital: p("Digital payment", "תשלום דיגיטלי"),
+    paymentIntoAccount: p("Paid into account", "חשבון שאליו הופקד"),
+    paymentDigitalApp: p("Digital method", "אפליקציה / אמצעי"),
+    paymentDetailsCol: p("Payment", "תשלום"),
+    paymentFieldsHint: p(
+      "If you choose bank transfer, pick the account that received the fee. If you choose digital payment, pick the saved method (e.g. Bit, Paybox) from your household list.",
+      "אם בחרתם העברה בנקאית, בחרו את החשבון שאליו הופקד התשלום. אם בחרתם תשלום דיגיטלי, בחרו את האמצעי השמור (למשל ביט, פייבוקס) מרשימת האמצעים של הבית.",
+    ),
+    receiptCol: p("Receipt", "קבלה"),
+    receiptLinkedHint: p(
+      "Allocated on receipt(s) below. Edit allocations from the receipt page.",
+      "שויך לקבלה/ות למטה. ניתן לערוך שיוך מעמוד הקבלה.",
+    ),
   };
 }
 

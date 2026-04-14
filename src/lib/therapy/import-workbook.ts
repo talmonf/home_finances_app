@@ -219,6 +219,38 @@ export async function importTherapyWorkbook(params: {
       continue;
     }
     try {
+      const pmRaw = str(r.payment_method);
+      const payment_method =
+        pmRaw === "bank_transfer" || pmRaw === "digital_payment"
+          ? (pmRaw as "bank_transfer" | "digital_payment")
+          : null;
+      let payment_date: Date | null = null;
+      if (str(r.payment_date)) {
+        const pd = new Date(str(r.payment_date));
+        payment_date = Number.isNaN(pd.getTime()) ? null : pd;
+      }
+      let payment_bank_account_id: string | null = null;
+      let payment_digital_payment_method_id: string | null = null;
+      if (payment_method === "bank_transfer") {
+        const bid = str(r.payment_bank_account_id);
+        if (bid) {
+          const ba = await prisma.bank_accounts.findFirst({
+            where: { id: bid, household_id: householdId },
+            select: { id: true },
+          });
+          payment_bank_account_id = ba?.id ?? null;
+        }
+      } else if (payment_method === "digital_payment") {
+        const did = str(r.payment_digital_payment_method_id);
+        if (did) {
+          const dm = await prisma.digital_payment_methods.findFirst({
+            where: { id: did, household_id: householdId },
+            select: { id: true },
+          });
+          payment_digital_payment_method_id = dm?.id ?? null;
+        }
+      }
+
       const data = {
         household_id: householdId,
         client_id,
@@ -233,6 +265,10 @@ export async function importTherapyWorkbook(params: {
         note_3: str(r.note_3) || null,
         import_key: str(r.import_key) || null,
         linked_transaction_id: str(r.linked_transaction_id) || null,
+        payment_date,
+        payment_method,
+        payment_bank_account_id,
+        payment_digital_payment_method_id,
       };
       const id = str(r.id);
       if (id) {

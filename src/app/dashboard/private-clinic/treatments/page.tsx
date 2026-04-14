@@ -7,7 +7,8 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
 import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
@@ -50,7 +51,8 @@ export default async function TreatmentsPage({
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
 
-  const [jobs, programs, clients, settings, allocGroups, treatments, visitDefaultsRows] = await Promise.all([
+  const [jobs, programs, clients, settings, allocGroups, treatments, visitDefaultsRows, bankAccounts, digitalPaymentMethods] =
+    await Promise.all([
     prisma.jobs.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { start_date: "desc" },
@@ -89,6 +91,14 @@ export default async function TreatmentsPage({
         job: true,
         program: true,
         attachments: { orderBy: { created_at: "asc" } },
+        payment_bank_account: { select: { account_name: true, bank_name: true } },
+        payment_digital_payment_method: { select: { name: true } },
+        receipt_allocations: {
+          orderBy: { created_at: "asc" },
+          include: {
+            receipt: { select: { id: true, receipt_number: true } },
+          },
+        },
       },
       take: 500,
     }),
@@ -101,6 +111,14 @@ export default async function TreatmentsPage({
         amount: true,
         currency: true,
       },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { account_name: "asc" },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -279,6 +297,58 @@ export default async function TreatmentsPage({
               noneOptionLabel={c.txNoneLinked}
             />
           </div>
+          <div className="md:col-span-2 space-y-2 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3">
+            <p className="text-xs text-slate-500">{tr.paymentFieldsHint}</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="block text-xs text-slate-400">{tr.paymentDate}</label>
+                <input
+                  name="payment_date"
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{tr.paymentMethod}</label>
+                <select
+                  name="payment_method"
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">{tr.paymentMethodUnset}</option>
+                  <option value="bank_transfer">{tr.paymentBankTransfer}</option>
+                  <option value="digital_payment">{tr.paymentDigital}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{tr.paymentIntoAccount}</label>
+                <select
+                  name="payment_bank_account_id"
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">—</option>
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.account_name} — {b.bank_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{tr.paymentDigitalApp}</label>
+                <select
+                  name="payment_digital_payment_method_id"
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">—</option>
+                  {digitalPaymentMethods.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
           <textarea
             name="note_1"
             placeholder={note1}
@@ -319,6 +389,8 @@ export default async function TreatmentsPage({
                   <th className="px-3 py-2 text-slate-300">{c.job}</th>
                   <th className="px-3 py-2 text-slate-300">{c.amount}</th>
                   <th className="px-3 py-2 text-slate-300">{c.paid}</th>
+                  <th className="px-3 py-2 text-slate-300">{tr.receiptCol}</th>
+                  <th className="px-3 py-2 text-slate-300">{tr.paymentDetailsCol}</th>
                   <th className="px-3 py-2 text-slate-300">{c.edit}</th>
                 </tr>
               </thead>
@@ -339,6 +411,44 @@ export default async function TreatmentsPage({
                         {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
                       </td>
                       <td className="px-3 py-2 text-slate-400">{treatmentPaymentStatusLabel(uiLanguage, st)}</td>
+                      <td className="max-w-[12rem] px-3 py-2 text-slate-400">
+                        {t.receipt_allocations.length > 0 ? (
+                          <ul className="list-none space-y-1">
+                            {t.receipt_allocations.map((a) => (
+                              <li key={a.id}>
+                                <Link
+                                  href={`/dashboard/private-clinic/receipts/${a.receipt.id}`}
+                                  className="text-sky-400 hover:underline"
+                                >
+                                  #{a.receipt.receipt_number}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="max-w-[14rem] px-3 py-2 text-slate-400">
+                        {(() => {
+                          const parts: string[] = [];
+                          if (t.payment_date) parts.push(formatHouseholdDate(t.payment_date, dateDisplayFormat));
+                          if (t.payment_method === "bank_transfer") {
+                            parts.push(tr.paymentBankTransfer);
+                            if (t.payment_bank_account) {
+                              parts.push(
+                                `${t.payment_bank_account.account_name} (${t.payment_bank_account.bank_name})`,
+                              );
+                            }
+                          } else if (t.payment_method === "digital_payment") {
+                            parts.push(tr.paymentDigital);
+                            if (t.payment_digital_payment_method) {
+                              parts.push(t.payment_digital_payment_method.name);
+                            }
+                          }
+                          return parts.length ? parts.join(" · ") : "—";
+                        })()}
+                      </td>
                       <td className="px-3 py-2 align-top">
                         <details>
                           <summary className="cursor-pointer text-xs text-sky-400">{c.edit}</summary>
@@ -396,6 +506,68 @@ export default async function TreatmentsPage({
                               label={tr.clinicIncomeLink}
                               noneOptionLabel={c.txNoneLinked}
                             />
+                            <p className="text-[10px] text-slate-500">{tr.paymentFieldsHint}</p>
+                            <label className="block text-[10px] text-slate-500">{tr.paymentDate}</label>
+                            <input
+                              name="payment_date"
+                              type="date"
+                              defaultValue={t.payment_date ? t.payment_date.toISOString().slice(0, 10) : ""}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                            />
+                            <label className="block text-[10px] text-slate-500">{tr.paymentMethod}</label>
+                            <select
+                              name="payment_method"
+                              defaultValue={t.payment_method ?? ""}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                            >
+                              <option value="">{tr.paymentMethodUnset}</option>
+                              <option value="bank_transfer">{tr.paymentBankTransfer}</option>
+                              <option value="digital_payment">{tr.paymentDigital}</option>
+                            </select>
+                            <label className="block text-[10px] text-slate-500">{tr.paymentIntoAccount}</label>
+                            <select
+                              name="payment_bank_account_id"
+                              defaultValue={t.payment_bank_account_id ?? ""}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                            >
+                              <option value="">—</option>
+                              {bankAccounts.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.account_name} — {b.bank_name}
+                                </option>
+                              ))}
+                            </select>
+                            <label className="block text-[10px] text-slate-500">{tr.paymentDigitalApp}</label>
+                            <select
+                              name="payment_digital_payment_method_id"
+                              defaultValue={t.payment_digital_payment_method_id ?? ""}
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                            >
+                              <option value="">—</option>
+                              {digitalPaymentMethods.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.name}
+                                </option>
+                              ))}
+                            </select>
+                            {t.receipt_allocations.length > 0 && (
+                              <div className="rounded border border-slate-700/80 bg-slate-800/60 px-2 py-2">
+                                <p className="mb-1 text-[10px] font-medium text-slate-400">{tr.receiptCol}</p>
+                                <p className="mb-1 text-[10px] text-slate-500">{tr.receiptLinkedHint}</p>
+                                <ul className="list-none space-y-1">
+                                  {t.receipt_allocations.map((a) => (
+                                    <li key={a.id}>
+                                      <Link
+                                        href={`/dashboard/private-clinic/receipts/${a.receipt.id}`}
+                                        className="text-xs text-sky-400 hover:underline"
+                                      >
+                                        #{a.receipt.receipt_number}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                             <textarea name="note_1" defaultValue={t.note_1 ?? ""} placeholder={note1} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
                             <textarea name="note_2" defaultValue={t.note_2 ?? ""} placeholder={note2} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
                             <textarea name="note_3" defaultValue={t.note_3 ?? ""} placeholder={note3} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />

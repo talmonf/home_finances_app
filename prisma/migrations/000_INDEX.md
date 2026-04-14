@@ -79,6 +79,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 067 | `067_therapy_hebrew_transcription_provider.sql` | ALTER | Enum `therapy_hebrew_transcription_provider`; `therapy_settings.hebrew_transcription_provider` (default `openrouter`). |
 | 068 | `068_insurance_policy_company_notes_file.sql` | ALTER | `insurance_policies`: `insurance_company`, `notes`; optional policy document S3 columns (`policy_file_*`, `policy_storage_*`, `policy_file_uploaded_at`). |
 | 069 | `069_therapy_clients_frequency_and_statuses.sql` | ALTER | `therapy_clients`: add `visits_per_period_count`, `visits_per_period_weeks`, `disability_status`, `rehab_basket_status` (private clinic client tracking fields). |
+| 070 | `070_therapy_treatment_payment_fields.sql` | ALTER | `therapy_treatments`: optional `payment_date`, `payment_method` (bank transfer / digital payment), FK to `bank_accounts` or `digital_payment_methods`. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -151,6 +152,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 067_therapy_hebrew_transcription_provider.sql
 - [x] 068_insurance_policy_company_notes_file.sql
 - [x] 069_therapy_clients_frequency_and_statuses.sql
+- [x] 070_therapy_treatment_payment_fields.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

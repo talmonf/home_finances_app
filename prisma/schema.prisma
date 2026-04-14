@@ -207,6 +207,7 @@ model bank_accounts {
   car_service_payments            car_services[]
   car_license_payments            car_licenses[]
   savings_policies                savings_policies[]
+  therapy_treatments_payment_destination therapy_treatments[] @relation("TherapyTreatmentPaymentBankAccount")
 }
 
 model credit_cards {
@@ -976,6 +977,7 @@ model digital_payment_methods {
   donations             donations[]
   subscriptions         subscriptions[]
   savings_policies      savings_policies[]
+  therapy_treatments_payment_via therapy_treatments[] @relation("TherapyTreatmentPaymentDigitalMethod")
 }
 
 model medical_appointments {
@@ -1347,6 +1349,13 @@ enum TherapyReceiptPaymentMethod {
   @@map("therapy_receipt_payment_method")
 }
 
+enum TherapyTreatmentPaymentMethod {
+  bank_transfer
+  digital_payment
+
+  @@map("therapy_treatment_payment_method")
+}
+
 enum TherapyAppointmentStatus {
   scheduled
   cancelled
@@ -1526,6 +1535,10 @@ model therapy_treatments {
   note_2                String?
   note_3                String?
   linked_transaction_id String?
+  payment_date                     DateTime?                     @db.Date
+  payment_method                   TherapyTreatmentPaymentMethod?
+  payment_bank_account_id          String?
+  payment_digital_payment_method_id String?
   import_key            String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
@@ -1535,6 +1548,8 @@ model therapy_treatments {
   job                jobs            @relation(fields: [job_id], references: [id], onDelete: Restrict)
   program            therapy_service_programs @relation(fields: [program_id], references: [id], onDelete: Restrict)
   linked_transaction transactions? @relation("TherapyTreatmentTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+  payment_bank_account            bank_accounts?            @relation("TherapyTreatmentPaymentBankAccount", fields: [payment_bank_account_id], references: [id], onDelete: SetNull)
+  payment_digital_payment_method  digital_payment_methods?  @relation("TherapyTreatmentPaymentDigitalMethod", fields: [payment_digital_payment_method_id], references: [id], onDelete: SetNull)
   receipt_allocations therapy_receipt_allocations[]
   appointments_completed therapy_appointments[]
   travel_entries       therapy_travel_entries[]
@@ -1542,6 +1557,8 @@ model therapy_treatments {
 
   @@index([household_id, job_id])
   @@index([household_id, occurred_at])
+  @@index([payment_bank_account_id])
+  @@index([payment_digital_payment_method_id])
 }
 
 model therapy_treatment_attachments {

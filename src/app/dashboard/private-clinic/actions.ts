@@ -18,6 +18,7 @@ import type {
   TherapyAppointmentStatus,
   TherapyReceiptPaymentMethod,
   TherapyReceiptRecipientType,
+  TherapyTreatmentPaymentMethod,
   TherapyVisitType,
 } from "@/generated/prisma/enums";
 
@@ -166,6 +167,54 @@ function parseReceiptPaymentMethod(raw: string | null | undefined): TherapyRecei
     return raw;
   }
   return null;
+}
+
+function parseTreatmentPaymentMethod(raw: string | null | undefined): TherapyTreatmentPaymentMethod | null {
+  if (raw === "bank_transfer" || raw === "digital_payment") return raw;
+  return null;
+}
+
+async function resolveTherapyTreatmentPaymentFields(
+  householdId: string,
+  formData: FormData,
+): Promise<{
+  payment_date: Date | null;
+  payment_method: TherapyTreatmentPaymentMethod | null;
+  payment_bank_account_id: string | null;
+  payment_digital_payment_method_id: string | null;
+}> {
+  const payment_date = parseDate((formData.get("payment_date") as string)?.trim() || null);
+  const payment_method = parseTreatmentPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
+
+  let payment_bank_account_id: string | null = null;
+  let payment_digital_payment_method_id: string | null = null;
+
+  if (payment_method === "bank_transfer") {
+    const bankRaw = (formData.get("payment_bank_account_id") as string)?.trim() || "";
+    if (bankRaw) {
+      const ba = await prisma.bank_accounts.findFirst({
+        where: { id: bankRaw, household_id: householdId },
+        select: { id: true },
+      });
+      payment_bank_account_id = ba?.id ?? null;
+    }
+  } else if (payment_method === "digital_payment") {
+    const digRaw = (formData.get("payment_digital_payment_method_id") as string)?.trim() || "";
+    if (digRaw) {
+      const d = await prisma.digital_payment_methods.findFirst({
+        where: { id: digRaw, household_id: householdId },
+        select: { id: true },
+      });
+      payment_digital_payment_method_id = d?.id ?? null;
+    }
+  }
+
+  return {
+    payment_date,
+    payment_method,
+    payment_bank_account_id,
+    payment_digital_payment_method_id,
+  };
 }
 
 function parseAppointmentStatus(raw: string | null | undefined): TherapyAppointmentStatus | null {
@@ -956,6 +1005,8 @@ export async function createTherapyTreatment(formData: FormData) {
     linked_transaction_id = txRow?.id ?? null;
   }
 
+  const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+
   await prisma.therapy_treatments.create({
     data: {
       id: crypto.randomUUID(),
@@ -971,6 +1022,10 @@ export async function createTherapyTreatment(formData: FormData) {
       note_2: (formData.get("note_2") as string)?.trim() || null,
       note_3: (formData.get("note_3") as string)?.trim() || null,
       linked_transaction_id,
+      payment_date: payment.payment_date,
+      payment_method: payment.payment_method,
+      payment_bank_account_id: payment.payment_bank_account_id,
+      payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
     },
   });
 
@@ -1011,6 +1066,8 @@ export async function updateTherapyTreatment(formData: FormData) {
     linked_transaction_id = txRow?.id ?? null;
   }
 
+  const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+
   await prisma.therapy_treatments.update({
     where: { id },
     data: {
@@ -1024,6 +1081,10 @@ export async function updateTherapyTreatment(formData: FormData) {
       note_2: (formData.get("note_2") as string)?.trim() || null,
       note_3: (formData.get("note_3") as string)?.trim() || null,
       linked_transaction_id,
+      payment_date: payment.payment_date,
+      payment_method: payment.payment_method,
+      payment_bank_account_id: payment.payment_bank_account_id,
+      payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
     },
   });
 
