@@ -22,8 +22,11 @@ export default async function ReceiptsPage() {
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
+  const now = new Date();
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
 
-  const [jobs, receipts] = await Promise.all([
+  const [jobs, receipts, orgJobs] = await Promise.all([
     prisma.jobs.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { start_date: "desc" },
@@ -34,10 +37,86 @@ export default async function ReceiptsPage() {
       take: 200,
       include: { job: true },
     }),
+    prisma.jobs.findMany({
+      where: { household_id: householdId, is_private_clinic: false },
+      select: { id: true },
+    }),
   ]);
+  const orgJobIds = new Set(orgJobs.map((j) => j.id));
+  const treatmentSum = orgJobIds.size
+    ? await prisma.therapy_treatments.aggregate({
+        where: {
+          household_id: householdId,
+          job_id: { in: Array.from(orgJobIds) },
+          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
+        },
+        _sum: { amount: true },
+      })
+    : { _sum: { amount: null } };
+  const consultationSum = orgJobIds.size
+    ? await prisma.therapy_consultations.aggregate({
+        where: {
+          household_id: householdId,
+          job_id: { in: Array.from(orgJobIds) },
+          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
+        },
+        _sum: { expected_income: true },
+      })
+    : { _sum: { expected_income: null } };
+  const travelSum = orgJobIds.size
+    ? await prisma.therapy_travel_entries.aggregate({
+        where: {
+          household_id: householdId,
+          job_id: { in: Array.from(orgJobIds) },
+          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
+        },
+        _sum: { reimbursable_amount: true },
+      })
+    : { _sum: { reimbursable_amount: null } };
+
+  const paidSum = orgJobIds.size
+    ? await prisma.therapy_receipts.aggregate({
+        where: {
+          household_id: householdId,
+          job_id: { in: Array.from(orgJobIds) },
+          recipient_type: "organization",
+          covered_period_start: { lte: lastMonthEnd },
+          covered_period_end: { gte: lastMonthStart },
+        },
+        _sum: { total_amount: true },
+      })
+    : { _sum: { total_amount: null } };
+
+  const earned =
+    Number(treatmentSum._sum.amount ?? 0) +
+    Number(consultationSum._sum.expected_income ?? 0) +
+    Number(travelSum._sum.reimbursable_amount ?? 0);
+  const paid = Number(paidSum._sum.total_amount ?? 0);
+  const outstanding = earned - paid;
+  const monthLabel = `${lastMonthStart.toISOString().slice(0, 10)} - ${lastMonthEnd.toISOString().slice(0, 10)}`;
 
   return (
     <div className="space-y-8">
+      <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <h2 className="text-lg font-medium text-slate-200">{r.receivablesLastMonth}</h2>
+        <p className="text-xs text-slate-400">
+          {r.receivablesRangeLabel}: {monthLabel}
+        </p>
+        <div className="grid gap-3 text-sm md:grid-cols-3">
+          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
+            <p className="text-slate-400">{r.earnedAmount}</p>
+            <p className="text-slate-100">{`${earned.toFixed(2)} ILS`}</p>
+          </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
+            <p className="text-slate-400">{r.paidAmount}</p>
+            <p className="text-slate-100">{`${paid.toFixed(2)} ILS`}</p>
+          </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
+            <p className="text-slate-400">{r.outstandingAmount}</p>
+            <p className={outstanding > 0 ? "text-amber-300" : "text-emerald-300"}>{`${outstanding.toFixed(2)} ILS`}</p>
+          </div>
+        </div>
+      </section>
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{r.newReceipt}</h2>
         <form
@@ -77,6 +156,18 @@ export default async function ReceiptsPage() {
           <input
             name="currency"
             defaultValue="ILS"
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <input
+            name="covered_period_start"
+            type="date"
+            placeholder={r.coveredStart}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <input
+            name="covered_period_end"
+            type="date"
+            placeholder={r.coveredEnd}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
           <select
@@ -134,6 +225,7 @@ export default async function ReceiptsPage() {
                   <th className="px-3 py-2 text-slate-300">{r.tableDate}</th>
                   <th className="px-3 py-2 text-slate-300">{r.tableJob}</th>
                   <th className="px-3 py-2 text-slate-300">{r.tableAmount}</th>
+                  <th className="px-3 py-2 text-slate-300">{r.receivablesRangeLabel}</th>
                   <th className="px-3 py-2 text-slate-300">{r.tableView}</th>
                 </tr>
               </thead>
@@ -145,6 +237,11 @@ export default async function ReceiptsPage() {
                     <td className="px-3 py-2 text-slate-400">{rec.job.job_title}</td>
                     <td className="px-3 py-2 text-slate-200">
                       {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency)}
+                    </td>
+                    <td className="px-3 py-2 text-slate-400">
+                      {rec.covered_period_start && rec.covered_period_end
+                        ? `${rec.covered_period_start.toISOString().slice(0, 10)} - ${rec.covered_period_end.toISOString().slice(0, 10)}`
+                        : "-"}
                     </td>
                     <td className="px-3 py-2">
                       <Link href={`/dashboard/private-clinic/receipts/${rec.id}`} className="text-xs text-sky-400">

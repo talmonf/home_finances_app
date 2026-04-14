@@ -134,6 +134,18 @@ export default async function ReceiptDetailPage({
             defaultValue={receipt.currency}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
+          <input
+            name="covered_period_start"
+            type="date"
+            defaultValue={receipt.covered_period_start ? receipt.covered_period_start.toISOString().slice(0, 10) : ""}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <input
+            name="covered_period_end"
+            type="date"
+            defaultValue={receipt.covered_period_end ? receipt.covered_period_end.toISOString().slice(0, 10) : ""}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
           <select
             name="recipient_type"
             defaultValue={receipt.recipient_type}

@@ -58,7 +58,13 @@ type PendingReceipt = {
   notes: string | null;
   paymentMethod: "cash" | "bank_transfer" | "digital_card" | "credit_card";
   recipientType: "client" | "organization";
+  coveredPeriodStart?: Date | null;
+  coveredPeriodEnd?: Date | null;
   allocations: PendingAllocation[];
+  treatmentKeysToMarkPaid?: string[];
+  treatmentPaymentMethod?: "bank_transfer" | "digital_payment" | null;
+  treatmentBankAccountId?: string | null;
+  treatmentDigitalMethodId?: string | null;
 };
 
 export type ImportConflict = {
@@ -151,6 +157,16 @@ function parseDate(raw: string): Date | null {
   const d = new Date(trimmed);
   if (!Number.isNaN(d.getTime())) return d;
   return null;
+}
+
+function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const withDay = new Date(`1 ${t}`);
+  if (Number.isNaN(withDay.getTime())) return null;
+  const start = new Date(Date.UTC(withDay.getUTCFullYear(), withDay.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(withDay.getUTCFullYear(), withDay.getUTCMonth() + 1, 0));
+  return { start, end };
 }
 
 function monthKey(d: Date): string {
@@ -423,6 +439,8 @@ async function analyzePrivateProfile(
         notes: noteRaw,
         paymentMethod: payment.receiptMethod,
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
+        coveredPeriodStart: null,
+        coveredPeriodEnd: null,
         allocations: allocations.map((a) => ({
           amount: a.amount,
           treatmentKey: a.treatmentKey,
@@ -504,6 +522,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   isPrivateClinic: boolean;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
+  bankAccounts: Array<{ id: string; account_number: string | null }>;
+  digitalMethods: Array<{ id: string; name: string }>;
 }): Promise<AnalyzeScratch> {
   const rows = sheetRows(params.workbook, params.sheetName);
   const scratch: AnalyzeScratch = {
@@ -523,6 +543,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   const existingProgramNames = new Set(
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
   );
+  const treatmentKeysByMonth = new Map<string, string[]>();
   for (let idx = rows.length - 1; idx >= 0; idx -= 1) {
     const row = rows[idx]!;
     const rowNumber = idx + 2;
@@ -551,6 +572,43 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         scratch.errors.push(`Row ${rowNumber}: monthly payment row is missing required receipt fields.`);
         continue;
       }
+      let bankId: string | null = null;
+      let digitalId: string | null = null;
+      if (payment.treatmentMethod === "bank_transfer") {
+        if (payment.accountDigits) {
+          const digits = normalizeDigits(payment.accountDigits);
+          const matches = ctx.bankAccounts.filter((b) => {
+            const v = normalizeDigits(b.account_number ?? "");
+            return v.includes(digits) || digits.includes(v);
+          });
+          if (matches.length === 1) bankId = matches[0]!.id;
+          else if (matches.length > 1) {
+            scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
+            continue;
+          } else if (ctx.isPrivateClinic) {
+            scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+          } else {
+            scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+            continue;
+          }
+        } else if (!ctx.isPrivateClinic) {
+          scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
+          continue;
+        }
+      }
+      if (payment.treatmentMethod === "digital_payment") {
+        const hint = payment.digitalHint?.toLowerCase() ?? "";
+        const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
+        if (matches.length === 1) digitalId = matches[0]!.id;
+        else {
+          scratch.errors.push(`Row ${rowNumber}: could not uniquely match digital payment method ${payRoute}.`);
+          continue;
+        }
+      }
+      const coveredMonthRaw = s(row["תאריך"]);
+      const coveredMonth = parseCoveredMonth(coveredMonthRaw);
+      const coveredMonthKey = coveredMonth ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}` : null;
+      const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
       scratch.pendingReceipts.push({
         key: `org:${receiptNum}`,
         rowNumber,
@@ -560,7 +618,13 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         notes: s(row["הערות"]) || null,
         paymentMethod: payment.receiptMethod,
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
+        coveredPeriodStart: coveredMonth?.start ?? null,
+        coveredPeriodEnd: coveredMonth?.end ?? null,
         allocations: [],
+        treatmentKeysToMarkPaid: treatmentKeys,
+        treatmentPaymentMethod: payment.treatmentMethod,
+        treatmentBankAccountId: bankId,
+        treatmentDigitalMethodId: digitalId,
       });
       continue;
     }
@@ -610,6 +674,10 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         paymentDigitalMethodId: null,
       });
       addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+      const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
+      const arr = treatmentKeysByMonth.get(month) ?? [];
+      arr.push(key);
+      treatmentKeysByMonth.set(month, arr);
       const ap = scratch.autoPrograms.get(programName);
       if (ap) ap.treatmentCount += 1;
       continue;
@@ -953,6 +1021,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           currency: "ILS",
           recipient_type: r.recipientType,
           payment_method: r.paymentMethod,
+          covered_period_start: r.coveredPeriodStart ?? null,
+          covered_period_end: r.coveredPeriodEnd ?? null,
           notes: r.notes,
         },
         select: { id: true },
@@ -971,6 +1041,21 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           },
         });
         createdCount.allocations += 1;
+      }
+      if (r.treatmentKeysToMarkPaid && r.treatmentKeysToMarkPaid.length > 0) {
+        for (const tKey of r.treatmentKeysToMarkPaid) {
+          const treatmentId = treatmentIdByKey.get(tKey);
+          if (!treatmentId) continue;
+          await tx.therapy_treatments.update({
+            where: { id: treatmentId },
+            data: {
+              payment_date: r.issuedAt,
+              payment_method: r.treatmentPaymentMethod ?? null,
+              payment_bank_account_id: r.treatmentBankAccountId ?? null,
+              payment_digital_payment_method_id: r.treatmentDigitalMethodId ?? null,
+            },
+          });
+        }
       }
     }
 

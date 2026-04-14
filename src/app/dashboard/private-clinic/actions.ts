@@ -1113,6 +1113,8 @@ export async function createTherapyReceipt(formData: FormData) {
   const totalStr = parseMoney(formData.get("total_amount") as string);
   const recipient_type = parseRecipientType((formData.get("recipient_type") as string)?.trim() || null);
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
+  const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
+  const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
 
   if (!job_id || !receipt_number || !issued_at || !totalStr || !recipient_type || !payment_method) {
     redirect(`${BASE}/receipts?error=missing`);
@@ -1141,6 +1143,8 @@ export async function createTherapyReceipt(formData: FormData) {
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       recipient_type,
       payment_method,
+      covered_period_start,
+      covered_period_end,
       notes: (formData.get("notes") as string)?.trim() || null,
       linked_transaction_id,
     },
@@ -1176,6 +1180,8 @@ export async function updateTherapyReceipt(formData: FormData) {
 
   const recipient_type = parseRecipientType((formData.get("recipient_type") as string)?.trim() || null);
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
+  const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
+  const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
   if (!recipient_type || !payment_method) redirect(`${BASE}/receipts?error=badenum`);
 
   await prisma.therapy_receipts.update({
@@ -1188,6 +1194,8 @@ export async function updateTherapyReceipt(formData: FormData) {
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       recipient_type,
       payment_method,
+      covered_period_start,
+      covered_period_end,
       notes: (formData.get("notes") as string)?.trim() || null,
       linked_transaction_id,
     },

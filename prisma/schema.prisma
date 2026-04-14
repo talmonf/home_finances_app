@@ -1596,6 +1596,8 @@ model therapy_receipts {
   currency              String   @default("ILS")
   recipient_type        TherapyReceiptRecipientType
   payment_method        TherapyReceiptPaymentMethod
+  covered_period_start  DateTime? @db.Date
+  covered_period_end    DateTime? @db.Date
   notes                 String?
   linked_transaction_id String?
   import_key            String?
@@ -1608,6 +1610,7 @@ model therapy_receipts {
   allocations        therapy_receipt_allocations[]
 
   @@index([household_id, job_id])
+  @@index([household_id, covered_period_start, covered_period_end])
 }
 
 model therapy_receipt_allocations {
