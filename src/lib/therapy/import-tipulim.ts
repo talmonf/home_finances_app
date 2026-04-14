@@ -296,6 +296,7 @@ function addTreatmentCount(map: Map<string, number>, key: string): void {
 async function analyzePrivateProfile(
   params: TipulimAnalyzeParams,
   ctx: {
+    isPrivateClinic: boolean;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -317,7 +318,7 @@ async function analyzePrivateProfile(
     pendingTravel: [],
     pendingConsultations: [],
   };
-  const pendingAllocByBatch = new Map<string, PendingAllocation[]>();
+  const pendingAllocByReceipt = new Map<string, PendingAllocation[]>();
   const existingPrograms = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
   let selectedProgramId = params.selectedProgramId ?? null;
   if (!selectedProgramId && existingPrograms.length === 0) {
@@ -380,11 +381,19 @@ async function analyzePrivateProfile(
           else if (matches.length > 1) {
             scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
             continue;
-          } else {
+          } else if (ctx.isPrivateClinic) {
             scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+          } else {
+            scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+            continue;
           }
         } else {
-          scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
+          if (ctx.isPrivateClinic) {
+            scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
+          } else {
+            scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
+            continue;
+          }
         }
       }
       if (payment.treatmentMethod === "digital_payment") {
@@ -397,8 +406,7 @@ async function analyzePrivateProfile(
         }
       }
 
-      const batchKey = `${clientRaw}|${monthKey(issuedAt)}`;
-      const allocations = pendingAllocByBatch.get(batchKey) ?? [];
+      const allocations = pendingAllocByReceipt.get(receiptNum) ?? [];
       const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
       if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
         scratch.errors.push(
@@ -407,14 +415,14 @@ async function analyzePrivateProfile(
         continue;
       }
       scratch.pendingReceipts.push({
-        key: batchKey,
+        key: receiptNum,
         rowNumber,
         receiptNumber: receiptNum,
         issuedAt,
         totalAmount,
         notes: noteRaw,
         paymentMethod: payment.receiptMethod,
-        recipientType: "client",
+        recipientType: ctx.isPrivateClinic ? "client" : "organization",
         allocations: allocations.map((a) => ({
           amount: a.amount,
           treatmentKey: a.treatmentKey,
@@ -474,15 +482,18 @@ async function analyzePrivateProfile(
         });
       }
       if (paymentDateRaw) {
+        if (!receiptNum) {
+          scratch.errors.push(`Row ${rowNumber}: allocation row must include receipt number.`);
+          continue;
+        }
         const pd = parseDate(paymentDateRaw);
         if (!pd) {
           scratch.errors.push(`Row ${rowNumber}: invalid payment date.`);
           continue;
         }
-        const batchKey = `${clientRaw}|${monthKey(pd)}`;
-        const arr = pendingAllocByBatch.get(batchKey) ?? [];
+        const arr = pendingAllocByReceipt.get(receiptNum) ?? [];
         arr.push({ amount, treatmentKey: tKey });
-        pendingAllocByBatch.set(batchKey, arr);
+        pendingAllocByReceipt.set(receiptNum, arr);
       }
     }
   }
@@ -490,6 +501,7 @@ async function analyzePrivateProfile(
 }
 
 async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
+  isPrivateClinic: boolean;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
 }): Promise<AnalyzeScratch> {
@@ -547,7 +559,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         totalAmount: total,
         notes: s(row["הערות"]) || null,
         paymentMethod: payment.receiptMethod,
-        recipientType: "organization",
+        recipientType: ctx.isPrivateClinic ? "client" : "organization",
         allocations: [],
       });
       continue;
@@ -655,7 +667,11 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
 }
 
 export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promise<TipulimAnalyzeResult> {
-  const [clients, programsByJob, bankAccounts, digitalMethods] = await Promise.all([
+  const [job, clients, programsByJob, bankAccounts, digitalMethods] = await Promise.all([
+    prisma.jobs.findFirst({
+      where: { id: params.jobId, household_id: params.householdId },
+      select: { is_private_clinic: true },
+    }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
       select: { id: true, first_name: true, last_name: true },
@@ -673,7 +689,13 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
       select: { id: true, name: true },
     }),
   ]);
-  const ctx = { clients, programsByJob, bankAccounts, digitalMethods };
+  const ctx = {
+    isPrivateClinic: job?.is_private_clinic ?? true,
+    clients,
+    programsByJob,
+    bankAccounts,
+    digitalMethods,
+  };
   const scratch =
     params.profile === "tipulim_org_monthly"
       ? await analyzeOrgProfile(params, ctx)
@@ -743,7 +765,11 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       created: { clients: 0, treatments: 0, receipts: 0, allocations: 0, travel: 0, consultations: 0, programs: 0 },
     };
   }
-  const [clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
+  const [job, clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
+    prisma.jobs.findFirst({
+      where: { id: params.jobId, household_id: params.householdId },
+      select: { is_private_clinic: true },
+    }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
       select: { id: true, first_name: true, last_name: true },
@@ -765,7 +791,13 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       select: { id: true, name: true, name_he: true },
     }),
   ]);
-  const ctx = { clients, programsByJob, bankAccounts, digitalMethods };
+  const ctx = {
+    isPrivateClinic: job?.is_private_clinic ?? true,
+    clients,
+    programsByJob,
+    bankAccounts,
+    digitalMethods,
+  };
   const scratch =
     params.profile === "tipulim_org_monthly"
       ? await analyzeOrgProfile(params, ctx)

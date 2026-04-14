@@ -164,6 +164,11 @@ export default async function PrivateClinicJobsPage({
               <input type="checkbox" name="is_active" defaultChecked />
               {c.active}
             </label>
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" name="is_private_clinic" defaultChecked />
+              {j.privateClinicRole}
+            </label>
+            <p className="md:col-span-3 text-xs text-slate-500">{j.privateClinicRoleHelp}</p>
             <textarea
               name="notes"
               placeholder={c.notes}
@@ -244,6 +249,11 @@ export default async function PrivateClinicJobsPage({
                     <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
                     {c.active}
                   </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-300">
+                    <input type="checkbox" name="is_private_clinic" defaultChecked={job.is_private_clinic} />
+                    {j.privateClinicRole}
+                  </label>
+                  <p className="md:col-span-3 text-[11px] text-slate-500">{j.privateClinicRoleHelp}</p>
                   <textarea
                     name="notes"
                     defaultValue={job.notes ?? ""}

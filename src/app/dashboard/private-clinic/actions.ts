@@ -455,6 +455,7 @@ export async function createTherapyJob(formData: FormData) {
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
       is_active: formData.has("is_active"),
+      is_private_clinic: formData.has("is_private_clinic"),
     },
   });
 
@@ -504,6 +505,7 @@ export async function updateTherapyJob(formData: FormData) {
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
       is_active: formData.has("is_active"),
+      is_private_clinic: formData.has("is_private_clinic"),
     },
   });
 

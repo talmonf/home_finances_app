@@ -1,0 +1,3 @@
+ALTER TABLE "jobs"
+  ADD COLUMN IF NOT EXISTS "is_private_clinic" BOOLEAN NOT NULL DEFAULT true;
+

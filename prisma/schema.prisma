@@ -458,6 +458,7 @@ model jobs {
   employer_address     String?
   notes                String?
   is_active            Boolean           @default(true)
+  is_private_clinic    Boolean           @default(true)
   bank_account_id      String?
   credit_card_id       String?
   created_at           DateTime          @default(now())

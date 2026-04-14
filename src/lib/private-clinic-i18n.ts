@@ -240,6 +240,11 @@ export function privateClinicJobs(lang: UiLanguage) {
       "Add at least one person under Family members before you can add a job.",
       "הוסיפו לפחות בן משפחה אחד לפני הוספת משרה.",
     ),
+    privateClinicRole: p("Private clinic role", "סיווג לקליניקה פרטית"),
+    privateClinicRoleHelp: p(
+      "On: receipts are issued to clients and bank account matching is lenient. Off: receipts are organizational and bank matching is strict.",
+      "פעיל: קבלות מונפקות ללקוחות והתאמת חשבון בנק מקלה. כבוי: קבלות ארגוניות והתאמת חשבון בנק מחמירה.",
+    ),
     clinicUnlinkedHint: p(
       "Your user is not linked to a family member — you can still use Private clinic for the whole household. When adding a job, choose which household member holds that employment.",
       "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה הפרטית לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
