@@ -60,9 +60,9 @@ export default async function ReceiptsPage() {
           job_id: { in: Array.from(orgJobIds) },
           occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
         },
-        _sum: { expected_income: true },
+        _sum: { income_amount: true },
       })
-    : { _sum: { expected_income: null } };
+    : { _sum: { income_amount: null } };
   const travelSum = orgJobIds.size
     ? await prisma.therapy_travel_entries.aggregate({
         where: {
@@ -70,9 +70,9 @@ export default async function ReceiptsPage() {
           job_id: { in: Array.from(orgJobIds) },
           occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
         },
-        _sum: { reimbursable_amount: true },
+        _sum: { amount: true },
       })
-    : { _sum: { reimbursable_amount: null } };
+    : { _sum: { amount: null } };
 
   const paidSum = orgJobIds.size
     ? await prisma.therapy_receipts.aggregate({
@@ -89,8 +89,8 @@ export default async function ReceiptsPage() {
 
   const earned =
     Number(treatmentSum._sum.amount ?? 0) +
-    Number(consultationSum._sum.expected_income ?? 0) +
-    Number(travelSum._sum.reimbursable_amount ?? 0);
+    Number(consultationSum._sum.income_amount ?? 0) +
+    Number(travelSum._sum.amount ?? 0);
   const paid = Number(paidSum._sum.total_amount ?? 0);
   const outstanding = earned - paid;
   const monthLabel = `${lastMonthStart.toISOString().slice(0, 10)} - ${lastMonthEnd.toISOString().slice(0, 10)}`;
