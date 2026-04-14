@@ -130,55 +130,104 @@ export default async function ClientsPage({
         )}
         <form
           action={createTherapyClient}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
+          className="grid items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
         >
-          <input
-            name="first_name"
-            placeholder={cl.firstName}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="last_name"
-            placeholder={cl.lastNameOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="id_number"
-            placeholder={cl.idOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">{c.startDate}</label>
-            <input name="start_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <label htmlFor="new_first_name" className="block text-xs text-slate-400">
+              {cl.firstName}
+            </label>
+            <input
+              id="new_first_name"
+              name="first_name"
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">{cl.endDate}</label>
-            <input name="end_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <label htmlFor="new_last_name" className="block text-xs text-slate-400">
+              {cl.lastNameOptional}
+            </label>
+            <input
+              id="new_last_name"
+              name="last_name"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
           </div>
-          <input
-            name="email"
-            type="email"
-            placeholder={cl.email}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="mobile_phone"
-            placeholder={cl.mobilePhone}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="home_phone"
-            placeholder={cl.homePhone}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="address"
-            placeholder={cl.address}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">{cl.visitFrequency}</label>
+            <label htmlFor="new_id_number" className="block text-xs text-slate-400">
+              {cl.idOptional}
+            </label>
+            <input
+              id="new_id_number"
+              name="id_number"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_start_date" className="block text-xs text-slate-400">
+              {c.startDate}
+            </label>
+            <input
+              id="new_start_date"
+              name="start_date"
+              type="date"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_end_date" className="block text-xs text-slate-400">
+              {cl.endDate}
+            </label>
+            <input
+              id="new_end_date"
+              name="end_date"
+              type="date"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_email" className="block text-xs text-slate-400">
+              {cl.email}
+            </label>
+            <input
+              id="new_email"
+              name="email"
+              type="email"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_mobile_phone" className="block text-xs text-slate-400">
+              {cl.mobilePhone}
+            </label>
+            <input
+              id="new_mobile_phone"
+              name="mobile_phone"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_home_phone" className="block text-xs text-slate-400">
+              {cl.homePhone}
+            </label>
+            <input
+              id="new_home_phone"
+              name="home_phone"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="new_address" className="block text-xs text-slate-400">
+              {cl.address}
+            </label>
+            <input
+              id="new_address"
+              name="address"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
             <div className="flex items-center gap-2">
               <label className="sr-only" htmlFor="new_visits_per_period_count">
                 {cl.visitsPer}
@@ -211,8 +260,11 @@ export default async function ClientsPage({
             </div>
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">{cl.disabilityStatus}</label>
+            <label htmlFor="new_disability_status" className="block text-xs text-slate-400">
+              {cl.disabilityStatus}
+            </label>
             <select
+              id="new_disability_status"
               name="disability_status"
               defaultValue="none"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
@@ -225,8 +277,11 @@ export default async function ClientsPage({
             </select>
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-400">{cl.rehabBasketStatus}</label>
+            <label htmlFor="new_rehab_basket_status" className="block text-xs text-slate-400">
+              {cl.rehabBasketStatus}
+            </label>
             <select
+              id="new_rehab_basket_status"
               name="rehab_basket_status"
               defaultValue="none"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
@@ -238,11 +293,16 @@ export default async function ClientsPage({
               ))}
             </select>
           </div>
-          <textarea
-            name="notes"
-            placeholder={c.notes}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="space-y-1 md:col-span-2">
+            <label htmlFor="new_notes" className="block text-xs text-slate-400">
+              {c.notes}
+            </label>
+            <textarea
+              id="new_notes"
+              name="notes"
+              className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <ClientJobProgramFields jobs={jobOptions} programs={programOptions} labels={jobFieldLabels} />
           <button
             type="submit"
@@ -266,58 +326,79 @@ export default async function ClientsPage({
                 <form
                   key={row.id}
                   action={updateTherapyClient}
-                  className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid md:grid-cols-2 md:gap-3"
+                  className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid md:grid-cols-2 md:items-start md:gap-3"
                 >
                   <input type="hidden" name="id" value={row.id} />
                   {obfuscate ? <input type="hidden" name="first_name" value={row.first_name} /> : null}
-                  {obfuscate ? (
-                    <input
-                      readOnly
-                      value={OBFUSCATED}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                      aria-label={cl.firstName}
-                    />
-                  ) : (
-                    <input
-                      name="first_name"
-                      defaultValue={row.first_name}
-                      required
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  )}
-                  {obfuscate ? <input type="hidden" name="last_name" value={row.last_name ?? ""} /> : null}
-                  {obfuscate ? (
-                    <input
-                      readOnly
-                      value={OBFUSCATED}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                      aria-label={cl.lastNameOptional}
-                    />
-                  ) : (
-                    <input
-                      name="last_name"
-                      defaultValue={row.last_name ?? ""}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  )}
-                  {obfuscate ? <input type="hidden" name="id_number" value={row.id_number ?? ""} /> : null}
-                  {obfuscate ? (
-                    <input
-                      readOnly
-                      value={row.id_number ? OBFUSCATED : ""}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                      aria-label={cl.idOptional}
-                    />
-                  ) : (
-                    <input
-                      name="id_number"
-                      defaultValue={row.id_number ?? ""}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  )}
                   <div className="space-y-1">
-                    <label className="block text-xs text-slate-400">{c.startDate}</label>
+                    <label htmlFor={`first_name_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.firstName}
+                    </label>
+                    {obfuscate ? (
+                      <input
+                        id={`first_name_${row.id}`}
+                        readOnly
+                        value={OBFUSCATED}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <input
+                        id={`first_name_${row.id}`}
+                        name="first_name"
+                        defaultValue={row.first_name}
+                        required
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                  </div>
+                  {obfuscate ? <input type="hidden" name="last_name" value={row.last_name ?? ""} /> : null}
+                  <div className="space-y-1">
+                    <label htmlFor={`last_name_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.lastNameOptional}
+                    </label>
+                    {obfuscate ? (
+                      <input
+                        id={`last_name_${row.id}`}
+                        readOnly
+                        value={OBFUSCATED}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <input
+                        id={`last_name_${row.id}`}
+                        name="last_name"
+                        defaultValue={row.last_name ?? ""}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                  </div>
+                  {obfuscate ? <input type="hidden" name="id_number" value={row.id_number ?? ""} /> : null}
+                  <div className="space-y-1">
+                    <label htmlFor={`id_number_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.idOptional}
+                    </label>
+                    {obfuscate ? (
+                      <input
+                        id={`id_number_${row.id}`}
+                        readOnly
+                        value={row.id_number ? OBFUSCATED : ""}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <input
+                        id={`id_number_${row.id}`}
+                        name="id_number"
+                        defaultValue={row.id_number ?? ""}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor={`start_date_${row.id}`} className="block text-xs text-slate-400">
+                      {c.startDate}
+                    </label>
                     <input
+                      id={`start_date_${row.id}`}
                       name="start_date"
                       type="date"
                       defaultValue={toDateInputValue(row.start_date)}
@@ -325,8 +406,11 @@ export default async function ClientsPage({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs text-slate-400">{cl.endDate}</label>
+                    <label htmlFor={`end_date_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.endDate}
+                    </label>
                     <input
+                      id={`end_date_${row.id}`}
                       name="end_date"
                       type="date"
                       defaultValue={toDateInputValue(row.end_date)}
@@ -334,96 +418,126 @@ export default async function ClientsPage({
                     />
                   </div>
                   <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor={`email_${row.id}`} className="block text-xs text-slate-400">
+                        {cl.email}
+                      </label>
+                      {row.email && !obfuscate ? (
+                        <a
+                          href={`mailto:${row.email}`}
+                          className="shrink-0 text-xs text-sky-400 hover:text-sky-300"
+                        >
+                          {cl.composeEmail}
+                        </a>
+                      ) : null}
+                    </div>
                     {obfuscate ? <input type="hidden" name="email" value={row.email ?? ""} /> : null}
                     {obfuscate ? (
                       <input
+                        id={`email_${row.id}`}
                         readOnly
                         value={row.email ? OBFUSCATED : ""}
-                        placeholder={cl.email}
                         className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                       />
                     ) : (
                       <input
+                        id={`email_${row.id}`}
                         name="email"
+                        type="email"
                         defaultValue={row.email ?? ""}
-                        placeholder={cl.email}
                         className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                       />
                     )}
-                    {row.email && !obfuscate ? (
-                      <a href={`mailto:${row.email}`} className="text-xs text-sky-400 hover:text-sky-300">
-                        {row.email}
-                      </a>
-                    ) : null}
                   </div>
                   <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor={`mobile_phone_${row.id}`} className="block text-xs text-slate-400">
+                        {cl.mobilePhone}
+                      </label>
+                      {phones.mobile && !obfuscate ? (
+                        <a
+                          href={`tel:${phones.mobile}`}
+                          className="shrink-0 text-xs text-sky-400 hover:text-sky-300"
+                        >
+                          {cl.callNumber}
+                        </a>
+                      ) : null}
+                    </div>
                     {obfuscate ? (
                       <>
                         <input type="hidden" name="mobile_phone" value={phones.mobile} />
                         <input
+                          id={`mobile_phone_${row.id}`}
                           readOnly
                           value={phones.mobile ? OBFUSCATED : ""}
-                          placeholder={cl.mobilePhone}
                           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                         />
                       </>
                     ) : (
                       <input
+                        id={`mobile_phone_${row.id}`}
                         name="mobile_phone"
                         defaultValue={phones.mobile}
-                        placeholder={cl.mobilePhone}
                         className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                       />
                     )}
-                    {phones.mobile && !obfuscate ? (
-                      <a href={`tel:${phones.mobile}`} className="text-xs text-sky-400 hover:text-sky-300">
-                        {phones.mobile}
-                      </a>
-                    ) : null}
                   </div>
                   <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor={`home_phone_${row.id}`} className="block text-xs text-slate-400">
+                        {cl.homePhone}
+                      </label>
+                      {phones.home && !obfuscate ? (
+                        <a
+                          href={`tel:${phones.home}`}
+                          className="shrink-0 text-xs text-sky-400 hover:text-sky-300"
+                        >
+                          {cl.callNumber}
+                        </a>
+                      ) : null}
+                    </div>
                     {obfuscate ? (
                       <>
                         <input type="hidden" name="home_phone" value={phones.home} />
                         <input
+                          id={`home_phone_${row.id}`}
                           readOnly
                           value={phones.home ? OBFUSCATED : ""}
-                          placeholder={cl.homePhone}
                           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                         />
                       </>
                     ) : (
                       <input
+                        id={`home_phone_${row.id}`}
                         name="home_phone"
                         defaultValue={phones.home}
-                        placeholder={cl.homePhone}
                         className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                       />
                     )}
-                    {phones.home && !obfuscate ? (
-                      <a href={`tel:${phones.home}`} className="text-xs text-sky-400 hover:text-sky-300">
-                        {phones.home}
-                      </a>
-                    ) : null}
                   </div>
                   {obfuscate ? <input type="hidden" name="address" value={row.address ?? ""} /> : null}
-                  {obfuscate ? (
-                    <input
-                      readOnly
-                      value={row.address ? OBFUSCATED : ""}
-                      placeholder={cl.address}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  ) : (
-                    <input
-                      name="address"
-                      defaultValue={row.address ?? ""}
-                      placeholder={cl.address}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  )}
                   <div className="space-y-1">
-                    <label className="block text-xs text-slate-400">{cl.visitFrequency}</label>
+                    <label htmlFor={`address_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.address}
+                    </label>
+                    {obfuscate ? (
+                      <input
+                        id={`address_${row.id}`}
+                        readOnly
+                        value={row.address ? OBFUSCATED : ""}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <input
+                        id={`address_${row.id}`}
+                        name="address"
+                        defaultValue={row.address ?? ""}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
                     <div className="flex items-center gap-2">
                       <label className="sr-only" htmlFor={`visits_per_period_count_${row.id}`}>
                         {cl.visitsPer}
@@ -456,8 +570,11 @@ export default async function ClientsPage({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs text-slate-400">{cl.disabilityStatus}</label>
+                    <label htmlFor={`disability_status_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.disabilityStatus}
+                    </label>
                     <select
+                      id={`disability_status_${row.id}`}
                       name="disability_status"
                       defaultValue={row.disability_status ?? "none"}
                       className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
@@ -470,8 +587,11 @@ export default async function ClientsPage({
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs text-slate-400">{cl.rehabBasketStatus}</label>
+                    <label htmlFor={`rehab_basket_status_${row.id}`} className="block text-xs text-slate-400">
+                      {cl.rehabBasketStatus}
+                    </label>
                     <select
+                      id={`rehab_basket_status_${row.id}`}
                       name="rehab_basket_status"
                       defaultValue={row.rehab_basket_status ?? "none"}
                       className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
@@ -484,21 +604,26 @@ export default async function ClientsPage({
                     </select>
                   </div>
                   {obfuscate ? <input type="hidden" name="notes" value={row.notes ?? ""} /> : null}
-                  {obfuscate ? (
-                    <textarea
-                      readOnly
-                      value={row.notes ? OBFUSCATED : ""}
-                      placeholder={c.notes}
-                      className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  ) : (
-                    <textarea
-                      name="notes"
-                      defaultValue={row.notes ?? ""}
-                      placeholder={c.notes}
-                      className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                  )}
+                  <div className="space-y-1 md:col-span-2">
+                    <label htmlFor={`notes_${row.id}`} className="block text-xs text-slate-400">
+                      {c.notes}
+                    </label>
+                    {obfuscate ? (
+                      <textarea
+                        id={`notes_${row.id}`}
+                        readOnly
+                        value={row.notes ? OBFUSCATED : ""}
+                        className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    ) : (
+                      <textarea
+                        id={`notes_${row.id}`}
+                        name="notes"
+                        defaultValue={row.notes ?? ""}
+                        className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    )}
+                  </div>
                   <ClientJobProgramFields
                     jobs={jobOptions}
                     programs={programOptions}

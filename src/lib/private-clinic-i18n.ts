@@ -275,6 +275,8 @@ export function privateClinicClients(lang: UiLanguage) {
     lastNameOptional: p("Last name (optional)", "שם משפחה (אופציונלי)"),
     idOptional: p("ID (optional)", "ת״ז (אופציונלי)"),
     email: p("Email", "דוא״ל"),
+    composeEmail: p("Compose", "כתיבת דוא״ל"),
+    callNumber: p("Call", "חיוג"),
     mobilePhone: p("Mobile phone", "טלפון נייד"),
     homePhone: p("Home phone", "טלפון בית"),
     address: p("Address", "כתובת"),
