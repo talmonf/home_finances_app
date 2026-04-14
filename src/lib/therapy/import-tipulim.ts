@@ -1,0 +1,991 @@
+import { prisma } from "@/lib/auth";
+import type { PrismaClient } from "@/generated/prisma/client";
+import * as XLSX from "xlsx";
+
+type ImportProfile = "tipulim_private" | "tipulim_org_monthly";
+
+type Row = Record<string, unknown>;
+
+type ClientCandidate = {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+};
+
+type ClientRef =
+  | { kind: "existing"; id: string; displayName: string }
+  | { kind: "new"; tempKey: string; displayName: string; firstName: string; lastName: string | null };
+
+type PendingTreatment = {
+  key: string;
+  clientRef: ClientRef;
+  programName: string | null;
+  occurredAt: Date;
+  amount: string;
+  visitType: "clinic" | "home" | "phone" | "video";
+  note: string | null;
+  paymentDate: Date | null;
+  paymentMethod: "bank_transfer" | "digital_payment" | null;
+  paymentBankAccountId: string | null;
+  paymentDigitalMethodId: string | null;
+};
+
+type PendingAllocation = {
+  amount: string;
+  treatmentKey: string;
+};
+
+type PendingTravel = {
+  occurredAt: Date | null;
+  amount: string | null;
+  note: string | null;
+  treatmentKey: string | null;
+};
+
+type PendingConsultation = {
+  occurredAt: Date;
+  amount: string;
+  note: string | null;
+  typeName: string;
+};
+
+type PendingReceipt = {
+  key: string;
+  rowNumber: number;
+  receiptNumber: string;
+  issuedAt: Date;
+  totalAmount: string;
+  notes: string | null;
+  paymentMethod: "cash" | "bank_transfer" | "digital_card" | "credit_card";
+  recipientType: "client" | "organization";
+  allocations: PendingAllocation[];
+};
+
+export type ImportConflict = {
+  key: string;
+  rowNumber: number;
+  rawName: string;
+  candidates: Array<{ id: string; label: string }>;
+};
+
+export type ProgramsToAutoCreate = {
+  name: string;
+  source: "system_default" | "sheet";
+  treatmentCount: number;
+  reason?: string;
+};
+
+export type TipulimAnalyzeResult = {
+  newClientsCount: number;
+  treatmentsTotal: number;
+  treatmentsPerClient: Array<{ displayName: string; clientId: string | null; count: number }>;
+  receiptsToCreateCount: number;
+  programsToAutoCreate: ProgramsToAutoCreate[];
+  warnings: string[];
+  blockingErrors: string[];
+  clientConflicts: ImportConflict[];
+  routing?: {
+    travelEntriesCount: number;
+    consultationEntriesCount: number;
+  };
+};
+
+export type TipulimCommitResult = TipulimAnalyzeResult & {
+  created: {
+    clients: number;
+    treatments: number;
+    receipts: number;
+    allocations: number;
+    travel: number;
+    consultations: number;
+    programs: number;
+  };
+};
+
+export type TipulimAnalyzeParams = {
+  householdId: string;
+  jobId: string;
+  selectedProgramId?: string | null;
+  profile: ImportProfile;
+  workbook: XLSX.WorkBook;
+  sheetName?: string | null;
+  missingVisitType?: "clinic" | "home" | "phone" | "video" | null;
+  clientResolutions?: Record<string, string>;
+};
+
+const DEFAULT_PROGRAM_NAME_HE = "כללי";
+
+function sheetRows(workbook: XLSX.WorkBook, sheetName?: string | null): Row[] {
+  const chosen = sheetName && workbook.Sheets[sheetName] ? sheetName : workbook.SheetNames[0];
+  if (!chosen) return [];
+  const ws = workbook.Sheets[chosen];
+  if (!ws) return [];
+  const rows = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
+  return rows.filter((r) => Object.values(r).some((v) => String(v ?? "").trim() !== ""));
+}
+
+function s(v: unknown): string {
+  if (v == null) return "";
+  return String(v).trim();
+}
+
+function norm(v: string): string {
+  return v.trim().replace(/\s+/g, " ");
+}
+
+function normalizeDigits(v: string): string {
+  return v.replace(/[^\d]/g, "");
+}
+
+function parseMoney(raw: string): string | null {
+  const cleaned = raw.replace(/,/g, "").trim();
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) return null;
+  return n.toFixed(2);
+}
+
+function parseDate(raw: string): Date | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const d = new Date(trimmed);
+  if (!Number.isNaN(d.getTime())) return d;
+  return null;
+}
+
+function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function parseClientName(raw: string): { firstName: string; lastInitial: string | null } {
+  const text = norm(raw);
+  const m = text.match(/^(.+?)\s+([^\s.])\.?$/);
+  if (!m) return { firstName: text, lastInitial: null };
+  return { firstName: norm(m[1]), lastInitial: m[2] ?? null };
+}
+
+function visitTypeFromCell(raw: string): "clinic" | "home" | "phone" | "video" | null {
+  const t = norm(raw).toLowerCase();
+  if (!t) return null;
+  if (["clinic", "קליניקה"].includes(t)) return "clinic";
+  if (["home", "בית", "ביקור בית"].includes(t)) return "home";
+  if (["phone", "טלפון", "ייעוץ טלפוני"].includes(t)) return "phone";
+  if (["video", "וידאו", "מקוון (וידאו)", "מקוון"].includes(t)) return "video";
+  return null;
+}
+
+function consultationTypeKey(raw: string): string {
+  const lowered = norm(raw).toLowerCase();
+  const map: Record<string, string> = {
+    בונוס: "bonus",
+    "חבר מביא חבר": "referral_bonus",
+    התייעצות: "consultation",
+    "ישיבת צוות": "team_meeting",
+    הדרכה: "supervision",
+    פגישה: "meeting",
+    אירוע: "event",
+  };
+  if (map[lowered]) return map[lowered];
+  return lowered
+    .replace(/['"]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "_")
+    .replace(/^_+|_+$/g, "") || "other";
+}
+
+function paymentMethodFromText(raw: string): {
+  receiptMethod: "cash" | "bank_transfer" | "digital_card" | "credit_card" | null;
+  treatmentMethod: "bank_transfer" | "digital_payment" | null;
+  accountDigits: string | null;
+  digitalHint: string | null;
+} {
+  const text = norm(raw);
+  if (!text) return { receiptMethod: null, treatmentMethod: null, accountDigits: null, digitalHint: null };
+  if (text.includes("העברה")) {
+    const digitRuns = text.match(/\d+/g) ?? [];
+    const longest = digitRuns.sort((a, b) => b.length - a.length)[0] ?? null;
+    return {
+      receiptMethod: "bank_transfer",
+      treatmentMethod: "bank_transfer",
+      accountDigits: longest,
+      digitalHint: null,
+    };
+  }
+  if (text.includes("ביט") || text.toLowerCase().includes("bit")) {
+    return {
+      receiptMethod: "digital_card",
+      treatmentMethod: "digital_payment",
+      accountDigits: null,
+      digitalHint: "ביט",
+    };
+  }
+  return { receiptMethod: null, treatmentMethod: null, accountDigits: null, digitalHint: null };
+}
+
+type AnalyzeScratch = {
+  rows: Row[];
+  warnings: string[];
+  errors: string[];
+  conflicts: ImportConflict[];
+  treatmentCountsByDisplay: Map<string, number>;
+  pendingTreatments: Map<string, PendingTreatment>;
+  pendingReceipts: PendingReceipt[];
+  newClients: Map<string, { displayName: string; firstName: string; lastName: string | null }>;
+  autoPrograms: Map<string, ProgramsToAutoCreate>;
+  routing: { travel: number; consultations: number };
+  pendingTravel: PendingTravel[];
+  pendingConsultations: PendingConsultation[];
+};
+
+async function resolveClientRef(
+  rawClient: string,
+  rowNumber: number,
+  clients: ClientCandidate[],
+  newClients: AnalyzeScratch["newClients"],
+  conflicts: AnalyzeScratch["conflicts"],
+  clientResolutions: Record<string, string> | undefined,
+): Promise<ClientRef | null> {
+  const displayName = norm(rawClient);
+  if (!displayName) return null;
+  const parsed = parseClientName(displayName);
+  const sameFirst = clients.filter((c) => norm(c.first_name) === parsed.firstName);
+  let matched = sameFirst;
+  if (parsed.lastInitial) {
+    matched = sameFirst.filter((c) => (c.last_name ?? "").trim().startsWith(parsed.lastInitial!));
+  }
+  if (matched.length === 1) {
+    return { kind: "existing", id: matched[0]!.id, displayName };
+  }
+  if (matched.length > 1) {
+    const key = `row:${rowNumber}:client:${displayName}`;
+    const resolvedId = clientResolutions?.[key];
+    if (resolvedId && matched.some((m) => m.id === resolvedId)) {
+      return { kind: "existing", id: resolvedId, displayName };
+    }
+    conflicts.push({
+      key,
+      rowNumber,
+      rawName: displayName,
+      candidates: matched.map((m) => ({
+        id: m.id,
+        label: `${m.first_name}${m.last_name ? ` ${m.last_name}` : ""}`,
+      })),
+    });
+    return null;
+  }
+  const tempKey = `new:${displayName}`;
+  if (!newClients.has(tempKey)) {
+    newClients.set(tempKey, {
+      displayName,
+      firstName: parsed.firstName,
+      lastName: parsed.lastInitial ? null : null,
+    });
+  }
+  return {
+    kind: "new",
+    tempKey,
+    displayName,
+    firstName: parsed.firstName,
+    lastName: null,
+  };
+}
+
+function addTreatmentCount(map: Map<string, number>, key: string): void {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+async function analyzePrivateProfile(
+  params: TipulimAnalyzeParams,
+  ctx: {
+    clients: ClientCandidate[];
+    programsByJob: Array<{ id: string; name: string; job_id: string }>;
+    bankAccounts: Array<{ id: string; account_number: string | null }>;
+    digitalMethods: Array<{ id: string; name: string }>;
+  },
+): Promise<AnalyzeScratch> {
+  const rows = sheetRows(params.workbook, params.sheetName);
+  const scratch: AnalyzeScratch = {
+    rows,
+    warnings: [],
+    errors: [],
+    conflicts: [],
+    treatmentCountsByDisplay: new Map(),
+    pendingTreatments: new Map(),
+    pendingReceipts: [],
+    newClients: new Map(),
+    autoPrograms: new Map(),
+    routing: { travel: 0, consultations: 0 },
+    pendingTravel: [],
+    pendingConsultations: [],
+  };
+  const pendingAllocByBatch = new Map<string, PendingAllocation[]>();
+  const existingPrograms = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
+  let selectedProgramId = params.selectedProgramId ?? null;
+  if (!selectedProgramId && existingPrograms.length === 0) {
+    scratch.autoPrograms.set(DEFAULT_PROGRAM_NAME_HE, {
+      name: DEFAULT_PROGRAM_NAME_HE,
+      source: "system_default",
+      treatmentCount: 0,
+      reason: "job_has_no_programs",
+    });
+  } else if (!selectedProgramId && existingPrograms.length > 0) {
+    selectedProgramId = existingPrograms[0]!.id;
+  }
+
+  for (let idx = rows.length - 1; idx >= 0; idx -= 1) {
+    const row = rows[idx]!;
+    const rowNumber = idx + 2;
+    const receiptNum = s(row["קבלה"]);
+    const paymentDateRaw = s(row["תאריך תשלום"]);
+    const paidRaw = s(row["שולם"]);
+    const amountRaw = s(row["סכום"]);
+    const clientRaw = s(row["מטופל"]);
+    const dateRaw = s(row["תאריך"]);
+    const visitRaw = s(row["סוג ביקור"]);
+    const noteRaw = s(row["הערות"]) || null;
+    const payRoute = s(row["דרך תשלום"]);
+    const amount = parseMoney(amountRaw);
+
+    const clientRef = await resolveClientRef(
+      clientRaw,
+      rowNumber,
+      ctx.clients,
+      scratch.newClients,
+      scratch.conflicts,
+      params.clientResolutions,
+    );
+
+    const isAnchor = !!receiptNum && !amount;
+    if (isAnchor) {
+      const issuedAt = parseDate(dateRaw) ?? parseDate(paymentDateRaw);
+      const totalAmount = parseMoney(paidRaw);
+      const payment = paymentMethodFromText(payRoute);
+      if (!issuedAt || !totalAmount) {
+        scratch.errors.push(`Row ${rowNumber}: payment anchor is missing valid date/total.`);
+        continue;
+      }
+      if (!payment.receiptMethod) {
+        scratch.errors.push(`Row ${rowNumber}: missing or unknown payment route for receipt #${receiptNum}.`);
+        continue;
+      }
+      let bankId: string | null = null;
+      let digitalId: string | null = null;
+      if (payment.treatmentMethod === "bank_transfer") {
+        if (payment.accountDigits) {
+          const digits = normalizeDigits(payment.accountDigits);
+          const matches = ctx.bankAccounts.filter((b) => {
+            const v = normalizeDigits(b.account_number ?? "");
+            return v.includes(digits) || digits.includes(v);
+          });
+          if (matches.length === 1) bankId = matches[0]!.id;
+          else if (matches.length > 1) {
+            scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
+            continue;
+          } else {
+            scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+          }
+        } else {
+          scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
+        }
+      }
+      if (payment.treatmentMethod === "digital_payment") {
+        const hint = payment.digitalHint?.toLowerCase() ?? "";
+        const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
+        if (matches.length === 1) digitalId = matches[0]!.id;
+        else {
+          scratch.errors.push(`Row ${rowNumber}: could not uniquely match digital payment method ${payRoute}.`);
+          continue;
+        }
+      }
+
+      const batchKey = `${clientRaw}|${monthKey(issuedAt)}`;
+      const allocations = pendingAllocByBatch.get(batchKey) ?? [];
+      const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+      if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
+        scratch.errors.push(
+          `Row ${rowNumber}: receipt #${receiptNum} total ${totalAmount} does not match allocations ${allocationSum.toFixed(2)}.`,
+        );
+        continue;
+      }
+      scratch.pendingReceipts.push({
+        key: batchKey,
+        rowNumber,
+        receiptNumber: receiptNum,
+        issuedAt,
+        totalAmount,
+        notes: noteRaw,
+        paymentMethod: payment.receiptMethod,
+        recipientType: "client",
+        allocations: allocations.map((a) => ({
+          amount: a.amount,
+          treatmentKey: a.treatmentKey,
+        })),
+      });
+      for (const a of allocations) {
+        const t = scratch.pendingTreatments.get(a.treatmentKey);
+        if (t) {
+          t.paymentDate = issuedAt;
+          t.paymentMethod = payment.treatmentMethod;
+          t.paymentBankAccountId = bankId;
+          t.paymentDigitalMethodId = digitalId;
+        }
+      }
+      continue;
+    }
+
+    if (amount && dateRaw) {
+      const occurredAt = parseDate(dateRaw);
+      if (!occurredAt) {
+        scratch.errors.push(`Row ${rowNumber}: invalid treatment date.`);
+        continue;
+      }
+      let vt = visitTypeFromCell(visitRaw);
+      if (!vt && !visitRaw.trim()) {
+        if (params.missingVisitType) {
+          vt = params.missingVisitType;
+          scratch.warnings.push(`Row ${rowNumber}: missing visit type, used fallback "${params.missingVisitType}".`);
+        } else {
+          scratch.errors.push(
+            `Row ${rowNumber}: missing visit type. Choose a fallback visit type in the import dialog and analyze again.`,
+          );
+          continue;
+        }
+      }
+      if (!vt) {
+        scratch.errors.push(`Row ${rowNumber}: unknown visit type "${visitRaw}".`);
+        continue;
+      }
+      if (!clientRef) continue;
+      const display = clientRef.displayName;
+      addTreatmentCount(scratch.treatmentCountsByDisplay, display);
+      const tKey = `${display}|${monthKey(occurredAt)}|${amount}|${vt}`;
+      if (!scratch.pendingTreatments.has(tKey)) {
+        scratch.pendingTreatments.set(tKey, {
+          key: tKey,
+          clientRef,
+          programName: null,
+          occurredAt,
+          amount,
+          visitType: vt,
+          note: noteRaw,
+          paymentDate: null,
+          paymentMethod: null,
+          paymentBankAccountId: null,
+          paymentDigitalMethodId: null,
+        });
+      }
+      if (paymentDateRaw) {
+        const pd = parseDate(paymentDateRaw);
+        if (!pd) {
+          scratch.errors.push(`Row ${rowNumber}: invalid payment date.`);
+          continue;
+        }
+        const batchKey = `${clientRaw}|${monthKey(pd)}`;
+        const arr = pendingAllocByBatch.get(batchKey) ?? [];
+        arr.push({ amount, treatmentKey: tKey });
+        pendingAllocByBatch.set(batchKey, arr);
+      }
+    }
+  }
+  return scratch;
+}
+
+async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
+  clients: ClientCandidate[];
+  programsByJob: Array<{ id: string; name: string; job_id: string }>;
+}): Promise<AnalyzeScratch> {
+  const rows = sheetRows(params.workbook, params.sheetName);
+  const scratch: AnalyzeScratch = {
+    rows,
+    warnings: [],
+    errors: [],
+    conflicts: [],
+    treatmentCountsByDisplay: new Map(),
+    pendingTreatments: new Map(),
+    pendingReceipts: [],
+    newClients: new Map(),
+    autoPrograms: new Map(),
+    routing: { travel: 0, consultations: 0 },
+    pendingTravel: [],
+    pendingConsultations: [],
+  };
+  const existingProgramNames = new Set(
+    ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
+  );
+  for (let idx = rows.length - 1; idx >= 0; idx -= 1) {
+    const row = rows[idx]!;
+    const rowNumber = idx + 2;
+    const programName = norm(s(row["תכנית"]));
+    const visitType = norm(s(row["סוג ביקור"]));
+    const clientRaw = s(row["מטופל"]);
+    const amountRaw = s(row["סכום"]);
+    const amount = parseMoney(amountRaw);
+    const dateRaw = s(row["תאריך"]);
+    const receiptNum = s(row["קבלה"]);
+    const paymentDateRaw = s(row["תאריך תשלום"]);
+    const payRoute = s(row["דרך תשלום"]);
+    if (programName && programName !== "תשלום" && !existingProgramNames.has(programName)) {
+      const e = scratch.autoPrograms.get(programName) ?? {
+        name: programName,
+        source: "sheet" as const,
+        treatmentCount: 0,
+      };
+      scratch.autoPrograms.set(programName, e);
+    }
+    if (programName === "תשלום") {
+      const d = parseDate(paymentDateRaw) ?? parseDate(s(row["תאריך"]));
+      const total = parseMoney(s(row["סכום"]) || s(row["שולם"]));
+      const payment = paymentMethodFromText(payRoute);
+      if (!d || !total || !receiptNum || !payment.receiptMethod) {
+        scratch.errors.push(`Row ${rowNumber}: monthly payment row is missing required receipt fields.`);
+        continue;
+      }
+      scratch.pendingReceipts.push({
+        key: `org:${receiptNum}`,
+        rowNumber,
+        receiptNumber: receiptNum,
+        issuedAt: d,
+        totalAmount: total,
+        notes: s(row["הערות"]) || null,
+        paymentMethod: payment.receiptMethod,
+        recipientType: "organization",
+        allocations: [],
+      });
+      continue;
+    }
+    if (!amount || !dateRaw) continue;
+    const occurredAt = parseDate(dateRaw);
+    if (!occurredAt) continue;
+    const clientRef = await resolveClientRef(
+      clientRaw,
+      rowNumber,
+      ctx.clients,
+      scratch.newClients,
+      scratch.conflicts,
+      params.clientResolutions,
+    );
+    const v = visitType;
+    const treatmentLike = new Set(["ביקור בית", "ייעוץ טלפוני", "מקוון (וידאו)"]);
+    if (treatmentLike.has(v)) {
+      let vt = visitTypeFromCell(v);
+      if (!vt && !v) {
+        if (params.missingVisitType) {
+          vt = params.missingVisitType;
+          scratch.warnings.push(`Row ${rowNumber}: missing visit type, used fallback "${params.missingVisitType}".`);
+        } else {
+          scratch.errors.push(
+            `Row ${rowNumber}: missing visit type. Choose a fallback visit type in the import dialog and analyze again.`,
+          );
+          continue;
+        }
+      }
+      if (!vt) {
+        scratch.errors.push(`Row ${rowNumber}: unknown treatment visit type ${visitType}.`);
+        continue;
+      }
+      if (!clientRef) continue;
+      const key = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|${vt}`;
+      scratch.pendingTreatments.set(key, {
+        key,
+        clientRef,
+        programName: programName || null,
+        occurredAt,
+        amount,
+        visitType: vt,
+        note: s(row["הערות"]) || null,
+        paymentDate: null,
+        paymentMethod: null,
+        paymentBankAccountId: null,
+        paymentDigitalMethodId: null,
+      });
+      addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+      const ap = scratch.autoPrograms.get(programName);
+      if (ap) ap.treatmentCount += 1;
+      continue;
+    }
+    if (v === "נסיעה") {
+      let linkedTreatmentKey: string | null = null;
+      if (clientRef && occurredAt) {
+        linkedTreatmentKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|home`;
+      }
+      scratch.pendingTravel.push({
+        occurredAt,
+        amount,
+        note: s(row["הערות"]) || null,
+        treatmentKey: linkedTreatmentKey,
+      });
+      scratch.routing.travel += 1;
+      continue;
+    }
+    const consultLike = new Set(["התייעצות", "ישיבת צוות", "הדרכה", "פגישה", "אירוע", "בונוס", "חבר מביא חבר"]);
+    if (consultLike.has(v) || v) {
+      scratch.pendingConsultations.push({
+        occurredAt,
+        amount,
+        note: s(row["הערות"]) || null,
+        typeName: v || "other",
+      });
+      scratch.routing.consultations += 1;
+    } else {
+      scratch.errors.push(`Row ${rowNumber}: unsupported visit type "${visitType}".`);
+    }
+  }
+  return scratch;
+}
+
+function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
+  const treatmentsPerClient = Array.from(scratch.treatmentCountsByDisplay.entries()).map(([displayName, count]) => ({
+    displayName,
+    clientId: null,
+    count,
+  }));
+  return {
+    newClientsCount: scratch.newClients.size,
+    treatmentsTotal: Array.from(scratch.treatmentCountsByDisplay.values()).reduce((a, b) => a + b, 0),
+    treatmentsPerClient,
+    receiptsToCreateCount: scratch.pendingReceipts.length,
+    programsToAutoCreate: Array.from(scratch.autoPrograms.values()),
+    warnings: scratch.warnings,
+    blockingErrors: scratch.errors,
+    clientConflicts: scratch.conflicts,
+    routing:
+      scratch.routing.travel || scratch.routing.consultations
+        ? { travelEntriesCount: scratch.routing.travel, consultationEntriesCount: scratch.routing.consultations }
+        : undefined,
+  };
+}
+
+export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promise<TipulimAnalyzeResult> {
+  const [clients, programsByJob, bankAccounts, digitalMethods] = await Promise.all([
+    prisma.therapy_clients.findMany({
+      where: { household_id: params.householdId },
+      select: { id: true, first_name: true, last_name: true },
+    }),
+    prisma.therapy_service_programs.findMany({
+      where: { household_id: params.householdId },
+      select: { id: true, name: true, job_id: true },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: params.householdId, is_active: true },
+      select: { id: true, account_number: true },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: params.householdId, is_active: true },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const ctx = { clients, programsByJob, bankAccounts, digitalMethods };
+  const scratch =
+    params.profile === "tipulim_org_monthly"
+      ? await analyzeOrgProfile(params, ctx)
+      : await analyzePrivateProfile(params, ctx);
+  return makeSummary(scratch);
+}
+
+async function getOrCreateProgramId(
+  tx: PrismaClient,
+  householdId: string,
+  jobId: string,
+  selectedProgramId: string | null | undefined,
+  autoPrograms: ProgramsToAutoCreate[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (selectedProgramId) {
+    map.set("__default__", selectedProgramId);
+    return map;
+  }
+  const existing = await tx.therapy_service_programs.findMany({
+    where: { household_id: householdId, job_id: jobId },
+    select: { id: true, name: true },
+  });
+  if (existing.length > 0) {
+    map.set("__default__", existing[0]!.id);
+    for (const p of existing) map.set(norm(p.name), p.id);
+  }
+  for (const p of autoPrograms) {
+    const key = norm(p.name);
+    if (map.has(key)) continue;
+    const created = await tx.therapy_service_programs.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        job_id: jobId,
+        name: p.name,
+        sort_order: 0,
+        is_active: true,
+      },
+      select: { id: true, name: true },
+    });
+    map.set(key, created.id);
+    if (!map.has("__default__")) map.set("__default__", created.id);
+  }
+  if (!map.has("__default__")) {
+    const created = await tx.therapy_service_programs.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        job_id: jobId,
+        name: DEFAULT_PROGRAM_NAME_HE,
+        sort_order: 0,
+        is_active: true,
+      },
+      select: { id: true },
+    });
+    map.set("__default__", created.id);
+  }
+  return map;
+}
+
+export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise<TipulimCommitResult> {
+  const analysis = await analyzeTipulimImport(params);
+  if (analysis.clientConflicts.length > 0 || analysis.blockingErrors.length > 0) {
+    return {
+      ...analysis,
+      created: { clients: 0, treatments: 0, receipts: 0, allocations: 0, travel: 0, consultations: 0, programs: 0 },
+    };
+  }
+  const [clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
+    prisma.therapy_clients.findMany({
+      where: { household_id: params.householdId },
+      select: { id: true, first_name: true, last_name: true },
+    }),
+    prisma.therapy_service_programs.findMany({
+      where: { household_id: params.householdId },
+      select: { id: true, name: true, job_id: true },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: params.householdId, is_active: true },
+      select: { id: true, account_number: true },
+    }),
+    prisma.digital_payment_methods.findMany({
+      where: { household_id: params.householdId, is_active: true },
+      select: { id: true, name: true },
+    }),
+    prisma.therapy_consultation_types.findMany({
+      where: { household_id: params.householdId },
+      select: { id: true, name: true, name_he: true },
+    }),
+  ]);
+  const ctx = { clients, programsByJob, bankAccounts, digitalMethods };
+  const scratch =
+    params.profile === "tipulim_org_monthly"
+      ? await analyzeOrgProfile(params, ctx)
+      : await analyzePrivateProfile(params, ctx);
+  const summary = makeSummary(scratch);
+  if (summary.clientConflicts.length > 0 || summary.blockingErrors.length > 0) {
+    return {
+      ...summary,
+      created: { clients: 0, treatments: 0, receipts: 0, allocations: 0, travel: 0, consultations: 0, programs: 0 },
+    };
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const createdCount = {
+      clients: 0,
+      treatments: 0,
+      receipts: 0,
+      allocations: 0,
+      travel: 0,
+      consultations: 0,
+      programs: 0,
+    };
+    const programMap = await getOrCreateProgramId(
+      tx as unknown as PrismaClient,
+      params.householdId,
+      params.jobId,
+      params.selectedProgramId ?? null,
+      summary.programsToAutoCreate,
+    );
+    const existingProgramCount = await tx.therapy_service_programs.count({
+      where: { household_id: params.householdId, job_id: params.jobId },
+    });
+    createdCount.programs = Math.max(summary.programsToAutoCreate.length - (existingProgramCount > 0 ? 0 : 1), 0);
+
+    const clientIdByKey = new Map<string, string>();
+    for (const [k, v] of scratch.newClients.entries()) {
+      const createdClient = await tx.therapy_clients.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          first_name: v.firstName,
+          last_name: v.lastName,
+          default_job_id: params.jobId,
+          default_program_id: programMap.get("__default__") ?? null,
+          is_active: true,
+        },
+        select: { id: true },
+      });
+      await tx.therapy_clients_jobs.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          client_id: createdClient.id,
+          job_id: params.jobId,
+          is_primary: true,
+        },
+      });
+      clientIdByKey.set(k, createdClient.id);
+      createdCount.clients += 1;
+    }
+
+    const treatmentIdByKey = new Map<string, string>();
+    for (const t of scratch.pendingTreatments.values()) {
+      const clientId =
+        t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
+      if (!clientId) continue;
+      const row = await tx.therapy_treatments.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          client_id: clientId,
+          job_id: params.jobId,
+          program_id: t.programName ? (programMap.get(norm(t.programName)) ?? programMap.get("__default__")!) : programMap.get("__default__")!,
+          occurred_at: t.occurredAt,
+          amount: t.amount,
+          currency: "ILS",
+          visit_type: t.visitType,
+          note_1: t.note,
+          payment_date: t.paymentDate,
+          payment_method: t.paymentMethod,
+          payment_bank_account_id: t.paymentBankAccountId,
+          payment_digital_payment_method_id: t.paymentDigitalMethodId,
+        },
+        select: { id: true },
+      });
+      treatmentIdByKey.set(t.key, row.id);
+      createdCount.treatments += 1;
+    }
+
+    const consultationTypeIdByName = new Map<string, string>();
+    for (const ct of consultationTypes) {
+      consultationTypeIdByName.set(norm(ct.name_he || ct.name), ct.id);
+      consultationTypeIdByName.set(norm(ct.name), ct.id);
+    }
+    for (const c of scratch.pendingConsultations) {
+      const lookup = norm(c.typeName);
+      let typeId = consultationTypeIdByName.get(lookup) ?? null;
+      if (!typeId) {
+        const createdType = await tx.therapy_consultation_types.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: params.householdId,
+            name: consultationTypeKey(c.typeName),
+            name_he: c.typeName,
+            sort_order: 0,
+            is_system: false,
+          },
+          select: { id: true },
+        });
+        typeId = createdType.id;
+        consultationTypeIdByName.set(lookup, typeId);
+      }
+      await tx.therapy_consultations.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          job_id: params.jobId,
+          consultation_type_id: typeId,
+          occurred_at: c.occurredAt,
+          income_amount: c.amount,
+          income_currency: "ILS",
+          notes: c.note,
+        },
+      });
+      createdCount.consultations += 1;
+    }
+
+    for (const tr of scratch.pendingTravel) {
+      await tx.therapy_travel_entries.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          job_id: params.jobId,
+          treatment_id: tr.treatmentKey ? treatmentIdByKey.get(tr.treatmentKey) ?? null : null,
+          occurred_at: tr.occurredAt,
+          amount: tr.amount,
+          currency: "ILS",
+          notes: tr.note,
+        },
+      });
+      createdCount.travel += 1;
+    }
+
+    for (const r of scratch.pendingReceipts) {
+      const receipt = await tx.therapy_receipts.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          job_id: params.jobId,
+          receipt_number: r.receiptNumber,
+          issued_at: r.issuedAt,
+          total_amount: r.totalAmount,
+          currency: "ILS",
+          recipient_type: r.recipientType,
+          payment_method: r.paymentMethod,
+          notes: r.notes,
+        },
+        select: { id: true },
+      });
+      createdCount.receipts += 1;
+      for (const a of r.allocations) {
+        const treatmentId = treatmentIdByKey.get(a.treatmentKey);
+        if (!treatmentId) continue;
+        await tx.therapy_receipt_allocations.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: params.householdId,
+            receipt_id: receipt.id,
+            treatment_id: treatmentId,
+            amount: a.amount,
+          },
+        });
+        createdCount.allocations += 1;
+      }
+    }
+
+    const touchedClientIds = new Set<string>();
+    for (const t of scratch.pendingTreatments.values()) {
+      const clientId =
+        t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
+      if (clientId) touchedClientIds.add(clientId);
+    }
+    const now = new Date();
+    const twoMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, now.getUTCDate()));
+    for (const clientId of touchedClientIds) {
+      const recent = await tx.therapy_treatments.findFirst({
+        where: {
+          household_id: params.householdId,
+          job_id: params.jobId,
+          client_id: clientId,
+          occurred_at: { gte: twoMonthsAgo },
+        },
+        select: { id: true },
+      });
+      if (recent) {
+        await tx.therapy_clients.update({
+          where: { id: clientId },
+          data: { end_date: null },
+        });
+      } else {
+        const last = await tx.therapy_treatments.findFirst({
+          where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
+          orderBy: { occurred_at: "desc" },
+          select: { occurred_at: true },
+        });
+        if (last) {
+          await tx.therapy_clients.update({
+            where: { id: clientId },
+            data: { end_date: last.occurred_at },
+          });
+        }
+      }
+    }
+
+    return createdCount;
+  });
+
+  return {
+    ...summary,
+    created,
+  };
+}
+

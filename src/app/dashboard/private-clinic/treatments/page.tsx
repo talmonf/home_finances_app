@@ -19,6 +19,7 @@ import { privateClinicCommon, privateClinicTreatments, treatmentPaymentStatusLab
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
+import { TherapyTreatmentsImportDialog } from "@/components/therapy-treatments-import-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -247,7 +248,44 @@ export default async function TreatmentsPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{tr.logTreatment}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{tr.logTreatment}</h2>
+          <TherapyTreatmentsImportDialog
+            jobs={jobs.map((j) => ({ id: j.id, title: j.job_title }))}
+            programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, name: p.name }))}
+            labels={{
+              importBtn: tr.importBtn,
+              title: tr.importTitle,
+              instructions: tr.importInstructions,
+              profile: tr.importProfile,
+              profilePrivate: tr.importProfilePrivate,
+              profileOrg: tr.importProfileOrg,
+              job: c.job,
+              program: c.program,
+              autoProgramHint: tr.importAutoProgramHint,
+              chooseFile: tr.importChooseFile,
+              sheet: tr.importSheet,
+              missingVisitType: tr.importMissingVisitType,
+              noFallback: tr.importNoFallback,
+              visitClinic: tr.importVisitClinic,
+              visitHome: tr.importVisitHome,
+              visitPhone: tr.importVisitPhone,
+              visitVideo: tr.importVisitVideo,
+              analyze: tr.importAnalyze,
+              confirm: tr.importConfirm,
+              cancel: c.cancel,
+              summaryTitle: tr.importSummaryTitle,
+              newClients: tr.importNewClients,
+              treatments: tr.importTreatments,
+              receipts: tr.importReceipts,
+              programsToCreate: tr.importProgramsToCreate,
+              warningTitle: tr.importWarnings,
+              errorsTitle: tr.importErrors,
+              conflictsTitle: tr.importConflicts,
+              applyNote: tr.importApplyNote,
+            }}
+          />
+        </div>
         <form
           action={createTherapyTreatment}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
