@@ -38,16 +38,22 @@ function rowFromError(errorText: string): string | null {
 function formatBlockingError(
   errorText: string,
   labels: {
-    importErrUnlinkedReceipt: (row: string | null) => string;
-    importErrAllocationMismatch: (row: string | null) => string;
+    importErrUnlinkedReceiptWithRow: string;
+    importErrUnlinkedReceipt: string;
+    importErrAllocationMismatchWithRow: string;
+    importErrAllocationMismatch: string;
   },
 ): string {
   const row = rowFromError(errorText);
   if (errorText.includes("could not be linked to any treatments")) {
-    return labels.importErrUnlinkedReceipt(row);
+    return row
+      ? labels.importErrUnlinkedReceiptWithRow.replace("{row}", row)
+      : labels.importErrUnlinkedReceipt;
   }
   if (errorText.includes("does not match allocations") || errorText.includes("does not match linked treatments")) {
-    return labels.importErrAllocationMismatch(row);
+    return row
+      ? labels.importErrAllocationMismatchWithRow.replace("{row}", row)
+      : labels.importErrAllocationMismatch;
   }
   return errorText;
 }
@@ -89,8 +95,10 @@ export function TherapyTreatmentsImportForm({
     conflictsTitle: string;
     applyNote: string;
     downloadExample: string;
-    importErrUnlinkedReceipt: (row: string | null) => string;
-    importErrAllocationMismatch: (row: string | null) => string;
+    importErrUnlinkedReceiptWithRow: string;
+    importErrUnlinkedReceipt: string;
+    importErrAllocationMismatchWithRow: string;
+    importErrAllocationMismatch: string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -168,11 +176,19 @@ export function TherapyTreatmentsImportForm({
     () =>
       preview?.blockingErrors.map((er) =>
         formatBlockingError(er, {
+          importErrUnlinkedReceiptWithRow: labels.importErrUnlinkedReceiptWithRow,
           importErrUnlinkedReceipt: labels.importErrUnlinkedReceipt,
+          importErrAllocationMismatchWithRow: labels.importErrAllocationMismatchWithRow,
           importErrAllocationMismatch: labels.importErrAllocationMismatch,
         }),
       ) ?? [],
-    [preview?.blockingErrors, labels.importErrUnlinkedReceipt, labels.importErrAllocationMismatch],
+    [
+      preview?.blockingErrors,
+      labels.importErrUnlinkedReceiptWithRow,
+      labels.importErrUnlinkedReceipt,
+      labels.importErrAllocationMismatchWithRow,
+      labels.importErrAllocationMismatch,
+    ],
   );
 
   return (

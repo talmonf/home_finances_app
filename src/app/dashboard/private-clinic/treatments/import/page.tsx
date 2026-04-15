@@ -122,7 +122,9 @@ export default async function TreatmentsImportPage() {
           conflictsTitle: tr.importConflicts,
           applyNote: tr.importApplyNote,
           downloadExample: tr.importDownloadExample,
+          importErrUnlinkedReceiptWithRow: tr.importErrUnlinkedReceiptWithRow,
           importErrUnlinkedReceipt: tr.importErrUnlinkedReceipt,
+          importErrAllocationMismatchWithRow: tr.importErrAllocationMismatchWithRow,
           importErrAllocationMismatch: tr.importErrAllocationMismatch,
         }}
       />
