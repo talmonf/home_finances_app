@@ -108,7 +108,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
         <label className="block text-xs text-slate-400">{labels.program}</label>
         <select
           name="program_id"
-          required
+          required={programsForJob.length > 0}
           value={programId}
           onChange={(e) => onProgramChange(e.target.value)}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"

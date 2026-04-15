@@ -41,7 +41,6 @@ export const dynamic = "force-dynamic";
 const CLIENTS_BASE = "/dashboard/private-clinic/clients";
 
 type SortKey =
-  | "created"
   | "first_name"
   | "last_name"
   | "start_date"
@@ -52,7 +51,6 @@ type SortKey =
 
 function parseSortKey(s: string | undefined): SortKey {
   const allowed: SortKey[] = [
-    "created",
     "first_name",
     "last_name",
     "start_date",
@@ -61,7 +59,7 @@ function parseSortKey(s: string | undefined): SortKey {
     "program",
     "active",
   ];
-  return allowed.includes(s as SortKey) ? (s as SortKey) : "created";
+  return allowed.includes(s as SortKey) ? (s as SortKey) : "first_name";
 }
 
 function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_clientsOrderByWithRelationInput[] {
@@ -80,9 +78,8 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ default_program: { name: dir } }, { id: dir }];
     case "active":
       return [{ is_active: dir }, { id: dir }];
-    case "created":
     default:
-      return [{ created_at: dir }, { id: dir }];
+      return [{ first_name: dir }, { last_name: dir }, { id: dir }];
   }
 }
 
@@ -176,9 +173,7 @@ export default async function ClientsPage({
   const dir: Prisma.SortOrder =
     dirRaw === "asc" || dirRaw === "desc"
       ? dirRaw
-      : sort === "created"
-        ? "desc"
-        : "asc";
+      : "asc";
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -375,15 +370,6 @@ export default async function ClientsPage({
             <thead className="bg-slate-900/80">
               <tr>
                 <SortHeader
-                  column="created"
-                  label={cl.colRecorded}
-                  sort={sort}
-                  dir={dir}
-                  filters={listFilters}
-                  sortHintAsc={cl.sortHintAsc}
-                  sortHintDesc={cl.sortHintDesc}
-                />
-                <SortHeader
                   column="first_name"
                   label={cl.colClientName}
                   sort={sort}
@@ -439,7 +425,7 @@ export default async function ClientsPage({
                 />
                 <SortHeader
                   column="active"
-                  label={cl.colActive}
+                  label={c.status}
                   sort={sort}
                   dir={dir}
                   filters={listFilters}
@@ -461,9 +447,6 @@ export default async function ClientsPage({
                 const endDisp = row.end_date ? formatHouseholdDate(row.end_date, dateDisplayFormat) : c.noDate;
                 return (
                   <tr key={row.id} className="hover:bg-slate-800/50">
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                      {formatHouseholdDate(row.created_at, dateDisplayFormat)}
-                    </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-200">
                       {obfuscate ? OBFUSCATED : row.first_name}
                     </td>

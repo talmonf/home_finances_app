@@ -1527,7 +1527,7 @@ model therapy_treatments {
   household_id          String
   client_id             String
   job_id                String
-  program_id            String
+  program_id            String?
   occurred_at           DateTime
   amount                Decimal  @db.Decimal(15, 2)
   currency              String   @default("ILS")
@@ -1547,7 +1547,7 @@ model therapy_treatments {
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   client             therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
   job                jobs            @relation(fields: [job_id], references: [id], onDelete: Restrict)
-  program            therapy_service_programs @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  program            therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: Restrict)
   linked_transaction transactions? @relation("TherapyTreatmentTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
   payment_bank_account            bank_accounts?            @relation("TherapyTreatmentPaymentBankAccount", fields: [payment_bank_account_id], references: [id], onDelete: SetNull)
   payment_digital_payment_method  digital_payment_methods?  @relation("TherapyTreatmentPaymentDigitalMethod", fields: [payment_digital_payment_method_id], references: [id], onDelete: SetNull)

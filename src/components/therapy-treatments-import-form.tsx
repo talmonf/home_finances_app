@@ -55,7 +55,7 @@ export function TherapyTreatmentsImportForm({
     visitVideo: string;
     analyze: string;
     confirm: string;
-    cancel: string;
+    clearPreview: string;
     summaryTitle: string;
     newClients: string;
     treatments: string;
@@ -270,9 +270,9 @@ export function TherapyTreatmentsImportForm({
             setSheetName("");
             setClientResolutions({});
           }}
-          className="rounded border border-slate-600 px-3 py-1.5 text-sm"
+          className="rounded border border-slate-600 px-3 py-1.5 text-sm text-slate-200"
         >
-          {labels.cancel}
+          {labels.clearPreview}
         </button>
       </div>
       {msg && <p className="text-sm text-slate-200">{msg}</p>}

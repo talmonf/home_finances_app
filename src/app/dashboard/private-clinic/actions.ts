@@ -1006,19 +1006,28 @@ export async function createTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const client_id = (formData.get("client_id") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
-  const program_id = (formData.get("program_id") as string)?.trim() || "";
+  const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const occurred_date = (formData.get("occurred_date") as string)?.trim() || "";
   const occurred_time = (formData.get("occurred_time") as string)?.trim() || "";
   const amountStr = parseMoney(formData.get("amount") as string);
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
-  if (!client_id || !job_id || !program_id || !occurred_date || !amountStr || !visit_type) {
+  if (!client_id || !job_id || !occurred_date || !amountStr || !visit_type) {
     redirect(`${BASE}/treatments?error=missing`);
   }
   if (!(await assertClient(householdId, client_id))) redirect(`${BASE}/treatments?error=client`);
   if (!(await assertJob(householdId, job_id))) redirect(`${BASE}/treatments?error=job`);
-  const prog = await assertProgram(householdId, program_id);
-  if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+  const programCountForJob = await prisma.therapy_service_programs.count({
+    where: { household_id: householdId, job_id },
+  });
+  let program_id: string | null = program_id_raw || null;
+  if (programCountForJob > 0) {
+    if (!program_id) redirect(`${BASE}/treatments?error=missing`);
+  }
+  if (program_id) {
+    const prog = await assertProgram(householdId, program_id);
+    if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+  }
 
   const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
   if (!occurred_at) redirect(`${BASE}/treatments?error=date`);
@@ -1070,17 +1079,26 @@ export async function updateTherapyTreatment(formData: FormData) {
   if (!row) redirect(`${BASE}/treatments?error=notfound`);
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
-  const program_id = (formData.get("program_id") as string)?.trim() || "";
+  const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const occurred_date = (formData.get("occurred_date") as string)?.trim() || "";
   const occurred_time = (formData.get("occurred_time") as string)?.trim() || "";
   const amountStr = parseMoney(formData.get("amount") as string);
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
-  if (!job_id || !program_id || !occurred_date || !amountStr || !visit_type) {
+  if (!job_id || !occurred_date || !amountStr || !visit_type) {
     redirect(`${BASE}/treatments?error=missing`);
   }
-  const prog = await assertProgram(householdId, program_id);
-  if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+  const programCountForJob = await prisma.therapy_service_programs.count({
+    where: { household_id: householdId, job_id },
+  });
+  let program_id: string | null = program_id_raw || null;
+  if (programCountForJob > 0) {
+    if (!program_id) redirect(`${BASE}/treatments?error=missing`);
+  }
+  if (program_id) {
+    const prog = await assertProgram(householdId, program_id);
+    if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+  }
 
   const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
   if (!occurred_at) redirect(`${BASE}/treatments?error=date`);

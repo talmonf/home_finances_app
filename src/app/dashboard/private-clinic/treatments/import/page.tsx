@@ -111,7 +111,7 @@ export default async function TreatmentsImportPage() {
           visitVideo: tr.importVisitVideo,
           analyze: tr.importAnalyze,
           confirm: tr.importConfirm,
-          cancel: c.cancel,
+          clearPreview: tr.importClearPreview,
           summaryTitle: tr.importSummaryTitle,
           newClients: tr.importNewClients,
           treatments: tr.importTreatments,

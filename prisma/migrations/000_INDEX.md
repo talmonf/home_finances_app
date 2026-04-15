@@ -82,6 +82,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 070 | `070_therapy_treatment_payment_fields.sql` | ALTER | `therapy_treatments`: optional `payment_date`, `payment_method` (bank transfer / digital payment), FK to `bank_accounts` or `digital_payment_methods`. |
 | 071 | `071_jobs_private_clinic_flag.sql` | ALTER | `jobs`: add `is_private_clinic` boolean flag (default `true`) to drive import recipient type and bank strictness behavior. |
 | 072 | `072_therapy_receipts_covered_period.sql` | ALTER | `therapy_receipts`: add `covered_period_start`/`covered_period_end` (DATE) for month coverage tracking + index for receivables reporting. |
+| 073 | `073_therapy_treatments_program_optional.sql` | ALTER | `therapy_treatments`: make `program_id` nullable so sessions can exist without a service program (jobs with no programs). |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -157,6 +158,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 070_therapy_treatment_payment_fields.sql
 - [x] 071_jobs_private_clinic_flag.sql
 - [x] 072_therapy_receipts_covered_period.sql
+- [x] 073_therapy_treatments_program_optional.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

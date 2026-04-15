@@ -152,8 +152,6 @@ export type TipulimAnalyzeParams = {
   clientResolutions?: Record<string, string>;
 };
 
-const DEFAULT_PROGRAM_NAME_HE = "כללי";
-
 function sheetRows(workbook: XLSX.WorkBook, sheetName?: string | null): Row[] {
   const chosen = sheetName && workbook.Sheets[sheetName] ? sheetName : workbook.SheetNames[0];
   if (!chosen) return [];
@@ -871,20 +869,6 @@ async function getOrCreateProgramId(
     map.set(key, created.id);
     if (!map.has("__default__")) map.set("__default__", created.id);
   }
-  if (!map.has("__default__")) {
-    const created = await tx.therapy_service_programs.create({
-      data: {
-        id: crypto.randomUUID(),
-        household_id: householdId,
-        job_id: jobId,
-        name: DEFAULT_PROGRAM_NAME_HE,
-        sort_order: 0,
-        is_active: true,
-      },
-      select: { id: true },
-    });
-    map.set("__default__", created.id);
-  }
   return map;
 }
 
@@ -951,6 +935,9 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       consultations: 0,
       programs: 0,
     };
+    const programCountBefore = await tx.therapy_service_programs.count({
+      where: { household_id: params.householdId, job_id: params.jobId },
+    });
     const programMap = await getOrCreateProgramId(
       tx as unknown as PrismaClient,
       params.householdId,
@@ -958,10 +945,10 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       params.selectedProgramId ?? null,
       summary.programsToAutoCreate,
     );
-    const existingProgramCount = await tx.therapy_service_programs.count({
+    const programCountAfter = await tx.therapy_service_programs.count({
       where: { household_id: params.householdId, job_id: params.jobId },
     });
-    createdCount.programs = Math.max(summary.programsToAutoCreate.length - (existingProgramCount > 0 ? 0 : 1), 0);
+    createdCount.programs = programCountAfter - programCountBefore;
 
     const clientIdByKey = new Map<string, string>();
     for (const [k, v] of scratch.newClients.entries()) {
@@ -995,13 +982,17 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       const clientId =
         t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
       if (!clientId) continue;
+      const defaultProg = programMap.get("__default__") ?? null;
+      const programIdForRow = t.programName
+        ? (programMap.get(norm(t.programName)) ?? defaultProg)
+        : defaultProg;
       const row = await tx.therapy_treatments.create({
         data: {
           id: crypto.randomUUID(),
           household_id: params.householdId,
           client_id: clientId,
           job_id: params.jobId,
-          program_id: t.programName ? (programMap.get(norm(t.programName)) ?? programMap.get("__default__")!) : programMap.get("__default__")!,
+          program_id: programIdForRow,
           occurred_at: t.occurredAt,
           amount: t.amount,
           currency: "ILS",
@@ -1130,34 +1121,41 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
     const now = new Date();
     const twoMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, now.getUTCDate()));
+    function utcDay(d: Date): Date {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    }
     for (const clientId of touchedClientIds) {
-      const recent = await tx.therapy_treatments.findFirst({
-        where: {
-          household_id: params.householdId,
-          job_id: params.jobId,
-          client_id: clientId,
-          occurred_at: { gte: twoMonthsAgo },
-        },
-        select: { id: true },
+      const firstTx = await tx.therapy_treatments.findFirst({
+        where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
+        orderBy: { occurred_at: "asc" },
+        select: { occurred_at: true },
       });
-      if (recent) {
-        await tx.therapy_clients.update({
-          where: { id: clientId },
-          data: { end_date: null },
-        });
-      } else {
-        const last = await tx.therapy_treatments.findFirst({
-          where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
-          orderBy: { occurred_at: "desc" },
-          select: { occurred_at: true },
-        });
-        if (last) {
-          await tx.therapy_clients.update({
-            where: { id: clientId },
-            data: { end_date: last.occurred_at },
-          });
-        }
+      const lastTx = await tx.therapy_treatments.findFirst({
+        where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
+        orderBy: { occurred_at: "desc" },
+        select: { occurred_at: true },
+      });
+      if (!firstTx || !lastTx) continue;
+      const existing = await tx.therapy_clients.findUnique({
+        where: { id: clientId },
+        select: { start_date: true },
+      });
+      const earliestOcc = utcDay(firstTx.occurred_at);
+      let newStart = earliestOcc;
+      if (existing?.start_date) {
+        const ex = utcDay(existing.start_date);
+        newStart = new Date(Math.min(ex.getTime(), earliestOcc.getTime()));
       }
+      const lastDay = utcDay(lastTx.occurred_at);
+      const recent = lastTx.occurred_at.getTime() >= twoMonthsAgo.getTime();
+      await tx.therapy_clients.update({
+        where: { id: clientId },
+        data: {
+          start_date: newStart,
+          end_date: recent ? null : lastDay,
+          is_active: recent,
+        },
+      });
     }
 
     return createdCount;

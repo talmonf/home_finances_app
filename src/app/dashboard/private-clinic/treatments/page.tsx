@@ -552,15 +552,26 @@ export default async function TreatmentsPage({
                             </select>
                             <select
                               name="program_id"
-                              defaultValue={t.program_id}
-                              required
+                              defaultValue={t.program_id ?? ""}
+                              required={programs.some((p) => p.job_id === t.job_id)}
                               className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                             >
-                              {programs.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {formatPrivateClinicJobLabel(p.job)} — {p.name}
-                                </option>
-                              ))}
+                              {programs.some((p) => p.job_id === t.job_id) ? (
+                                <>
+                                  {!t.program_id ? (
+                                    <option value="">{c.select}</option>
+                                  ) : null}
+                                  {programs
+                                    .filter((p) => p.job_id === t.job_id)
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {formatPrivateClinicJobLabel(p.job)} — {p.name}
+                                      </option>
+                                    ))}
+                                </>
+                              ) : (
+                                <option value="">{c.select}</option>
+                              )}
                             </select>
                             <label className="block text-[10px] text-slate-500">{c.date}</label>
                             <input
