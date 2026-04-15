@@ -1,5 +1,3 @@
-"use client";
-
 import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
