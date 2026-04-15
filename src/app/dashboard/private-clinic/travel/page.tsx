@@ -301,7 +301,7 @@ export default async function TravelPage({
                         ? `${tv.scopeJob} ${formatJobDisplayLabel(e.job)}`
                         : "—"}
                     {e.amount != null
-                      ? ` — ${formatMoneyLineForDisplay(obfuscate, e.amount.toString(), e.currency)}`
+                      ? ` — ${formatMoneyLineForDisplay(obfuscate, e.amount.toString(), e.currency, uiLanguage)}`
                       : ""}
                   </summary>
                   <form action={updateTherapyTravelEntry} className="mt-3 grid gap-2 md:grid-cols-2">

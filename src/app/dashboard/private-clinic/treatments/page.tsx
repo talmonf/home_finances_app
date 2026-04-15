@@ -6,30 +6,30 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import {
-  formatHouseholdDate,
-  formatHouseholdDateUtcWithOptionalTime,
-  utcDateToHtmlDateInputValue,
-} from "@/lib/household-date-format";
-import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
-import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
-import { decimalToNumber, treatmentPaymentStatus } from "@/lib/therapy/payment";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
-import { privateClinicCommon, privateClinicTreatments, treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
-import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
 import {
-  jobWhereInPrivateClinicModule,
-  jobsWhereActiveForPrivateClinicPickers,
   formatPrivateClinicJobLabel,
+  jobsWhereActiveForPrivateClinicPickers,
+  jobWhereInPrivateClinicModule,
 } from "@/lib/private-clinic/jobs-scope";
+import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { TreatmentModalForm } from "./treatment-modal-form";
+import { TreatmentsListClient } from "./treatments-list-client";
+import {
+  loadTreatmentsCursorPage,
+  parseTreatmentsPaidFilter,
+  parseTreatmentsSortDir,
+  parseTreatmentsSortKey,
+  type TreatmentsListFilters,
+} from "./treatments-list-data";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,10 @@ type Search = {
   client?: string;
   from?: string;
   to?: string;
+  sort?: string;
+  dir?: string;
+  modal?: string;
+  edit_id?: string;
 };
 
 export default async function TreatmentsPage({
@@ -57,12 +61,16 @@ export default async function TreatmentsPage({
   const c = privateClinicCommon(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
   const sp = searchParams ? await searchParams : {};
-  const paidFilter = sp.paid || "all";
-  const jobFilter = sp.job || "";
-  const programFilter = sp.program || "";
-  const clientFilter = sp.client || "";
-  const from = sp.from ? new Date(sp.from) : null;
-  const to = sp.to ? new Date(sp.to) : null;
+  const filters: TreatmentsListFilters = {
+    paid: parseTreatmentsPaidFilter(sp.paid),
+    job: sp.job?.trim() || "",
+    program: sp.program?.trim() || "",
+    client: sp.client?.trim() || "",
+    from: sp.from?.trim() || "",
+    to: sp.to?.trim() || "",
+    sort: parseTreatmentsSortKey(sp.sort),
+    dir: parseTreatmentsSortDir(sp.dir),
+  };
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -85,19 +93,24 @@ export default async function TreatmentsPage({
   const linkedJobIds = linkedJobRows.map((r) => r.job_id);
   const linkedProgramIds = linkedProgramRows
     .map((r) => r.program_id)
-    .filter((id): id is string => id != null);
+    .filter((id): id is string => Boolean(id));
 
-  const [jobs, programs, clients, settings, allocGroups, treatments, visitDefaultsRows, bankAccounts, digitalPaymentMethods] =
+  const [jobs, programs, clients, settings, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage] =
     await Promise.all([
-    prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({
-        householdId,
-        familyMemberId,
-        includeJobIds: linkedJobIds,
-      }),
+      prisma.jobs.findMany({
+      where: {
+        household_id: householdId,
+        OR: [
+          jobsWhereActiveForPrivateClinicPickers({
+            householdId,
+            familyMemberId,
+          }),
+          ...(linkedJobIds.length ? [{ id: { in: linkedJobIds } }] : []),
+        ],
+      },
       orderBy: { start_date: "desc" },
     }),
-    prisma.therapy_service_programs.findMany({
+      prisma.therapy_service_programs.findMany({
       where: {
         household_id: householdId,
         OR: [
@@ -112,62 +125,17 @@ export default async function TreatmentsPage({
       },
       include: { job: true },
     }),
-    prisma.therapy_clients.findMany({
+      prisma.therapy_clients.findMany({
       where: {
         household_id: householdId,
-        OR: [{ is_active: true }, ...(clientFilter ? [{ id: clientFilter }] : [])],
+        OR: [{ is_active: true }, ...(filters.client ? [{ id: filters.client }] : [])],
       },
       orderBy: { first_name: "asc" },
     }),
-    prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
-    prisma.therapy_receipt_allocations.groupBy({
-      by: ["treatment_id"],
+      prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
+      prisma.therapy_visit_type_default_amounts.findMany({
       where: {
         household_id: householdId,
-        treatment: { job: jobWhereInPrivateClinicModule },
-      },
-      _sum: { amount: true },
-    }),
-    prisma.therapy_treatments.findMany({
-      where: {
-        household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
-        ...(jobFilter ? { job_id: jobFilter } : {}),
-        ...(programFilter ? { program_id: programFilter } : {}),
-        ...(clientFilter ? { client_id: clientFilter } : {}),
-        ...(from || to
-          ? {
-              occurred_at: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
-      },
-      orderBy: { occurred_at: "desc" },
-      include: {
-        client: true,
-        job: true,
-        program: true,
-        attachments: { orderBy: { created_at: "asc" } },
-        payment_bank_account: { select: { account_name: true, bank_name: true } },
-        payment_digital_payment_method: { select: { name: true } },
-        receipt_allocations: {
-          orderBy: { created_at: "asc" },
-          include: {
-            receipt: { select: { id: true, receipt_number: true } },
-          },
-        },
-      },
-      take: 500,
-    }),
-    prisma.therapy_visit_type_default_amounts.findMany({
-      where: {
-        household_id: householdId,
-        job: {
-          ...jobWhereInPrivateClinicModule,
-          ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
-        },
       },
       select: {
         job_id: true,
@@ -177,14 +145,15 @@ export default async function TreatmentsPage({
         currency: true,
       },
     }),
-    prisma.bank_accounts.findMany({
+      prisma.bank_accounts.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
     }),
-    prisma.digital_payment_methods.findMany({
+      prisma.digital_payment_methods.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { name: "asc" },
     }),
+      loadTreatmentsCursorPage({ householdId, filters, take: 50 }),
   ]);
 
   const visitDefaults = visitDefaultsRows.map((r) => ({
@@ -194,20 +163,6 @@ export default async function TreatmentsPage({
     amount: r.amount.toString(),
     currency: r.currency,
   }));
-
-  const sumMap = new Map(
-    allocGroups.map((g) => [g.treatment_id, decimalToNumber(g._sum.amount)]),
-  );
-
-  const filtered = treatments.filter((t) => {
-    const allocated = sumMap.get(t.id) ?? 0;
-    const st = treatmentPaymentStatus(t.amount, allocated);
-    if (paidFilter === "all") return true;
-    if (paidFilter === "paid") return st === "paid";
-    if (paidFilter === "unpaid") return st === "unpaid";
-    if (paidFilter === "partial") return st === "partial";
-    return true;
-  });
 
   const note1 = therapyLocalizedNoteLabel(
     settings?.note_1_label ?? "Note 1",
@@ -225,13 +180,45 @@ export default async function TreatmentsPage({
     uiLanguage,
   );
 
-  const visitOptions = ["clinic", "home", "phone", "video"] as const;
+  const queryParams = new URLSearchParams();
+  if (filters.paid !== "all") queryParams.set("paid", filters.paid);
+  if (filters.job) queryParams.set("job", filters.job);
+  if (filters.program) queryParams.set("program", filters.program);
+  if (filters.client) queryParams.set("client", filters.client);
+  if (filters.from) queryParams.set("from", filters.from);
+  if (filters.to) queryParams.set("to", filters.to);
+  if (filters.sort !== "occurred_at") queryParams.set("sort", filters.sort);
+  if (filters.dir !== "desc") queryParams.set("dir", filters.dir);
+  const baseListHref = `/dashboard/private-clinic/treatments?${queryParams.toString()}`;
+  const apiHrefBase = `/api/private-clinic/treatments?${queryParams.toString()}&take=50`;
+
+  const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const editId = sp.edit_id?.trim() || "";
+  const editTreatment =
+    modalMode === "edit" && editId
+      ? await prisma.therapy_treatments.findFirst({
+          where: { id: editId, household_id: householdId },
+          include: {
+            client: { select: { first_name: true, last_name: true } },
+            attachments: { orderBy: { created_at: "asc" } },
+            receipt_allocations: {
+              orderBy: { created_at: "asc" },
+              include: { receipt: { select: { id: true, receipt_number: true } } },
+            },
+          },
+        })
+      : null;
 
   return (
     <div className="space-y-8">
       {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error}
+        </p>
+      )}
+      {(sp.created || sp.updated) && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {c.saved}
         </p>
       )}
 
@@ -245,7 +232,7 @@ export default async function TreatmentsPage({
             <label className="block text-xs text-slate-400">{tr.payment}</label>
             <select
               name="paid"
-              defaultValue={paidFilter}
+              defaultValue={filters.paid}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="all">{c.all}</option>
@@ -258,7 +245,7 @@ export default async function TreatmentsPage({
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
-              defaultValue={jobFilter}
+              defaultValue={filters.job}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>
@@ -273,7 +260,7 @@ export default async function TreatmentsPage({
             <label className="block text-xs text-slate-400">{c.program}</label>
             <select
               name="program"
-              defaultValue={programFilter}
+              defaultValue={filters.program}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.anyF}</option>
@@ -288,7 +275,7 @@ export default async function TreatmentsPage({
             <label className="block text-xs text-slate-400">{c.client}</label>
             <select
               name="client"
-              defaultValue={clientFilter}
+              defaultValue={filters.client}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>
@@ -305,7 +292,7 @@ export default async function TreatmentsPage({
             <input
               name="from"
               type="date"
-              defaultValue={sp.from ?? ""}
+              defaultValue={filters.from}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -314,9 +301,33 @@ export default async function TreatmentsPage({
             <input
               name="to"
               type="date"
-              defaultValue={sp.to ?? ""}
+              defaultValue={filters.to}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.tableSort}</label>
+            <select
+              name="sort"
+              defaultValue={filters.sort}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="occurred_at">{c.when}</option>
+              <option value="client">{c.client}</option>
+              <option value="job">{c.job}</option>
+              <option value="amount">{c.amount}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.tableSort}</label>
+            <select
+              name="dir"
+              defaultValue={filters.dir}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="desc">{tr.sortHintDesc}</option>
+              <option value="asc">{tr.sortHintAsc}</option>
+            </select>
           </div>
           <button
             type="submit"
@@ -329,392 +340,144 @@ export default async function TreatmentsPage({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{tr.logTreatment}</h2>
-          <OpenPrivateClinicTreatmentsImportButton
-            label={tr.importBtn}
-            importPath="/dashboard/private-clinic/treatments/import"
-          />
-        </div>
-        <form
-          action={createTherapyTreatment}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-        >
-          <div>
-            <label className="block text-xs text-slate-400">{c.client}</label>
-            <select
-              name="client_id"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{c.select}</option>
-              {clients.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.first_name} {cl.last_name ?? ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          <TherapyTreatmentDefaultAmountFields
-            uiLanguage={uiLanguage}
-            jobs={jobs.map((j) => ({ id: j.id, job_title: formatPrivateClinicJobLabel(j) }))}
-            programs={programs.map((p) => ({
-              id: p.id,
-              job_id: p.job_id,
-              name: p.name,
-              job: { job_title: formatPrivateClinicJobLabel(p.job) },
-            }))}
-            visitDefaults={visitDefaults}
-            labels={{
-              job: c.job,
-              program: c.program,
-              date: c.date,
-              timeOptional: tr.occurredTimeOptional,
-              amount: c.amount,
-              currency: c.currency,
-              visitType: tr.visitType,
-              select: c.select,
-            }}
-          />
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
-            <TherapyTransactionLinkSelect
-              name="linked_transaction_id"
-              householdId={householdId}
-              label={tr.clinicIncomeLink}
-              hint={tr.clinicIncomeHint}
-              noneOptionLabel={c.txNoneLinked}
+          <h2 className="text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
+          <div className="flex items-center gap-2">
+            <OpenPrivateClinicTreatmentsImportButton
+              label={tr.importBtn}
+              importPath="/dashboard/private-clinic/treatments/import"
             />
+            <Link
+              href={`${baseListHref}&modal=new`}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            >
+              {tr.addTreatmentBtn}
+            </Link>
           </div>
-          <div className="md:col-span-2 space-y-2 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3">
-            <p className="text-xs text-slate-500">{tr.paymentFieldsHint}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="block text-xs text-slate-400">{tr.paymentDate}</label>
-                <input
-                  name="payment_date"
-                  type="date"
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{tr.paymentMethod}</label>
-                <select
-                  name="payment_method"
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">{tr.paymentMethodUnset}</option>
-                  <option value="bank_transfer">{tr.paymentBankTransfer}</option>
-                  <option value="digital_payment">{tr.paymentDigital}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{tr.paymentIntoAccount}</label>
-                <select
-                  name="payment_bank_account_id"
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">—</option>
-                  {bankAccounts.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.account_name} — {b.bank_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{tr.paymentDigitalApp}</label>
-                <select
-                  name="payment_digital_payment_method_id"
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">—</option>
-                  {digitalPaymentMethods.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-          <textarea
-            name="note_1"
-            placeholder={note1}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <textarea
-            name="note_2"
-            placeholder={note2}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <textarea
-            name="note_3"
-            placeholder={note3}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {tr.saveTreatment}
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">
-          {tr.treatmentsCount(filtered.length)}
-        </h2>
-        {filtered.length === 0 ? (
+        </div>
+        {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noRowsMatch}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-700">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-3 py-2 text-slate-300">{c.when}</th>
-                  <th className="px-3 py-2 text-slate-300">{c.client}</th>
-                  <th className="px-3 py-2 text-slate-300">{c.job}</th>
-                  <th className="px-3 py-2 text-slate-300">{c.amount}</th>
-                  <th className="px-3 py-2 text-slate-300">{c.paid}</th>
-                  <th className="px-3 py-2 text-slate-300">{tr.receiptCol}</th>
-                  <th className="px-3 py-2 text-slate-300">{tr.paymentDetailsCol}</th>
-                  <th className="px-3 py-2 text-slate-300">{c.edit}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((t) => {
-                  const allocated = sumMap.get(t.id) ?? 0;
-                  const st = treatmentPaymentStatus(t.amount, allocated);
-                  return (
-                    <tr key={t.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                        {formatHouseholdDateUtcWithOptionalTime(t.occurred_at, dateDisplayFormat)}
-                      </td>
-                      <td className="px-3 py-2 text-slate-100">
-                        {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}
-                      </td>
-                      <td className="px-3 py-2 text-slate-400">{formatPrivateClinicJobLabel(t.job)}</td>
-                      <td className="px-3 py-2 text-slate-200">
-                        {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
-                      </td>
-                      <td className="px-3 py-2 text-slate-400">{treatmentPaymentStatusLabel(uiLanguage, st)}</td>
-                      <td className="max-w-[12rem] px-3 py-2 text-slate-400">
-                        {t.receipt_allocations.length > 0 ? (
-                          <ul className="list-none space-y-1">
-                            {t.receipt_allocations.map((a) => (
-                              <li key={a.id}>
-                                <Link
-                                  href={`/dashboard/private-clinic/receipts/${a.receipt.id}`}
-                                  className="text-sky-400 hover:underline"
-                                >
-                                  #{a.receipt.receipt_number}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="max-w-[14rem] px-3 py-2 text-slate-400">
-                        {(() => {
-                          const parts: string[] = [];
-                          if (t.payment_date && !Number.isNaN(t.payment_date.getTime())) {
-                            parts.push(formatHouseholdDate(t.payment_date, dateDisplayFormat));
-                          }
-                          if (t.payment_method === "bank_transfer") {
-                            parts.push(tr.paymentBankTransfer);
-                            if (t.payment_bank_account) {
-                              parts.push(
-                                `${t.payment_bank_account.account_name} (${t.payment_bank_account.bank_name})`,
-                              );
-                            }
-                          } else if (t.payment_method === "digital_payment") {
-                            parts.push(tr.paymentDigital);
-                            if (t.payment_digital_payment_method) {
-                              parts.push(t.payment_digital_payment_method.name);
-                            }
-                          }
-                          return parts.length ? parts.join(" · ") : "—";
-                        })()}
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <details>
-                          <summary className="cursor-pointer text-xs text-sky-400">{c.edit}</summary>
-                          <form action={updateTherapyTreatment} className="mt-2 space-y-2 rounded border border-slate-700 p-2">
-                            <input type="hidden" name="id" value={t.id} />
-                            <select
-                              name="job_id"
-                              defaultValue={t.job_id}
-                              required
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            >
-                              {jobs.map((j) => (
-                                <option key={j.id} value={j.id}>
-                                  {formatPrivateClinicJobLabel(j)}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              name="program_id"
-                              defaultValue={t.program_id ?? ""}
-                              required={programs.some((p) => p.job_id === t.job_id)}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            >
-                              {programs.some((p) => p.job_id === t.job_id) ? (
-                                <>
-                                  {!t.program_id ? (
-                                    <option value="">{c.select}</option>
-                                  ) : null}
-                                  {programs
-                                    .filter((p) => p.job_id === t.job_id)
-                                    .map((p) => (
-                                      <option key={p.id} value={p.id}>
-                                        {formatPrivateClinicJobLabel(p.job)} — {p.name}
-                                      </option>
-                                    ))}
-                                </>
-                              ) : (
-                                <option value="">{c.select}</option>
-                              )}
-                            </select>
-                            <label className="block text-[10px] text-slate-500">{c.date}</label>
-                            <input
-                              name="occurred_date"
-                              type="date"
-                              defaultValue={utcDateToHtmlDateInputValue(t.occurred_at)}
-                              required
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            />
-                            <label className="mt-1 block text-[10px] text-slate-500">{tr.occurredTimeOptional}</label>
-                            <input
-                              name="occurred_time"
-                              type="time"
-                              step={60}
-                              defaultValue={defaultOccurredTimeInputValue(t.occurred_at)}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            />
-                            <input
-                              name="amount"
-                              defaultValue={t.amount.toString()}
-                              required
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            />
-                            <input name="currency" defaultValue={t.currency} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
-                            <select name="visit_type" defaultValue={t.visit_type} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs">
-                              {visitOptions.map((v) => (
-                                <option key={v} value={v}>
-                                  {therapyVisitTypeLabel(uiLanguage, v)}
-                                </option>
-                              ))}
-                            </select>
-                            <TherapyTransactionLinkSelect
-                              name="linked_transaction_id"
-                              householdId={householdId}
-                              currentId={t.linked_transaction_id}
-                              label={tr.clinicIncomeLink}
-                              noneOptionLabel={c.txNoneLinked}
-                            />
-                            <p className="text-[10px] text-slate-500">{tr.paymentFieldsHint}</p>
-                            <label className="block text-[10px] text-slate-500">{tr.paymentDate}</label>
-                            <input
-                              name="payment_date"
-                              type="date"
-                              defaultValue={utcDateToHtmlDateInputValue(t.payment_date)}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            />
-                            <label className="block text-[10px] text-slate-500">{tr.paymentMethod}</label>
-                            <select
-                              name="payment_method"
-                              defaultValue={t.payment_method ?? ""}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            >
-                              <option value="">{tr.paymentMethodUnset}</option>
-                              <option value="bank_transfer">{tr.paymentBankTransfer}</option>
-                              <option value="digital_payment">{tr.paymentDigital}</option>
-                            </select>
-                            <label className="block text-[10px] text-slate-500">{tr.paymentIntoAccount}</label>
-                            <select
-                              name="payment_bank_account_id"
-                              defaultValue={t.payment_bank_account_id ?? ""}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            >
-                              <option value="">—</option>
-                              {bankAccounts.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {b.account_name} — {b.bank_name}
-                                </option>
-                              ))}
-                            </select>
-                            <label className="block text-[10px] text-slate-500">{tr.paymentDigitalApp}</label>
-                            <select
-                              name="payment_digital_payment_method_id"
-                              defaultValue={t.payment_digital_payment_method_id ?? ""}
-                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
-                            >
-                              <option value="">—</option>
-                              {digitalPaymentMethods.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                  {d.name}
-                                </option>
-                              ))}
-                            </select>
-                            {t.receipt_allocations.length > 0 && (
-                              <div className="rounded border border-slate-700/80 bg-slate-800/60 px-2 py-2">
-                                <p className="mb-1 text-[10px] font-medium text-slate-400">{tr.receiptCol}</p>
-                                <p className="mb-1 text-[10px] text-slate-500">{tr.receiptLinkedHint}</p>
-                                <ul className="list-none space-y-1">
-                                  {t.receipt_allocations.map((a) => (
-                                    <li key={a.id}>
-                                      <Link
-                                        href={`/dashboard/private-clinic/receipts/${a.receipt.id}`}
-                                        className="text-xs text-sky-400 hover:underline"
-                                      >
-                                        #{a.receipt.receipt_number}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            <textarea name="note_1" defaultValue={t.note_1 ?? ""} placeholder={note1} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
-                            <textarea name="note_2" defaultValue={t.note_2 ?? ""} placeholder={note2} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
-                            <textarea name="note_3" defaultValue={t.note_3 ?? ""} placeholder={note3} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs" />
-                            <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                              {c.save}
-                            </button>
-                          </form>
-                          <ConfirmDeleteForm action={deleteTherapyTreatment} className="mt-2">
-                            <input type="hidden" name="id" value={t.id} />
-                            <button type="submit" className="text-xs text-rose-400">
-                              {c.delete}
-                            </button>
-                          </ConfirmDeleteForm>
-                          <TherapyTreatmentAttachments
-                            treatmentId={t.id}
-                            uiLanguage={uiLanguage}
-                            attachments={t.attachments.map((a) => ({
-                              id: a.id,
-                              file_name: a.file_name,
-                              mime_type: a.mime_type,
-                              byte_size: a.byte_size,
-                              transcription_status: a.transcription_status,
-                              transcription_text: a.transcription_text,
-                              transcription_error: a.transcription_error,
-                              transcription_language: a.transcription_language,
-                            }))}
-                          />
-                        </details>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TreatmentsListClient
+            initialRows={firstPage.rows}
+            initialCursor={firstPage.nextCursor}
+            apiHrefBase={apiHrefBase}
+            listBaseHref={baseListHref}
+            dateDisplayFormat={dateDisplayFormat}
+            uiLanguage={uiLanguage}
+            obfuscate={obfuscate}
+            labels={{
+              when: c.when,
+              client: c.client,
+              job: c.job,
+              amount: c.amount,
+              paid: c.paid,
+              receiptCol: tr.receiptCol,
+              paymentDetailsCol: tr.paymentDetailsCol,
+              edit: c.edit,
+              loadingMore: tr.loadingMore,
+              noMoreRows: tr.noMoreRows,
+              loadMore: tr.loadMore,
+              paymentBankTransfer: tr.paymentBankTransfer,
+              paymentDigital: tr.paymentDigital,
+            }}
+          />
         )}
       </section>
+      {modalMode === "new" ? (
+        <TreatmentModalForm
+          action={createTherapyTreatment}
+          mode="create"
+          title={tr.addTreatmentBtn}
+          closeHref={baseListHref}
+          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
+          redirectOnError={`${baseListHref}&modal=new`}
+          householdId={householdId}
+          uiLanguage={uiLanguage}
+          clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}` }))}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
+          programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
+          visitDefaults={visitDefaults}
+          bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
+          digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
+          labels={{ c, tr, note1, note2, note3 }}
+        />
+      ) : null}
+      {modalMode === "edit" && editTreatment ? (
+        <TreatmentModalForm
+          action={updateTherapyTreatment}
+          mode="edit"
+          title={tr.editTreatmentTitle}
+          closeHref={baseListHref}
+          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
+          redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editTreatment.id)}`}
+          householdId={householdId}
+          uiLanguage={uiLanguage}
+          clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}` }))}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
+          programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
+          visitDefaults={visitDefaults}
+          bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
+          digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
+          labels={{ c, tr, note1, note2, note3 }}
+          initial={{
+            id: editTreatment.id,
+            client_id: editTreatment.client_id,
+            client_label: `${editTreatment.client.first_name} ${editTreatment.client.last_name ?? ""}`.trim(),
+            job_id: editTreatment.job_id,
+            program_id: editTreatment.program_id ?? "",
+            occurred_date: utcDateToHtmlDateInputValue(editTreatment.occurred_at),
+            occurred_time: defaultOccurredTimeInputValue(editTreatment.occurred_at),
+            amount: editTreatment.amount.toString(),
+            currency: editTreatment.currency,
+            visit_type: editTreatment.visit_type,
+            linked_transaction_id: editTreatment.linked_transaction_id ?? "",
+            payment_date: utcDateToHtmlDateInputValue(editTreatment.payment_date),
+            payment_method: editTreatment.payment_method ?? "",
+            payment_bank_account_id: editTreatment.payment_bank_account_id ?? "",
+            payment_digital_payment_method_id: editTreatment.payment_digital_payment_method_id ?? "",
+            note_1: editTreatment.note_1 ?? "",
+            note_2: editTreatment.note_2 ?? "",
+            note_3: editTreatment.note_3 ?? "",
+          }}
+          extraContent={
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <ConfirmDeleteForm action={deleteTherapyTreatment}>
+                  <input type="hidden" name="id" value={editTreatment.id} />
+                  <input type="hidden" name="redirect_on_success" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`} />
+                  <button type="submit" className="text-sm text-rose-400">
+                    {c.delete}
+                  </button>
+                </ConfirmDeleteForm>
+                <p className="text-xs text-slate-500">{tr.receiptLinkedHint}</p>
+              </div>
+              <ul className="list-none space-y-1 text-xs">
+                {editTreatment.receipt_allocations.map((a) => (
+                  <li key={a.id}>
+                    <Link href={`/dashboard/private-clinic/receipts/${a.receipt.id}`} className="text-sky-400 hover:underline">
+                      #{a.receipt.receipt_number}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <TherapyTreatmentAttachments
+                treatmentId={editTreatment.id}
+                uiLanguage={uiLanguage}
+                attachments={editTreatment.attachments.map((a) => ({
+                  id: a.id,
+                  file_name: a.file_name,
+                  mime_type: a.mime_type,
+                  byte_size: a.byte_size,
+                  transcription_status: a.transcription_status,
+                  transcription_text: a.transcription_text,
+                  transcription_error: a.transcription_error,
+                  transcription_language: a.transcription_language,
+                }))}
+              />
+            </div>
+          }
+        />
+      ) : null}
     </div>
   );
 }

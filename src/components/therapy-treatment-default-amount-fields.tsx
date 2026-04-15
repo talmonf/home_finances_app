@@ -29,17 +29,31 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     visitType: string;
     select: string;
   };
+  defaultValues?: {
+    job_id?: string;
+    program_id?: string;
+    occurred_date?: string;
+    occurred_time?: string;
+    amount?: string;
+    currency?: string;
+    visit_type?: TherapyVisitType;
+  };
 }) {
-  const { visitDefaults, jobs, programs, labels, uiLanguage } = props;
+  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues } = props;
 
-  const firstJobId = jobs[0]?.id ?? "";
+  const firstJobId = defaultValues?.job_id || jobs[0]?.id || "";
   const programsForFirst = useMemo(
     () => programs.filter((p) => p.job_id === firstJobId),
     [programs, firstJobId],
   );
-  const initialProgramId = programsForFirst[0]?.id ?? programs[0]?.id ?? "";
+  const requestedProgramId = defaultValues?.program_id || "";
+  const initialProgramId =
+    (requestedProgramId && programs.some((p) => p.id === requestedProgramId) ? requestedProgramId : "") ||
+    programsForFirst[0]?.id ||
+    programs[0]?.id ||
+    "";
 
-  const initialVisit: TherapyVisitType = "clinic";
+  const initialVisit: TherapyVisitType = defaultValues?.visit_type ?? "clinic";
   const initialResolved = resolveTherapyVisitTypeDefault(
     visitDefaults,
     firstJobId,
@@ -50,8 +64,8 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   const [jobId, setJobId] = useState(firstJobId);
   const [programId, setProgramId] = useState(initialProgramId);
   const [visitType, setVisitType] = useState<TherapyVisitType>(initialVisit);
-  const [amount, setAmount] = useState(initialResolved?.amount ?? "");
-  const [currency, setCurrency] = useState(initialResolved?.currency ?? "ILS");
+  const [amount, setAmount] = useState(defaultValues?.amount ?? initialResolved?.amount ?? "");
+  const [currency, setCurrency] = useState(defaultValues?.currency ?? initialResolved?.currency ?? "ILS");
 
   const programsForJob = useMemo(() => programs.filter((p) => p.job_id === jobId), [programs, jobId]);
 
@@ -130,6 +144,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           name="occurred_date"
           type="date"
           required
+          defaultValue={defaultValues?.occurred_date ?? ""}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
@@ -139,6 +154,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           name="occurred_time"
           type="time"
           step={60}
+          defaultValue={defaultValues?.occurred_time ?? ""}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>

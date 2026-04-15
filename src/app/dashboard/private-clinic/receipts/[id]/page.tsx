@@ -220,7 +220,7 @@ export default async function ReceiptDetailPage({
               <option key={t.id} value={t.id}>
                 {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
                 {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}{" "}
-                {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
+                {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)}
               </option>
             ))}
           </select>

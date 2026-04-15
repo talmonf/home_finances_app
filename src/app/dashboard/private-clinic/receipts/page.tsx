@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdId,
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
+  getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
@@ -13,6 +14,7 @@ import { createTherapyReceipt } from "../actions";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function ReceiptsPage({
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
   const sp = searchParams ? await searchParams : {};
@@ -131,6 +134,7 @@ export default async function ReceiptsPage({
   const paid = Number(paidSum._sum.total_amount ?? 0);
   const outstanding = earned - paid;
   const monthLabel = `${lastMonthStart.toISOString().slice(0, 10)} - ${lastMonthEnd.toISOString().slice(0, 10)}`;
+  const ilsLabel = uiLanguage === "he" ? 'ש"ח' : "ILS";
 
   return (
     <div className="space-y-8">
@@ -142,15 +146,15 @@ export default async function ReceiptsPage({
         <div className="grid gap-3 text-sm md:grid-cols-3">
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
             <p className="text-slate-400">{r.earnedAmount}</p>
-            <p className="text-slate-100">{`${earned.toFixed(2)} ILS`}</p>
+            <p className="text-slate-100">{`${earned.toFixed(2)} ${ilsLabel}`}</p>
           </div>
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
             <p className="text-slate-400">{r.paidAmount}</p>
-            <p className="text-slate-100">{`${paid.toFixed(2)} ILS`}</p>
+            <p className="text-slate-100">{`${paid.toFixed(2)} ${ilsLabel}`}</p>
           </div>
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
             <p className="text-slate-400">{r.outstandingAmount}</p>
-            <p className={outstanding > 0 ? "text-amber-300" : "text-emerald-300"}>{`${outstanding.toFixed(2)} ILS`}</p>
+            <p className={outstanding > 0 ? "text-amber-300" : "text-emerald-300"}>{`${outstanding.toFixed(2)} ${ilsLabel}`}</p>
           </div>
         </div>
       </section>
@@ -342,10 +346,10 @@ export default async function ReceiptsPage({
                 {receipts.map((rec) => (
                   <tr key={rec.id} className="border-b border-slate-700/80">
                     <td className="px-3 py-2 text-slate-100">{rec.receipt_number}</td>
-                    <td className="px-3 py-2 text-slate-400">{String(rec.issued_at)}</td>
+                    <td className="px-3 py-2 text-slate-400">{formatHouseholdDate(rec.issued_at, dateDisplayFormat)}</td>
                     <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(rec.job)}</td>
                     <td className="px-3 py-2 text-slate-200">
-                      {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency)}
+                      {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency, uiLanguage)}
                     </td>
                     <td className="px-3 py-2 text-slate-400">
                       {rec.covered_period_start && rec.covered_period_end

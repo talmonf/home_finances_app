@@ -35,6 +35,22 @@ const CLIENT_STATUS_OPTIONS = new Set([
   "filed_worsening",
 ]);
 
+function redirectPrivateClinicScoped(
+  formData: FormData,
+  kind: "success" | "error",
+  fallbackPath: string,
+  errorKey?: string,
+): never {
+  const field = kind === "success" ? "redirect_on_success" : "redirect_on_error";
+  let path = (formData.get(field) as string | null)?.trim() || fallbackPath;
+  if (!path.startsWith(`${BASE}/`)) path = fallbackPath;
+  if (kind === "error" && errorKey) {
+    const sep = path.includes("?") ? "&" : "?";
+    redirect(`${path}${sep}error=${encodeURIComponent(errorKey)}`);
+  }
+  redirect(path);
+}
+
 function redirectTherapyClientFormError(formData: FormData, fallbackPath: string, errorKey: string): never {
   let path = (formData.get("redirect_on_error") as string)?.trim() || fallbackPath;
   if (!path.startsWith(`${BASE}/clients`)) path = fallbackPath;
@@ -1004,6 +1020,7 @@ export async function updateTherapyClient(formData: FormData) {
 
 export async function createTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/treatments`;
   const client_id = (formData.get("client_id") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
@@ -1013,24 +1030,24 @@ export async function createTherapyTreatment(formData: FormData) {
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
   if (!client_id || !job_id || !occurred_date || !amountStr || !visit_type) {
-    redirect(`${BASE}/treatments?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
-  if (!(await assertClient(householdId, client_id))) redirect(`${BASE}/treatments?error=client`);
-  if (!(await assertJob(householdId, job_id))) redirect(`${BASE}/treatments?error=job`);
+  if (!(await assertClient(householdId, client_id))) redirectPrivateClinicScoped(formData, "error", fallbackPath, "client");
+  if (!(await assertJob(householdId, job_id))) redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
   let program_id: string | null = program_id_raw || null;
   if (programCountForJob > 0) {
-    if (!program_id) redirect(`${BASE}/treatments?error=missing`);
+    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
-    if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+    if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "program");
   }
 
   const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
-  if (!occurred_at) redirect(`${BASE}/treatments?error=date`);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackPath, "date");
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1067,16 +1084,17 @@ export async function createTherapyTreatment(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/treatments`);
-  redirect(`${BASE}/treatments?created=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?created=1`);
 }
 
 export async function updateTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/treatments`;
   const id = (formData.get("id") as string)?.trim() || "";
   const row = await prisma.therapy_treatments.findFirst({
     where: { id, household_id: householdId },
   });
-  if (!row) redirect(`${BASE}/treatments?error=notfound`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
@@ -1086,22 +1104,22 @@ export async function updateTherapyTreatment(formData: FormData) {
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
   if (!job_id || !occurred_date || !amountStr || !visit_type) {
-    redirect(`${BASE}/treatments?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
   let program_id: string | null = program_id_raw || null;
   if (programCountForJob > 0) {
-    if (!program_id) redirect(`${BASE}/treatments?error=missing`);
+    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
-    if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
+    if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "program");
   }
 
   const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
-  if (!occurred_at) redirect(`${BASE}/treatments?error=date`);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackPath, "date");
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1136,16 +1154,17 @@ export async function updateTherapyTreatment(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/treatments`);
-  redirect(`${BASE}/treatments?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
 }
 
 export async function deleteTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/treatments`;
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/treatments?error=id`);
+  if (!id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "id");
   await prisma.therapy_treatments.deleteMany({ where: { id, household_id: householdId } });
   revalidatePath(`${BASE}/treatments`);
-  redirect(`${BASE}/treatments?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
 }
 
 // --- Receipts ---

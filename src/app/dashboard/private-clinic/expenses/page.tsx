@@ -135,7 +135,7 @@ export default async function ExpensesPage() {
                     {therapyLocalizedCategoryName(e.category, uiLanguage)}
                   </span>
                   <span className="text-slate-100">
-                    {formatDecimalAmountForDisplay(obfuscate, e.amount, e.currency)}
+                    {formatDecimalAmountForDisplay(obfuscate, e.amount, e.currency, uiLanguage)}
                   </span>
                 </div>
                 {e.notes && <p className="text-sm text-slate-400">{e.notes}</p>}
