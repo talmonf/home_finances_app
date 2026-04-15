@@ -48,6 +48,11 @@ type PreviewData = {
       fallbackIssuedMonthKey: string;
       monthKeyUsed: string;
       matchedTreatments: number;
+      matchedConsultations?: number;
+      matchedTravel?: number;
+      matchedTreatmentsAmount?: string;
+      matchedConsultationsAmount?: string;
+      matchedTravelAmount?: string;
     }>;
     commitLinkDiagnostics?: {
       allocationsMissingTreatmentKey: number;
@@ -474,11 +479,14 @@ export function TherapyTreatmentsImportForm({
                     preview.importDebug.orgPaymentDiagnosticsSample.length > 0 && (
                       <>
                         <p>{labels.importDebugOrgPaymentRows}:</p>
+                        <p className="text-cyan-200/90">Key: T = treatments, C = consultations, TR = travel entries</p>
                         <ul className="list-disc pl-5">
                           {preview.importDebug.orgPaymentDiagnosticsSample.map((d, i) => (
                             <li key={`${d.receiptNumber}-${d.rowNumber}-${i}`}>
                               #{d.receiptNumber} row {d.rowNumber} | raw="{d.coveredMonthRaw || "—"}" | key=
-                              {d.monthKeyUsed} | matched={d.matchedTreatments}
+                              {d.monthKeyUsed} | matched: T={d.matchedTreatments}, C={d.matchedConsultations ?? 0},
+                              TR={d.matchedTravel ?? 0} | amounts: T={d.matchedTreatmentsAmount ?? "0.00"}, C=
+                              {d.matchedConsultationsAmount ?? "0.00"}, TR={d.matchedTravelAmount ?? "0.00"}
                             </li>
                           ))}
                         </ul>

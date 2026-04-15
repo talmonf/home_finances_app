@@ -163,6 +163,11 @@ export type TipulimAnalyzeResult = {
       fallbackIssuedMonthKey: string;
       monthKeyUsed: string;
       matchedTreatments: number;
+      matchedConsultations?: number;
+      matchedTravel?: number;
+      matchedTreatmentsAmount?: string;
+      matchedConsultationsAmount?: string;
+      matchedTravelAmount?: string;
     }>;
     commitLinkDiagnostics?: {
       allocationsMissingTreatmentKey: number;
@@ -1103,6 +1108,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       fallbackIssuedMonthKey,
       monthKeyUsed,
       matchedTreatments: treatmentKeys.length,
+      matchedConsultations: consultationKeys.length,
+      matchedTravel: travelKeys.length,
     });
     const allocationsSeen = new Set<string>();
     const allocations: PendingAllocation[] = [];
@@ -1126,10 +1133,17 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       if (!travel?.amount) continue;
       travelAllocations.push({ travelKey: trKey, amount: travel.amount });
     }
+    const treatmentAmountSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    const consultationAmountSum = consultationAllocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    const travelAmountSum = travelAllocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    const lastDiag = scratch.orgPaymentDiagnostics[scratch.orgPaymentDiagnostics.length - 1];
+    if (lastDiag && lastDiag.rowNumber === payRow.rowNumber && lastDiag.receiptNumber === payRow.receiptNum) {
+      lastDiag.matchedTreatmentsAmount = treatmentAmountSum.toFixed(2);
+      lastDiag.matchedConsultationsAmount = consultationAmountSum.toFixed(2);
+      lastDiag.matchedTravelAmount = travelAmountSum.toFixed(2);
+    }
     const allocationsSum =
-      allocations.reduce((sum, a) => sum + Number(a.amount), 0) +
-      consultationAllocations.reduce((sum, a) => sum + Number(a.amount), 0) +
-      travelAllocations.reduce((sum, a) => sum + Number(a.amount), 0);
+      treatmentAmountSum + consultationAmountSum + travelAmountSum;
     if (allocationsSum > 0 && Math.abs(allocationsSum - Number(payRow.total)) > 0.01) {
       const remainder = Number(payRow.total) - allocationsSum;
       scratch.warnings.push(
