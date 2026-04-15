@@ -12,6 +12,29 @@ import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-
 import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
+
+type ListFilterQs = {
+  q: string;
+  status: string;
+  job: string;
+  from: string;
+  to: string;
+};
+
+/** Parse yyyy-mm-dd to UTC midnight for stable @db.Date comparisons. */
+function parseFilterYmd(s: string | undefined): Date | null {
+  if (!s?.trim()) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const da = Number(m[3]);
+  if (!Number.isFinite(y) || mo < 1 || mo > 12 || da < 1 || da > 31) return null;
+  const d = new Date(Date.UTC(y, mo - 1, da));
+  if (d.getUTCFullYear() !== y || d.getUTCMonth() !== mo - 1 || d.getUTCDate() !== da) return null;
+  return d;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -66,12 +89,18 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
 function clientsListHref(p: {
   q?: string;
   status?: string;
+  job?: string;
+  from?: string;
+  to?: string;
   sort: SortKey;
   dir: Prisma.SortOrder;
 }) {
   const sp = new URLSearchParams();
   if (p.q?.trim()) sp.set("q", p.q.trim());
   if (p.status && p.status !== "all") sp.set("status", p.status);
+  if (p.job?.trim()) sp.set("job", p.job.trim());
+  if (p.from?.trim()) sp.set("from", p.from.trim());
+  if (p.to?.trim()) sp.set("to", p.to.trim());
   sp.set("sort", p.sort);
   sp.set("dir", p.dir);
   return `${CLIENTS_BASE}?${sp.toString()}`;
@@ -82,8 +111,7 @@ function SortHeader({
   label,
   sort,
   dir,
-  q,
-  status,
+  filters,
   sortHintAsc,
   sortHintDesc,
 }: {
@@ -91,13 +119,12 @@ function SortHeader({
   label: string;
   sort: SortKey;
   dir: Prisma.SortOrder;
-  q: string;
-  status: string;
+  filters: ListFilterQs;
   sortHintAsc: string;
   sortHintDesc: string;
 }) {
   const nextDir: Prisma.SortOrder = sort === column ? (dir === "asc" ? "desc" : "asc") : "asc";
-  const href = clientsListHref({ q, status, sort: column, dir: nextDir });
+  const href = clientsListHref({ ...filters, sort: column, dir: nextDir });
   const active = sort === column;
   return (
     <th scope="col" className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -122,11 +149,14 @@ export default async function ClientsPage({
     error?: string;
     q?: string;
     status?: string;
+    job?: string;
+    from?: string;
+    to?: string;
     sort?: string;
     dir?: string;
   }>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
@@ -139,6 +169,8 @@ export default async function ClientsPage({
   const resolved = searchParams ? await searchParams : undefined;
   const q = (resolved?.q ?? "").trim();
   const status = resolved?.status === "active" || resolved?.status === "inactive" ? resolved.status : "all";
+  const fromRaw = (resolved?.from ?? "").trim();
+  const toRaw = (resolved?.to ?? "").trim();
   const sort = parseSortKey(resolved?.sort);
   const dirRaw = resolved?.dir;
   const dir: Prisma.SortOrder =
@@ -147,6 +179,33 @@ export default async function ClientsPage({
       : sort === "created"
         ? "desc"
         : "asc";
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const { jobs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
+  const allowedJobIds = new Set(jobs.map((j) => j.id));
+  const jobIdRaw = (resolved?.job ?? "").trim();
+  const jobId = allowedJobIds.has(jobIdRaw) ? jobIdRaw : "";
+
+  let dateFrom = parseFilterYmd(fromRaw);
+  let dateTo = parseFilterYmd(toRaw);
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    const t = dateFrom;
+    dateFrom = dateTo;
+    dateTo = t;
+  }
+  const dateRangeActive = Boolean(dateFrom && dateTo);
+
+  const listFilters: ListFilterQs = {
+    q,
+    status,
+    job: jobId,
+    from: fromRaw,
+    to: toRaw,
+  };
 
   const where: Prisma.therapy_clientsWhereInput = {
     household_id: householdId,
@@ -160,16 +219,35 @@ export default async function ClientsPage({
           ],
         }
       : {}),
+    ...(jobId
+      ? {
+          OR: [{ default_job_id: jobId }, { client_jobs: { some: { job_id: jobId } } }],
+        }
+      : {}),
+    ...(dateRangeActive && dateFrom && dateTo
+      ? {
+          AND: [
+            { OR: [{ start_date: null }, { start_date: { lte: dateTo } }] },
+            { OR: [{ end_date: null }, { end_date: { gte: dateFrom } }] },
+          ],
+        }
+      : {}),
   };
 
-  const clients = await prisma.therapy_clients.findMany({
-    where,
-    orderBy: orderByForSort(sort, dir),
-    include: {
-      default_job: true,
-      default_program: true,
-    },
-  });
+  const [baseClientCount, clients] = await Promise.all([
+    prisma.therapy_clients.count({ where: { household_id: householdId } }),
+    prisma.therapy_clients.findMany({
+      where,
+      orderBy: orderByForSort(sort, dir),
+      include: {
+        default_job: true,
+        default_program: true,
+      },
+    }),
+  ]);
+
+  const hasActiveFilters =
+    Boolean(q) || status !== "all" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
 
   return (
     <div className="space-y-6">
@@ -190,64 +268,107 @@ export default async function ClientsPage({
           href={`${CLIENTS_BASE}/new`}
           className="inline-flex shrink-0 items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
         >
-          {c.add} — {cl.addClientTitle}
+          {cl.addClientBtn}
         </Link>
       </div>
 
       <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
         <h2 className="text-sm font-medium text-slate-300">{cl.filters}</h2>
-        <form method="get" className="flex flex-wrap items-end gap-3">
+        <form method="get" className="space-y-3">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label htmlFor="clients_filter_q" className="block text-xs text-slate-400">
-              {cl.filterSearchLabel}
-            </label>
-            <input
-              id="clients_filter_q"
-              name="q"
-              type="search"
-              defaultValue={q}
-              placeholder={cl.filterSearchPlaceholder}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div className="min-w-[10rem] space-y-1">
-            <label htmlFor="clients_filter_status" className="block text-xs text-slate-400">
-              {cl.filterStatusLabel}
-            </label>
-            <select
-              id="clients_filter_status"
-              name="status"
-              defaultValue={status}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[12rem] flex-1 space-y-1">
+              <label htmlFor="clients_filter_q" className="block text-xs text-slate-400">
+                {cl.filterSearchLabel}
+              </label>
+              <input
+                id="clients_filter_q"
+                name="q"
+                type="search"
+                defaultValue={q}
+                placeholder={cl.filterSearchPlaceholder}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="min-w-[12rem] space-y-1">
+              <label htmlFor="clients_filter_job" className="block text-xs text-slate-400">
+                {cl.filterJobLabel}
+              </label>
+              <select
+                id="clients_filter_job"
+                name="job"
+                defaultValue={jobId}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{cl.filterJobAny}</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="min-w-[10rem] space-y-1">
+              <label htmlFor="clients_filter_status" className="block text-xs text-slate-400">
+                {cl.filterStatusLabel}
+              </label>
+              <select
+                id="clients_filter_status"
+                name="status"
+                defaultValue={status}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">{cl.filterStatusAll}</option>
+                <option value="active">{cl.filterStatusActiveOnly}</option>
+                <option value="inactive">{cl.filterStatusInactiveOnly}</option>
+              </select>
+            </div>
+            <div className="min-w-[9rem] space-y-1">
+              <label htmlFor="clients_filter_from" className="block text-xs text-slate-400">
+                {c.from}
+              </label>
+              <input
+                id="clients_filter_from"
+                name="from"
+                type="date"
+                defaultValue={fromRaw}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="min-w-[9rem] space-y-1">
+              <label htmlFor="clients_filter_to" className="block text-xs text-slate-400">
+                {c.to}
+              </label>
+              <input
+                id="clients_filter_to"
+                name="to"
+                type="date"
+                defaultValue={toRaw}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
             >
-              <option value="all">{cl.filterStatusAll}</option>
-              <option value="active">{cl.filterStatusActiveOnly}</option>
-              <option value="inactive">{cl.filterStatusInactiveOnly}</option>
-            </select>
+              {c.apply}
+            </button>
+            {hasActiveFilters ? (
+              <Link
+                href={clientsListHref({ sort, dir })}
+                className="text-sm text-sky-400 hover:text-sky-300"
+              >
+                {c.cancel}
+              </Link>
+            ) : null}
           </div>
-          <button
-            type="submit"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
-          >
-            {c.apply}
-          </button>
-          {(q || status !== "all") && (
-            <Link
-              href={clientsListHref({ sort, dir })}
-              className="text-sm text-sky-400 hover:text-sky-300"
-            >
-              {c.cancel}
-            </Link>
-          )}
+          <p className="text-xs text-slate-500">{cl.filterDateRangeHelp}</p>
         </form>
       </section>
 
       {clients.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          {q || status !== "all" ? c.noRowsMatch : c.clientsEmpty}
-        </p>
+        <p className="text-sm text-slate-500">{baseClientCount === 0 ? c.clientsEmpty : c.noRowsMatch}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-700">
           <table className="min-w-full divide-y divide-slate-700 text-sm">
@@ -258,8 +379,7 @@ export default async function ClientsPage({
                   label={cl.colRecorded}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -268,8 +388,7 @@ export default async function ClientsPage({
                   label={cl.colClientName}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -278,8 +397,7 @@ export default async function ClientsPage({
                   label={cl.colLastName}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -288,8 +406,7 @@ export default async function ClientsPage({
                   label={cl.colJob}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -298,8 +415,7 @@ export default async function ClientsPage({
                   label={cl.colProgram}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -308,8 +424,7 @@ export default async function ClientsPage({
                   label={cl.colStart}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -318,8 +433,7 @@ export default async function ClientsPage({
                   label={cl.colEnd}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
@@ -328,8 +442,7 @@ export default async function ClientsPage({
                   label={cl.colActive}
                   sort={sort}
                   dir={dir}
-                  q={q}
-                  status={status}
+                  filters={listFilters}
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />

@@ -277,8 +277,8 @@ export function privateClinicPrograms(lang: UiLanguage) {
 export function privateClinicClients(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
-    addClientTitle: p("Add client", "הוספת לקוח"),
-    addClientBtn: p("Add client", "הוספת לקוח"),
+    addClientTitle: p("Add Client", "הוספת לקוח"),
+    addClientBtn: p("Add Client", "הוספת לקוח"),
     clientsHeading: p("Clients", "לקוחות"),
     firstName: p("First name", "שם פרטי"),
     lastNameOptional: p("Last name (optional)", "שם משפחה (אופציונלי)"),
@@ -322,6 +322,12 @@ export function privateClinicClients(lang: UiLanguage) {
     filterStatusAll: p("All clients", "כל הלקוחות"),
     filterStatusActiveOnly: p("Active only", "פעילים בלבד"),
     filterStatusInactiveOnly: p("Inactive only", "לא פעילים בלבד"),
+    filterJobLabel: p("Job (default or linked)", "משרה (ברירת מחדל או מקושרת)"),
+    filterJobAny: p("Any job", "כל משרה"),
+    filterDateRangeHelp: p(
+      "When both dates are set, only clients whose start–end span overlaps that range are shown (open dates count as unbounded).",
+      "כששני התאריכים מלאים, יוצגו לקוחות שטווח התחלה–סיום שלהם חופף לטווח (תאריך ריק נחשב ללא גבול).",
+    ),
     newClientPageTitle: p("New client", "לקוח חדש"),
     editClientPageTitle: p("Edit client", "עריכת לקוח"),
     backToClients: p("Back to clients", "חזרה לרשימת לקוחות"),
