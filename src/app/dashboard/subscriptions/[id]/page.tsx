@@ -327,11 +327,12 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
                 Description
               </label>
-              <input
+              <textarea
                 id="description"
                 name="description"
+                rows={5}
                 defaultValue={subscription.description ?? ""}
-                className={inputClass}
+                className={`${inputClass} min-h-[7.5rem] resize-y`}
               />
             </div>
             <div className="flex items-end">

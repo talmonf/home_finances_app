@@ -145,10 +145,11 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
               <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
                 {t.description}
               </label>
-              <input
+              <textarea
                 id="description"
                 name="description"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                rows={5}
+                className="min-h-[7.5rem] w-full resize-y rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
             <div>

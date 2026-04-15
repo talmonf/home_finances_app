@@ -383,10 +383,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               >
                 Description
               </label>
-              <input
+              <textarea
                 id="description"
                 name="description"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                rows={5}
+                className="min-h-[7.5rem] w-full resize-y rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional notes"
               />
             </div>

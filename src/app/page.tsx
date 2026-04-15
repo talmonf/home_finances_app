@@ -4,8 +4,11 @@ import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
 import { countOpenMedicalReimbursementRequestsForHousehold } from "@/lib/medical-open-reimbursement-requests";
-import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
-import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
+import {
+  HouseholdDashboardPanel,
+  type DashboardOngoingTileProps,
+  type DashboardSetupTileProps,
+} from "@/components/household-dashboard-panel";
 
 function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"): string {
   if (language === "he") {
@@ -14,11 +17,7 @@ function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"):
   return n === 1 ? "1 open reimbursement request" : `${n} open reimbursement requests`;
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams?: Promise<{ q?: string }>;
-}) {
+export default async function Home() {
   const session = await getAuthSession();
 
   if (!session?.user) {
@@ -106,11 +105,6 @@ export default async function Home({
   const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
   );
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const searchQuery = (resolvedSearchParams?.q ?? "").trim();
-  const searchQueryLower = searchQuery.toLowerCase();
-  const filterBySearch = (text: string) =>
-    !searchQueryLower || text.toLowerCase().includes(searchQueryLower);
 
   if (
     !isSuperAdmin &&
@@ -121,12 +115,9 @@ export default async function Home({
     redirect("/dashboard/private-clinic");
   }
 
-  const setupSections = visibleSections
-    .filter((s) => s.group === "setup")
-    .filter((s) => filterBySearch(`${s.title} ${s.description}`));
-  const ongoingSections = visibleSections
-    .filter((s) => s.group === "ongoing")
-    .filter((s) => filterBySearch(`${s.title} ${s.description}`));
+  const allSetupSections = visibleSections.filter((s) => s.group === "setup");
+  const setupSections = allSetupSections;
+  const ongoingSections = visibleSections.filter((s) => s.group === "ongoing");
 
   const setupSectionIds = setupSections.map((s) => s.id);
 
@@ -148,193 +139,85 @@ export default async function Home({
   const hasHouseholdSetupOptions = setupSections.length > 0;
   const showHouseholdsCard = isSuperAdmin || hasHouseholdSetupOptions;
 
+  const hasAnyTiles = setupSections.length > 0 || ongoingSections.length > 0;
+
+  const setupTiles: DashboardSetupTileProps[] =
+    !isSuperAdmin && setupCounts
+      ? setupSections.map((section) => ({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+          href: section.href,
+          count: section.countKey ? setupCounts[section.countKey] : null,
+          countSuffix: section.countSuffix,
+          isDone: isDoneBySectionId.get(section.id) ?? false,
+        }))
+      : [];
+
+  const ongoingTiles: DashboardOngoingTileProps[] = !isSuperAdmin
+    ? ongoingSections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+        href: section.href,
+        reimbursementNote:
+          section.id === "medicalAppointments" && openMedicalReimbursementRequestCount > 0
+            ? formatOpenReimbursementRequestsLabel(
+                openMedicalReimbursementRequestCount,
+                uiLanguage,
+              )
+            : null,
+      }))
+    : [];
+
+  const welcomeSubtitleNonAdmin = showHouseholdsCard
+    ? "This dashboard will show your households, accounts, and key finance insights."
+    : "This dashboard will show your enabled finance sections and key finance insights.";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
       <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-50">
-              Welcome back, {session.user.name ?? "user"}
-            </h1>
-            <p className="text-sm text-slate-400">
-              {isSuperAdmin
-                ? "Use the super admin tools to manage households and platform users."
-                : showHouseholdsCard
-                  ? "This dashboard will show your households, accounts, and key finance insights."
-                  : "This dashboard will show your enabled finance sections and key finance insights."}
-            </p>
-          </div>
-          {!isSuperAdmin && (
-            <form method="get" className="w-full max-w-[220px]">
-              <label htmlFor="dashboard-search" className="mb-1 block text-xs text-slate-400">
-                Search tiles
-              </label>
-              <input
-                id="dashboard-search"
-                name="q"
-                type="search"
-                defaultValue={searchQuery}
-                placeholder="e.g. donations"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500"
-              />
-            </form>
-          )}
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {showHouseholdsCard && (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-              <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                {isSuperAdmin ? "Households (Super Admin)" : "Households"}
-              </h2>
-              <p className="mb-3 text-xs text-slate-400">
-                {isSuperAdmin
-                  ? "Create and manage all households on the platform."
-                  : "A households overview page will appear here once implemented."}
-              </p>
-              {isSuperAdmin && (
-                <Link
-                  href="/admin/households"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open household admin
-                </Link>
-              )}
-            </div>
-          )}
-          {!isSuperAdmin && (
-            <div className="col-span-full">
-              {setupSections.length === 0 && ongoingSections.length === 0 ? (
+        {isSuperAdmin ? (
+          <>
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-slate-50">
+                  Welcome back, {session.user.name ?? "user"}
+                </h1>
                 <p className="text-sm text-slate-400">
-                  {searchQuery
-                    ? "No dashboard tiles match your search."
-                    : "Your super admin hasn&apos;t enabled any sections yet."}
+                  Use the super admin tools to manage households and platform users.
                 </p>
-              ) : (
-                <>
-                  {setupSections.length > 0 && (
-                    <SetupHouseholdCollapsible>
-                      {setupSections.map((section) => {
-                        const count =
-                          section.countKey && setupCounts
-                            ? setupCounts[section.countKey]
-                            : null;
-
-                        const isDone =
-                          isDoneBySectionId.get(section.id) ?? false;
-
-                        return (
-                          <div
-                            key={section.id}
-                            className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500"
-                          >
-                            <Link
-                              href={section.href}
-                              className="block focus:outline-none focus:ring-2 focus:ring-sky-400"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <h2 className="text-sm font-semibold text-slate-200">
-                                  {section.title}
-                                </h2>
-
-                                <span
-                                  className={`mt-0.5 rounded-full px-2 py-0.5 text-xs ${
-                                    isDone
-                                      ? "bg-emerald-500/15 text-emerald-300"
-                                      : "bg-slate-500/15 text-slate-300"
-                                  }`}
-                                >
-                                  {isDone ? "Done" : "Not done"}
-                                </span>
-                              </div>
-
-                              {typeof count === "number" &&
-                                section.countSuffix && (
-                                  <p className="mt-1 text-xs text-slate-400">
-                                    {count} {section.countSuffix}
-                                  </p>
-                                )}
-
-                              {section.description && (
-                                <p className="mt-2 text-xs text-slate-400">
-                                  {section.description}
-                                </p>
-                              )}
-                            </Link>
-
-                            {!isDone && (
-                              <form
-                                action={toggleSetupSectionDone}
-                                className="mt-3"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="section_id"
-                                  value={section.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="next_is_done"
-                                  value="true"
-                                />
-                                <input type="hidden" name="redirect_to" value="/" />
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-                                >
-                                  Mark done
-                                </button>
-                              </form>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </SetupHouseholdCollapsible>
-                  )}
-
-                  {ongoingSections.length > 0 && (
-                    <>
-                      <div className="mt-6 mb-4 text-sm font-semibold text-slate-200">
-                        Manage your finances
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-3">
-                        {ongoingSections.map((section) => {
-                          const reimbursementNote =
-                            section.id === "medicalAppointments" &&
-                            openMedicalReimbursementRequestCount > 0
-                              ? formatOpenReimbursementRequestsLabel(
-                                  openMedicalReimbursementRequestCount,
-                                  uiLanguage,
-                                )
-                              : null;
-
-                          return (
-                            <Link
-                              key={section.id}
-                              href={section.href}
-                              className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 transition hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                            >
-                              <h2 className="mb-1 text-sm font-semibold text-slate-200">
-                                {section.title}
-                              </h2>
-                              <p className="mt-2 text-xs text-slate-400">
-                                {section.description}
-                              </p>
-                              {reimbursementNote && (
-                                <p className="mt-2 text-xs font-medium text-amber-200/90">
-                                  {reimbursementNote}
-                                </p>
-                              )}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {showHouseholdsCard && (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                  <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                    Households (Super Admin)
+                  </h2>
+                  <p className="mb-3 text-xs text-slate-400">
+                    Create and manage all households on the platform.
+                  </p>
+                  <Link
+                    href="/admin/households"
+                    className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                  >
+                    Open household admin
+                  </Link>
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <HouseholdDashboardPanel
+            userName={session.user.name ?? "user"}
+            welcomeSubtitle={welcomeSubtitleNonAdmin}
+            showHouseholdsCard={showHouseholdsCard}
+            hasAnyTiles={hasAnyTiles}
+            setupTiles={setupTiles}
+            ongoingTiles={ongoingTiles}
+          />
+        )}
       </div>
     </div>
   );
