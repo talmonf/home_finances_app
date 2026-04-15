@@ -175,15 +175,18 @@ function normalizeDigits(v: string): string {
 }
 
 function receiptMatchKey(raw: unknown): string {
-  const text = String(raw ?? "")
+  const base = String(raw ?? "")
     .replace(/\u00A0/g, " ")
     .trim();
+  if (!base) return "";
+  const text = base
+    .replace(/^'+/, "")
+    .replace(/^#+/, "")
+    .replace(/\s+/g, "");
   if (!text) return "";
-  const digitsLike = text.match(/^0*(\d+)(?:\.0+)?$/);
-  if (digitsLike?.[1]) {
-    const normalized = digitsLike[1].replace(/^0+/, "");
-    return normalized || "0";
-  }
+  const withoutExcelFraction = text.replace(/\.0+$/, "");
+  const digits = normalizeDigits(withoutExcelFraction);
+  if (digits) return digits.replace(/^0+/, "") || "0";
   return norm(text).toLowerCase();
 }
 
