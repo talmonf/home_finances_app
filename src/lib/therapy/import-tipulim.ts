@@ -670,6 +670,10 @@ async function analyzePrivateProfile(
       }
     }
     const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    if (allocations.length === 0) {
+      scratch.errors.push(`Row ${rowNumber}: receipt #${receiptNum} could not be linked to any treatments.`);
+      continue;
+    }
     if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
       scratch.errors.push(
         `Row ${rowNumber}: receipt #${receiptNum} total ${totalAmount} does not match allocations ${allocationSum.toFixed(2)}.`,
@@ -810,6 +814,28 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       const coveredMonth = parseCoveredMonth(coveredMonthRaw);
       const coveredMonthKey = coveredMonth ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}` : null;
       const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
+      const allocationsSeen = new Set<string>();
+      const allocations: PendingAllocation[] = [];
+      for (const tKey of treatmentKeys) {
+        const treatment = scratch.pendingTreatments.get(tKey);
+        if (!treatment) continue;
+        const uniq = `${tKey}|${treatment.amount}`;
+        if (allocationsSeen.has(uniq)) continue;
+        allocationsSeen.add(uniq);
+        allocations.push({ treatmentKey: tKey, amount: treatment.amount });
+      }
+      const allocationsSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+      if (allocations.length === 0) {
+        scratch.errors.push(
+          `Row ${rowNumber}: monthly payment receipt #${receiptNum} could not be linked to any treatments in ${coveredMonthRaw || "the covered month"}.`,
+        );
+        continue;
+      }
+      if (allocations.length > 0 && Math.abs(allocationsSum - Number(total)) > 0.01) {
+        scratch.warnings.push(
+          `Row ${rowNumber}: monthly payment receipt #${receiptNum} total ${total} does not match linked treatments ${allocationsSum.toFixed(2)}.`,
+        );
+      }
       scratch.pendingReceipts.push({
         key: `org:${receiptNum}`,
         rowNumber,
@@ -821,7 +847,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
         coveredPeriodStart: coveredMonth?.start ?? null,
         coveredPeriodEnd: coveredMonth?.end ?? null,
-        allocations: [],
+        allocations,
         treatmentKeysToMarkPaid: treatmentKeys,
         treatmentPaymentMethod: payment.treatmentMethod,
         treatmentBankAccountId: bankId,
@@ -914,6 +940,16 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     }
   }
   return scratch;
+}
+
+export async function analyzeOrgProfileForTest(params: TipulimAnalyzeParams, ctx: {
+  isPrivateClinic: boolean;
+  clients: ClientCandidate[];
+  programsByJob: Array<{ id: string; name: string; job_id: string }>;
+  bankAccounts: Array<{ id: string; account_number: string | null }>;
+  digitalMethods: Array<{ id: string; name: string }>;
+}) {
+  return analyzeOrgProfile(params, ctx);
 }
 
 function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {

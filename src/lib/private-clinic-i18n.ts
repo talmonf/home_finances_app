@@ -428,6 +428,24 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importErrors: p("Blocking errors", "שגיאות חוסמות"),
     importConflicts: p("Client conflicts", "התנגשויות לקוח"),
     importApplyNote: p("Import completed.", "הייבוא הושלם."),
+    importErrUnlinkedReceipt: (row: string | null) =>
+      p(
+        row
+          ? `Row ${row}: Receipt row could not be linked to treatments. Add a matching treatment receipt number (or matching covered month) and analyze again.`
+          : "A receipt row could not be linked to treatments. Add a matching treatment receipt number (or matching covered month) and analyze again.",
+        row
+          ? `שורה ${row}: שורת הקבלה לא קושרה לטיפולים. הוסיפו מספר קבלה תואם בשורות הטיפול (או חודש כיסוי תואם) ונתחו שוב.`
+          : "שורת קבלה לא קושרה לטיפולים. הוסיפו מספר קבלה תואם בשורות הטיפול (או חודש כיסוי תואם) ונתחו שוב.",
+      ),
+    importErrAllocationMismatch: (row: string | null) =>
+      p(
+        row
+          ? `Row ${row}: Receipt total does not match linked treatment amounts.`
+          : "Receipt total does not match linked treatment amounts.",
+        row
+          ? `שורה ${row}: סכום הקבלה לא תואם לסכום הטיפולים המקושרים.`
+          : "סכום הקבלה לא תואם לסכום הטיפולים המקושרים.",
+      ),
   };
 }
 

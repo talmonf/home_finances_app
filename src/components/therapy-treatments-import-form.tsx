@@ -30,6 +30,28 @@ type PreviewData = {
   message?: string;
 };
 
+function rowFromError(errorText: string): string | null {
+  const m = errorText.match(/Row\s+(\d+):/i);
+  return m?.[1] ?? null;
+}
+
+function formatBlockingError(
+  errorText: string,
+  labels: {
+    importErrUnlinkedReceipt: (row: string | null) => string;
+    importErrAllocationMismatch: (row: string | null) => string;
+  },
+): string {
+  const row = rowFromError(errorText);
+  if (errorText.includes("could not be linked to any treatments")) {
+    return labels.importErrUnlinkedReceipt(row);
+  }
+  if (errorText.includes("does not match allocations") || errorText.includes("does not match linked treatments")) {
+    return labels.importErrAllocationMismatch(row);
+  }
+  return errorText;
+}
+
 export function TherapyTreatmentsImportForm({
   jobs,
   programs,
@@ -67,6 +89,8 @@ export function TherapyTreatmentsImportForm({
     conflictsTitle: string;
     applyNote: string;
     downloadExample: string;
+    importErrUnlinkedReceipt: (row: string | null) => string;
+    importErrAllocationMismatch: (row: string | null) => string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -139,6 +163,17 @@ export function TherapyTreatmentsImportForm({
       setBusy(false);
     }
   }
+
+  const displayBlockingErrors = useMemo(
+    () =>
+      preview?.blockingErrors.map((er) =>
+        formatBlockingError(er, {
+          importErrUnlinkedReceipt: labels.importErrUnlinkedReceipt,
+          importErrAllocationMismatch: labels.importErrAllocationMismatch,
+        }),
+      ) ?? [],
+    [preview?.blockingErrors, labels.importErrUnlinkedReceipt, labels.importErrAllocationMismatch],
+  );
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/70 p-4">
@@ -353,7 +388,7 @@ export function TherapyTreatmentsImportForm({
             <div>
               <p className="text-sm font-medium text-rose-200">{labels.errorsTitle}</p>
               <ul className="list-disc pl-5 text-xs text-rose-100">
-                {preview.blockingErrors.map((er, i) => (
+                {displayBlockingErrors.map((er, i) => (
                   <li key={i}>{er}</li>
                 ))}
               </ul>
