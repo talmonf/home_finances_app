@@ -15,6 +15,7 @@ import {
   deleteTherapyTravelEntry,
   updateTherapyTravelEntry,
 } from "../actions";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
@@ -38,17 +39,20 @@ export default async function TravelPage({
 
   const [jobs, treatments, entries] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { occurred_at: "desc" },
       take: 300,
       include: { client: true, job: true },
     }),
     prisma.therapy_travel_entries.findMany({
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+      },
       orderBy: { created_at: "desc" },
       take: 200,
       include: { job: true, treatment: { include: { client: true, job: true } } },

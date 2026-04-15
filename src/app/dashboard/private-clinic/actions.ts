@@ -95,7 +95,7 @@ async function householdIdOrRedirect(): Promise<string> {
 
 async function assertJob(householdId: string, jobId: string) {
   const j = await prisma.jobs.findFirst({
-    where: { id: jobId, household_id: householdId },
+    where: { id: jobId, household_id: householdId, is_private_clinic: true },
     select: { id: true },
   });
   return j?.id ?? null;
@@ -103,7 +103,12 @@ async function assertJob(householdId: string, jobId: string) {
 
 async function assertJobForFamilyMember(householdId: string, familyMemberId: string, jobId: string) {
   const j = await prisma.jobs.findFirst({
-    where: { id: jobId, household_id: householdId, family_member_id: familyMemberId },
+    where: {
+      id: jobId,
+      household_id: householdId,
+      family_member_id: familyMemberId,
+      is_private_clinic: true,
+    },
     select: { id: true },
   });
   return j?.id ?? null;
@@ -288,6 +293,7 @@ async function jobIdsForCurrentUserScope(householdId: string, userFamilyMemberId
   const rows = await prisma.jobs.findMany({
     where: {
       household_id: householdId,
+      is_private_clinic: true,
       ...(userFamilyMemberId ? { family_member_id: userFamilyMemberId } : {}),
     },
     select: { id: true },

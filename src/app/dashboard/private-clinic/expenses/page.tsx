@@ -14,6 +14,7 @@ import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-lin
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function ExpensesPage() {
 
   const [jobs, categories, expenses] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_expense_categories.findMany({
@@ -36,7 +37,7 @@ export default async function ExpensesPage() {
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_job_expenses.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { expense_date: "desc" },
       take: 200,
       include: { job: true, category: true },

@@ -29,10 +29,11 @@ export default async function PrivateClinicJobsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, householdMembers] = await Promise.all([
+  const [jobs, householdMembers, jobCountAnyFlag] = await Promise.all([
     prisma.jobs.findMany({
       where: {
         household_id: householdId,
+        is_private_clinic: true,
         ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
       },
       orderBy: [{ is_active: "desc" }, { start_date: "desc" }, { created_at: "desc" }],
@@ -41,6 +42,12 @@ export default async function PrivateClinicJobsPage({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
       select: { id: true, full_name: true },
+    }),
+    prisma.jobs.count({
+      where: {
+        household_id: householdId,
+        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+      },
     }),
   ]);
 
@@ -185,7 +192,11 @@ export default async function PrivateClinicJobsPage({
         <h2 className="text-lg font-medium text-slate-200">{j.jobsHeading}</h2>
         {jobs.length === 0 ? (
           <p className="text-sm text-slate-500">
-            {familyMemberId ? c.noJobsForMember : j.noJobsInHousehold}
+            {jobCountAnyFlag === 0
+              ? familyMemberId
+                ? c.noJobsForMember
+                : j.noJobsInHousehold
+              : j.noPrivateClinicJobsFiltered}
           </p>
         ) : (
           <div className="space-y-3">

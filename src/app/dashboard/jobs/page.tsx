@@ -124,6 +124,17 @@ export default async function JobsPage({ searchParams }: PageProps) {
               <input type="checkbox" name="is_active" defaultChecked />
               Active
             </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+              <span className="flex items-center gap-2">
+                <input type="checkbox" name="is_private_clinic" />
+                {isHebrew ? "כלול במודול הקליניקה הפרטית" : "Include in Private clinic module"}
+              </span>
+              <span className="text-xs font-normal text-slate-500">
+                {isHebrew
+                  ? "כבוי: המשרה לא תופיע ברשימות ובטפסים של הקליניקה הפרטית (טיפולים, קבלות וכו׳)."
+                  : "When off, this job is hidden from Private clinic lists and forms (treatments, receipts, etc.)."}
+              </span>
+            </label>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">
                 {isHebrew ? "חשבון בנק מקושר (אופציונלי)" : "Linked bank account (optional)"}
@@ -180,6 +191,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
                     <th className="px-3 py-2 text-slate-300">Type</th>
                     <th className="px-3 py-2 text-slate-300">Employer</th>
                     <th className="px-3 py-2 text-slate-300">Dates</th>
+                    <th className="px-3 py-2 text-slate-300">{isHebrew ? "קליניקה" : "Clinic"}</th>
                     <th className="px-3 py-2 text-slate-300">Actions</th>
                   </tr>
                 </thead>
@@ -193,6 +205,9 @@ export default async function JobsPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 text-slate-300">
                         {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}
                         {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : "Present"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-400">
+                        {job.is_private_clinic ? (isHebrew ? "כן" : "Yes") : (isHebrew ? "לא" : "No")}
                       </td>
                       <td className="px-3 py-2">
                         <Link href={`/dashboard/jobs/${job.id}`} className="text-xs text-sky-400 hover:text-sky-300">

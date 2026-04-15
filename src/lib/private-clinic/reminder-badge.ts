@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
 import { countUpcomingReminders, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
+import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
 
 export async function getPrivateClinicReminderBadgeCount(
   prisma: PrismaClient,
@@ -14,7 +15,11 @@ export async function getPrivateClinicReminderBadgeCount(
       select: { id: true, reminder_date: true, category: true, description: true },
     }),
     prisma.subscriptions.findMany({
-      where: { household_id: householdId, job_id: { not: null } },
+      where: {
+        household_id: householdId,
+        job_id: { not: null },
+        job: jobWhereInPrivateClinicModule,
+      },
       select: {
         id: true,
         name: true,

@@ -10,6 +10,7 @@ import { privateClinicClients, privateClinicCommon, privateClinicJobs } from "@/
 import { redirect } from "next/navigation";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -36,13 +37,31 @@ export default async function ClientsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, programs, clients] = await Promise.all([
+  const clients = await prisma.therapy_clients.findMany({
+    where: { household_id: householdId },
+    orderBy: { created_at: "desc" },
+    include: {
+      client_jobs: { include: { job: true } },
+      default_program: true,
+      default_job: true,
+    },
+  });
+
+  const usedJobIds = new Set<string>();
+  const usedProgramIds = new Set<string>();
+  for (const cl of clients) {
+    if (cl.default_job_id) usedJobIds.add(cl.default_job_id);
+    if (cl.default_program_id) usedProgramIds.add(cl.default_program_id);
+    for (const cj of cl.client_jobs) usedJobIds.add(cj.job_id);
+  }
+
+  const [jobs, programs] = await Promise.all([
     prisma.jobs.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
-      },
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        familyMemberId,
+        includeJobIds: [...usedJobIds],
+      }),
       orderBy: { start_date: "desc" },
       include: { family_member: true },
     }),
@@ -50,19 +69,18 @@ export default async function ClientsPage({
       where: {
         household_id: householdId,
         is_active: true,
-        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : {}),
+        OR: [
+          {
+            job: {
+              ...jobWhereInPrivateClinicModule,
+              ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+            },
+          },
+          ...(usedProgramIds.size ? [{ id: { in: [...usedProgramIds] } }] : []),
+        ],
       },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },
-    }),
-    prisma.therapy_clients.findMany({
-      where: { household_id: householdId },
-      orderBy: { created_at: "desc" },
-      include: {
-        client_jobs: { include: { job: true } },
-        default_program: true,
-        default_job: true,
-      },
     }),
   ]);
 

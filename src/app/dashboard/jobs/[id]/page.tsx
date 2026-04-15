@@ -124,6 +124,17 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
               <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
               {isHebrew ? "פעיל" : "Active"}
             </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+              <span className="flex items-center gap-2">
+                <input type="checkbox" name="is_private_clinic" defaultChecked={job.is_private_clinic} />
+                {isHebrew ? "כלול במודול הקליניקה הפרטית" : "Include in Private clinic module"}
+              </span>
+              <span className="text-xs font-normal text-slate-500">
+                {isHebrew
+                  ? "משפיע על הופעה ברשימות ובטפסים של הקליניקה הפרטית, ועל התנהגות ייבוא קבלות (לקוח מול ארגון)."
+                  : "Controls visibility in Private clinic lists/forms and receipt-import behavior (client vs organization)."}
+              </span>
+            </label>
             <input name="employer_name" defaultValue={job.employer_name ?? ""} placeholder="Employer (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} placeholder="Employer tax number (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="employer_address" defaultValue={job.employer_address ?? ""} placeholder="Employer address (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />

@@ -15,6 +15,7 @@ import {
   updateTherapyReceipt,
   upsertReceiptAllocation,
 } from "../../actions";
+import { jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
@@ -48,7 +49,10 @@ export default async function ReceiptDetailPage({
 
   const [jobs, treatments] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        includeJobIds: [receipt.job_id],
+      }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_treatments.findMany({

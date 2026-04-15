@@ -13,6 +13,7 @@ import {
   buildUnifiedReminderRows,
   startOfTodayLocal,
 } from "@/lib/private-clinic/reminders-logic";
+import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
 import { privateClinicReminders } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -64,7 +65,11 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
         orderBy: { reminder_date: "asc" },
       }),
       prisma.subscriptions.findMany({
-        where: { household_id: householdId, job_id: { not: null } },
+        where: {
+          household_id: householdId,
+          job_id: { not: null },
+          job: jobWhereInPrivateClinicModule,
+        },
       }),
       prisma.therapy_clients.findMany({
         where: { household_id: householdId },

@@ -95,6 +95,7 @@ export async function createJob(formData: FormData) {
   const employer_address = (formData.get("employer_address") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const is_active = formData.get("is_active") !== "off";
+  const is_private_clinic = formData.has("is_private_clinic");
   const bank_account_id_raw = parseOptionalLinkedId(formData.get("bank_account_id") as string | null);
   const credit_card_id_raw = parseOptionalLinkedId(formData.get("credit_card_id") as string | null);
 
@@ -136,12 +137,14 @@ export async function createJob(formData: FormData) {
       employer_address,
       notes,
       is_active,
+      is_private_clinic,
       bank_account_id,
       credit_card_id,
     },
   });
 
   revalidatePath("/dashboard/jobs");
+  revalidatePath("/dashboard/private-clinic", "layout");
   redirect("/dashboard/jobs?created=1");
 }
 
@@ -166,6 +169,7 @@ export async function updateJob(formData: FormData) {
   const employer_address = (formData.get("employer_address") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const is_active = formData.get("is_active") !== "off";
+  const is_private_clinic = formData.has("is_private_clinic");
   const bank_account_id_raw = parseOptionalLinkedId(formData.get("bank_account_id") as string | null);
   const credit_card_id_raw = parseOptionalLinkedId(formData.get("credit_card_id") as string | null);
 
@@ -206,6 +210,7 @@ export async function updateJob(formData: FormData) {
       employer_address,
       notes,
       is_active,
+      is_private_clinic,
       bank_account_id,
       credit_card_id,
     },
@@ -213,6 +218,7 @@ export async function updateJob(formData: FormData) {
 
   revalidatePath("/dashboard/jobs");
   revalidatePath(`/dashboard/jobs/${id}`);
+  revalidatePath("/dashboard/private-clinic", "layout");
   redirect("/dashboard/jobs?updated=1");
 }
 

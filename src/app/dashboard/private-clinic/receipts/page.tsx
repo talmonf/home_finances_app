@@ -11,6 +11,7 @@ import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic
 import { redirect } from "next/navigation";
 import { createTherapyReceipt } from "../actions";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +29,11 @@ export default async function ReceiptsPage() {
 
   const [jobs, receipts, orgJobs] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_receipts.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { issued_at: "desc" },
       take: 200,
       include: { job: true },

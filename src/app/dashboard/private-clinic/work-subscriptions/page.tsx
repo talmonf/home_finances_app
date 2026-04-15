@@ -12,6 +12,7 @@ import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "@/app/dashboard/subscriptions/actions";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +57,16 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
 
   const [subscriptions, jobs] = await Promise.all([
     prisma.subscriptions.findMany({
-      where: { household_id: householdId, job_id: { not: null } },
+      where: {
+        household_id: householdId,
+        job_id: { not: null },
+        job: jobWhereInPrivateClinicModule,
+      },
       include: { job: true },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);

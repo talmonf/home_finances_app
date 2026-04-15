@@ -1,4 +1,5 @@
 import { getAuthSession, prisma } from "@/lib/auth";
+import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
@@ -35,11 +36,11 @@ export async function GET() {
     privateClinicReminders,
   ] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, is_private_clinic: true },
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_service_programs.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_clients.findMany({
@@ -47,21 +48,21 @@ export async function GET() {
       orderBy: { created_at: "desc" },
     }),
     prisma.therapy_clients_jobs.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { occurred_at: "desc" },
     }),
     prisma.therapy_receipts.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { issued_at: "desc" },
     }),
     prisma.therapy_receipt_allocations.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, receipt: { job: jobWhereInPrivateClinicModule } },
     }),
     prisma.therapy_job_expenses.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { expense_date: "desc" },
     }),
     prisma.therapy_expense_categories.findMany({
@@ -70,11 +71,11 @@ export async function GET() {
     }),
     prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
     prisma.therapy_appointments.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { start_at: "asc" },
     }),
     prisma.therapy_appointment_series.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -82,11 +83,14 @@ export async function GET() {
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_consultations.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       orderBy: { occurred_at: "desc" },
     }),
     prisma.therapy_travel_entries.findMany({
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+      },
       orderBy: { created_at: "desc" },
     }),
     prisma.private_clinic_reminders.findMany({

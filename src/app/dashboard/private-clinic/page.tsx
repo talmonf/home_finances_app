@@ -1,5 +1,6 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { privateClinicOverviewCardLabel } from "@/lib/private-clinic-i18n";
+import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +15,32 @@ export default async function PrivateClinicOverviewPage() {
   const [clients, treatments, receipts, expenses, appointments, consultations, travel] =
     await Promise.all([
       prisma.therapy_clients.count({ where: { household_id: householdId, is_active: true } }),
-      prisma.therapy_treatments.count({ where: { household_id: householdId } }),
-      prisma.therapy_receipts.count({ where: { household_id: householdId } }),
-      prisma.therapy_job_expenses.count({ where: { household_id: householdId } }),
-      prisma.therapy_appointments.count({
-        where: { household_id: householdId, status: "scheduled", start_at: { gte: new Date() } },
+      prisma.therapy_treatments.count({
+        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
       }),
-      prisma.therapy_consultations.count({ where: { household_id: householdId } }),
-      prisma.therapy_travel_entries.count({ where: { household_id: householdId } }),
+      prisma.therapy_receipts.count({
+        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      }),
+      prisma.therapy_job_expenses.count({
+        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      }),
+      prisma.therapy_appointments.count({
+        where: {
+          household_id: householdId,
+          job: jobWhereInPrivateClinicModule,
+          status: "scheduled",
+          start_at: { gte: new Date() },
+        },
+      }),
+      prisma.therapy_consultations.count({
+        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      }),
+      prisma.therapy_travel_entries.count({
+        where: {
+          household_id: householdId,
+          OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+        },
+      }),
     ]);
 
   const cards = [

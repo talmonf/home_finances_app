@@ -10,6 +10,7 @@ import {
 } from "../actions";
 import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -36,18 +37,20 @@ export default async function ProgramsPage({
 
   const [jobs, programs] = await Promise.all([
     prisma.jobs.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
-      },
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        familyMemberId,
+      }),
       orderBy: { start_date: "desc" },
       include: { family_member: true },
     }),
     prisma.therapy_service_programs.findMany({
       where: {
         household_id: householdId,
-        ...(familyMemberId ? { job: { family_member_id: familyMemberId } } : {}),
+        job: {
+          ...jobWhereInPrivateClinicModule,
+          ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+        },
       },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },

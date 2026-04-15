@@ -20,6 +20,7 @@ import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
 import { TherapyTreatmentsImportDialog } from "@/components/therapy-treatments-import-dialog";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -52,14 +53,40 @@ export default async function TreatmentsPage({
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
 
+  const [linkedJobRows, linkedProgramRows] = await Promise.all([
+    prisma.therapy_treatments.findMany({
+      where: { household_id: householdId },
+      distinct: ["job_id"],
+      select: { job_id: true },
+    }),
+    prisma.therapy_treatments.findMany({
+      where: { household_id: householdId },
+      distinct: ["program_id"],
+      select: { program_id: true },
+    }),
+  ]);
+  const linkedJobIds = linkedJobRows.map((r) => r.job_id);
+  const linkedProgramIds = linkedProgramRows
+    .map((r) => r.program_id)
+    .filter((id): id is string => id != null);
+
   const [jobs, programs, clients, settings, allocGroups, treatments, visitDefaultsRows, bankAccounts, digitalPaymentMethods] =
     await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        includeJobIds: linkedJobIds,
+      }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_service_programs.findMany({
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        OR: [
+          { job: jobWhereInPrivateClinicModule },
+          ...(linkedProgramIds.length ? [{ id: { in: linkedProgramIds } }] : []),
+        ],
+      },
       include: { job: true },
     }),
     prisma.therapy_clients.findMany({
@@ -69,12 +96,16 @@ export default async function TreatmentsPage({
     prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
     prisma.therapy_receipt_allocations.groupBy({
       by: ["treatment_id"],
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        treatment: { job: jobWhereInPrivateClinicModule },
+      },
       _sum: { amount: true },
     }),
     prisma.therapy_treatments.findMany({
       where: {
         household_id: householdId,
+        job: jobWhereInPrivateClinicModule,
         ...(jobFilter ? { job_id: jobFilter } : {}),
         ...(programFilter ? { program_id: programFilter } : {}),
         ...(from || to
@@ -104,7 +135,10 @@ export default async function TreatmentsPage({
       take: 500,
     }),
     prisma.therapy_visit_type_default_amounts.findMany({
-      where: { household_id: householdId },
+      where: {
+        household_id: householdId,
+        job: jobWhereInPrivateClinicModule,
+      },
       select: {
         job_id: true,
         program_id: true,

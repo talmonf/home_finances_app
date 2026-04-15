@@ -242,14 +242,18 @@ export function privateClinicJobs(lang: UiLanguage) {
     ),
     privateClinicRole: p("Private clinic role", "סיווג לקליניקה פרטית"),
     privateClinicRoleHelp: p(
-      "On: receipts are issued to clients and bank account matching is lenient. Off: receipts are organizational and bank matching is strict.",
-      "פעיל: קבלות מונפקות ללקוחות והתאמת חשבון בנק מקלה. כבוי: קבלות ארגוניות והתאמת חשבון בנק מחמירה.",
+      "On: this job appears in the Private clinic module; receipts default to clients and bank matching is lenient. Off: hidden from clinic lists/forms; receipts default to organization and bank matching is strict.",
+      "פעיל: המשרה מופיעה במודול הקליניקה הפרטית; קבלות ברירת מחדל ללקוחות והתאמת חשבון בנק מקלה. כבוי: מוסתרת מרשימות/טפסים של הקליניקה; קבלות ארגוניות והתאמת בנק מחמירה.",
     ),
     clinicUnlinkedHint: p(
       "Your user is not linked to a family member — you can still use Private clinic for the whole household. When adding a job, choose which household member holds that employment.",
       "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה הפרטית לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
     ),
     noJobsInHousehold: p("No jobs in this household yet. Add one above.", "אין עדיין משרות במשקה. הוסיפו למעלה."),
+    noPrivateClinicJobsFiltered: p(
+      "No jobs are marked for the Private clinic module. Turn on “Include in Private clinic module” on Dashboard → Jobs (or enable “Private clinic role” here when adding a job).",
+      "אין משרות שמסומנות למודול הקליניקה הפרטית. הפעילו ״כלול במודול הקליניקה הפרטית״ בלוח הבקרה ← משרות (או סמנו ״סיווג לקליניקה פרטית״ כאן בעת הוספת משרה).",
+    ),
   };
 }
 
