@@ -139,7 +139,13 @@ export async function loadReceiptsCursorPage(params: {
             },
           },
         },
-        _count: { select: { allocations: true } },
+        _count: {
+          select: {
+            allocations: true,
+            consultation_allocations: true,
+            travel_allocations: true,
+          },
+        },
       },
     });
     iterations += 1;
@@ -162,7 +168,8 @@ export async function loadReceiptsCursorPage(params: {
         currency: rec.currency,
         covered_period_start_iso: rec.covered_period_start ? rec.covered_period_start.toISOString() : null,
         covered_period_end_iso: rec.covered_period_end ? rec.covered_period_end.toISOString() : null,
-        linked_treatments_count: rec._count.allocations,
+        linked_treatments_count:
+          rec._count.allocations + rec._count.consultation_allocations + rec._count.travel_allocations,
         client_id: firstClient?.id ?? null,
         client_first_name: firstClient?.first_name ?? null,
         client_last_name: firstClient?.last_name ?? null,

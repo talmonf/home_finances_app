@@ -69,7 +69,18 @@ type PendingAllocation = {
   treatmentKey: string;
 };
 
+type PendingConsultationAllocation = {
+  amount: string;
+  consultationKey: string;
+};
+
+type PendingTravelAllocation = {
+  amount: string;
+  travelKey: string;
+};
+
 type PendingTravel = {
+  key: string;
   occurredAt: Date | null;
   amount: string | null;
   note: string | null;
@@ -77,6 +88,7 @@ type PendingTravel = {
 };
 
 type PendingConsultation = {
+  key: string;
   occurredAt: Date;
   amount: string;
   note: string | null;
@@ -105,6 +117,8 @@ type PendingReceipt = {
   coveredPeriodStart?: Date | null;
   coveredPeriodEnd?: Date | null;
   allocations: PendingAllocation[];
+  consultationAllocations?: PendingConsultationAllocation[];
+  travelAllocations?: PendingTravelAllocation[];
   treatmentKeysToMarkPaid?: string[];
   treatmentPaymentMethod?: "bank_transfer" | "digital_payment" | null;
   treatmentBankAccountId?: string | null;
@@ -164,6 +178,8 @@ export type TipulimCommitResult = TipulimAnalyzeResult & {
     treatments: number;
     receipts: number;
     allocations: number;
+    consultationAllocations: number;
+    travelAllocations: number;
     travel: number;
     consultations: number;
     programs: number;
@@ -826,6 +842,8 @@ async function analyzePrivateProfile(
         amount: a.amount,
         treatmentKey: a.treatmentKey,
       })),
+      consultationAllocations: [],
+      travelAllocations: [],
     });
     for (const a of allocations) {
       const t = scratch.pendingTreatments.get(a.treatmentKey);
@@ -880,6 +898,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
   );
   const treatmentKeysByMonth = new Map<string, string[]>();
+  const consultationKeysByMonth = new Map<string, string[]>();
+  const travelKeysByMonth = new Map<string, string[]>();
   const pendingOrgPaymentRows: PendingOrgPaymentRow[] = [];
   for (let idx = 0; idx < rows.length; idx += 1) {
     const row = rows[idx]!;
@@ -982,23 +1002,35 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       if (clientRef && occurredAt) {
         linkedTreatmentKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|home`;
       }
+      const travelKey = `travel:${rowNumber}`;
       scratch.pendingTravel.push({
+        key: travelKey,
         occurredAt,
         amount,
         note: s(row["הערות"]) || null,
         treatmentKey: linkedTreatmentKey,
       });
+      const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
+      const travelArr = travelKeysByMonth.get(month) ?? [];
+      travelArr.push(travelKey);
+      travelKeysByMonth.set(month, travelArr);
       scratch.routing.travel += 1;
       continue;
     }
     const consultLike = new Set(["התייעצות", "ישיבת צוות", "הדרכה", "פגישה", "אירוע", "בונוס", "חבר מביא חבר"]);
     if (consultLike.has(v)) {
+      const consultationKey = `consultation:${rowNumber}`;
       scratch.pendingConsultations.push({
+        key: consultationKey,
         occurredAt,
         amount,
         note: s(row["הערות"]) || null,
         typeName: v || "other",
       });
+      const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
+      const consultArr = consultationKeysByMonth.get(month) ?? [];
+      consultArr.push(consultationKey);
+      consultationKeysByMonth.set(month, consultArr);
       scratch.routing.consultations += 1;
       continue;
     }
@@ -1061,6 +1093,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     const fallbackIssuedMonthKey = `${payRow.issuedAt.getUTCFullYear()}-${String(payRow.issuedAt.getUTCMonth() + 1).padStart(2, "0")}`;
     const monthKeyUsed = coveredMonthKey ?? fallbackIssuedMonthKey;
     const treatmentKeys = treatmentKeysByMonth.get(monthKeyUsed) ?? [];
+    const consultationKeys = consultationKeysByMonth.get(monthKeyUsed) ?? [];
+    const travelKeys = travelKeysByMonth.get(monthKeyUsed) ?? [];
     scratch.orgPaymentDiagnostics.push({
       rowNumber: payRow.rowNumber,
       receiptNumber: payRow.receiptNum,
@@ -1080,10 +1114,26 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       allocationsSeen.add(uniq);
       allocations.push({ treatmentKey: tKey, amount: treatment.amount });
     }
-    const allocationsSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-    if (allocations.length > 0 && Math.abs(allocationsSum - Number(payRow.total)) > 0.01) {
+    const consultationAllocations: PendingConsultationAllocation[] = [];
+    for (const cKey of consultationKeys) {
+      const consultation = scratch.pendingConsultations.find((c) => c.key === cKey);
+      if (!consultation) continue;
+      consultationAllocations.push({ consultationKey: cKey, amount: consultation.amount });
+    }
+    const travelAllocations: PendingTravelAllocation[] = [];
+    for (const trKey of travelKeys) {
+      const travel = scratch.pendingTravel.find((t) => t.key === trKey);
+      if (!travel?.amount) continue;
+      travelAllocations.push({ travelKey: trKey, amount: travel.amount });
+    }
+    const allocationsSum =
+      allocations.reduce((sum, a) => sum + Number(a.amount), 0) +
+      consultationAllocations.reduce((sum, a) => sum + Number(a.amount), 0) +
+      travelAllocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    if (allocationsSum > 0 && Math.abs(allocationsSum - Number(payRow.total)) > 0.01) {
+      const remainder = Number(payRow.total) - allocationsSum;
       scratch.warnings.push(
-        `Row ${payRow.rowNumber}: monthly payment receipt #${payRow.receiptNum} total ${payRow.total} does not match linked treatments ${allocationsSum.toFixed(2)}.`,
+        `Row ${payRow.rowNumber}: monthly payment receipt #${payRow.receiptNum} total ${payRow.total} differs from linked entries ${allocationsSum.toFixed(2)} (remainder ${remainder.toFixed(2)}).`,
       );
     }
     scratch.pendingReceipts.push({
@@ -1102,6 +1152,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         coveredMonth?.end ??
         new Date(Date.UTC(payRow.issuedAt.getUTCFullYear(), payRow.issuedAt.getUTCMonth() + 1, 0)),
       allocations,
+      consultationAllocations,
+      travelAllocations,
       treatmentKeysToMarkPaid: treatmentKeys,
       treatmentPaymentMethod: payment.treatmentMethod,
       treatmentBankAccountId: resolvedIds.bankId,
@@ -1141,9 +1193,19 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
         ? { travelEntriesCount: scratch.routing.travel, consultationEntriesCount: scratch.routing.consultations }
         : undefined,
     importDebug: {
-      unlinkedReceiptsCount: scratch.pendingReceipts.filter((r) => r.allocations.length === 0).length,
+      unlinkedReceiptsCount: scratch.pendingReceipts.filter((r) => {
+        const treatment = r.allocations.length;
+        const consultations = r.consultationAllocations?.length ?? 0;
+        const travel = r.travelAllocations?.length ?? 0;
+        return treatment + consultations + travel === 0;
+      }).length,
       unlinkedReceiptsSample: scratch.pendingReceipts
-        .filter((r) => r.allocations.length === 0)
+        .filter((r) => {
+          const treatment = r.allocations.length;
+          const consultations = r.consultationAllocations?.length ?? 0;
+          const travel = r.travelAllocations?.length ?? 0;
+          return treatment + consultations + travel === 0;
+        })
         .slice(0, 5)
         .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
       orgPaymentDiagnosticsSample: scratch.orgPaymentDiagnostics.slice(0, 10),
@@ -1233,7 +1295,17 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   if (analysis.clientConflicts.length > 0 || analysis.blockingErrors.length > 0) {
     return {
       ...analysis,
-      created: { clients: 0, treatments: 0, receipts: 0, allocations: 0, travel: 0, consultations: 0, programs: 0 },
+      created: {
+        clients: 0,
+        treatments: 0,
+        receipts: 0,
+        allocations: 0,
+        consultationAllocations: 0,
+        travelAllocations: 0,
+        travel: 0,
+        consultations: 0,
+        programs: 0,
+      },
     };
   }
   const [job, clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
@@ -1277,7 +1349,17 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   if (summary.clientConflicts.length > 0 || summary.blockingErrors.length > 0) {
     return {
       ...summary,
-      created: { clients: 0, treatments: 0, receipts: 0, allocations: 0, travel: 0, consultations: 0, programs: 0 },
+      created: {
+        clients: 0,
+        treatments: 0,
+        receipts: 0,
+        allocations: 0,
+        consultationAllocations: 0,
+        travelAllocations: 0,
+        travel: 0,
+        consultations: 0,
+        programs: 0,
+      },
     };
   }
 
@@ -1292,6 +1374,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       treatments: 0,
       receipts: 0,
       allocations: 0,
+      consultationAllocations: 0,
+      travelAllocations: 0,
       travel: 0,
       consultations: 0,
       programs: 0,
@@ -1379,6 +1463,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
 
     const consultationTypeIdByName = new Map<string, string>();
+    const consultationIdByKey = new Map<string, string>();
     for (const ct of consultationTypes) {
       consultationTypeIdByName.set(norm(ct.name_he || ct.name), ct.id);
       consultationTypeIdByName.set(norm(ct.name), ct.id);
@@ -1401,7 +1486,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         typeId = createdType.id;
         consultationTypeIdByName.set(lookup, typeId);
       }
-      await tx.therapy_consultations.create({
+      const createdConsultation = await tx.therapy_consultations.create({
         data: {
           id: crypto.randomUUID(),
           household_id: params.householdId,
@@ -1412,12 +1497,15 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           income_currency: "ILS",
           notes: c.note,
         },
+        select: { id: true },
       });
+      consultationIdByKey.set(c.key, createdConsultation.id);
       createdCount.consultations += 1;
     }
 
+    const travelIdByKey = new Map<string, string>();
     for (const tr of scratch.pendingTravel) {
-      await tx.therapy_travel_entries.create({
+      const createdTravel = await tx.therapy_travel_entries.create({
         data: {
           id: crypto.randomUUID(),
           household_id: params.householdId,
@@ -1428,7 +1516,9 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           currency: "ILS",
           notes: tr.note,
         },
+        select: { id: true },
       });
+      travelIdByKey.set(tr.key, createdTravel.id);
       createdCount.travel += 1;
     }
 
@@ -1468,6 +1558,34 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           },
         });
         createdCount.allocations += 1;
+      }
+      for (const a of r.consultationAllocations ?? []) {
+        const consultationId = consultationIdByKey.get(a.consultationKey);
+        if (!consultationId) continue;
+        await tx.therapy_receipt_consultation_allocations.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: params.householdId,
+            receipt_id: receipt.id,
+            consultation_id: consultationId,
+            amount: a.amount,
+          },
+        });
+        createdCount.consultationAllocations += 1;
+      }
+      for (const a of r.travelAllocations ?? []) {
+        const travelId = travelIdByKey.get(a.travelKey);
+        if (!travelId) continue;
+        await tx.therapy_receipt_travel_allocations.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: params.householdId,
+            receipt_id: receipt.id,
+            travel_entry_id: travelId,
+            amount: a.amount,
+          },
+        });
+        createdCount.travelAllocations += 1;
       }
       if (r.treatmentKeysToMarkPaid && r.treatmentKeysToMarkPaid.length > 0) {
         for (const tKey of r.treatmentKeysToMarkPaid) {

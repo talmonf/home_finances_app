@@ -1607,7 +1607,9 @@ model therapy_receipts {
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
   linked_transaction transactions? @relation("TherapyReceiptTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
-  allocations        therapy_receipt_allocations[]
+  allocations                 therapy_receipt_allocations[]
+  consultation_allocations    therapy_receipt_consultation_allocations[]
+  travel_allocations          therapy_receipt_travel_allocations[]
 
   @@index([household_id, job_id])
   @@index([household_id, covered_period_start, covered_period_end])
@@ -1627,6 +1629,38 @@ model therapy_receipt_allocations {
   treatment  therapy_treatments @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
 
   @@unique([receipt_id, treatment_id])
+}
+
+model therapy_receipt_consultation_allocations {
+  id               String   @id @default(uuid())
+  household_id     String
+  receipt_id       String
+  consultation_id  String
+  amount           Decimal  @db.Decimal(15, 2)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  household     households            @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  receipt       therapy_receipts      @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+  consultation  therapy_consultations @relation(fields: [consultation_id], references: [id], onDelete: Cascade)
+
+  @@unique([receipt_id, consultation_id])
+}
+
+model therapy_receipt_travel_allocations {
+  id              String   @id @default(uuid())
+  household_id    String
+  receipt_id      String
+  travel_entry_id String
+  amount          Decimal  @db.Decimal(15, 2)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household    households           @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  receipt      therapy_receipts     @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+  travel_entry therapy_travel_entries @relation(fields: [travel_entry_id], references: [id], onDelete: Cascade)
+
+  @@unique([receipt_id, travel_entry_id])
 }
 
 model therapy_job_expenses {
@@ -1742,6 +1776,7 @@ model therapy_consultations {
   consultation_type  therapy_consultation_types @relation(fields: [consultation_type_id], references: [id], onDelete: Restrict)
   linked_income_tx   transactions? @relation("TherapyConsultationIncomeTx", fields: [linked_income_transaction_id], references: [id], onDelete: SetNull)
   linked_cost_tx     transactions? @relation("TherapyConsultationCostTx", fields: [linked_cost_transaction_id], references: [id], onDelete: SetNull)
+  receipt_allocations therapy_receipt_consultation_allocations[]
 
   @@index([household_id, job_id])
   @@index([household_id, occurred_at])
@@ -1764,6 +1799,7 @@ model therapy_travel_entries {
   job                jobs?       @relation(fields: [job_id], references: [id], onDelete: Cascade)
   treatment          therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
   linked_transaction transactions? @relation("TherapyTravelTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
+  receipt_allocations therapy_receipt_travel_allocations[]
 
   @@index([household_id])
 }
