@@ -1267,30 +1267,45 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     function utcDay(d: Date): Date {
       return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     }
-    for (const clientId of touchedClientIds) {
-      const firstTx = await tx.therapy_treatments.findFirst({
-        where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
-        orderBy: { occurred_at: "asc" },
-        select: { occurred_at: true },
+    const touchedIds = Array.from(touchedClientIds);
+    const treatmentBoundsByClient = new Map<string, { min: Date | null; max: Date | null }>();
+    if (touchedIds.length > 0) {
+      const groupedBounds = await tx.therapy_treatments.groupBy({
+        by: ["client_id"],
+        where: {
+          household_id: params.householdId,
+          job_id: params.jobId,
+          client_id: { in: touchedIds },
+        },
+        _min: { occurred_at: true },
+        _max: { occurred_at: true },
       });
-      const lastTx = await tx.therapy_treatments.findFirst({
-        where: { household_id: params.householdId, job_id: params.jobId, client_id: clientId },
-        orderBy: { occurred_at: "desc" },
-        select: { occurred_at: true },
-      });
-      if (!firstTx || !lastTx) continue;
-      const existing = await tx.therapy_clients.findUnique({
-        where: { id: clientId },
-        select: { start_date: true },
-      });
-      const earliestOcc = utcDay(firstTx.occurred_at);
+      for (const row of groupedBounds) {
+        treatmentBoundsByClient.set(row.client_id, {
+          min: row._min.occurred_at ?? null,
+          max: row._max.occurred_at ?? null,
+        });
+      }
+    }
+    const existingClients = touchedIds.length
+      ? await tx.therapy_clients.findMany({
+          where: { id: { in: touchedIds } },
+          select: { id: true, start_date: true },
+        })
+      : [];
+    const existingStartByClient = new Map(existingClients.map((c) => [c.id, c.start_date] as const));
+    for (const clientId of touchedIds) {
+      const bounds = treatmentBoundsByClient.get(clientId);
+      if (!bounds?.min || !bounds.max) continue;
+      const earliestOcc = utcDay(bounds.min);
       let newStart = earliestOcc;
-      if (existing?.start_date) {
-        const ex = utcDay(existing.start_date);
+      const existingStart = existingStartByClient.get(clientId);
+      if (existingStart) {
+        const ex = utcDay(existingStart);
         newStart = new Date(Math.min(ex.getTime(), earliestOcc.getTime()));
       }
-      const lastDay = utcDay(lastTx.occurred_at);
-      const recent = lastTx.occurred_at.getTime() >= twoMonthsAgo.getTime();
+      const lastDay = utcDay(bounds.max);
+      const recent = bounds.max.getTime() >= twoMonthsAgo.getTime();
       await tx.therapy_clients.update({
         where: { id: clientId },
         data: {
@@ -1302,6 +1317,10 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
 
     return createdCount;
+  }, {
+    // Large monthly imports can exceed Prisma's default interactive transaction timeout (5s).
+    maxWait: 10_000,
+    timeout: 120_000,
   });
 
   return {
