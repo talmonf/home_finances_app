@@ -10,6 +10,7 @@ export type ReceiptsBankFilter = "all" | "linked" | "unlinked";
 
 export type ReceiptsListFilters = {
   job: string;
+  client: string;
   from: string;
   to: string;
   recipient: ReceiptsRecipientFilter;
@@ -98,6 +99,17 @@ export async function loadReceiptsCursorPage(params: {
         household_id: householdId,
         job: jobWhereInPrivateClinicModule,
         ...(filters.job ? { job_id: filters.job } : {}),
+        ...(filters.client
+          ? {
+              allocations: {
+                some: {
+                  treatment: {
+                    client_id: filters.client,
+                  },
+                },
+              },
+            }
+          : {}),
         ...(from || to
           ? {
               issued_at: {

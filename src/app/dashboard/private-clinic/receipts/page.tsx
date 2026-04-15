@@ -27,6 +27,7 @@ export const dynamic = "force-dynamic";
 
 type ReceiptSearch = {
   job?: string;
+  client?: string;
   from?: string;
   to?: string;
   recipient?: string;
@@ -56,6 +57,7 @@ export default async function ReceiptsPage({
   const sp = searchParams ? await searchParams : {};
   const filters: ReceiptsListFilters = {
     job: sp.job?.trim() || "",
+    client: sp.client?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
     recipient: parseReceiptsRecipientFilter(sp.recipient),
@@ -72,10 +74,18 @@ export default async function ReceiptsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, firstPage, orgJobs] = await Promise.all([
+  const [jobs, clients, firstPage, orgJobs] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
+    }),
+    prisma.therapy_clients.findMany({
+      where: {
+        household_id: householdId,
+        OR: [{ is_active: true }, ...(filters.client ? [{ id: filters.client }] : [])],
+      },
+      orderBy: { first_name: "asc" },
+      select: { id: true, first_name: true, last_name: true, is_active: true },
     }),
     loadReceiptsCursorPage({
       householdId,
@@ -142,6 +152,7 @@ export default async function ReceiptsPage({
   const ilsLabel = uiLanguage === "he" ? 'ש"ח' : "ILS";
   const queryParams = new URLSearchParams();
   if (filters.job) queryParams.set("job", filters.job);
+  if (filters.client) queryParams.set("client", filters.client);
   if (filters.from) queryParams.set("from", filters.from);
   if (filters.to) queryParams.set("to", filters.to);
   if (filters.recipient !== "all") queryParams.set("recipient", filters.recipient);
@@ -209,6 +220,22 @@ export default async function ReceiptsPage({
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {formatJobDisplayLabel(j)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.client}</label>
+            <select
+              name="client"
+              defaultValue={filters.client}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {clients.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.first_name} {cl.last_name ?? ""}
+                  {!cl.is_active ? ` (${c.inactive})` : ""}
                 </option>
               ))}
             </select>

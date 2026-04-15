@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     cursorId: cursor,
     filters: {
       job: url.searchParams.get("job")?.trim() || "",
+      client: url.searchParams.get("client")?.trim() || "",
       from: url.searchParams.get("from")?.trim() || "",
       to: url.searchParams.get("to")?.trim() || "",
       recipient: parseReceiptsRecipientFilter(url.searchParams.get("recipient") ?? undefined),
