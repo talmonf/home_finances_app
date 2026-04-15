@@ -290,6 +290,21 @@ function parseDateFromCell(v: unknown): Date | null {
 function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
   const t = raw.trim();
   if (!t) return null;
+  // Excel serial values may appear in monthly-covered-period cells (e.g. "45322").
+  if (/^\d{5,7}(\.\d+)?$/.test(t.replace(/,/g, ""))) {
+    const n = Number(t.replace(/,/g, ""));
+    if (Number.isFinite(n)) {
+      const fromExcel = excelSerialToUtcDate(Math.floor(n));
+      if (fromExcel) {
+        const y = fromExcel.getUTCFullYear();
+        const m = fromExcel.getUTCMonth();
+        return {
+          start: new Date(Date.UTC(y, m, 1)),
+          end: new Date(Date.UTC(y, m + 1, 0)),
+        };
+      }
+    }
+  }
   const hebrewMonths: Record<string, number> = {
     ינואר: 1,
     פברואר: 2,
