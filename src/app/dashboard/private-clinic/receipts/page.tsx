@@ -3,18 +3,25 @@ import {
   prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
-  getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
-import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
-import { createTherapyReceipt } from "../actions";
-import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { createTherapyReceipt, updateTherapyReceipt } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import {
+  loadReceiptsCursorPage,
+  parseReceiptsBankFilter,
+  parseReceiptsRecipientFilter,
+  parseReceiptsSortDir,
+  parseReceiptsSortKey,
+  type ReceiptsListFilters,
+} from "./receipts-list-data";
+import { ReceiptsListClient } from "./receipts-list-client";
+import { ReceiptModalForm } from "./receipt-modal-form";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +31,13 @@ type ReceiptSearch = {
   to?: string;
   recipient?: string;
   bank?: string;
+  sort?: string;
+  dir?: string;
+  modal?: string;
+  edit_id?: string;
+  created?: string;
+  updated?: string;
+  error?: string;
 };
 
 export default async function ReceiptsPage({
@@ -34,48 +48,34 @@ export default async function ReceiptsPage({
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
-  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
   const sp = searchParams ? await searchParams : {};
-  const jobFilter = sp.job || "";
-  const from = sp.from ? new Date(sp.from) : null;
-  const to = sp.to ? new Date(sp.to) : null;
-  const recipientFilter = sp.recipient || "all";
-  const bankFilter = sp.bank || "all";
+  const filters: ReceiptsListFilters = {
+    job: sp.job?.trim() || "",
+    from: sp.from?.trim() || "",
+    to: sp.to?.trim() || "",
+    recipient: parseReceiptsRecipientFilter(sp.recipient),
+    bank: parseReceiptsBankFilter(sp.bank),
+    sort: parseReceiptsSortKey(sp.sort),
+    dir: parseReceiptsSortDir(sp.dir),
+  };
   const now = new Date();
   const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
 
-  const [jobs, receipts, orgJobs] = await Promise.all([
+  const [jobs, firstPage, orgJobs] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: { start_date: "desc" },
     }),
-    prisma.therapy_receipts.findMany({
-      where: {
-        household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
-        ...(jobFilter ? { job_id: jobFilter } : {}),
-        ...(from || to
-          ? {
-              issued_at: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
-        ...(recipientFilter === "client" || recipientFilter === "organization"
-          ? { recipient_type: recipientFilter as "client" | "organization" }
-          : {}),
-        ...(bankFilter === "linked" ? { linked_transaction_id: { not: null } } : {}),
-        ...(bankFilter === "unlinked" ? { linked_transaction_id: null } : {}),
-      },
-      orderBy: { issued_at: "desc" },
-      take: 500,
-      include: { job: true },
+    loadReceiptsCursorPage({
+      householdId,
+      filters,
+      take: 50,
     }),
     prisma.jobs.findMany({
       where: { household_id: householdId, is_private_clinic: false },
@@ -135,9 +135,40 @@ export default async function ReceiptsPage({
   const outstanding = earned - paid;
   const monthLabel = `${lastMonthStart.toISOString().slice(0, 10)} - ${lastMonthEnd.toISOString().slice(0, 10)}`;
   const ilsLabel = uiLanguage === "he" ? 'ש"ח' : "ILS";
+  const queryParams = new URLSearchParams();
+  if (filters.job) queryParams.set("job", filters.job);
+  if (filters.from) queryParams.set("from", filters.from);
+  if (filters.to) queryParams.set("to", filters.to);
+  if (filters.recipient !== "all") queryParams.set("recipient", filters.recipient);
+  if (filters.bank !== "all") queryParams.set("bank", filters.bank);
+  if (filters.sort !== "issued_at") queryParams.set("sort", filters.sort);
+  if (filters.dir !== "desc") queryParams.set("dir", filters.dir);
+  const baseListHref = `/dashboard/private-clinic/receipts?${queryParams.toString()}`;
+  const apiHrefBase = `/api/private-clinic/receipts?${queryParams.toString()}&take=50`;
+
+  const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const editId = sp.edit_id?.trim() || "";
+  const editReceipt =
+    modalMode === "edit" && editId
+      ? await prisma.therapy_receipts.findFirst({
+          where: {
+            id: editId,
+            household_id: householdId,
+            job: jobWhereInPrivateClinicModule,
+          },
+        })
+      : null;
 
   return (
     <div className="space-y-8">
+      {sp.error ? (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">{r.formError}</p>
+      ) : null}
+      {(sp.created || sp.updated) && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {c.saved}
+        </p>
+      )}
       <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
         <h2 className="text-lg font-medium text-slate-200">{r.receivablesLastMonth}</h2>
         <p className="text-xs text-slate-400">
@@ -159,101 +190,6 @@ export default async function ReceiptsPage({
         </div>
       </section>
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{r.newReceipt}</h2>
-        <form
-          action={createTherapyReceipt}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-        >
-          <select
-            name="job_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.job}</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {formatJobDisplayLabel(j)}
-              </option>
-            ))}
-          </select>
-          <input
-            name="receipt_number"
-            placeholder={r.receiptNumber}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="issued_at"
-            type="date"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="total_amount"
-            placeholder={r.totalAmount}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="currency"
-            defaultValue="ILS"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="covered_period_start"
-            type="date"
-            placeholder={r.coveredStart}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="covered_period_end"
-            type="date"
-            placeholder={r.coveredEnd}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <select
-            name="recipient_type"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="client">{r.recipientClient}</option>
-            <option value="organization">{r.recipientOrg}</option>
-          </select>
-          <select
-            name="payment_method"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="cash">{r.paymentCash}</option>
-            <option value="bank_transfer">{r.paymentBank}</option>
-            <option value="digital_card">{r.paymentDigital}</option>
-            <option value="credit_card">{r.paymentCredit}</option>
-          </select>
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
-            <TherapyTransactionLinkSelect
-              name="linked_transaction_id"
-              householdId={householdId}
-              label={r.linkTxPayment}
-              hint={r.linkTxPaymentHint}
-              noneOptionLabel={c.txNoneLinked}
-            />
-          </div>
-          <textarea
-            name="notes"
-            placeholder={c.notes}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {r.createAllocate}
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{r.filters}</h2>
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
@@ -263,7 +199,7 @@ export default async function ReceiptsPage({
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
-              defaultValue={jobFilter}
+              defaultValue={filters.job}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>
@@ -278,7 +214,7 @@ export default async function ReceiptsPage({
             <label className="block text-xs text-slate-400">{r.filterRecipient}</label>
             <select
               name="recipient"
-              defaultValue={recipientFilter}
+              defaultValue={filters.recipient}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="all">{r.bankLinkAll}</option>
@@ -290,7 +226,7 @@ export default async function ReceiptsPage({
             <label className="block text-xs text-slate-400">{r.filterBankLink}</label>
             <select
               name="bank"
-              defaultValue={bankFilter}
+              defaultValue={filters.bank}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="all">{r.bankLinkAll}</option>
@@ -316,6 +252,31 @@ export default async function ReceiptsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
+          <div>
+            <label className="block text-xs text-slate-400">{r.sortBy}</label>
+            <select
+              name="sort"
+              defaultValue={filters.sort}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="issued_at">{r.tableDate}</option>
+              <option value="number">{r.tableNumber}</option>
+              <option value="job">{r.tableJob}</option>
+              <option value="amount">{r.tableAmount}</option>
+              <option value="treatments">{r.tableTreatmentsCount}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{r.sortDir}</label>
+            <select
+              name="dir"
+              defaultValue={filters.dir}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="desc">{r.sortDesc}</option>
+              <option value="asc">{r.sortAsc}</option>
+            </select>
+          </div>
           <button
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
@@ -326,48 +287,130 @@ export default async function ReceiptsPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{r.receiptsCount(receipts.length)}</h2>
-        {receipts.length === 0 ? (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{r.receiptsHeading}</h2>
+          <Link
+            href={`${baseListHref}&modal=new`}
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            {r.newReceipt}
+          </Link>
+        </div>
+        {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.receiptsEmpty}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-700">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-3 py-2 text-slate-300">{r.tableNumber}</th>
-                  <th className="px-3 py-2 text-slate-300">{r.tableDate}</th>
-                  <th className="px-3 py-2 text-slate-300">{r.tableJob}</th>
-                  <th className="px-3 py-2 text-slate-300">{r.tableAmount}</th>
-                  <th className="px-3 py-2 text-slate-300">{r.receivablesRangeLabel}</th>
-                  <th className="px-3 py-2 text-slate-300">{r.tableView}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receipts.map((rec) => (
-                  <tr key={rec.id} className="border-b border-slate-700/80">
-                    <td className="px-3 py-2 text-slate-100">{rec.receipt_number}</td>
-                    <td className="px-3 py-2 text-slate-400">{formatHouseholdDate(rec.issued_at, dateDisplayFormat)}</td>
-                    <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(rec.job)}</td>
-                    <td className="px-3 py-2 text-slate-200">
-                      {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency, uiLanguage)}
-                    </td>
-                    <td className="px-3 py-2 text-slate-400">
-                      {rec.covered_period_start && rec.covered_period_end
-                        ? `${rec.covered_period_start.toISOString().slice(0, 10)} - ${rec.covered_period_end.toISOString().slice(0, 10)}`
-                        : "-"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Link href={`/dashboard/private-clinic/receipts/${rec.id}`} className="text-xs text-sky-400">
-                        {r.open}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ReceiptsListClient
+            initialRows={firstPage.rows}
+            initialCursor={firstPage.nextCursor}
+            apiHrefBase={apiHrefBase}
+            listBaseHref={baseListHref}
+            uiLanguage={uiLanguage}
+            obfuscate={obfuscate}
+            dateDisplayFormat={dateDisplayFormat}
+            labels={{
+              number: r.tableNumber,
+              date: r.tableDate,
+              job: r.tableJob,
+              amount: r.tableAmount,
+              coverage: r.receivablesRangeLabel,
+              treatments: r.tableTreatmentsCount,
+              edit: c.edit,
+              open: r.open,
+              loadingMore: r.loadingMore,
+              noMoreRows: r.noMoreRows,
+              loadMore: r.loadMore,
+            }}
+          />
         )}
       </section>
+      {modalMode === "new" ? (
+        <ReceiptModalForm
+          action={createTherapyReceipt}
+          mode="create"
+          closeHref={baseListHref}
+          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
+          redirectOnError={`${baseListHref}&modal=new`}
+          householdId={householdId}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          labels={{
+            titleNew: r.newReceipt,
+            titleEdit: r.editReceipt,
+            save: r.createAllocate,
+            cancel: c.cancel,
+            job: c.job,
+            receiptNumber: r.receiptNumber,
+            date: c.date,
+            totalAmount: r.totalAmount,
+            currency: c.currency,
+            coveredStart: r.coveredStart,
+            coveredEnd: r.coveredEnd,
+            recipient: r.filterRecipient,
+            paymentMethod: r.paymentMethodLabel,
+            notes: c.notes,
+            recipientClient: r.recipientClient,
+            recipientOrg: r.recipientOrg,
+            paymentCash: r.paymentCash,
+            paymentBank: r.paymentBank,
+            paymentDigital: r.paymentDigital,
+            paymentCredit: r.paymentCredit,
+            linkBankOptional: c.linkBankOptional,
+            linkTxPayment: r.linkTxPayment,
+            linkTxPaymentHint: r.linkTxPaymentHint,
+            txNoneLinked: c.txNoneLinked,
+          }}
+        />
+      ) : null}
+      {modalMode === "edit" && editReceipt ? (
+        <ReceiptModalForm
+          action={updateTherapyReceipt}
+          mode="edit"
+          closeHref={baseListHref}
+          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
+          redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editReceipt.id)}`}
+          householdId={householdId}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          labels={{
+            titleNew: r.newReceipt,
+            titleEdit: r.editReceipt,
+            save: r.saveReceipt,
+            cancel: c.cancel,
+            job: c.job,
+            receiptNumber: r.receiptNumber,
+            date: c.date,
+            totalAmount: r.totalAmount,
+            currency: c.currency,
+            coveredStart: r.coveredStart,
+            coveredEnd: r.coveredEnd,
+            recipient: r.filterRecipient,
+            paymentMethod: r.paymentMethodLabel,
+            notes: c.notes,
+            recipientClient: r.recipientClient,
+            recipientOrg: r.recipientOrg,
+            paymentCash: r.paymentCash,
+            paymentBank: r.paymentBank,
+            paymentDigital: r.paymentDigital,
+            paymentCredit: r.paymentCredit,
+            linkBankOptional: c.linkBankOptional,
+            linkTxPayment: r.linkTxPayment,
+            linkTxPaymentHint: r.linkTxPaymentHint,
+            txNoneLinked: c.txNoneLinked,
+          }}
+          initial={{
+            id: editReceipt.id,
+            job_id: editReceipt.job_id,
+            receipt_number: editReceipt.receipt_number,
+            issued_at: editReceipt.issued_at.toISOString().slice(0, 10),
+            total_amount: editReceipt.total_amount.toString(),
+            currency: editReceipt.currency,
+            covered_period_start: editReceipt.covered_period_start?.toISOString().slice(0, 10) ?? "",
+            covered_period_end: editReceipt.covered_period_end?.toISOString().slice(0, 10) ?? "",
+            recipient_type: editReceipt.recipient_type,
+            payment_method: editReceipt.payment_method,
+            linked_transaction_id: editReceipt.linked_transaction_id ?? "",
+            notes: editReceipt.notes ?? "",
+          }}
+        />
+      ) : null}
     </div>
   );
 }

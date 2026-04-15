@@ -1037,7 +1037,7 @@ export async function createTherapyTreatment(formData: FormData) {
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
-  let program_id: string | null = program_id_raw || null;
+  const program_id: string | null = program_id_raw || null;
   if (programCountForJob > 0) {
     if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
@@ -1109,7 +1109,7 @@ export async function updateTherapyTreatment(formData: FormData) {
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
-  let program_id: string | null = program_id_raw || null;
+  const program_id: string | null = program_id_raw || null;
   if (programCountForJob > 0) {
     if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
@@ -1171,6 +1171,7 @@ export async function deleteTherapyTreatment(formData: FormData) {
 
 export async function createTherapyReceipt(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/receipts`;
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const receipt_number = (formData.get("receipt_number") as string)?.trim() || "";
   const issued_at = parseDateRequired((formData.get("issued_at") as string) || null);
@@ -1181,9 +1182,9 @@ export async function createTherapyReceipt(formData: FormData) {
   const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
 
   if (!job_id || !receipt_number || !issued_at || !totalStr || !recipient_type || !payment_method) {
-    redirect(`${BASE}/receipts?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
-  if (!(await assertJob(householdId, job_id))) redirect(`${BASE}/receipts?error=job`);
+  if (!(await assertJob(householdId, job_id))) redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1215,22 +1216,23 @@ export async function createTherapyReceipt(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/receipts`);
-  redirect(`${BASE}/receipts/${id}`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}`);
 }
 
 export async function updateTherapyReceipt(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/receipts`;
   const id = (formData.get("id") as string)?.trim() || "";
   const row = await prisma.therapy_receipts.findFirst({
     where: { id, household_id: householdId },
   });
-  if (!row) redirect(`${BASE}/receipts?error=notfound`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const issued_at = parseDateRequired((formData.get("issued_at") as string) || null);
   const totalStr = parseMoney(formData.get("total_amount") as string);
-  if (!job_id || !issued_at || !totalStr) redirect(`${BASE}/receipts?error=missing`);
-  if (!(await assertJob(householdId, job_id))) redirect(`${BASE}/receipts?error=job`);
+  if (!job_id || !issued_at || !totalStr) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  if (!(await assertJob(householdId, job_id))) redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1246,7 +1248,7 @@ export async function updateTherapyReceipt(formData: FormData) {
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
   const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
-  if (!recipient_type || !payment_method) redirect(`${BASE}/receipts?error=badenum`);
+  if (!recipient_type || !payment_method) redirectPrivateClinicScoped(formData, "error", fallbackPath, "badenum");
 
   await prisma.therapy_receipts.update({
     where: { id },
@@ -1267,7 +1269,7 @@ export async function updateTherapyReceipt(formData: FormData) {
 
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${id}`);
-  redirect(`${BASE}/receipts/${id}?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}?updated=1`);
 }
 
 export async function upsertReceiptAllocation(formData: FormData) {
