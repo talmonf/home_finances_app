@@ -375,7 +375,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
     paymentDigital: p("Digital payment", "תשלום דיגיטלי"),
     paymentIntoAccount: p("Paid into account", "חשבון שאליו הופקד"),
     paymentDigitalApp: p("Digital method", "אפליקציה / אמצעי"),
-    paymentDetailsCol: p("Payment", "תשלום"),
+    paymentDetailsCol: p("Payment date", "תאריך תשלום"),
     sortHintAsc: p("Ascending", "סדר עולה"),
     sortHintDesc: p("Descending", "סדר יורד"),
     treatmentsTitle: p("Treatments", "טיפולים"),

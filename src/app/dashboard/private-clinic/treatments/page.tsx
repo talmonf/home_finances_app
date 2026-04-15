@@ -377,8 +377,6 @@ export default async function TreatmentsPage({
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
-              paymentBankTransfer: tr.paymentBankTransfer,
-              paymentDigital: tr.paymentDigital,
             }}
           />
         )}

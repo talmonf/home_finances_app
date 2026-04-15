@@ -21,8 +21,6 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
-  paymentBankTransfer: string;
-  paymentDigital: string;
 };
 
 export function TreatmentsListClient({
@@ -108,15 +106,9 @@ export function TreatmentsListClient({
           </thead>
           <tbody>
             {rows.map((t) => {
-              const paymentParts: string[] = [];
-              if (t.payment_date_iso) paymentParts.push(formatHouseholdDate(new Date(t.payment_date_iso), dateDisplayFormat));
-              if (t.payment_method === "bank_transfer") {
-                paymentParts.push(labels.paymentBankTransfer);
-                if (t.payment_bank_account_label) paymentParts.push(t.payment_bank_account_label);
-              } else if (t.payment_method === "digital_payment") {
-                paymentParts.push(labels.paymentDigital);
-                if (t.payment_digital_method_name) paymentParts.push(t.payment_digital_method_name);
-              }
+              const paymentDate = t.payment_date_iso
+                ? formatHouseholdDate(new Date(t.payment_date_iso), dateDisplayFormat)
+                : "—";
 
               return (
                 <tr key={t.id} className="border-b border-slate-700/80">
@@ -146,7 +138,7 @@ export function TreatmentsListClient({
                       "—"
                     )}
                   </td>
-                  <td className="max-w-[14rem] px-3 py-2 text-slate-400">{paymentParts.length ? paymentParts.join(" · ") : "—"}</td>
+                  <td className="max-w-[14rem] px-3 py-2 text-slate-400">{paymentDate}</td>
                   <td className="px-3 py-2">
                     <Link href={`${listBaseHref}&modal=edit&edit_id=${encodeURIComponent(t.id)}`} className="text-xs text-sky-400">
                       {labels.edit}
