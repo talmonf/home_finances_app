@@ -83,6 +83,16 @@ type PendingConsultation = {
   typeName: string;
 };
 
+type PendingOrgPaymentRow = {
+  rowNumber: number;
+  receiptNum: string;
+  total: string;
+  issuedAt: Date;
+  payRoute: string;
+  note: string | null;
+  coveredMonthRaw: string;
+};
+
 type PendingReceipt = {
   key: string;
   rowNumber: number;
@@ -473,6 +483,15 @@ function addTreatmentCount(map: Map<string, number>, key: string): void {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
+function uniqueTreatmentKey(
+  pendingTreatments: Map<string, PendingTreatment>,
+  baseKey: string,
+  rowNumber: number,
+): string {
+  if (!pendingTreatments.has(baseKey)) return baseKey;
+  return `${baseKey}|row:${rowNumber}`;
+}
+
 async function analyzePrivateProfile(
   params: TipulimAnalyzeParams,
   ctx: {
@@ -560,23 +579,22 @@ async function analyzePrivateProfile(
       if (!clientRef) continue;
       const display = clientRef.displayName;
       addTreatmentCount(scratch.treatmentCountsByDisplay, display);
-      const tKey = `${display}|${monthKey(occurredAt)}|${amount}|${vt}`;
-      if (!scratch.pendingTreatments.has(tKey)) {
-        scratch.pendingTreatments.set(tKey, {
-          key: tKey,
-          rowNumber,
-          clientRef,
-          programName: null,
-          occurredAt,
-          amount,
-          visitType: vt,
-          note: noteRaw,
-          paymentDate: null,
-          paymentMethod: null,
-          paymentBankAccountId: null,
-          paymentDigitalMethodId: null,
-        });
-      }
+      const baseKey = `${display}|${monthKey(occurredAt)}|${amount}|${vt}`;
+      const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
+      scratch.pendingTreatments.set(tKey, {
+        key: tKey,
+        rowNumber,
+        clientRef,
+        programName: null,
+        occurredAt,
+        amount,
+        visitType: vt,
+        note: noteRaw,
+        paymentDate: null,
+        paymentMethod: null,
+        paymentBankAccountId: null,
+        paymentDigitalMethodId: null,
+      });
       const receiptKeys = receiptMatchKeys(row["קבלה"]);
       if (receiptKeys.length > 0) {
         for (const rk of receiptKeys) {
@@ -748,7 +766,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
   );
   const treatmentKeysByMonth = new Map<string, string[]>();
-  for (let idx = rows.length - 1; idx >= 0; idx -= 1) {
+  const pendingOrgPaymentRows: PendingOrgPaymentRow[] = [];
+  for (let idx = 0; idx < rows.length; idx += 1) {
     const row = rows[idx]!;
     const rowNumber = idx + 2;
     const programName = norm(s(row["תכנית"]));
@@ -772,80 +791,18 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     if (programName === "תשלום") {
       const d = parseDateFromCell(paymentDateCell) ?? parseDateFromCell(dateCell);
       const total = parseMoney(s(row["סכום"]) || s(row["שולם"]));
-      const payment = paymentMethodFromText(payRoute);
-      if (!d || !total || !receiptNum || !payment.receiptMethod) {
+      if (!d || !total || !receiptNum) {
         scratch.errors.push(`Row ${rowNumber}: monthly payment row is missing required receipt fields.`);
         continue;
       }
-      let bankId: string | null = null;
-      let digitalId: string | null = null;
-      if (payment.treatmentMethod === "bank_transfer") {
-        if (payment.accountDigits) {
-          const digits = normalizeDigits(payment.accountDigits);
-          const matches = ctx.bankAccounts.filter((b) => {
-            const v = normalizeDigits(b.account_number ?? "");
-            return v.includes(digits) || digits.includes(v);
-          });
-          if (matches.length === 1) bankId = matches[0]!.id;
-          else if (matches.length > 1) {
-            scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
-            continue;
-          } else if (ctx.isPrivateClinic) {
-            scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
-          } else {
-            scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
-            continue;
-          }
-        } else if (!ctx.isPrivateClinic) {
-          scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
-          continue;
-        }
-      }
-      if (payment.treatmentMethod === "digital_payment") {
-        const hint = payment.digitalHint?.toLowerCase() ?? "";
-        const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
-        if (matches.length === 1) digitalId = matches[0]!.id;
-        else {
-          scratch.errors.push(`Row ${rowNumber}: could not uniquely match digital payment method ${payRoute}.`);
-          continue;
-        }
-      }
-      const coveredMonthRaw = s(dateCell);
-      const coveredMonth = parseCoveredMonth(coveredMonthRaw);
-      const coveredMonthKey = coveredMonth ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}` : null;
-      const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
-      const allocationsSeen = new Set<string>();
-      const allocations: PendingAllocation[] = [];
-      for (const tKey of treatmentKeys) {
-        const treatment = scratch.pendingTreatments.get(tKey);
-        if (!treatment) continue;
-        const uniq = `${tKey}|${treatment.amount}`;
-        if (allocationsSeen.has(uniq)) continue;
-        allocationsSeen.add(uniq);
-        allocations.push({ treatmentKey: tKey, amount: treatment.amount });
-      }
-      const allocationsSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-      if (allocations.length > 0 && Math.abs(allocationsSum - Number(total)) > 0.01) {
-        scratch.warnings.push(
-          `Row ${rowNumber}: monthly payment receipt #${receiptNum} total ${total} does not match linked treatments ${allocationsSum.toFixed(2)}.`,
-        );
-      }
-      scratch.pendingReceipts.push({
-        key: `org:${receiptNum}`,
+      pendingOrgPaymentRows.push({
         rowNumber,
-        receiptNumber: receiptNum,
+        receiptNum,
+        total,
         issuedAt: d,
-        totalAmount: total,
-        notes: s(row["הערות"]) || null,
-        paymentMethod: payment.receiptMethod,
-        recipientType: ctx.isPrivateClinic ? "client" : "organization",
-        coveredPeriodStart: coveredMonth?.start ?? null,
-        coveredPeriodEnd: coveredMonth?.end ?? null,
-        allocations,
-        treatmentKeysToMarkPaid: treatmentKeys,
-        treatmentPaymentMethod: payment.treatmentMethod,
-        treatmentBankAccountId: bankId,
-        treatmentDigitalMethodId: digitalId,
+        payRoute,
+        note: s(row["הערות"]) || null,
+        coveredMonthRaw: s(dateCell),
       });
       continue;
     }
@@ -881,7 +838,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         continue;
       }
       if (!clientRef) continue;
-      const key = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|${vt}`;
+      const baseKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|${vt}`;
+      const key = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
       scratch.pendingTreatments.set(key, {
         key,
         rowNumber,
@@ -931,6 +889,62 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     } else {
       scratch.errors.push(`Row ${rowNumber}: unsupported visit type "${visitType}".`);
     }
+  }
+
+  // Pass 2 for org monthly payment rows: resolve links after all treatments are known.
+  for (const payRow of pendingOrgPaymentRows) {
+    const payment = paymentMethodFromText(payRow.payRoute);
+    if (!payment.receiptMethod) {
+      scratch.errors.push(`Row ${payRow.rowNumber}: missing or unknown payment route for receipt #${payRow.receiptNum}.`);
+      continue;
+    }
+    const resolvedIds = resolveBankDigitalForParsedPayment(
+      ctx,
+      payment,
+      payRow.rowNumber,
+      scratch,
+      payRow.payRoute,
+    );
+    if (!resolvedIds.ok) continue;
+
+    const coveredMonth = parseCoveredMonth(payRow.coveredMonthRaw);
+    const coveredMonthKey = coveredMonth
+      ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}`
+      : null;
+    const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
+    const allocationsSeen = new Set<string>();
+    const allocations: PendingAllocation[] = [];
+    for (const tKey of treatmentKeys) {
+      const treatment = scratch.pendingTreatments.get(tKey);
+      if (!treatment) continue;
+      const uniq = `${tKey}|${treatment.amount}`;
+      if (allocationsSeen.has(uniq)) continue;
+      allocationsSeen.add(uniq);
+      allocations.push({ treatmentKey: tKey, amount: treatment.amount });
+    }
+    const allocationsSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    if (allocations.length > 0 && Math.abs(allocationsSum - Number(payRow.total)) > 0.01) {
+      scratch.warnings.push(
+        `Row ${payRow.rowNumber}: monthly payment receipt #${payRow.receiptNum} total ${payRow.total} does not match linked treatments ${allocationsSum.toFixed(2)}.`,
+      );
+    }
+    scratch.pendingReceipts.push({
+      key: `org:${payRow.receiptNum}`,
+      rowNumber: payRow.rowNumber,
+      receiptNumber: payRow.receiptNum,
+      issuedAt: payRow.issuedAt,
+      totalAmount: payRow.total,
+      notes: payRow.note,
+      paymentMethod: payment.receiptMethod,
+      recipientType: ctx.isPrivateClinic ? "client" : "organization",
+      coveredPeriodStart: coveredMonth?.start ?? null,
+      coveredPeriodEnd: coveredMonth?.end ?? null,
+      allocations,
+      treatmentKeysToMarkPaid: treatmentKeys,
+      treatmentPaymentMethod: payment.treatmentMethod,
+      treatmentBankAccountId: resolvedIds.bankId,
+      treatmentDigitalMethodId: resolvedIds.digitalId,
+    });
   }
   return scratch;
 }

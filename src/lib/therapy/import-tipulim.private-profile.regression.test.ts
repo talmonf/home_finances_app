@@ -374,6 +374,70 @@ test("org monthly profile links allocations for short visit labels (בית/טל�
   assert.equal(scratch.pendingReceipts[0]?.allocations.length, 2);
 });
 
+test("org monthly profile links allocations when payment row appears last", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeOrgProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  const rows = [
+    {
+      תכנית: "ארגון א",
+      "סוג ביקור": "ביקור בית",
+      מטופל: "מאור",
+      סכום: "100",
+      תאריך: "10/03/2026",
+      קבלה: "",
+      "תאריך תשלום": "",
+      "דרך תשלום": "",
+      הערות: "",
+    },
+    {
+      תכנית: "ארגון א",
+      "סוג ביקור": "ייעוץ טלפוני",
+      מטופל: "מאור",
+      סכום: "200",
+      תאריך: "20/03/2026",
+      קבלה: "",
+      "תאריך תשלום": "",
+      "דרך תשלום": "",
+      הערות: "",
+    },
+    {
+      תכנית: "תשלום",
+      "סוג ביקור": "",
+      מטופל: "",
+      סכום: "300",
+      תאריך: "מרץ 2026",
+      קבלה: "7781",
+      "תאריך תשלום": "31/03/2026",
+      "דרך תשלום": "ביט",
+      הערות: "",
+    },
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Sheet1");
+
+  const params = {
+    householdId: "hh-1",
+    jobId: "job-1",
+    selectedProgramId: null,
+    profile: "tipulim_org_monthly",
+    workbook,
+    sheetName: "Sheet1",
+  } as const;
+
+  const scratch = await analyzeOrgProfileForTest(params, {
+    isPrivateClinic: false,
+    clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
+    programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
+    bankAccounts: [],
+    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+  });
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingReceipts.length, 1);
+  assert.equal(scratch.pendingReceipts[0]?.allocations.length, 2);
+});
+
 test("private profile blocks receipt anchor when no treatments can be linked", async () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
   const { analyzePrivateProfileForTest } = await import("@/lib/therapy/import-tipulim");
