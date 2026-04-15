@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 
 type Locale = "en" | "he";
 
@@ -17,6 +18,7 @@ export function TherapyImportForm({
   };
 }) {
   const [msg, setMsg] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,7 +45,14 @@ export function TherapyImportForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-      <input type="file" name="file" accept=".xlsx,.xls" required className="text-sm text-slate-300" />
+      <FileUploadField
+        id="therapy-import-file"
+        name="file"
+        accept=".xlsx,.xls"
+        required
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
+      />
       <button
         type="submit"
         className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 import { useUiLanguage } from "@/components/household-preferences-context";
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 export default function JobDocumentUpload({ jobId }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const isHebrew = useUiLanguage() === "he";
 
   async function onSubmit(formData: FormData) {
@@ -36,7 +38,15 @@ export default function JobDocumentUpload({ jobId }: Props) {
 
   return (
     <form action={onSubmit} className="flex flex-wrap items-center gap-2">
-      <input type="file" name="file" required className="max-w-[230px] text-xs text-slate-200" />
+      <FileUploadField
+        id={`job-document-file-${jobId}`}
+        name="file"
+        required
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
+        buttonLabel={isHebrew ? "בחירת קובץ" : "Choose file"}
+        noFileText={isHebrew ? "לא נבחר קובץ" : "No file selected"}
+      />
       <button
         type="submit"
         disabled={busy}

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { TipulimImportProfile } from "@/lib/therapy/import-tipulim";
+import { FileUploadField } from "@/components/file-upload-field";
 
 type Job = { id: string; title: string };
 type Program = { id: string; jobId: string; name: string; jobLabel?: string };
@@ -199,12 +200,16 @@ export function TherapyTreatmentsImportForm({
         </label>
         <label className="text-sm text-slate-200">
           {labels.chooseFile}
-          <input
-            className="mt-1 w-full text-sm text-slate-300"
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
+          <div className="mt-1">
+            <FileUploadField
+              id="therapy-treatments-import-file"
+              accept=".xlsx,.xls,.csv"
+              onFileChange={setFile}
+              fileName={file?.name ?? null}
+              className="w-full"
+              textClassName="max-w-full truncate text-sm text-slate-300"
+            />
+          </div>
         </label>
         {sheetOptions.length > 0 && (
           <label className="text-sm text-slate-200">

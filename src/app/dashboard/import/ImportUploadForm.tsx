@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileUploadField } from "@/components/file-upload-field";
 
 type BankAccount = { id: string; account_name: string };
 
@@ -80,11 +81,16 @@ export function ImportUploadForm({
           <label className="mb-1 block text-xs font-medium text-slate-400">
             {isHebrew ? "קובץ PDF או Excel" : "PDF or Excel file"}
           </label>
-          <input
-            type="file"
+          <FileUploadField
+            id="import-upload-file"
             accept=".pdf,.xlsx,.xls"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 file:mr-2 file:rounded file:border-0 file:bg-sky-600 file:px-3 file:py-1 file:text-sm file:text-white"
+            onFileChange={setFile}
+            fileName={file?.name ?? null}
+            buttonLabel={isHebrew ? "בחירת קובץ" : "Choose file"}
+            noFileText={isHebrew ? "לא נבחר קובץ" : "No file selected"}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2"
+            buttonClassName="inline-flex cursor-pointer rounded bg-sky-600 px-3 py-1 text-sm text-white hover:bg-sky-500"
+            textClassName="max-w-full truncate text-sm text-slate-200"
           />
         </div>
       </div>

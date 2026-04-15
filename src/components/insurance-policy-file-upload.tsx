@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 
 export function InsurancePolicyFileUpload({
   policyId,
@@ -20,13 +21,12 @@ export function InsurancePolicyFileUpload({
   };
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
   const upload = useCallback(async () => {
-    const file = inputRef.current?.files?.[0];
     if (!file || file.size === 0) {
       setError(labels.chooseFile);
       setSuccess(false);
@@ -48,25 +48,25 @@ export function InsurancePolicyFileUpload({
         return;
       }
       setSuccess(true);
-      if (inputRef.current) inputRef.current.value = "";
+      setFile(null);
       router.refresh();
     } catch {
       setError(labels.error);
     } finally {
       setBusy(false);
     }
-  }, [policyId, router, labels]);
+  }, [file, policyId, router, labels]);
 
   const inputId = `insurance-policy-file-${policyId}`;
 
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-      <input
-        ref={inputRef}
+      <FileUploadField
         id={inputId}
-        type="file"
-        className="max-w-[min(100%,280px)] text-xs text-slate-200"
-        aria-describedby={error ? `${inputId}-err` : success ? `${inputId}-ok` : undefined}
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
+        className="max-w-[min(100%,340px)] flex flex-wrap items-center gap-2"
+        textClassName="max-w-[180px] truncate text-xs text-slate-200"
       />
       <button
         type="button"

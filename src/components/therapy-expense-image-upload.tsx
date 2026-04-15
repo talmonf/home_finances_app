@@ -1,8 +1,12 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 
 export function TherapyExpenseImageUpload({ expenseId }: { expenseId: string }) {
+  const [file, setFile] = useState<File | null>(null);
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -21,12 +25,13 @@ export function TherapyExpenseImageUpload({ expenseId }: { expenseId: string }) 
   return (
     <form className="flex flex-wrap items-end gap-2" onSubmit={onSubmit}>
       <input type="hidden" name="expense_id" value={expenseId} />
-      <input
-        type="file"
+      <FileUploadField
+        id={`therapy-expense-file-${expenseId}`}
         name="file"
         accept="image/*"
         required
-        className="text-sm text-slate-300"
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
       />
       <button
         type="submit"

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 import type { UiLanguage } from "@/lib/ui-language";
 import { privateClinicTreatmentAttachments } from "@/lib/private-clinic-i18n";
 
@@ -33,6 +34,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   async function onUpload(formData: FormData) {
     setBusyUpload(true);
@@ -48,6 +50,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         return;
       }
       router.refresh();
+      setUploadFile(null);
     } catch {
       setError(s.uploadFailed);
     } finally {
@@ -114,7 +117,15 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
       <div className="text-xs font-medium text-slate-400">{s.heading}</div>
       <p className="text-[11px] leading-snug text-slate-500">{s.privacyNotice}</p>
       <form action={onUpload} className="flex flex-wrap items-center gap-2">
-        <input type="file" name="file" required className="max-w-[200px] text-[11px] text-slate-200" />
+        <FileUploadField
+          id={`therapy-treatment-attachment-file-${treatmentId}`}
+          name="file"
+          required
+          onFileChange={setUploadFile}
+          fileName={uploadFile?.name ?? null}
+          className="max-w-[320px] flex flex-wrap items-center gap-2"
+          textClassName="max-w-[180px] truncate text-[11px] text-slate-200"
+        />
         <button
           type="submit"
           disabled={busyUpload}

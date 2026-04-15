@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 import { useUiLanguage } from "@/components/household-preferences-context";
 
 type Card = { id: string; label: string };
@@ -19,6 +20,7 @@ export function CarLicenseCreateForm({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const isHebrew = useUiLanguage() === "he";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -50,6 +52,7 @@ export function CarLicenseCreateForm({
         return;
       }
       e.currentTarget.reset();
+      setReceiptFile(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error — could not reach the server.");
@@ -119,12 +122,14 @@ export function CarLicenseCreateForm({
         <p className="mb-1 text-[11px] leading-snug text-slate-500">
           PDF or photo stored in your household S3 bucket (same credentials as job documents / rentals).
         </p>
-        <input
+        <FileUploadField
           id="license-receipt"
           name="receipt"
-          type="file"
           accept="image/*,.pdf,application/pdf"
-          className="w-full max-w-full text-sm text-slate-200 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-sm file:text-slate-100"
+          onFileChange={setReceiptFile}
+          fileName={receiptFile?.name ?? null}
+          className="w-full"
+          textClassName="max-w-full truncate text-sm text-slate-200"
         />
       </div>
       <input name="notes" placeholder={isHebrew ? "הערות רישיון" : "License notes"} className={`md:col-span-2 ${field}`} />

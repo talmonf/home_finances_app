@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 
 /** Div + button upload so this works inside the license edit form (no nested form). */
 export function CarLicenseReceiptUpload({
@@ -18,13 +19,12 @@ export function CarLicenseReceiptUpload({
   layout?: "inline" | "stacked";
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
   const upload = useCallback(async () => {
-    const file = inputRef.current?.files?.[0];
     if (!file || file.size === 0) {
       setError("Choose a file first.");
       setSuccess(false);
@@ -46,14 +46,14 @@ export function CarLicenseReceiptUpload({
         return;
       }
       setSuccess(true);
-      if (inputRef.current) inputRef.current.value = "";
+      setFile(null);
       router.refresh();
     } catch {
       setError("Upload failed");
     } finally {
       setBusy(false);
     }
-  }, [licenseId, router]);
+  }, [file, licenseId, router]);
 
   const inputId = `car-license-receipt-file-${licenseId}${inputSuffix}`;
 
@@ -64,16 +64,16 @@ export function CarLicenseReceiptUpload({
 
   return (
     <div className={rowClass}>
-      <input
-        ref={inputRef}
+      <FileUploadField
         id={inputId}
-        type="file"
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
         className={
           layout === "stacked"
-            ? "w-full max-w-md text-xs text-slate-200"
-            : "max-w-[200px] text-xs text-slate-200"
+            ? "w-full max-w-md flex flex-wrap items-center gap-2"
+            : "max-w-[320px] flex flex-wrap items-center gap-2"
         }
-        aria-describedby={error ? `${inputId}-err` : success ? `${inputId}-ok` : undefined}
+        textClassName="max-w-[180px] truncate text-xs text-slate-200"
       />
       <button
         type="button"

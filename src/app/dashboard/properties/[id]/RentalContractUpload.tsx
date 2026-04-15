@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileUploadField } from "@/components/file-upload-field";
 
 type Props = {
   rentalId: string;
@@ -9,6 +10,7 @@ type Props = {
 export default function RentalContractUpload({ rentalId }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   async function onSubmit(formData: FormData) {
     setBusy(true);
@@ -34,7 +36,13 @@ export default function RentalContractUpload({ rentalId }: Props) {
 
   return (
     <form action={onSubmit} className="flex flex-wrap items-center gap-2">
-      <input type="file" name="file" required className="max-w-[230px] text-xs text-slate-200" />
+      <FileUploadField
+        id={`rental-contract-file-${rentalId}`}
+        name="file"
+        required
+        onFileChange={setFile}
+        fileName={file?.name ?? null}
+      />
       <button
         type="submit"
         disabled={busy}
