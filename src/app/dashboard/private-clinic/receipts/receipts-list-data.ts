@@ -22,12 +22,16 @@ export type ReceiptListRowDto = {
   id: string;
   receipt_number: string;
   issued_at_iso: string;
+  recipient_type: "client" | "organization";
   job_label: string;
   total_amount: string;
   currency: string;
   covered_period_start_iso: string | null;
   covered_period_end_iso: string | null;
   linked_treatments_count: number;
+  client_id: string | null;
+  client_first_name: string | null;
+  client_last_name: string | null;
 };
 
 export type ReceiptsCursorPage = {
@@ -113,6 +117,16 @@ export async function loadReceiptsCursorPage(params: {
       take: filters.sort === "treatments" ? chunkSize : take,
       include: {
         job: true,
+        allocations: {
+          orderBy: { created_at: "asc" },
+          include: {
+            treatment: {
+              include: {
+                client: { select: { id: true, first_name: true, last_name: true } },
+              },
+            },
+          },
+        },
         _count: { select: { allocations: true } },
       },
     });
@@ -124,17 +138,24 @@ export async function loadReceiptsCursorPage(params: {
 
     nextCursor = chunk[chunk.length - 1]?.id ?? null;
 
-    const mappedChunk: ReceiptListRowDto[] = chunk.map((rec) => ({
-      id: rec.id,
-      receipt_number: rec.receipt_number,
-      issued_at_iso: rec.issued_at.toISOString(),
-      job_label: formatJobDisplayLabel(rec.job),
-      total_amount: rec.total_amount.toString(),
-      currency: rec.currency,
-      covered_period_start_iso: rec.covered_period_start ? rec.covered_period_start.toISOString() : null,
-      covered_period_end_iso: rec.covered_period_end ? rec.covered_period_end.toISOString() : null,
-      linked_treatments_count: rec._count.allocations,
-    }));
+    const mappedChunk: ReceiptListRowDto[] = chunk.map((rec) => {
+      const firstClient = rec.allocations[0]?.treatment.client;
+      return {
+        id: rec.id,
+        receipt_number: rec.receipt_number,
+        issued_at_iso: rec.issued_at.toISOString(),
+        recipient_type: rec.recipient_type,
+        job_label: formatJobDisplayLabel(rec.job),
+        total_amount: rec.total_amount.toString(),
+        currency: rec.currency,
+        covered_period_start_iso: rec.covered_period_start ? rec.covered_period_start.toISOString() : null,
+        covered_period_end_iso: rec.covered_period_end ? rec.covered_period_end.toISOString() : null,
+        linked_treatments_count: rec._count.allocations,
+        client_id: firstClient?.id ?? null,
+        client_first_name: firstClient?.first_name ?? null,
+        client_last_name: firstClient?.last_name ?? null,
+      };
+    });
 
     if (filters.sort === "treatments") {
       const direction = filters.dir === "asc" ? 1 : -1;

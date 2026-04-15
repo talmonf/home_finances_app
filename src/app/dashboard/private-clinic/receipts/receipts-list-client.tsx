@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
+import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
@@ -11,18 +11,18 @@ import type { ReceiptListRowDto } from "./receipts-list-data";
 type Labels = {
   number: string;
   date: string;
+  client: string;
   job: string;
   amount: string;
   coverage: string;
   treatments: string;
   edit: string;
-  open: string;
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
 };
 
-type ColumnSortKey = "number" | "date" | "job" | "amount" | "coverage" | "treatments" | "edit";
+type ColumnSortKey = "number" | "date" | "client" | "job" | "amount" | "coverage" | "treatments" | "edit";
 type SortDir = "asc" | "desc";
 
 export function ReceiptsListClient({
@@ -93,6 +93,7 @@ export function ReceiptsListClient({
   const sortedRows = useMemo(() => {
     const sortValue = (row: ReceiptListRowDto): number | string => {
       if (sortKey === "number") return row.receipt_number.toLocaleLowerCase();
+      if (sortKey === "client") return `${row.client_first_name ?? ""} ${row.client_last_name ?? ""}`.trim().toLocaleLowerCase();
       if (sortKey === "job") return row.job_label.toLocaleLowerCase();
       if (sortKey === "amount") return Number(row.total_amount);
       if (sortKey === "coverage")
@@ -153,6 +154,12 @@ export function ReceiptsListClient({
                 </button>
               </th>
               <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("client")} className="hover:text-slate-100">
+                  {labels.client}
+                  {sortArrow("client")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("job")} className="hover:text-slate-100">
                   {labels.job}
                   {sortArrow("job")}
@@ -189,6 +196,18 @@ export function ReceiptsListClient({
               <tr key={rec.id} className="border-b border-slate-700/80">
                 <td className="px-3 py-2 text-slate-100">{rec.receipt_number}</td>
                 <td className="px-3 py-2 text-slate-400">{formatHouseholdDate(new Date(rec.issued_at_iso), dateDisplayFormat)}</td>
+                <td className="px-3 py-2 text-slate-300">
+                  {rec.recipient_type === "client" && rec.client_id && rec.client_first_name ? (
+                    <Link
+                      href={`/dashboard/private-clinic/clients/${encodeURIComponent(rec.client_id)}/edit`}
+                      className="text-sky-400 hover:underline"
+                    >
+                      {formatClientNameForDisplay(obfuscate, rec.client_first_name, rec.client_last_name)}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="px-3 py-2 text-slate-400">{rec.job_label}</td>
                 <td className="px-3 py-2 text-slate-200">
                   {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency, uiLanguage)}
@@ -200,14 +219,9 @@ export function ReceiptsListClient({
                 </td>
                 <td className="px-3 py-2 text-slate-300">{rec.linked_treatments_count}</td>
                 <td className="px-3 py-2 text-xs">
-                  <div className="flex items-center gap-3">
-                    <Link href={`${listBaseHref}&modal=edit&edit_id=${encodeURIComponent(rec.id)}`} className="text-sky-400">
-                      {labels.edit}
-                    </Link>
-                    <Link href={`/dashboard/private-clinic/receipts/${rec.id}`} className="text-slate-400 hover:text-slate-300">
-                      {labels.open}
-                    </Link>
-                  </div>
+                  <Link href={`${listBaseHref}&modal=edit&edit_id=${encodeURIComponent(rec.id)}`} className="text-sky-400">
+                    {labels.edit}
+                  </Link>
                 </td>
               </tr>
             ))}

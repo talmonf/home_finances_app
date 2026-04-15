@@ -45,7 +45,7 @@ export default async function ReceiptsPage({
 }: {
   searchParams?: Promise<ReceiptSearch>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
@@ -66,10 +66,15 @@ export default async function ReceiptsPage({
   const now = new Date();
   const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
 
   const [jobs, firstPage, orgJobs] = await Promise.all([
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
     }),
     loadReceiptsCursorPage({
@@ -141,8 +146,6 @@ export default async function ReceiptsPage({
   if (filters.to) queryParams.set("to", filters.to);
   if (filters.recipient !== "all") queryParams.set("recipient", filters.recipient);
   if (filters.bank !== "all") queryParams.set("bank", filters.bank);
-  if (filters.sort !== "issued_at") queryParams.set("sort", filters.sort);
-  if (filters.dir !== "desc") queryParams.set("dir", filters.dir);
   const baseListHref = `/dashboard/private-clinic/receipts?${queryParams.toString()}`;
   const apiHrefBase = `/api/private-clinic/receipts?${queryParams.toString()}&take=50`;
 
@@ -252,31 +255,6 @@ export default async function ReceiptsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div>
-            <label className="block text-xs text-slate-400">{r.sortBy}</label>
-            <select
-              name="sort"
-              defaultValue={filters.sort}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="issued_at">{r.tableDate}</option>
-              <option value="number">{r.tableNumber}</option>
-              <option value="job">{r.tableJob}</option>
-              <option value="amount">{r.tableAmount}</option>
-              <option value="treatments">{r.tableTreatmentsCount}</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{r.sortDir}</label>
-            <select
-              name="dir"
-              defaultValue={filters.dir}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="desc">{r.sortDesc}</option>
-              <option value="asc">{r.sortAsc}</option>
-            </select>
-          </div>
           <button
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
@@ -310,12 +288,12 @@ export default async function ReceiptsPage({
             labels={{
               number: r.tableNumber,
               date: r.tableDate,
+              client: c.client,
               job: r.tableJob,
               amount: r.tableAmount,
               coverage: r.receivablesRangeLabel,
               treatments: r.tableTreatmentsCount,
               edit: c.edit,
-              open: r.open,
               loadingMore: r.loadingMore,
               noMoreRows: r.noMoreRows,
               loadMore: r.loadMore,
