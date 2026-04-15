@@ -182,12 +182,58 @@ function parseMoney(raw: string): string | null {
   return n.toFixed(2);
 }
 
+/** Excel 1900 date system (SheetJS / Excel): whole days since 1899-12-30 → UTC midnight for that calendar day. */
+function excelSerialToUtcDate(serial: number): Date | null {
+  if (!Number.isFinite(serial)) return null;
+  const whole = Math.floor(serial);
+  if (whole < 1 || whole > 1000000) return null;
+  const ms = (whole - 25569) * 86400 * 1000;
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  if (y < 1980 || y > 2100) return null;
+  return d;
+}
+
 function parseDate(raw: string): Date | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const d = new Date(trimmed);
   if (!Number.isNaN(d.getTime())) return d;
+  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
+  if (m) {
+    const day = parseInt(m[1]!, 10);
+    const month = parseInt(m[2]!, 10) - 1;
+    let year = parseInt(m[3]!, 10);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const dt = new Date(Date.UTC(year, month, day));
+    if (!Number.isNaN(dt.getTime())) return dt;
+  }
+  // CSV sometimes stores Excel serials as plain digits (e.g. "45321").
+  if (/^\d{5,7}(\.\d+)?$/.test(trimmed.replace(/,/g, ""))) {
+    const n = Number(trimmed.replace(/,/g, ""));
+    if (Number.isFinite(n)) {
+      const fromExcel = excelSerialToUtcDate(Math.floor(n));
+      if (fromExcel) return fromExcel;
+    }
+  }
   return null;
+}
+
+/** Use for date columns: Excel serial numbers, Date cells, and locale date strings. */
+function parseDateFromCell(v: unknown): Date | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) {
+    return Number.isNaN(v.getTime()) ? null : v;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) {
+    const whole = Math.floor(v);
+    if (whole >= 20000 && whole < 1000000) {
+      return excelSerialToUtcDate(whole);
+    }
+    return null;
+  }
+  return parseDate(String(v));
 }
 
 function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
@@ -428,15 +474,17 @@ async function analyzePrivateProfile(
     selectedProgramId = existingPrograms[0]!.id;
   }
 
-  for (let idx = rows.length - 1; idx >= 0; idx -= 1) {
+  // Pass 1 (top → bottom): treatments + receipt allocations. Order-independent from anchor rows.
+  for (let idx = 0; idx < rows.length; idx += 1) {
     const row = rows[idx]!;
     const rowNumber = idx + 2;
     const receiptNum = s(row["קבלה"]);
-    const paymentDateRaw = s(row["תאריך תשלום"]);
-    const paidRaw = s(row["שולם"]);
+    const paymentDateCell = row["תאריך תשלום"];
+    const paymentDateRaw = s(paymentDateCell);
     const amountRaw = s(row["סכום"]);
     const clientRaw = s(row["מטופל"]);
-    const dateRaw = s(row["תאריך"]);
+    const dateCell = row["תאריך"];
+    const dateRaw = s(dateCell);
     const visitRaw = s(row["סוג ביקור"]);
     const noteRaw = s(row["הערות"]) || null;
     const payRoute = s(row["דרך תשלום"]);
@@ -451,62 +499,12 @@ async function analyzePrivateProfile(
       params.clientResolutions,
     );
 
-    const isAnchor = !!receiptNum && !amount;
-    if (isAnchor) {
-      const issuedAt = parseDate(dateRaw) ?? parseDate(paymentDateRaw);
-      const totalAmount = parseMoney(paidRaw);
-      const payment = paymentMethodFromText(payRoute);
-      if (!issuedAt || !totalAmount) {
-        scratch.errors.push(`Row ${rowNumber}: payment anchor is missing valid date/total.`);
-        continue;
-      }
-      if (!payment.receiptMethod) {
-        scratch.errors.push(`Row ${rowNumber}: missing or unknown payment route for receipt #${receiptNum}.`);
-        continue;
-      }
-      const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
-      if (!resolvedIds.ok) continue;
-      const bankId = resolvedIds.bankId;
-      const digitalId = resolvedIds.digitalId;
+    if (receiptNum && !amount) continue;
 
-      const allocations = pendingAllocByReceipt.get(receiptNum) ?? [];
-      const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-      if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
-        scratch.errors.push(
-          `Row ${rowNumber}: receipt #${receiptNum} total ${totalAmount} does not match allocations ${allocationSum.toFixed(2)}.`,
-        );
-        continue;
-      }
-      scratch.pendingReceipts.push({
-        key: receiptNum,
-        rowNumber,
-        receiptNumber: receiptNum,
-        issuedAt,
-        totalAmount,
-        notes: noteRaw,
-        paymentMethod: payment.receiptMethod,
-        recipientType: ctx.isPrivateClinic ? "client" : "organization",
-        coveredPeriodStart: null,
-        coveredPeriodEnd: null,
-        allocations: allocations.map((a) => ({
-          amount: a.amount,
-          treatmentKey: a.treatmentKey,
-        })),
-      });
-      for (const a of allocations) {
-        const t = scratch.pendingTreatments.get(a.treatmentKey);
-        if (t) {
-          t.paymentDate = issuedAt;
-          t.paymentMethod = payment.treatmentMethod;
-          t.paymentBankAccountId = bankId;
-          t.paymentDigitalMethodId = digitalId;
-        }
-      }
-      continue;
-    }
-
-    if (amount && dateRaw) {
-      const occurredAt = parseDate(dateRaw);
+    const occurredAt = parseDateFromCell(dateCell);
+    const hasDateCell =
+      (dateRaw && dateRaw.length > 0) || dateCell instanceof Date || typeof dateCell === "number";
+    if (amount && hasDateCell) {
       if (!occurredAt) {
         scratch.errors.push(`Row ${rowNumber}: invalid treatment date.`);
         continue;
@@ -546,8 +544,12 @@ async function analyzePrivateProfile(
           paymentDigitalMethodId: null,
         });
       }
-      if (paymentDateRaw) {
-        const pd = parseDate(paymentDateRaw);
+      const hasPaymentDateCell =
+        (paymentDateRaw && paymentDateRaw.length > 0) ||
+        paymentDateCell instanceof Date ||
+        typeof paymentDateCell === "number";
+      if (hasPaymentDateCell) {
+        const pd = parseDateFromCell(paymentDateCell);
         if (!pd) {
           scratch.errors.push(`Row ${rowNumber}: invalid payment date.`);
           continue;
@@ -573,6 +575,73 @@ async function analyzePrivateProfile(
           }
           t.paymentDate = pd;
         }
+      }
+    }
+  }
+
+  // Pass 2 (top → bottom): receipt anchors (totals + allocations gathered in pass 1).
+  for (let idx = 0; idx < rows.length; idx += 1) {
+    const row = rows[idx]!;
+    const rowNumber = idx + 2;
+    const receiptNum = s(row["קבלה"]);
+    const paidRaw = s(row["שולם"]);
+    const amountRaw = s(row["סכום"]);
+    const amount = parseMoney(amountRaw);
+    const dateCell = row["תאריך"];
+    const paymentDateCell = row["תאריך תשלום"];
+    const noteRaw = s(row["הערות"]) || null;
+    const payRoute = s(row["דרך תשלום"]);
+
+    const isAnchor = !!receiptNum && !amount;
+    if (!isAnchor) continue;
+
+    const issuedAt = parseDateFromCell(dateCell) ?? parseDateFromCell(paymentDateCell);
+    const totalAmount = parseMoney(paidRaw);
+    const payment = paymentMethodFromText(payRoute);
+    if (!issuedAt || !totalAmount) {
+      scratch.errors.push(`Row ${rowNumber}: payment anchor is missing valid date/total.`);
+      continue;
+    }
+    if (!payment.receiptMethod) {
+      scratch.errors.push(`Row ${rowNumber}: missing or unknown payment route for receipt #${receiptNum}.`);
+      continue;
+    }
+    const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
+    if (!resolvedIds.ok) continue;
+    const bankId = resolvedIds.bankId;
+    const digitalId = resolvedIds.digitalId;
+
+    const allocations = pendingAllocByReceipt.get(receiptNum) ?? [];
+    const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
+    if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
+      scratch.errors.push(
+        `Row ${rowNumber}: receipt #${receiptNum} total ${totalAmount} does not match allocations ${allocationSum.toFixed(2)}.`,
+      );
+      continue;
+    }
+    scratch.pendingReceipts.push({
+      key: receiptNum,
+      rowNumber,
+      receiptNumber: receiptNum,
+      issuedAt,
+      totalAmount,
+      notes: noteRaw,
+      paymentMethod: payment.receiptMethod,
+      recipientType: ctx.isPrivateClinic ? "client" : "organization",
+      coveredPeriodStart: null,
+      coveredPeriodEnd: null,
+      allocations: allocations.map((a) => ({
+        amount: a.amount,
+        treatmentKey: a.treatmentKey,
+      })),
+    });
+    for (const a of allocations) {
+      const t = scratch.pendingTreatments.get(a.treatmentKey);
+      if (t) {
+        t.paymentDate = issuedAt;
+        t.paymentMethod = payment.treatmentMethod;
+        t.paymentBankAccountId = bankId;
+        t.paymentDigitalMethodId = digitalId;
       }
     }
   }
@@ -613,9 +682,10 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     const clientRaw = s(row["מטופל"]);
     const amountRaw = s(row["סכום"]);
     const amount = parseMoney(amountRaw);
-    const dateRaw = s(row["תאריך"]);
+    const dateCell = row["תאריך"];
+    const dateRaw = s(dateCell);
     const receiptNum = s(row["קבלה"]);
-    const paymentDateRaw = s(row["תאריך תשלום"]);
+    const paymentDateCell = row["תאריך תשלום"];
     const payRoute = s(row["דרך תשלום"]);
     if (programName && programName !== "תשלום" && !existingProgramNames.has(programName)) {
       const e = scratch.autoPrograms.get(programName) ?? {
@@ -626,7 +696,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       scratch.autoPrograms.set(programName, e);
     }
     if (programName === "תשלום") {
-      const d = parseDate(paymentDateRaw) ?? parseDate(s(row["תאריך"]));
+      const d = parseDateFromCell(paymentDateCell) ?? parseDateFromCell(dateCell);
       const total = parseMoney(s(row["סכום"]) || s(row["שולם"]));
       const payment = paymentMethodFromText(payRoute);
       if (!d || !total || !receiptNum || !payment.receiptMethod) {
@@ -666,7 +736,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
           continue;
         }
       }
-      const coveredMonthRaw = s(row["תאריך"]);
+      const coveredMonthRaw = s(dateCell);
       const coveredMonth = parseCoveredMonth(coveredMonthRaw);
       const coveredMonthKey = coveredMonth ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}` : null;
       const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
@@ -689,8 +759,10 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       });
       continue;
     }
-    if (!amount || !dateRaw) continue;
-    const occurredAt = parseDate(dateRaw);
+    const hasOrgDate =
+      (dateRaw && dateRaw.length > 0) || dateCell instanceof Date || typeof dateCell === "number";
+    if (!amount || !hasOrgDate) continue;
+    const occurredAt = parseDateFromCell(dateCell);
     if (!occurredAt) continue;
     const clientRef = await resolveClientRef(
       clientRaw,
