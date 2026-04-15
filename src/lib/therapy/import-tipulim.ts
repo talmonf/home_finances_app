@@ -174,6 +174,19 @@ function normalizeDigits(v: string): string {
   return v.replace(/[^\d]/g, "");
 }
 
+function receiptMatchKey(raw: unknown): string {
+  const text = String(raw ?? "")
+    .replace(/\u00A0/g, " ")
+    .trim();
+  if (!text) return "";
+  const digitsLike = text.match(/^0*(\d+)(?:\.0+)?$/);
+  if (digitsLike?.[1]) {
+    const normalized = digitsLike[1].replace(/^0+/, "");
+    return normalized || "0";
+  }
+  return norm(text).toLowerCase();
+}
+
 function parseMoney(raw: string): string | null {
   const cleaned = raw.replace(/,/g, "").trim();
   if (!cleaned) return null;
@@ -479,6 +492,7 @@ async function analyzePrivateProfile(
     const row = rows[idx]!;
     const rowNumber = idx + 2;
     const receiptNum = s(row["קבלה"]);
+    const receiptKey = receiptMatchKey(row["קבלה"]);
     const paymentDateCell = row["תאריך תשלום"];
     const paymentDateRaw = s(paymentDateCell);
     const amountRaw = s(row["סכום"]);
@@ -544,6 +558,11 @@ async function analyzePrivateProfile(
           paymentDigitalMethodId: null,
         });
       }
+      if (receiptKey) {
+        const arr = pendingAllocByReceipt.get(receiptKey) ?? [];
+        arr.push({ amount, treatmentKey: tKey });
+        pendingAllocByReceipt.set(receiptKey, arr);
+      }
       const hasPaymentDateCell =
         (paymentDateRaw && paymentDateRaw.length > 0) ||
         paymentDateCell instanceof Date ||
@@ -556,11 +575,7 @@ async function analyzePrivateProfile(
         }
         const t = scratch.pendingTreatments.get(tKey);
         if (!t) continue;
-        if (receiptNum) {
-          const arr = pendingAllocByReceipt.get(receiptNum) ?? [];
-          arr.push({ amount, treatmentKey: tKey });
-          pendingAllocByReceipt.set(receiptNum, arr);
-        } else {
+        if (!receiptKey) {
           const payment = paymentMethodFromText(payRoute);
           if (payment.treatmentMethod) {
             const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
@@ -584,6 +599,7 @@ async function analyzePrivateProfile(
     const row = rows[idx]!;
     const rowNumber = idx + 2;
     const receiptNum = s(row["קבלה"]);
+    const receiptKey = receiptMatchKey(row["קבלה"]);
     const paidRaw = s(row["שולם"]);
     const amountRaw = s(row["סכום"]);
     const amount = parseMoney(amountRaw);
@@ -611,7 +627,7 @@ async function analyzePrivateProfile(
     const bankId = resolvedIds.bankId;
     const digitalId = resolvedIds.digitalId;
 
-    const allocations = pendingAllocByReceipt.get(receiptNum) ?? [];
+    const allocations = pendingAllocByReceipt.get(receiptKey) ?? [];
     const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
     if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
       scratch.errors.push(
@@ -646,6 +662,19 @@ async function analyzePrivateProfile(
     }
   }
   return scratch;
+}
+
+export async function analyzePrivateProfileForTest(
+  params: TipulimAnalyzeParams,
+  ctx: {
+    isPrivateClinic: boolean;
+    clients: ClientCandidate[];
+    programsByJob: Array<{ id: string; name: string; job_id: string }>;
+    bankAccounts: Array<{ id: string; account_number: string | null }>;
+    digitalMethods: Array<{ id: string; name: string }>;
+  },
+) {
+  return analyzePrivateProfile(params, ctx);
 }
 
 async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
