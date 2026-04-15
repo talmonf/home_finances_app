@@ -23,11 +23,13 @@ type Labels = {
   loadMore: string;
 };
 
+type ColumnSortKey = "occurred_at" | "client" | "job" | "amount" | "paid" | "receipt" | "payment_details" | "edit";
+type SortDir = "asc" | "desc";
+
 export function TreatmentsListClient({
   initialRows,
   initialCursor,
   apiHrefBase,
-  listBaseHref,
   dateDisplayFormat,
   uiLanguage,
   obfuscate,
@@ -36,7 +38,6 @@ export function TreatmentsListClient({
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
   apiHrefBase: string;
-  listBaseHref: string;
   dateDisplayFormat: HouseholdDateDisplayFormat;
   uiLanguage: UiLanguage;
   obfuscate: boolean;
@@ -46,6 +47,8 @@ export function TreatmentsListClient({
   const [cursor, setCursor] = useState(initialCursor);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(Boolean(initialCursor));
+  const [sortKey, setSortKey] = useState<ColumnSortKey>("occurred_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadMore = useCallback(async () => {
@@ -86,6 +89,54 @@ export function TreatmentsListClient({
     return () => obs.disconnect();
   }, [hasMore, loadMore]);
 
+  const sortedRows = useMemo(() => {
+    const rankForPaidStatus = (status: TreatmentListRowDto["payment_status"]): number => {
+      if (status === "unpaid") return 0;
+      if (status === "partial") return 1;
+      return 2;
+    };
+
+    const sortValue = (row: TreatmentListRowDto): number | string => {
+      if (sortKey === "occurred_at") return new Date(row.occurred_at_iso).getTime();
+      if (sortKey === "client") return `${row.client_first_name} ${row.client_last_name ?? ""}`.trim().toLocaleLowerCase();
+      if (sortKey === "job") return row.job_label.toLocaleLowerCase();
+      if (sortKey === "amount") return Number(row.amount);
+      if (sortKey === "paid") return rankForPaidStatus(row.payment_status);
+      if (sortKey === "receipt") return row.receipt_allocations[0]?.receipt_number ?? "";
+      if (sortKey === "edit") return row.id;
+      return row.payment_date_iso ? new Date(row.payment_date_iso).getTime() : 0;
+    };
+
+    const direction = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a);
+      const bv = sortValue(b);
+      if (typeof av === "number" && typeof bv === "number") {
+        return (av - bv) * direction;
+      }
+      return String(av).localeCompare(String(bv)) * direction;
+    });
+  }, [rows, sortDir, sortKey]);
+
+  const onSort = useCallback((column: ColumnSortKey) => {
+    setSortKey((current) => {
+      if (current === column) {
+        setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
+        return current;
+      }
+      setSortDir("asc");
+      return column;
+    });
+  }, []);
+
+  const sortArrow = useCallback(
+    (column: ColumnSortKey): string => {
+      if (sortKey !== column) return "";
+      return sortDir === "asc" ? " ▲" : " ▼";
+    },
+    [sortDir, sortKey],
+  );
+
   const rowCount = useMemo(() => rows.length, [rows]);
 
   return (
@@ -94,18 +145,58 @@ export function TreatmentsListClient({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-700 bg-slate-800/80">
-              <th className="px-3 py-2 text-slate-300">{labels.when}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.client}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.job}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.amount}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.paid}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.receiptCol}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.paymentDetailsCol}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("occurred_at")} className="hover:text-slate-100">
+                  {labels.when}
+                  {sortArrow("occurred_at")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("client")} className="hover:text-slate-100">
+                  {labels.client}
+                  {sortArrow("client")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("job")} className="hover:text-slate-100">
+                  {labels.job}
+                  {sortArrow("job")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
+                  {labels.amount}
+                  {sortArrow("amount")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("paid")} className="hover:text-slate-100">
+                  {labels.paid}
+                  {sortArrow("paid")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("receipt")} className="hover:text-slate-100">
+                  {labels.receiptCol}
+                  {sortArrow("receipt")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("payment_details")} className="hover:text-slate-100">
+                  {labels.paymentDetailsCol}
+                  {sortArrow("payment_details")}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-slate-300">
+                <button type="button" onClick={() => onSort("edit")} className="hover:text-slate-100">
+                  {labels.edit}
+                  {sortArrow("edit")}
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((t) => {
+            {sortedRows.map((t) => {
               const paymentDate = t.payment_date_iso
                 ? formatHouseholdDate(new Date(t.payment_date_iso), dateDisplayFormat)
                 : "—";

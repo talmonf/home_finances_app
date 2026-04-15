@@ -305,30 +305,6 @@ export default async function TreatmentsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.tableSort}</label>
-            <select
-              name="sort"
-              defaultValue={filters.sort}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="occurred_at">{c.when}</option>
-              <option value="client">{c.client}</option>
-              <option value="job">{c.job}</option>
-              <option value="amount">{c.amount}</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.tableSort}</label>
-            <select
-              name="dir"
-              defaultValue={filters.dir}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="desc">{tr.sortHintDesc}</option>
-              <option value="asc">{tr.sortHintAsc}</option>
-            </select>
-          </div>
           <button
             type="submit"
             className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
@@ -361,7 +337,6 @@ export default async function TreatmentsPage({
             initialRows={firstPage.rows}
             initialCursor={firstPage.nextCursor}
             apiHrefBase={apiHrefBase}
-            listBaseHref={baseListHref}
             dateDisplayFormat={dateDisplayFormat}
             uiLanguage={uiLanguage}
             obfuscate={obfuscate}
