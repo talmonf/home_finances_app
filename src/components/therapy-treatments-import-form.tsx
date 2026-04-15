@@ -28,6 +28,19 @@ type PreviewData = {
   error?: string;
   sheetNames?: string[];
   message?: string;
+  created?: {
+    clients: number;
+    treatments: number;
+    receipts: number;
+    allocations: number;
+    travel: number;
+    consultations: number;
+    programs: number;
+  };
+  importDebug?: {
+    unlinkedReceiptsCount: number;
+    unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
+  };
 };
 
 function rowFromError(errorText: string): string | null {
@@ -99,6 +112,12 @@ export function TherapyTreatmentsImportForm({
     importErrUnlinkedReceipt: string;
     importErrAllocationMismatchWithRow: string;
     importErrAllocationMismatch: string;
+    importDebugTitle: string;
+    importCreatedCountsTitle: string;
+    importCreatedAllocations: string;
+    importCreatedTreatments: string;
+    importCreatedReceipts: string;
+    importDebugUnlinkedReceipts: string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -408,6 +427,33 @@ export function TherapyTreatmentsImportForm({
                   <li key={i}>{er}</li>
                 ))}
               </ul>
+            </div>
+          )}
+          {(preview.created || preview.importDebug) && (
+            <div className="rounded border border-cyan-700 bg-cyan-950/30 p-2 text-xs text-cyan-100">
+              <p className="font-medium">{labels.importDebugTitle}</p>
+              {preview.created && (
+                <p>
+                  {labels.importCreatedCountsTitle}: {labels.importCreatedTreatments}={preview.created.treatments}, {labels.importCreatedReceipts}=
+                  {preview.created.receipts}, {labels.importCreatedAllocations}={preview.created.allocations}
+                </p>
+              )}
+              {preview.importDebug && (
+                <>
+                  <p>
+                    {labels.importDebugUnlinkedReceipts}: {preview.importDebug.unlinkedReceiptsCount}
+                  </p>
+                  {preview.importDebug.unlinkedReceiptsSample.length > 0 && (
+                    <ul className="list-disc pl-5">
+                      {preview.importDebug.unlinkedReceiptsSample.map((r, i) => (
+                        <li key={`${r.receiptNumber}-${r.rowNumber}-${i}`}>
+                          #{r.receiptNumber} (row {r.rowNumber})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

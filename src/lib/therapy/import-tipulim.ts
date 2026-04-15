@@ -128,6 +128,10 @@ export type TipulimAnalyzeResult = {
     travelEntriesCount: number;
     consultationEntriesCount: number;
   };
+  importDebug?: {
+    unlinkedReceiptsCount: number;
+    unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
+  };
 };
 
 export type TipulimCommitResult = TipulimAnalyzeResult & {
@@ -859,9 +863,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       params.clientResolutions,
     );
     const v = visitType;
-    const treatmentLike = new Set(["ביקור בית", "ייעוץ טלפוני", "מקוון (וידאו)"]);
-    if (treatmentLike.has(v)) {
-      let vt = visitTypeFromCell(v);
+    let vt = visitTypeFromCell(v);
+    if (vt || !v) {
       if (!vt && !v) {
         if (params.missingVisitType) {
           vt = params.missingVisitType;
@@ -961,6 +964,13 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
       scratch.routing.travel || scratch.routing.consultations
         ? { travelEntriesCount: scratch.routing.travel, consultationEntriesCount: scratch.routing.consultations }
         : undefined,
+    importDebug: {
+      unlinkedReceiptsCount: scratch.pendingReceipts.filter((r) => r.allocations.length === 0).length,
+      unlinkedReceiptsSample: scratch.pendingReceipts
+        .filter((r) => r.allocations.length === 0)
+        .slice(0, 5)
+        .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
+    },
   };
 }
 
@@ -1147,6 +1157,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
 
     const treatmentIdByKey = new Map<string, string>();
+    const preferredProgramByClient = new Map<string, { programId: string; occurredAtMs: number }>();
     for (const t of scratch.pendingTreatments.values()) {
       const clientId =
         t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
@@ -1175,6 +1186,13 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         select: { id: true },
       });
       treatmentIdByKey.set(t.key, row.id);
+      if (programIdForRow) {
+        const occurredAtMs = t.occurredAt.getTime();
+        const existingPreferred = preferredProgramByClient.get(clientId);
+        if (!existingPreferred || occurredAtMs >= existingPreferred.occurredAtMs) {
+          preferredProgramByClient.set(clientId, { programId: programIdForRow, occurredAtMs });
+        }
+      }
       createdCount.treatments += 1;
     }
 
@@ -1316,25 +1334,30 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     const existingClients = touchedIds.length
       ? await tx.therapy_clients.findMany({
           where: { id: { in: touchedIds } },
-          select: { id: true, start_date: true },
+          select: { id: true, start_date: true, default_program_id: true },
         })
       : [];
-    const existingStartByClient = new Map(existingClients.map((c) => [c.id, c.start_date] as const));
+    const existingClientById = new Map(existingClients.map((c) => [c.id, c] as const));
     for (const clientId of touchedIds) {
       const bounds = treatmentBoundsByClient.get(clientId);
       if (!bounds?.min || !bounds.max) continue;
       const earliestOcc = utcDay(bounds.min);
       let newStart = earliestOcc;
-      const existingStart = existingStartByClient.get(clientId);
+      const existingClient = existingClientById.get(clientId);
+      const existingStart = existingClient?.start_date ?? null;
       if (existingStart) {
         const ex = utcDay(existingStart);
         newStart = new Date(Math.min(ex.getTime(), earliestOcc.getTime()));
       }
       const lastDay = utcDay(bounds.max);
       const recent = bounds.max.getTime() >= twoMonthsAgo.getTime();
+      const preferredProgramId =
+        preferredProgramByClient.get(clientId)?.programId ?? existingClient?.default_program_id ?? null;
       await tx.therapy_clients.update({
         where: { id: clientId },
         data: {
+          default_job_id: params.jobId,
+          default_program_id: preferredProgramId,
           start_date: newStart,
           end_date: recent ? null : lastDay,
           is_active: recent,

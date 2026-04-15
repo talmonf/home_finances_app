@@ -241,6 +241,20 @@ export default async function ClientsPage({
       },
     }),
   ]);
+  const treatmentCountsRaw =
+    clients.length > 0
+      ? await prisma.therapy_treatments.groupBy({
+          by: ["client_id"],
+          where: {
+            household_id: householdId,
+            client_id: { in: clients.map((c) => c.id) },
+          },
+          _count: { _all: true },
+        })
+      : [];
+  const treatmentCountByClientId = new Map<string, number>(
+    treatmentCountsRaw.map((row) => [row.client_id, row._count._all]),
+  );
 
   const hasActiveFilters =
     Boolean(q) || status !== "all" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
@@ -406,6 +420,9 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
+                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {cl.colTreatmentsCount}
+                </th>
                 <SortHeader
                   column="start_date"
                   label={cl.colStart}
@@ -442,10 +459,12 @@ export default async function ClientsPage({
               {clients.map((row) => {
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
+                const treatmentsCount = treatmentCountByClientId.get(row.id) ?? 0;
                 const startDisp = row.start_date
                   ? formatHouseholdDate(row.start_date, dateDisplayFormat)
                   : c.noDate;
                 const endDisp = row.end_date ? formatHouseholdDate(row.end_date, dateDisplayFormat) : c.noDate;
+                const treatmentsHref = `/dashboard/private-clinic/treatments?client=${encodeURIComponent(row.id)}`;
                 return (
                   <tr key={row.id} className="hover:bg-slate-800/50">
                     <td className="whitespace-nowrap px-3 py-2 text-slate-200">
@@ -459,6 +478,11 @@ export default async function ClientsPage({
                     </td>
                     <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={programLabel}>
                       {programLabel}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                      <Link href={treatmentsHref} className="font-medium text-sky-400 hover:text-sky-300 hover:underline">
+                        {treatmentsCount}
+                      </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{startDisp}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{endDisp}</td>

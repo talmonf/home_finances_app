@@ -337,6 +337,7 @@ export function privateClinicClients(lang: UiLanguage) {
     colLastName: p("Last name", "שם משפחה"),
     colJob: p("Default job", "משרת ברירת מחדל"),
     colProgram: p("Default program", "תכנית ברירת מחדל"),
+    colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
     colStart: p("Start", "התחלה"),
     colEnd: p("End", "סיום"),
     colActions: p("Actions", "פעולות"),
@@ -444,6 +445,12 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "Receipt total does not match linked treatment amounts.",
       "סכום הקבלה לא תואם לסכום הטיפולים המקושרים.",
     ),
+    importDebugTitle: p("Import debug", "דיבוג ייבוא"),
+    importCreatedCountsTitle: p("Created", "נוצרו"),
+    importCreatedTreatments: p("treatments", "טיפולים"),
+    importCreatedReceipts: p("receipts", "קבלות"),
+    importCreatedAllocations: p("allocations", "שיוכים"),
+    importDebugUnlinkedReceipts: p("Unlinked receipts", "קבלות ללא שיוך"),
   };
 }
 

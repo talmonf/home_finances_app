@@ -126,6 +126,12 @@ export default async function TreatmentsImportPage() {
           importErrUnlinkedReceipt: tr.importErrUnlinkedReceipt,
           importErrAllocationMismatchWithRow: tr.importErrAllocationMismatchWithRow,
           importErrAllocationMismatch: tr.importErrAllocationMismatch,
+          importDebugTitle: tr.importDebugTitle,
+          importCreatedCountsTitle: tr.importCreatedCountsTitle,
+          importCreatedTreatments: tr.importCreatedTreatments,
+          importCreatedReceipts: tr.importCreatedReceipts,
+          importCreatedAllocations: tr.importCreatedAllocations,
+          importDebugUnlinkedReceipts: tr.importDebugUnlinkedReceipts,
         }}
       />
     </div>
