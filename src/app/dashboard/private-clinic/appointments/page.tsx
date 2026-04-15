@@ -21,6 +21,7 @@ import {
   deleteTherapyAppointmentSeries,
   updateTherapyAppointmentStatus,
 } from "../actions";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
@@ -114,7 +115,7 @@ export default async function AppointmentsPage() {
           >
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -122,7 +123,7 @@ export default async function AppointmentsPage() {
             <option value="">{ap.programOptional}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.job.job_title} — {p.name}
+                {formatJobDisplayLabel(p.job)} — {p.name}
               </option>
             ))}
           </select>
@@ -174,7 +175,7 @@ export default async function AppointmentsPage() {
           <select name="job_id" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -182,7 +183,7 @@ export default async function AppointmentsPage() {
             <option value="">{ap.programOptional}</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.job.job_title} — {p.name}
+                {formatJobDisplayLabel(p.job)} — {p.name}
               </option>
             ))}
           </select>
@@ -251,7 +252,7 @@ export default async function AppointmentsPage() {
               >
                 <span>
                   {formatClientNameForDisplay(obfuscate, s.client.first_name, s.client.last_name)} —{" "}
-                  {s.job.job_title} — {recurrenceLabel(s.recurrence)} —{" "}
+                  {formatJobDisplayLabel(s.job)} — {recurrenceLabel(s.recurrence)} —{" "}
                   {weekdayLongLabel(uiLanguage, s.day_of_week)}
                 </span>
                 <ConfirmDeleteForm action={deleteTherapyAppointmentSeries}>
@@ -290,7 +291,7 @@ export default async function AppointmentsPage() {
                     <td className="px-3 py-2 text-slate-100">
                       {formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)}
                     </td>
-                    <td className="px-3 py-2 text-slate-400">{a.job.job_title}</td>
+                    <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(a.job)}</td>
                     <td className="px-3 py-2">
                       <form action={updateTherapyAppointmentStatus} className="flex items-center gap-2">
                         <input type="hidden" name="id" value={a.id} />

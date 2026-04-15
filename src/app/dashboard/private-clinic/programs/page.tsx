@@ -10,6 +10,7 @@ import {
 } from "../actions";
 import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +102,7 @@ export default async function ProgramsPage({
             <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title} {j.employer_name ? `- ${j.employer_name}` : ""} — {j.family_member.full_name}
+                {formatJobDisplayLabel(j)} — {j.family_member.full_name}
               </option>
             ))}
           </select>
@@ -152,8 +153,7 @@ export default async function ProgramsPage({
                 <summary className="cursor-pointer text-sm text-slate-100">
                   {p.name}{" "}
                   <span className="text-slate-400">
-                    ({p.job.job_title}
-                    {p.job.employer_name ? ` — ${p.job.employer_name}` : ""}) · {p.is_active ? c.active : c.inactive}
+                    ({formatJobDisplayLabel(p.job)}) · {p.is_active ? c.active : c.inactive}
                   </span>
                 </summary>
                 <form action={updateTherapyProgram} className="mt-3 grid gap-2 md:grid-cols-2">

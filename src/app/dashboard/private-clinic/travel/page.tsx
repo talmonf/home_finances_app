@@ -15,6 +15,7 @@ import {
   deleteTherapyTravelEntry,
   updateTherapyTravelEntry,
 } from "../actions";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
@@ -144,7 +145,7 @@ export default async function TravelPage({
             <option value="">{tv.jobWhenScope}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -156,7 +157,7 @@ export default async function TravelPage({
             {treatments.map((t) => (
               <option key={t.id} value={t.id}>
                 {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
-                {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — {t.job.job_title}
+                {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — {formatJobDisplayLabel(t.job)}
               </option>
             ))}
           </select>
@@ -216,7 +217,7 @@ export default async function TravelPage({
               <option value="">{c.any}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.job_title}
+                  {formatJobDisplayLabel(j)}
                 </option>
               ))}
             </select>
@@ -295,9 +296,9 @@ export default async function TravelPage({
                       : c.noDate}{" "}
                     —{" "}
                     {e.treatment
-                      ? `${tv.scopeTreatment} ${formatClientNameForDisplay(obfuscate, e.treatment.client.first_name, e.treatment.client.last_name)} (${e.treatment.job.job_title})`
+                      ? `${tv.scopeTreatment} ${formatClientNameForDisplay(obfuscate, e.treatment.client.first_name, e.treatment.client.last_name)} (${formatJobDisplayLabel(e.treatment.job)})`
                       : e.job
-                        ? `${tv.scopeJob} ${e.job.job_title}`
+                        ? `${tv.scopeJob} ${formatJobDisplayLabel(e.job)}`
                         : "—"}
                     {e.amount != null
                       ? ` — ${formatMoneyLineForDisplay(obfuscate, e.amount.toString(), e.currency)}`
@@ -333,7 +334,7 @@ export default async function TravelPage({
                       <option value="">{c.job}</option>
                       {jobs.map((j) => (
                         <option key={j.id} value={j.id}>
-                          {j.job_title}
+                          {formatJobDisplayLabel(j)}
                         </option>
                       ))}
                     </select>

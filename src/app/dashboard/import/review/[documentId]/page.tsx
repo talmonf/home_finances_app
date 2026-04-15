@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
@@ -41,10 +42,6 @@ const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
   tools: "Tools",
   other: "Other",
 };
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
-}
 
 export default async function ImportReviewPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -137,7 +134,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
     orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
   });
 
-  const jobOptions = jobs.map((j) => ({ id: j.id, label: formatJobLabel(j) }));
+  const jobOptions = jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }));
   const subscriptionOptions = subscriptions.map((s) => ({
     id: s.id,
     name: s.name,

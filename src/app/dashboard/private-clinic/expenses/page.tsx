@@ -13,6 +13,7 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
@@ -60,7 +61,7 @@ export default async function ExpensesPage() {
             <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -130,7 +131,7 @@ export default async function ExpensesPage() {
               >
                 <div className="flex flex-wrap justify-between gap-2 text-sm text-slate-300">
                   <span>
-                    {String(e.expense_date)} — {e.job.job_title} —{" "}
+                    {String(e.expense_date)} — {formatJobDisplayLabel(e.job)} —{" "}
                     {therapyLocalizedCategoryName(e.category, uiLanguage)}
                   </span>
                   <span className="text-slate-100">
@@ -157,7 +158,7 @@ export default async function ExpensesPage() {
                     >
                       {jobs.map((j) => (
                         <option key={j.id} value={j.id}>
-                          {j.job_title}
+                          {formatJobDisplayLabel(j)}
                         </option>
                       ))}
                     </select>

@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -27,10 +28,6 @@ type PageProps = {
     subscriptionId?: string;
   }>;
 };
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
-}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -297,7 +294,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {jobs.map((j) => (
                   <option key={j.id} value={j.id}>
-                    {formatJobLabel(j)}
+                    {formatJobDisplayLabel(j)}
                   </option>
                 ))}
               </select>
@@ -421,7 +418,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                             href={`/dashboard/jobs/${tx.job.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {formatJobLabel(tx.job)}
+                            {formatJobDisplayLabel(tx.job)}
                           </Link>
                         ) : (
                           "—"

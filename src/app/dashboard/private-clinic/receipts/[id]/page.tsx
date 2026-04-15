@@ -15,6 +15,7 @@ import {
   updateTherapyReceipt,
   upsertReceiptAllocation,
 } from "../../actions";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
@@ -110,7 +111,7 @@ export default async function ReceiptDetailPage({
           >
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>

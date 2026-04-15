@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "./actions";
@@ -75,10 +76,6 @@ function formatSubscriptionPaymentSummary(s: {
   if (s.digital_payment_method?.name) parts.push(s.digital_payment_method.name);
   if (s.credit_card?.card_name) parts.push(s.credit_card.card_name);
   return parts.length ? parts.join(" · ") : "—";
-}
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
 }
 
 const subscriptionSelectClass =
@@ -473,7 +470,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                             href={`/dashboard/jobs/${s.job.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {formatJobLabel(s.job)}
+                            {formatJobDisplayLabel(s.job)}
                           </Link>
                         ) : (
                           "—"

@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,10 +35,6 @@ function formatMoneyWithCurrency(value: unknown, currency: string, obfuscate: bo
   const amount = formatMoney(value);
   if (amount === "—") return "—";
   return `${amount} ${currency}`;
-}
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
 }
 
 type PageProps = {
@@ -124,7 +121,7 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                 </option>
                 {jobs.map((j) => (
                   <option key={j.id} value={j.id}>
-                    {formatJobLabel(j)}
+                    {formatJobDisplayLabel(j)}
                   </option>
                 ))}
               </select>
@@ -271,7 +268,7 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                   <tr key={s.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                     <td className="px-4 py-3 text-slate-100">{s.name}</td>
                     <td className="px-4 py-3 text-slate-300">
-                      {s.job ? formatJobLabel(s.job) : "—"}
+                      {s.job ? formatJobDisplayLabel(s.job) : "—"}
                     </td>
                     <td className="px-4 py-3 text-slate-300 tabular-nums">
                       {formatMoneyWithCurrency(s.fee_amount, s.currency, obfuscate)}

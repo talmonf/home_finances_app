@@ -11,6 +11,7 @@ import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic
 import { redirect } from "next/navigation";
 import { createTherapyReceipt } from "../actions";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
@@ -167,7 +168,7 @@ export default async function ReceiptsPage({
             <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -264,7 +265,7 @@ export default async function ReceiptsPage({
               <option value="">{c.any}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.job_title}
+                  {formatJobDisplayLabel(j)}
                 </option>
               ))}
             </select>
@@ -342,7 +343,7 @@ export default async function ReceiptsPage({
                   <tr key={rec.id} className="border-b border-slate-700/80">
                     <td className="px-3 py-2 text-slate-100">{rec.receipt_number}</td>
                     <td className="px-3 py-2 text-slate-400">{String(rec.issued_at)}</td>
-                    <td className="px-3 py-2 text-slate-400">{rec.job.job_title}</td>
+                    <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(rec.job)}</td>
                     <td className="px-3 py-2 text-slate-200">
                       {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency)}
                     </td>

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export type TherapyClientFormJobOption = { id: string; label: string };
@@ -59,7 +60,7 @@ export async function loadTherapyClientFormOptions(params: {
   return {
     jobs: jobs.map((j) => ({
       id: j.id,
-      label: `${j.job_title}${j.employer_name ? ` - ${j.employer_name}` : ""}`,
+      label: formatJobDisplayLabel(j),
     })),
     programs: programs.map((p) => ({
       id: p.id,

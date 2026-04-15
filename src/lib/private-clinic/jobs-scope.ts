@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 
 type PickerArgs = {
   householdId: string;
@@ -31,5 +32,5 @@ export function formatPrivateClinicJobLabel(job: {
   job_title: string;
   employer_name: string | null;
 }): string {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+  return formatJobDisplayLabel(job);
 }

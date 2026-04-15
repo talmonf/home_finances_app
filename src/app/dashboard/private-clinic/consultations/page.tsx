@@ -13,6 +13,7 @@ import {
   deleteTherapyConsultation,
   updateTherapyConsultation,
 } from "../actions";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -108,7 +109,7 @@ export default async function ConsultationsPage({
             <option value="">{c.job}</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.job_title}
+                {formatJobDisplayLabel(j)}
               </option>
             ))}
           </select>
@@ -213,7 +214,7 @@ export default async function ConsultationsPage({
               <option value="">{c.any}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.job_title}
+                  {formatJobDisplayLabel(j)}
                 </option>
               ))}
             </select>
@@ -270,7 +271,7 @@ export default async function ConsultationsPage({
               >
                 <summary className="cursor-pointer text-sm text-slate-200">
                   {formatHouseholdDateUtcWithTime(r.occurred_at, dateDisplayFormat)} —{" "}
-                  {therapyLocalizedCategoryName(r.consultation_type, uiLanguage)} — {r.job.job_title}
+                  {therapyLocalizedCategoryName(r.consultation_type, uiLanguage)} — {formatJobDisplayLabel(r.job)}
                 </summary>
                 <form action={updateTherapyConsultation} className="mt-3 grid gap-2 md:grid-cols-2">
                   <input type="hidden" name="id" value={r.id} />
@@ -282,7 +283,7 @@ export default async function ConsultationsPage({
                   >
                     {jobs.map((j) => (
                       <option key={j.id} value={j.id}>
-                        {j.job_title}
+                        {formatJobDisplayLabel(j)}
                       </option>
                     ))}
                   </select>

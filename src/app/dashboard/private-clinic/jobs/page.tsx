@@ -1,5 +1,6 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { createTherapyJob, saveTherapyJobVisitTypeDefaults, updateTherapyJob } from "../actions";
@@ -203,7 +204,7 @@ export default async function PrivateClinicJobsPage({
             {jobs.map((job) => (
               <details key={job.id} className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
                 <summary className="cursor-pointer text-sm text-slate-100">
-                  {job.job_title} {job.employer_name ? `- ${job.employer_name}` : ""}{" "}
+                  {formatJobDisplayLabel(job)}{" "}
                   <span className="text-slate-400">({job.is_active ? c.active : c.inactive})</span>
                 </summary>
                 <form action={updateTherapyJob} className="mt-3 grid gap-2 md:grid-cols-3">

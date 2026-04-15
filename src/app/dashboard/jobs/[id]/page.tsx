@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -81,7 +82,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
           <Link href="/dashboard/jobs" className="inline-block text-sm text-slate-400 hover:text-slate-200">
             {isHebrew ? "חזרה לעבודות →" : "← Back to jobs"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">{job.job_title}</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{formatJobDisplayLabel(job)}</h1>
           {resolved?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
               {decodeURIComponent(resolved.error.replace(/\+/g, " "))}

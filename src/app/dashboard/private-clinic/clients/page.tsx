@@ -12,6 +12,7 @@ import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-
 import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 
 type ListFilterQs = {
@@ -439,7 +440,7 @@ export default async function ClientsPage({
             </thead>
             <tbody className="divide-y divide-slate-800 bg-slate-900/40">
               {clients.map((row) => {
-                const jobLabel = `${row.default_job.job_title}${row.default_job.employer_name ? ` - ${row.default_job.employer_name}` : ""}`;
+                const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
                 const startDisp = row.start_date
                   ? formatHouseholdDate(row.start_date, dateDisplayFormat)

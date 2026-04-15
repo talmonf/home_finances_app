@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 
 export type SubscriptionFamilyJobSelectMember = {
   id: string;
@@ -15,10 +16,6 @@ export type SubscriptionFamilyJobSelectJob = {
   employer_name: string | null;
   is_active?: boolean;
 };
-
-function formatJobLabel(job: { job_title: string; employer_name: string | null }) {
-  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
-}
 
 type Props = {
   members: SubscriptionFamilyJobSelectMember[];
@@ -102,7 +99,7 @@ export function SubscriptionFamilyJobSelects({
           <option value="">None</option>
           {visibleJobs.map((j) => (
             <option key={j.id} value={j.id}>
-              {formatJobLabel(j)}
+              {formatJobDisplayLabel(j)}
               {showInactiveJobSuffix && j.is_active === false ? " (inactive)" : ""}
             </option>
           ))}
