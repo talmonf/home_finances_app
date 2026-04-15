@@ -31,7 +31,7 @@ export function FileUploadField({
   fileName,
   resetSignal,
   inputRef,
-  className = "flex flex-wrap items-center gap-2",
+  className = "",
   buttonClassName = "inline-flex cursor-pointer rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-100 hover:bg-slate-700",
   textClassName = "max-w-full truncate text-xs text-slate-300",
 }: FileUploadFieldProps) {
@@ -48,7 +48,7 @@ export function FileUploadField({
   const shownFileName = fileName ?? internalFileName;
 
   return (
-    <div className={className}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
       <input
         ref={inputRef}
         id={inputId}
