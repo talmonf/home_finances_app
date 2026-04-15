@@ -355,6 +355,7 @@ export default async function TreatmentsPage({
               when: c.when,
               client: c.client,
               job: c.job,
+              program: c.program,
               amount: c.amount,
               paid: c.paid,
               receiptCol: tr.receiptCol,

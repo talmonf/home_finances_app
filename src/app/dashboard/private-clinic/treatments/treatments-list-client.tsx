@@ -13,6 +13,7 @@ type Labels = {
   when: string;
   client: string;
   job: string;
+  program: string;
   amount: string;
   paid: string;
   receiptCol: string;
@@ -165,6 +166,7 @@ export function TreatmentsListClient({
                   {sortArrow("job")}
                 </button>
               </th>
+              <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
@@ -217,6 +219,7 @@ export function TreatmentsListClient({
                     </Link>
                   </td>
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
+                  <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
                   <td className="px-3 py-2 text-slate-200">
                     {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)}
                   </td>

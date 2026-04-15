@@ -25,6 +25,7 @@ export type TreatmentListRowDto = {
   client_first_name: string;
   client_last_name: string | null;
   job_label: string;
+  program_label: string | null;
   amount: string;
   currency: string;
   payment_status: TherapyPaymentStatus;
@@ -115,6 +116,7 @@ export async function loadTreatmentsCursorPage(params: {
       include: {
         client: true,
         job: true,
+        program: { select: { name: true } },
         payment_bank_account: { select: { account_name: true, bank_name: true } },
         payment_digital_payment_method: { select: { name: true } },
         receipt_allocations: {
@@ -142,6 +144,7 @@ export async function loadTreatmentsCursorPage(params: {
         client_first_name: t.client.first_name,
         client_last_name: t.client.last_name,
         job_label: formatPrivateClinicJobLabel(t.job),
+        program_label: t.program?.name ?? null,
         amount: t.amount.toString(),
         currency: t.currency,
         payment_status: paymentStatus,
