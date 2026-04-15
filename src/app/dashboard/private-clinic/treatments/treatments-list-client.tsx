@@ -209,7 +209,12 @@ export function TreatmentsListClient({
                     {formatHouseholdDateUtcWithOptionalTime(new Date(t.occurred_at_iso), dateDisplayFormat)}
                   </td>
                   <td className="px-3 py-2 text-slate-100">
-                    {formatClientNameForDisplay(obfuscate, t.client_first_name, t.client_last_name)}
+                    <Link
+                      href={`/dashboard/private-clinic/clients/${encodeURIComponent(t.client_id)}/edit`}
+                      className="text-sky-400 hover:underline"
+                    >
+                      {formatClientNameForDisplay(obfuscate, t.client_first_name, t.client_last_name)}
+                    </Link>
                   </td>
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
                   <td className="px-3 py-2 text-slate-200">

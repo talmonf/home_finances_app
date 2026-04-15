@@ -21,6 +21,7 @@ export type TreatmentsListFilters = {
 export type TreatmentListRowDto = {
   id: string;
   occurred_at_iso: string;
+  client_id: string;
   client_first_name: string;
   client_last_name: string | null;
   job_label: string;
@@ -137,6 +138,7 @@ export async function loadTreatmentsCursorPage(params: {
       out.push({
         id: t.id,
         occurred_at_iso: t.occurred_at.toISOString(),
+        client_id: t.client_id,
         client_first_name: t.client.first_name,
         client_last_name: t.client.last_name,
         job_label: formatPrivateClinicJobLabel(t.job),
