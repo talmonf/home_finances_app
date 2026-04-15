@@ -556,6 +556,11 @@ type AnalyzeScratch = {
     fallbackIssuedMonthKey: string;
     monthKeyUsed: string;
     matchedTreatments: number;
+    matchedConsultations?: number;
+    matchedTravel?: number;
+    matchedTreatmentsAmount?: string;
+    matchedConsultationsAmount?: string;
+    matchedTravelAmount?: string;
   }>;
 };
 
