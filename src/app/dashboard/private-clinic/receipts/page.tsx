@@ -225,6 +225,18 @@ export default async function ReceiptsPage({
             </select>
           </div>
           <div>
+            <label className="block text-xs text-slate-400">{r.filterRecipient}</label>
+            <select
+              name="recipient"
+              defaultValue={filters.recipient}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{r.bankLinkAll}</option>
+              <option value="client">{r.recipientClient}</option>
+              <option value="organization">{r.recipientOrg}</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-xs text-slate-400">{c.client}</label>
             <select
               name="client"
@@ -238,18 +250,6 @@ export default async function ReceiptsPage({
                   {!cl.is_active ? ` (${c.inactive})` : ""}
                 </option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{r.filterRecipient}</label>
-            <select
-              name="recipient"
-              defaultValue={filters.recipient}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="all">{r.bankLinkAll}</option>
-              <option value="client">{r.recipientClient}</option>
-              <option value="organization">{r.recipientOrg}</option>
             </select>
           </div>
           <div>
