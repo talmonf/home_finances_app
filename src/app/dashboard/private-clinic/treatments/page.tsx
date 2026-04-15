@@ -78,7 +78,7 @@ export default async function TreatmentsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [linkedJobRows, linkedProgramRows] = await Promise.all([
+  const [linkedJobRows, linkedProgramRows, linkedClientRows] = await Promise.all([
     prisma.therapy_treatments.findMany({
       where: { household_id: householdId },
       distinct: ["job_id"],
@@ -89,11 +89,17 @@ export default async function TreatmentsPage({
       distinct: ["program_id"],
       select: { program_id: true },
     }),
+    prisma.therapy_treatments.findMany({
+      where: { household_id: householdId },
+      distinct: ["client_id"],
+      select: { client_id: true },
+    }),
   ]);
   const linkedJobIds = linkedJobRows.map((r) => r.job_id);
   const linkedProgramIds = linkedProgramRows
     .map((r) => r.program_id)
     .filter((id): id is string => Boolean(id));
+  const linkedClientIds = linkedClientRows.map((r) => r.client_id);
 
   const [jobs, programs, clients, settings, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage] =
     await Promise.all([
@@ -128,7 +134,11 @@ export default async function TreatmentsPage({
       prisma.therapy_clients.findMany({
       where: {
         household_id: householdId,
-        OR: [{ is_active: true }, ...(filters.client ? [{ id: filters.client }] : [])],
+        OR: [
+          { is_active: true },
+          ...(filters.client ? [{ id: filters.client }] : []),
+          ...(linkedClientIds.length ? [{ id: { in: linkedClientIds } }] : []),
+        ],
       },
       orderBy: { first_name: "asc" },
     }),
