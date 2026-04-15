@@ -87,6 +87,23 @@ export function formatHouseholdDateUtcWithTime(
   return `${datePart} ${hh}:${mm}`;
 }
 
+/** Like {@link formatHouseholdDateUtcWithTime} but omits time when the instant is UTC midnight (date-only). */
+export function formatHouseholdDateUtcWithOptionalTime(
+  d: Date | null | undefined,
+  format: HouseholdDateDisplayFormat,
+): string {
+  if (!d) return "—";
+  if (
+    d.getUTCHours() === 0 &&
+    d.getUTCMinutes() === 0 &&
+    d.getUTCSeconds() === 0 &&
+    d.getUTCMilliseconds() === 0
+  ) {
+    return formatHouseholdDate(d, format);
+  }
+  return formatHouseholdDateUtcWithTime(d, format);
+}
+
 export const HOUSEHOLD_DATE_FORMAT_LABELS: Record<HouseholdDateDisplayFormat, string> = {
   YMD: "yyyy-MM-dd (ISO)",
   DMY: "dd/MM/yyyy",

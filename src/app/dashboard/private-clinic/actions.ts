@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
+import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1006,11 +1007,12 @@ export async function createTherapyTreatment(formData: FormData) {
   const client_id = (formData.get("client_id") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const program_id = (formData.get("program_id") as string)?.trim() || "";
-  const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
+  const occurred_date = (formData.get("occurred_date") as string)?.trim() || "";
+  const occurred_time = (formData.get("occurred_time") as string)?.trim() || "";
   const amountStr = parseMoney(formData.get("amount") as string);
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
-  if (!client_id || !job_id || !program_id || !occurred_at_raw || !amountStr || !visit_type) {
+  if (!client_id || !job_id || !program_id || !occurred_date || !amountStr || !visit_type) {
     redirect(`${BASE}/treatments?error=missing`);
   }
   if (!(await assertClient(householdId, client_id))) redirect(`${BASE}/treatments?error=client`);
@@ -1018,8 +1020,8 @@ export async function createTherapyTreatment(formData: FormData) {
   const prog = await assertProgram(householdId, program_id);
   if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
 
-  const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirect(`${BASE}/treatments?error=date`);
+  const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
+  if (!occurred_at) redirect(`${BASE}/treatments?error=date`);
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1069,18 +1071,19 @@ export async function updateTherapyTreatment(formData: FormData) {
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const program_id = (formData.get("program_id") as string)?.trim() || "";
-  const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
+  const occurred_date = (formData.get("occurred_date") as string)?.trim() || "";
+  const occurred_time = (formData.get("occurred_time") as string)?.trim() || "";
   const amountStr = parseMoney(formData.get("amount") as string);
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
 
-  if (!job_id || !program_id || !occurred_at_raw || !amountStr || !visit_type) {
+  if (!job_id || !program_id || !occurred_date || !amountStr || !visit_type) {
     redirect(`${BASE}/treatments?error=missing`);
   }
   const prog = await assertProgram(householdId, program_id);
   if (!prog || prog.job_id !== job_id) redirect(`${BASE}/treatments?error=program`);
 
-  const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirect(`${BASE}/treatments?error=date`);
+  const occurred_at = parseTherapyOccurredAtFromForm(occurred_date, occurred_time);
+  if (!occurred_at) redirect(`${BASE}/treatments?error=date`);
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;

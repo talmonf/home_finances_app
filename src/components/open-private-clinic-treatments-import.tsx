@@ -1,4 +1,4 @@
-"use client";
+import Link from "next/link";
 
 export function OpenPrivateClinicTreatmentsImportButton({
   label,
@@ -8,14 +8,11 @@ export function OpenPrivateClinicTreatmentsImportButton({
   importPath: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => {
-        window.open(importPath, "_blank");
-      }}
-      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+    <Link
+      href={importPath}
+      className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
     >
       {label}
-    </button>
+    </Link>
   );
 }

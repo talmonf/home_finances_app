@@ -270,6 +270,62 @@ function paymentMethodFromText(raw: string): {
   return { receiptMethod: null, treatmentMethod: null, accountDigits: null, digitalHint: null };
 }
 
+type BankDigitalImportCtx = {
+  isPrivateClinic: boolean;
+  bankAccounts: Array<{ id: string; account_number: string | null }>;
+  digitalMethods: Array<{ id: string; name: string }>;
+};
+
+/** Resolves bank / digital payment method IDs for import rows (receipt anchors and direct treatment payment). */
+function resolveBankDigitalForParsedPayment(
+  ctx: BankDigitalImportCtx,
+  payment: ReturnType<typeof paymentMethodFromText>,
+  rowNumber: number,
+  scratch: { errors: string[]; warnings: string[] },
+  paymentRouteLabel: string,
+): { ok: boolean; bankId: string | null; digitalId: string | null } {
+  let bankId: string | null = null;
+  let digitalId: string | null = null;
+  if (!payment.treatmentMethod) return { ok: true, bankId, digitalId };
+
+  if (payment.treatmentMethod === "bank_transfer") {
+    if (payment.accountDigits) {
+      const digits = normalizeDigits(payment.accountDigits);
+      const matches = ctx.bankAccounts.filter((b) => {
+        const v = normalizeDigits(b.account_number ?? "");
+        return v.includes(digits) || digits.includes(v);
+      });
+      if (matches.length === 1) bankId = matches[0]!.id;
+      else if (matches.length > 1) {
+        scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
+        return { ok: false, bankId, digitalId };
+      } else if (ctx.isPrivateClinic) {
+        scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+      } else {
+        scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
+        return { ok: false, bankId, digitalId };
+      }
+    } else if (ctx.isPrivateClinic) {
+      scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
+    } else {
+      scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
+      return { ok: false, bankId, digitalId };
+    }
+  }
+  if (payment.treatmentMethod === "digital_payment") {
+    const hint = payment.digitalHint?.toLowerCase() ?? "";
+    const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
+    if (matches.length === 1) digitalId = matches[0]!.id;
+    else {
+      scratch.errors.push(
+        `Row ${rowNumber}: could not uniquely match digital payment method ${paymentRouteLabel || "(digital)"}.`,
+      );
+      return { ok: false, bankId, digitalId };
+    }
+  }
+  return { ok: true, bankId, digitalId };
+}
+
 type AnalyzeScratch = {
   rows: Row[];
   warnings: string[];
@@ -370,14 +426,7 @@ async function analyzePrivateProfile(
   const pendingAllocByReceipt = new Map<string, PendingAllocation[]>();
   const existingPrograms = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
   let selectedProgramId = params.selectedProgramId ?? null;
-  if (!selectedProgramId && existingPrograms.length === 0) {
-    scratch.autoPrograms.set(DEFAULT_PROGRAM_NAME_HE, {
-      name: DEFAULT_PROGRAM_NAME_HE,
-      source: "system_default",
-      treatmentCount: 0,
-      reason: "job_has_no_programs",
-    });
-  } else if (!selectedProgramId && existingPrograms.length > 0) {
+  if (!selectedProgramId && existingPrograms.length > 0) {
     selectedProgramId = existingPrograms[0]!.id;
   }
 
@@ -417,43 +466,10 @@ async function analyzePrivateProfile(
         scratch.errors.push(`Row ${rowNumber}: missing or unknown payment route for receipt #${receiptNum}.`);
         continue;
       }
-      let bankId: string | null = null;
-      let digitalId: string | null = null;
-      if (payment.treatmentMethod === "bank_transfer") {
-        if (payment.accountDigits) {
-          const digits = normalizeDigits(payment.accountDigits);
-          const matches = ctx.bankAccounts.filter((b) => {
-            const v = normalizeDigits(b.account_number ?? "");
-            return v.includes(digits) || digits.includes(v);
-          });
-          if (matches.length === 1) bankId = matches[0]!.id;
-          else if (matches.length > 1) {
-            scratch.errors.push(`Row ${rowNumber}: multiple bank accounts match ${payment.accountDigits}.`);
-            continue;
-          } else if (ctx.isPrivateClinic) {
-            scratch.warnings.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
-          } else {
-            scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
-            continue;
-          }
-        } else {
-          if (ctx.isPrivateClinic) {
-            scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
-          } else {
-            scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
-            continue;
-          }
-        }
-      }
-      if (payment.treatmentMethod === "digital_payment") {
-        const hint = payment.digitalHint?.toLowerCase() ?? "";
-        const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
-        if (matches.length === 1) digitalId = matches[0]!.id;
-        else {
-          scratch.errors.push(`Row ${rowNumber}: could not uniquely match digital payment method ${payRoute}.`);
-          continue;
-        }
-      }
+      const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
+      if (!resolvedIds.ok) continue;
+      const bankId = resolvedIds.bankId;
+      const digitalId = resolvedIds.digitalId;
 
       const allocations = pendingAllocByReceipt.get(receiptNum) ?? [];
       const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
@@ -533,18 +549,32 @@ async function analyzePrivateProfile(
         });
       }
       if (paymentDateRaw) {
-        if (!receiptNum) {
-          scratch.errors.push(`Row ${rowNumber}: allocation row must include receipt number.`);
-          continue;
-        }
         const pd = parseDate(paymentDateRaw);
         if (!pd) {
           scratch.errors.push(`Row ${rowNumber}: invalid payment date.`);
           continue;
         }
-        const arr = pendingAllocByReceipt.get(receiptNum) ?? [];
-        arr.push({ amount, treatmentKey: tKey });
-        pendingAllocByReceipt.set(receiptNum, arr);
+        const t = scratch.pendingTreatments.get(tKey);
+        if (!t) continue;
+        if (receiptNum) {
+          const arr = pendingAllocByReceipt.get(receiptNum) ?? [];
+          arr.push({ amount, treatmentKey: tKey });
+          pendingAllocByReceipt.set(receiptNum, arr);
+        } else {
+          const payment = paymentMethodFromText(payRoute);
+          if (payment.treatmentMethod) {
+            const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
+            if (!resolvedIds.ok) continue;
+            t.paymentMethod = payment.treatmentMethod;
+            t.paymentBankAccountId = resolvedIds.bankId;
+            t.paymentDigitalMethodId = resolvedIds.digitalId;
+          } else if (norm(payRoute)) {
+            scratch.warnings.push(
+              `Row ${rowNumber}: payment route "${payRoute}" was not recognized; saved payment date without payment method.`,
+            );
+          }
+          t.paymentDate = pd;
+        }
       }
     }
   }

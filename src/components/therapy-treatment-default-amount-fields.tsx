@@ -22,7 +22,8 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   labels: {
     job: string;
     program: string;
-    dateTime: string;
+    date: string;
+    timeOptional: string;
     amount: string;
     currency: string;
     visitType: string;
@@ -124,11 +125,20 @@ export function TherapyTreatmentDefaultAmountFields(props: {
         </select>
       </div>
       <div>
-        <label className="block text-xs text-slate-400">{labels.dateTime}</label>
+        <label className="block text-xs text-slate-400">{labels.date}</label>
         <input
-          name="occurred_at"
-          type="datetime-local"
+          name="occurred_date"
+          type="date"
           required
+          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400">{labels.timeOptional}</label>
+        <input
+          name="occurred_time"
+          type="time"
+          step={60}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>

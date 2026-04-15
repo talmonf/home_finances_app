@@ -7,7 +7,8 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
+import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
@@ -362,7 +363,8 @@ export default async function TreatmentsPage({
             labels={{
               job: c.job,
               program: c.program,
-              dateTime: tr.dateTime,
+              date: c.date,
+              timeOptional: tr.occurredTimeOptional,
               amount: c.amount,
               currency: c.currency,
               visitType: tr.visitType,
@@ -483,7 +485,7 @@ export default async function TreatmentsPage({
                   return (
                     <tr key={t.id} className="border-b border-slate-700/80">
                       <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                        {formatHouseholdDateUtcWithTime(t.occurred_at, dateDisplayFormat)}
+                        {formatHouseholdDateUtcWithOptionalTime(t.occurred_at, dateDisplayFormat)}
                       </td>
                       <td className="px-3 py-2 text-slate-100">
                         {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}
@@ -560,11 +562,20 @@ export default async function TreatmentsPage({
                                 </option>
                               ))}
                             </select>
+                            <label className="block text-[10px] text-slate-500">{c.date}</label>
                             <input
-                              name="occurred_at"
-                              type="datetime-local"
-                              defaultValue={t.occurred_at.toISOString().slice(0, 16)}
+                              name="occurred_date"
+                              type="date"
+                              defaultValue={t.occurred_at.toISOString().slice(0, 10)}
                               required
+                              className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                            />
+                            <label className="mt-1 block text-[10px] text-slate-500">{tr.occurredTimeOptional}</label>
+                            <input
+                              name="occurred_time"
+                              type="time"
+                              step={60}
+                              defaultValue={defaultOccurredTimeInputValue(t.occurred_at)}
                               className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                             />
                             <input
