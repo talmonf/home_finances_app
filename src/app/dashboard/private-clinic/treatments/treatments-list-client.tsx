@@ -30,6 +30,7 @@ export function TreatmentsListClient({
   initialRows,
   initialCursor,
   apiHrefBase,
+  listBaseHref,
   dateDisplayFormat,
   uiLanguage,
   obfuscate,
@@ -38,6 +39,7 @@ export function TreatmentsListClient({
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
   apiHrefBase: string;
+  listBaseHref: string;
   dateDisplayFormat: HouseholdDateDisplayFormat;
   uiLanguage: UiLanguage;
   obfuscate: boolean;

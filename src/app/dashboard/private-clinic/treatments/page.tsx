@@ -337,6 +337,7 @@ export default async function TreatmentsPage({
             initialRows={firstPage.rows}
             initialCursor={firstPage.nextCursor}
             apiHrefBase={apiHrefBase}
+            listBaseHref={baseListHref}
             dateDisplayFormat={dateDisplayFormat}
             uiLanguage={uiLanguage}
             obfuscate={obfuscate}
