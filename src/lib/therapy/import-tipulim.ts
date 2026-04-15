@@ -670,10 +670,6 @@ async function analyzePrivateProfile(
       }
     }
     const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-    if (allocations.length === 0) {
-      scratch.errors.push(`Row ${rowNumber}: receipt #${receiptNum} could not be linked to any treatments.`);
-      continue;
-    }
     if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
       scratch.errors.push(
         `Row ${rowNumber}: receipt #${receiptNum} total ${totalAmount} does not match allocations ${allocationSum.toFixed(2)}.`,
@@ -825,12 +821,6 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         allocations.push({ treatmentKey: tKey, amount: treatment.amount });
       }
       const allocationsSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-      if (allocations.length === 0) {
-        scratch.errors.push(
-          `Row ${rowNumber}: monthly payment receipt #${receiptNum} could not be linked to any treatments in ${coveredMonthRaw || "the covered month"}.`,
-        );
-        continue;
-      }
       if (allocations.length > 0 && Math.abs(allocationsSum - Number(total)) > 0.01) {
         scratch.warnings.push(
           `Row ${rowNumber}: monthly payment receipt #${receiptNum} total ${total} does not match linked treatments ${allocationsSum.toFixed(2)}.`,
