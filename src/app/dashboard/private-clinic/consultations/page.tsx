@@ -23,7 +23,15 @@ export const dynamic = "force-dynamic";
 export default async function ConsultationsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
+  searchParams?: Promise<{
+    created?: string;
+    updated?: string;
+    error?: string;
+    job?: string;
+    from?: string;
+    to?: string;
+    income_bank?: string;
+  }>;
 }) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -33,7 +41,11 @@ export default async function ConsultationsPage({
   const uiLanguage = await getCurrentUiLanguage();
   const c = privateClinicCommon(uiLanguage);
   const co = privateClinicConsultations(uiLanguage);
-  const sp = searchParams ? await searchParams : undefined;
+  const sp = searchParams ? await searchParams : {};
+  const jobFilter = sp.job || "";
+  const from = sp.from ? new Date(sp.from) : null;
+  const to = sp.to ? new Date(sp.to) : null;
+  const incomeBankFilter = sp.income_bank || "all";
 
   const [jobs, types, rows] = await Promise.all([
     prisma.jobs.findMany({
@@ -45,9 +57,25 @@ export default async function ConsultationsPage({
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_consultations.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: {
+        household_id: householdId,
+        job: jobWhereInPrivateClinicModule,
+        ...(jobFilter ? { job_id: jobFilter } : {}),
+        ...(from || to
+          ? {
+              occurred_at: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+        ...(incomeBankFilter === "linked"
+          ? { linked_income_transaction_id: { not: null } }
+          : {}),
+        ...(incomeBankFilter === "unlinked" ? { linked_income_transaction_id: null } : {}),
+      },
       orderBy: { occurred_at: "desc" },
-      take: 200,
+      take: 500,
       include: { job: true, consultation_type: true },
     }),
   ]);
@@ -55,12 +83,12 @@ export default async function ConsultationsPage({
   return (
     <div className="space-y-8">
       <p className="text-sm text-slate-500">{co.intro}</p>
-      {sp?.error && (
+      {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error}
         </p>
       )}
-      {(sp?.created || sp?.updated) && (
+      {(sp.created || sp.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
           {c.saved}
         </p>
@@ -170,7 +198,67 @@ export default async function ConsultationsPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{co.recent}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{co.filters}</h2>
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+          method="get"
+        >
+          <div>
+            <label className="block text-xs text-slate-400">{c.job}</label>
+            <select
+              name="job"
+              defaultValue={jobFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.job_title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{co.filterIncomeBank}</label>
+            <select
+              name="income_bank"
+              defaultValue={incomeBankFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{co.incomeBankAll}</option>
+              <option value="linked">{co.incomeBankLinked}</option>
+              <option value="unlinked">{co.incomeBankUnlinked}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.from}</label>
+            <input
+              name="from"
+              type="date"
+              defaultValue={sp.from ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.to}</label>
+            <input
+              name="to"
+              type="date"
+              defaultValue={sp.to ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          >
+            {c.apply}
+          </button>
+        </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-slate-200">{co.consultationsCount(rows.length)}</h2>
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
         ) : (

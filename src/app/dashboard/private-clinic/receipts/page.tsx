@@ -15,7 +15,19 @@ import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers }
 
 export const dynamic = "force-dynamic";
 
-export default async function ReceiptsPage() {
+type ReceiptSearch = {
+  job?: string;
+  from?: string;
+  to?: string;
+  recipient?: string;
+  bank?: string;
+};
+
+export default async function ReceiptsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<ReceiptSearch>;
+}) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -23,6 +35,12 @@ export default async function ReceiptsPage() {
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
+  const sp = searchParams ? await searchParams : {};
+  const jobFilter = sp.job || "";
+  const from = sp.from ? new Date(sp.from) : null;
+  const to = sp.to ? new Date(sp.to) : null;
+  const recipientFilter = sp.recipient || "all";
+  const bankFilter = sp.bank || "all";
   const now = new Date();
   const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
@@ -33,9 +51,26 @@ export default async function ReceiptsPage() {
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_receipts.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: {
+        household_id: householdId,
+        job: jobWhereInPrivateClinicModule,
+        ...(jobFilter ? { job_id: jobFilter } : {}),
+        ...(from || to
+          ? {
+              issued_at: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+        ...(recipientFilter === "client" || recipientFilter === "organization"
+          ? { recipient_type: recipientFilter as "client" | "organization" }
+          : {}),
+        ...(bankFilter === "linked" ? { linked_transaction_id: { not: null } } : {}),
+        ...(bankFilter === "unlinked" ? { linked_transaction_id: null } : {}),
+      },
       orderBy: { issued_at: "desc" },
-      take: 200,
+      take: 500,
       include: { job: true },
     }),
     prisma.jobs.findMany({
@@ -214,7 +249,79 @@ export default async function ReceiptsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{r.receiptsHeading}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{r.filters}</h2>
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+          method="get"
+        >
+          <div>
+            <label className="block text-xs text-slate-400">{c.job}</label>
+            <select
+              name="job"
+              defaultValue={jobFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.job_title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{r.filterRecipient}</label>
+            <select
+              name="recipient"
+              defaultValue={recipientFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{r.bankLinkAll}</option>
+              <option value="client">{r.recipientClient}</option>
+              <option value="organization">{r.recipientOrg}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{r.filterBankLink}</label>
+            <select
+              name="bank"
+              defaultValue={bankFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{r.bankLinkAll}</option>
+              <option value="linked">{r.bankLinkLinked}</option>
+              <option value="unlinked">{r.bankLinkUnlinked}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.from}</label>
+            <input
+              name="from"
+              type="date"
+              defaultValue={sp.from ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.to}</label>
+            <input
+              name="to"
+              type="date"
+              defaultValue={sp.to ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          >
+            {c.apply}
+          </button>
+        </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-slate-200">{r.receiptsCount(receipts.length)}</h2>
         {receipts.length === 0 ? (
           <p className="text-sm text-slate-500">{c.receiptsEmpty}</p>
         ) : (

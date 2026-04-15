@@ -28,6 +28,7 @@ type Search = {
   paid?: string;
   job?: string;
   program?: string;
+  client?: string;
   from?: string;
   to?: string;
 };
@@ -50,6 +51,7 @@ export default async function TreatmentsPage({
   const paidFilter = sp.paid || "all";
   const jobFilter = sp.job || "";
   const programFilter = sp.program || "";
+  const clientFilter = sp.client || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
 
@@ -90,7 +92,10 @@ export default async function TreatmentsPage({
       include: { job: true },
     }),
     prisma.therapy_clients.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        OR: [{ is_active: true }, ...(clientFilter ? [{ id: clientFilter }] : [])],
+      },
       orderBy: { first_name: "asc" },
     }),
     prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
@@ -108,6 +113,7 @@ export default async function TreatmentsPage({
         job: jobWhereInPrivateClinicModule,
         ...(jobFilter ? { job_id: jobFilter } : {}),
         ...(programFilter ? { program_id: programFilter } : {}),
+        ...(clientFilter ? { client_id: clientFilter } : {}),
         ...(from || to
           ? {
               occurred_at: {
@@ -250,6 +256,22 @@ export default async function TreatmentsPage({
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.job.job_title} — {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.client}</label>
+            <select
+              name="client"
+              defaultValue={clientFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {clients.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.first_name} {cl.last_name ?? ""}
+                  {!cl.is_active ? ` (${c.inactive})` : ""}
                 </option>
               ))}
             </select>

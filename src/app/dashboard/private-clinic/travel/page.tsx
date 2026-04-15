@@ -24,7 +24,16 @@ export const dynamic = "force-dynamic";
 export default async function TravelPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
+  searchParams?: Promise<{
+    created?: string;
+    updated?: string;
+    error?: string;
+    job?: string;
+    client?: string;
+    from?: string;
+    to?: string;
+    bank?: string;
+  }>;
 }) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -35,12 +44,24 @@ export default async function TravelPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tv = privateClinicTravel(uiLanguage);
-  const sp = searchParams ? await searchParams : undefined;
+  const sp = searchParams ? await searchParams : {};
+  const jobFilter = sp.job || "";
+  const clientFilter = sp.client || "";
+  const from = sp.from ? new Date(sp.from) : null;
+  const to = sp.to ? new Date(sp.to) : null;
+  const bankFilter = sp.bank || "all";
 
-  const [jobs, treatments, entries] = await Promise.all([
+  const [jobs, clients, treatments, entries] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
       orderBy: { start_date: "desc" },
+    }),
+    prisma.therapy_clients.findMany({
+      where: {
+        household_id: householdId,
+        OR: [{ is_active: true }, ...(clientFilter ? [{ id: clientFilter }] : [])],
+      },
+      orderBy: { first_name: "asc" },
     }),
     prisma.therapy_treatments.findMany({
       where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
@@ -51,10 +72,37 @@ export default async function TravelPage({
     prisma.therapy_travel_entries.findMany({
       where: {
         household_id: householdId,
-        OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+        AND: [
+          {
+            OR: [
+              { job: jobWhereInPrivateClinicModule },
+              { treatment: { job: jobWhereInPrivateClinicModule } },
+            ],
+          },
+          ...(jobFilter
+            ? [
+                {
+                  OR: [{ job_id: jobFilter }, { treatment: { job_id: jobFilter } }],
+                },
+              ]
+            : []),
+          ...(clientFilter ? [{ treatment: { client_id: clientFilter } }] : []),
+          ...(from || to
+            ? [
+                {
+                  occurred_at: {
+                    ...(from ? { gte: from } : {}),
+                    ...(to ? { lte: to } : {}),
+                  },
+                },
+              ]
+            : []),
+          ...(bankFilter === "linked" ? [{ linked_transaction_id: { not: null } }] : []),
+          ...(bankFilter === "unlinked" ? [{ linked_transaction_id: null }] : []),
+        ],
       },
       orderBy: { created_at: "desc" },
-      take: 200,
+      take: 500,
       include: { job: true, treatment: { include: { client: true, job: true } } },
     }),
   ]);
@@ -62,12 +110,12 @@ export default async function TravelPage({
   return (
     <div className="space-y-8">
       <p className="text-sm text-slate-500">{tv.intro}</p>
-      {sp?.error && (
+      {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error}
         </p>
       )}
-      {(sp?.created || sp?.updated) && (
+      {(sp.created || sp.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
           {c.saved}
         </p>
@@ -153,7 +201,83 @@ export default async function TravelPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{tv.entries}</h2>
+        <h2 className="text-lg font-medium text-slate-200">{tv.filters}</h2>
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+          method="get"
+        >
+          <div>
+            <label className="block text-xs text-slate-400">{c.job}</label>
+            <select
+              name="job"
+              defaultValue={jobFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.job_title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.client}</label>
+            <select
+              name="client"
+              defaultValue={clientFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {clients.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.first_name} {cl.last_name ?? ""}
+                  {!cl.is_active ? ` (${c.inactive})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{tv.filterBankLink}</label>
+            <select
+              name="bank"
+              defaultValue={bankFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{tv.bankLinkAll}</option>
+              <option value="linked">{tv.bankLinkLinked}</option>
+              <option value="unlinked">{tv.bankLinkUnlinked}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.from}</label>
+            <input
+              name="from"
+              type="date"
+              defaultValue={sp.from ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{c.to}</label>
+            <input
+              name="to"
+              type="date"
+              defaultValue={sp.to ?? ""}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          >
+            {c.apply}
+          </button>
+        </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-slate-200">{tv.entriesCount(entries.length)}</h2>
         {entries.length === 0 ? (
           <p className="text-sm text-slate-500">{c.travelEmpty}</p>
         ) : (
