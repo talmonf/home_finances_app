@@ -221,8 +221,42 @@ export function ReceiptsListClient({
                 <td className="px-3 py-2 text-slate-300">
                   <div>{rec.linked_treatments_count}</div>
                   <div className="text-xs text-slate-500">
-                    T:{rec.linked_treatment_allocations_count} C:{rec.linked_consultation_allocations_count} TR:
-                    {rec.linked_travel_allocations_count}
+                    <span title="Treatments">T</span>:
+                    {rec.linked_treatment_allocations_count > 0 ? (
+                      <Link
+                        href={`/dashboard/private-clinic/treatments?receipt=${encodeURIComponent(rec.id)}`}
+                        className="text-sky-400 hover:underline"
+                        title="Treatments"
+                      >
+                        {rec.linked_treatment_allocations_count}
+                      </Link>
+                    ) : (
+                      rec.linked_treatment_allocations_count
+                    )}{" "}
+                    <span title="Consultations">C</span>:
+                    {rec.linked_consultation_allocations_count > 0 ? (
+                      <Link
+                        href={`/dashboard/private-clinic/consultations?receipt=${encodeURIComponent(rec.id)}`}
+                        className="text-sky-400 hover:underline"
+                        title="Consultations"
+                      >
+                        {rec.linked_consultation_allocations_count}
+                      </Link>
+                    ) : (
+                      rec.linked_consultation_allocations_count
+                    )}{" "}
+                    <span title="Travel entries">TR</span>:
+                    {rec.linked_travel_allocations_count > 0 ? (
+                      <Link
+                        href={`/dashboard/private-clinic/travel?receipt=${encodeURIComponent(rec.id)}`}
+                        className="text-sky-400 hover:underline"
+                        title="Travel entries"
+                      >
+                        {rec.linked_travel_allocations_count}
+                      </Link>
+                    ) : (
+                      rec.linked_travel_allocations_count
+                    )}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-xs">

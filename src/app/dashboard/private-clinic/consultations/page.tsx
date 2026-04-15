@@ -29,6 +29,7 @@ export default async function ConsultationsPage({
     updated?: string;
     error?: string;
     job?: string;
+    receipt?: string;
     from?: string;
     to?: string;
     income_bank?: string;
@@ -44,6 +45,7 @@ export default async function ConsultationsPage({
   const co = privateClinicConsultations(uiLanguage);
   const sp = searchParams ? await searchParams : {};
   const jobFilter = sp.job || "";
+  const receiptFilter = sp.receipt || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
   const incomeBankFilter = sp.income_bank || "all";
@@ -62,6 +64,15 @@ export default async function ConsultationsPage({
         household_id: householdId,
         job: jobWhereInPrivateClinicModule,
         ...(jobFilter ? { job_id: jobFilter } : {}),
+        ...(receiptFilter
+          ? {
+              receipt_allocations: {
+                some: {
+                  receipt_id: receiptFilter,
+                },
+              },
+            }
+          : {}),
         ...(from || to
           ? {
               occurred_at: {
@@ -80,6 +91,12 @@ export default async function ConsultationsPage({
       include: { job: true, consultation_type: true },
     }),
   ]);
+  const filteredReceipt = receiptFilter
+    ? await prisma.therapy_receipts.findFirst({
+        where: { id: receiptFilter, household_id: householdId },
+        select: { id: true, receipt_number: true },
+      })
+    : null;
 
   return (
     <div className="space-y-8">
@@ -200,10 +217,19 @@ export default async function ConsultationsPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{co.filters}</h2>
+        {filteredReceipt ? (
+          <p className="text-xs text-slate-400">
+            Filtered by receipt #{filteredReceipt.receipt_number}{" "}
+            <a href="/dashboard/private-clinic/consultations" className="text-sky-400 hover:underline">
+              {c.cancel}
+            </a>
+          </p>
+        ) : null}
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           method="get"
         >
+          {receiptFilter ? <input type="hidden" name="receipt" value={receiptFilter} /> : null}
           <div>
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select

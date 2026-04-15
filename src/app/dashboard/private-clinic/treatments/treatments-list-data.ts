@@ -12,6 +12,7 @@ export type TreatmentsListFilters = {
   job: string;
   program: string;
   client: string;
+  receipt: string;
   from: string;
   to: string;
   sort: TreatmentsSortKey;
@@ -90,6 +91,15 @@ export async function loadTreatmentsCursorPage(params: {
     ...(filters.job ? { job_id: filters.job } : {}),
     ...(filters.program ? { program_id: filters.program } : {}),
     ...(filters.client ? { client_id: filters.client } : {}),
+    ...(filters.receipt
+      ? {
+          receipt_allocations: {
+            some: {
+              receipt_id: filters.receipt,
+            },
+          },
+        }
+      : {}),
     ...(from || to
       ? {
           occurred_at: {

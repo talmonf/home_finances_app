@@ -31,6 +31,7 @@ export default async function TravelPage({
     error?: string;
     job?: string;
     client?: string;
+    receipt?: string;
     from?: string;
     to?: string;
     bank?: string;
@@ -48,6 +49,7 @@ export default async function TravelPage({
   const sp = searchParams ? await searchParams : {};
   const jobFilter = sp.job || "";
   const clientFilter = sp.client || "";
+  const receiptFilter = sp.receipt || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
   const bankFilter = sp.bank || "all";
@@ -88,6 +90,17 @@ export default async function TravelPage({
               ]
             : []),
           ...(clientFilter ? [{ treatment: { client_id: clientFilter } }] : []),
+          ...(receiptFilter
+            ? [
+                {
+                  receipt_allocations: {
+                    some: {
+                      receipt_id: receiptFilter,
+                    },
+                  },
+                },
+              ]
+            : []),
           ...(from || to
             ? [
                 {
@@ -107,6 +120,12 @@ export default async function TravelPage({
       include: { job: true, treatment: { include: { client: true, job: true } } },
     }),
   ]);
+  const filteredReceipt = receiptFilter
+    ? await prisma.therapy_receipts.findFirst({
+        where: { id: receiptFilter, household_id: householdId },
+        select: { id: true, receipt_number: true },
+      })
+    : null;
 
   return (
     <div className="space-y-8">
@@ -203,10 +222,19 @@ export default async function TravelPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{tv.filters}</h2>
+        {filteredReceipt ? (
+          <p className="text-xs text-slate-400">
+            Filtered by receipt #{filteredReceipt.receipt_number}{" "}
+            <a href="/dashboard/private-clinic/travel" className="text-sky-400 hover:underline">
+              {c.cancel}
+            </a>
+          </p>
+        ) : null}
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           method="get"
         >
+          {receiptFilter ? <input type="hidden" name="receipt" value={receiptFilter} /> : null}
           <div>
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select

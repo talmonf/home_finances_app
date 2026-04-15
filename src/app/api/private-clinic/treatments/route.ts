@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
       job: url.searchParams.get("job")?.trim() || "",
       program: url.searchParams.get("program")?.trim() || "",
       client: url.searchParams.get("client")?.trim() || "",
+      receipt: url.searchParams.get("receipt")?.trim() || "",
       from: url.searchParams.get("from")?.trim() || "",
       to: url.searchParams.get("to")?.trim() || "",
       sort: parseTreatmentsSortKey(url.searchParams.get("sort") ?? undefined),

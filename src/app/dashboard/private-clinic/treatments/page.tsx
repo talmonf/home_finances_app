@@ -38,6 +38,7 @@ type Search = {
   job?: string;
   program?: string;
   client?: string;
+  receipt?: string;
   from?: string;
   to?: string;
   sort?: string;
@@ -66,6 +67,7 @@ export default async function TreatmentsPage({
     job: sp.job?.trim() || "",
     program: sp.program?.trim() || "",
     client: sp.client?.trim() || "",
+    receipt: sp.receipt?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
     sort: parseTreatmentsSortKey(sp.sort),
@@ -195,6 +197,7 @@ export default async function TreatmentsPage({
   if (filters.job) queryParams.set("job", filters.job);
   if (filters.program) queryParams.set("program", filters.program);
   if (filters.client) queryParams.set("client", filters.client);
+  if (filters.receipt) queryParams.set("receipt", filters.receipt);
   if (filters.from) queryParams.set("from", filters.from);
   if (filters.to) queryParams.set("to", filters.to);
   if (filters.sort !== "occurred_at") queryParams.set("sort", filters.sort);
@@ -218,6 +221,12 @@ export default async function TreatmentsPage({
           },
         })
       : null;
+  const filteredReceipt = filters.receipt
+    ? await prisma.therapy_receipts.findFirst({
+        where: { id: filters.receipt, household_id: householdId },
+        select: { id: true, receipt_number: true },
+      })
+    : null;
 
   return (
     <div className="space-y-8">
@@ -234,10 +243,19 @@ export default async function TreatmentsPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{tr.filters}</h2>
+        {filteredReceipt ? (
+          <p className="text-xs text-slate-400">
+            Filtered by receipt #{filteredReceipt.receipt_number}{" "}
+            <Link href="/dashboard/private-clinic/treatments" className="text-sky-400 hover:underline">
+              {c.cancel}
+            </Link>
+          </p>
+        ) : null}
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           method="get"
         >
+          {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
           <div>
             <label className="block text-xs text-slate-400">{tr.payment}</label>
             <select
