@@ -141,6 +141,20 @@ export type TipulimAnalyzeResult = {
   importDebug?: {
     unlinkedReceiptsCount: number;
     unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
+    orgPaymentDiagnosticsSample?: Array<{
+      rowNumber: number;
+      receiptNumber: string;
+      coveredMonthRaw: string;
+      coveredMonthKey: string | null;
+      fallbackIssuedMonthKey: string;
+      monthKeyUsed: string;
+      matchedTreatments: number;
+    }>;
+    commitLinkDiagnostics?: {
+      allocationsMissingTreatmentKey: number;
+      markPaidMissingTreatmentKey: number;
+      missingTreatmentKeysSample: string[];
+    };
   };
 };
 
@@ -375,10 +389,10 @@ function parseClientName(raw: string): { firstName: string; lastInitial: string 
 function visitTypeFromCell(raw: string): "clinic" | "home" | "phone" | "video" | null {
   const t = norm(raw).toLowerCase();
   if (!t) return null;
-  if (["clinic", "קליניקה"].includes(t)) return "clinic";
-  if (["home", "בית", "ביקור בית"].includes(t)) return "home";
-  if (["phone", "טלפון", "ייעוץ טלפוני"].includes(t)) return "phone";
-  if (["video", "וידאו", "מקוון (וידאו)", "מקוון"].includes(t)) return "video";
+  if (["clinic", "קליניקה", "טיפול בקליניקה"].includes(t)) return "clinic";
+  if (["home", "בית", "ביקור בית", "טיפול בבית", "ביתי"].includes(t)) return "home";
+  if (["phone", "טלפון", "ייעוץ טלפוני", "טלפוני", "טיפול טלפוני"].includes(t)) return "phone";
+  if (["video", "וידאו", "מקוון (וידאו)", "מקוון", "זום", "טיפול בזום"].includes(t)) return "video";
   return null;
 }
 
@@ -498,6 +512,15 @@ type AnalyzeScratch = {
   routing: { travel: number; consultations: number };
   pendingTravel: PendingTravel[];
   pendingConsultations: PendingConsultation[];
+  orgPaymentDiagnostics: Array<{
+    rowNumber: number;
+    receiptNumber: string;
+    coveredMonthRaw: string;
+    coveredMonthKey: string | null;
+    fallbackIssuedMonthKey: string;
+    monthKeyUsed: string;
+    matchedTreatments: number;
+  }>;
 };
 
 async function resolveClientRef(
@@ -590,6 +613,7 @@ async function analyzePrivateProfile(
     routing: { travel: 0, consultations: 0 },
     pendingTravel: [],
     pendingConsultations: [],
+    orgPaymentDiagnostics: [],
   };
   const pendingAllocByReceipt = new Map<string, PendingAllocation[]>();
   const existingPrograms = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
@@ -835,6 +859,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     routing: { travel: 0, consultations: 0 },
     pendingTravel: [],
     pendingConsultations: [],
+    orgPaymentDiagnostics: [],
   };
   const existingProgramNames = new Set(
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
@@ -952,7 +977,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       continue;
     }
     const consultLike = new Set(["התייעצות", "ישיבת צוות", "הדרכה", "פגישה", "אירוע", "בונוס", "חבר מביא חבר"]);
-    if (consultLike.has(v) || v) {
+    if (consultLike.has(v)) {
       scratch.pendingConsultations.push({
         occurredAt,
         amount,
@@ -960,6 +985,39 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         typeName: v || "other",
       });
       scratch.routing.consultations += 1;
+      continue;
+    }
+    if (!v) {
+      if (params.missingVisitType) {
+        const fallbackKeyBase = `${clientRef?.displayName ?? "unknown"}|${monthKey(occurredAt)}|${amount}|${params.missingVisitType}`;
+        const fallbackKey = uniqueTreatmentKey(scratch.pendingTreatments, fallbackKeyBase, rowNumber);
+        if (!clientRef) continue;
+        scratch.pendingTreatments.set(fallbackKey, {
+          key: fallbackKey,
+          rowNumber,
+          clientRef,
+          programName: programName || null,
+          occurredAt,
+          amount,
+          visitType: params.missingVisitType,
+          note: s(row["הערות"]) || null,
+          paymentDate: null,
+          paymentMethod: null,
+          paymentBankAccountId: null,
+          paymentDigitalMethodId: null,
+        });
+        addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+        const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
+        const arr = treatmentKeysByMonth.get(month) ?? [];
+        arr.push(fallbackKey);
+        treatmentKeysByMonth.set(month, arr);
+        const ap = scratch.autoPrograms.get(programName);
+        if (ap) ap.treatmentCount += 1;
+      } else {
+        scratch.errors.push(
+          `Row ${rowNumber}: missing visit type. Choose a fallback visit type in the import dialog and analyze again.`,
+        );
+      }
     } else {
       scratch.errors.push(`Row ${rowNumber}: unsupported visit type "${visitType}".`);
     }
@@ -985,7 +1043,18 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     const coveredMonthKey = coveredMonth
       ? `${coveredMonth.start.getUTCFullYear()}-${String(coveredMonth.start.getUTCMonth() + 1).padStart(2, "0")}`
       : null;
-    const treatmentKeys = coveredMonthKey ? (treatmentKeysByMonth.get(coveredMonthKey) ?? []) : [];
+    const fallbackIssuedMonthKey = `${payRow.issuedAt.getUTCFullYear()}-${String(payRow.issuedAt.getUTCMonth() + 1).padStart(2, "0")}`;
+    const monthKeyUsed = coveredMonthKey ?? fallbackIssuedMonthKey;
+    const treatmentKeys = treatmentKeysByMonth.get(monthKeyUsed) ?? [];
+    scratch.orgPaymentDiagnostics.push({
+      rowNumber: payRow.rowNumber,
+      receiptNumber: payRow.receiptNum,
+      coveredMonthRaw: payRow.coveredMonthRaw,
+      coveredMonthKey,
+      fallbackIssuedMonthKey,
+      monthKeyUsed,
+      matchedTreatments: treatmentKeys.length,
+    });
     const allocationsSeen = new Set<string>();
     const allocations: PendingAllocation[] = [];
     for (const tKey of treatmentKeys) {
@@ -1011,8 +1080,12 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       notes: payRow.note,
       paymentMethod: payment.receiptMethod,
       recipientType: ctx.isPrivateClinic ? "client" : "organization",
-      coveredPeriodStart: coveredMonth?.start ?? null,
-      coveredPeriodEnd: coveredMonth?.end ?? null,
+      coveredPeriodStart:
+        coveredMonth?.start ??
+        new Date(Date.UTC(payRow.issuedAt.getUTCFullYear(), payRow.issuedAt.getUTCMonth(), 1)),
+      coveredPeriodEnd:
+        coveredMonth?.end ??
+        new Date(Date.UTC(payRow.issuedAt.getUTCFullYear(), payRow.issuedAt.getUTCMonth() + 1, 0)),
       allocations,
       treatmentKeysToMarkPaid: treatmentKeys,
       treatmentPaymentMethod: payment.treatmentMethod,
@@ -1058,6 +1131,7 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
         .filter((r) => r.allocations.length === 0)
         .slice(0, 5)
         .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
+      orgPaymentDiagnosticsSample: scratch.orgPaymentDiagnostics.slice(0, 10),
     },
   };
 }
@@ -1192,6 +1266,11 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     };
   }
 
+  const linkDiagnostics = {
+    allocationsMissingTreatmentKey: 0,
+    markPaidMissingTreatmentKey: 0,
+    missingTreatmentKeys: new Set<string>(),
+  };
   const created = await prisma.$transaction(async (tx) => {
     const createdCount = {
       clients: 0,
@@ -1359,7 +1438,11 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       createdCount.receipts += 1;
       for (const a of r.allocations) {
         const treatmentId = treatmentIdByKey.get(a.treatmentKey);
-        if (!treatmentId) continue;
+        if (!treatmentId) {
+          linkDiagnostics.allocationsMissingTreatmentKey += 1;
+          if (linkDiagnostics.missingTreatmentKeys.size < 20) linkDiagnostics.missingTreatmentKeys.add(a.treatmentKey);
+          continue;
+        }
         await tx.therapy_receipt_allocations.create({
           data: {
             id: crypto.randomUUID(),
@@ -1374,7 +1457,11 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       if (r.treatmentKeysToMarkPaid && r.treatmentKeysToMarkPaid.length > 0) {
         for (const tKey of r.treatmentKeysToMarkPaid) {
           const treatmentId = treatmentIdByKey.get(tKey);
-          if (!treatmentId) continue;
+          if (!treatmentId) {
+            linkDiagnostics.markPaidMissingTreatmentKey += 1;
+            if (linkDiagnostics.missingTreatmentKeys.size < 20) linkDiagnostics.missingTreatmentKeys.add(tKey);
+            continue;
+          }
           await tx.therapy_treatments.update({
             where: { id: treatmentId },
             data: {
@@ -1463,6 +1550,17 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   return {
     ...summary,
     created,
+    importDebug: {
+      ...(summary.importDebug ?? {
+        unlinkedReceiptsCount: 0,
+        unlinkedReceiptsSample: [],
+      }),
+      commitLinkDiagnostics: {
+        allocationsMissingTreatmentKey: linkDiagnostics.allocationsMissingTreatmentKey,
+        markPaidMissingTreatmentKey: linkDiagnostics.markPaidMissingTreatmentKey,
+        missingTreatmentKeysSample: Array.from(linkDiagnostics.missingTreatmentKeys).slice(0, 10),
+      },
+    },
   };
 }
 

@@ -40,6 +40,20 @@ type PreviewData = {
   importDebug?: {
     unlinkedReceiptsCount: number;
     unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
+    orgPaymentDiagnosticsSample?: Array<{
+      rowNumber: number;
+      receiptNumber: string;
+      coveredMonthRaw: string;
+      coveredMonthKey: string | null;
+      fallbackIssuedMonthKey: string;
+      monthKeyUsed: string;
+      matchedTreatments: number;
+    }>;
+    commitLinkDiagnostics?: {
+      allocationsMissingTreatmentKey: number;
+      markPaidMissingTreatmentKey: number;
+      missingTreatmentKeysSample: string[];
+    };
   };
 };
 
@@ -118,6 +132,10 @@ export function TherapyTreatmentsImportForm({
     importCreatedTreatments: string;
     importCreatedReceipts: string;
     importDebugUnlinkedReceipts: string;
+    importDebugOrgPaymentRows: string;
+    importDebugCommitLinkTitle: string;
+    importDebugMissingAllocationLinks: string;
+    importDebugMissingMarkPaidLinks: string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -451,6 +469,40 @@ export function TherapyTreatmentsImportForm({
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {preview.importDebug.orgPaymentDiagnosticsSample &&
+                    preview.importDebug.orgPaymentDiagnosticsSample.length > 0 && (
+                      <>
+                        <p>{labels.importDebugOrgPaymentRows}:</p>
+                        <ul className="list-disc pl-5">
+                          {preview.importDebug.orgPaymentDiagnosticsSample.map((d, i) => (
+                            <li key={`${d.receiptNumber}-${d.rowNumber}-${i}`}>
+                              #{d.receiptNumber} row {d.rowNumber} | raw="{d.coveredMonthRaw || "—"}" | key=
+                              {d.monthKeyUsed} | matched={d.matchedTreatments}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  {preview.importDebug.commitLinkDiagnostics && (
+                    <>
+                      <p>{labels.importDebugCommitLinkTitle}:</p>
+                      <ul className="list-disc pl-5">
+                        <li>
+                          {labels.importDebugMissingAllocationLinks}:{" "}
+                          {preview.importDebug.commitLinkDiagnostics.allocationsMissingTreatmentKey}
+                        </li>
+                        <li>
+                          {labels.importDebugMissingMarkPaidLinks}:{" "}
+                          {preview.importDebug.commitLinkDiagnostics.markPaidMissingTreatmentKey}
+                        </li>
+                        {preview.importDebug.commitLinkDiagnostics.missingTreatmentKeysSample.length > 0 && (
+                          <li>
+                            keys: {preview.importDebug.commitLinkDiagnostics.missingTreatmentKeysSample.join(", ")}
+                          </li>
+                        )}
+                      </ul>
+                    </>
                   )}
                 </>
               )}

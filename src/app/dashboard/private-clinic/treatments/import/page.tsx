@@ -132,6 +132,10 @@ export default async function TreatmentsImportPage() {
           importCreatedReceipts: tr.importCreatedReceipts,
           importCreatedAllocations: tr.importCreatedAllocations,
           importDebugUnlinkedReceipts: tr.importDebugUnlinkedReceipts,
+          importDebugOrgPaymentRows: tr.importDebugOrgPaymentRows,
+          importDebugCommitLinkTitle: tr.importDebugCommitLinkTitle,
+          importDebugMissingAllocationLinks: tr.importDebugMissingAllocationLinks,
+          importDebugMissingMarkPaidLinks: tr.importDebugMissingMarkPaidLinks,
         }}
       />
     </div>

@@ -451,6 +451,10 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importCreatedReceipts: p("receipts", "קבלות"),
     importCreatedAllocations: p("allocations", "שיוכים"),
     importDebugUnlinkedReceipts: p("Unlinked receipts", "קבלות ללא שיוך"),
+    importDebugOrgPaymentRows: p("Org payment diagnostics", "דיאגנוסטיקת תשלומי ארגון"),
+    importDebugCommitLinkTitle: p("Commit link diagnostics", "דיאגנוסטיקת קישור בשמירה"),
+    importDebugMissingAllocationLinks: p("Missing allocation links", "שיוכי הקצאה חסרים"),
+    importDebugMissingMarkPaidLinks: p("Missing mark-paid links", "עדכוני סימון-שולם חסרים"),
   };
 }
 
