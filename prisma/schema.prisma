@@ -80,6 +80,8 @@ model households {
   therapy_treatments                therapy_treatments[]
   therapy_receipts                  therapy_receipts[]
   therapy_receipt_allocations       therapy_receipt_allocations[]
+  therapy_receipt_consultation_allocations therapy_receipt_consultation_allocations[]
+  therapy_receipt_travel_allocations       therapy_receipt_travel_allocations[]
   therapy_job_expenses              therapy_job_expenses[]
   therapy_appointment_series        therapy_appointment_series[]
   therapy_appointments              therapy_appointments[]
