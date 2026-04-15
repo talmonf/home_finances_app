@@ -276,10 +276,84 @@ function parseDateFromCell(v: unknown): Date | null {
 function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
   const t = raw.trim();
   if (!t) return null;
-  const withDay = new Date(`1 ${t}`);
-  if (Number.isNaN(withDay.getTime())) return null;
-  const start = new Date(Date.UTC(withDay.getUTCFullYear(), withDay.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(withDay.getUTCFullYear(), withDay.getUTCMonth() + 1, 0));
+  const hebrewMonths: Record<string, number> = {
+    ינואר: 1,
+    פברואר: 2,
+    מרץ: 3,
+    אפריל: 4,
+    מאי: 5,
+    יוני: 6,
+    יולי: 7,
+    אוגוסט: 8,
+    ספטמבר: 9,
+    אוקטובר: 10,
+    נובמבר: 11,
+    דצמבר: 12,
+  };
+  const englishMonths: Record<string, number> = {
+    january: 1,
+    february: 2,
+    march: 3,
+    april: 4,
+    may: 5,
+    june: 6,
+    july: 7,
+    august: 8,
+    september: 9,
+    october: 10,
+    november: 11,
+    december: 12,
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    jun: 6,
+    jul: 7,
+    aug: 8,
+    sep: 9,
+    sept: 9,
+    oct: 10,
+    nov: 11,
+    dec: 12,
+  };
+  const compact = t
+    .replace(/[\u200E\u200F\u202A-\u202E]/g, "")
+    .replace(/[,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  let year: number | null = null;
+  let month: number | null = null;
+
+  // YYYY-MM or YYYY/MM
+  let m = compact.match(/^(\d{4})[/-](\d{1,2})$/);
+  if (m) {
+    year = Number(m[1]);
+    month = Number(m[2]);
+  }
+
+  // MM-YYYY or MM/YYYY
+  if (!year || !month) {
+    m = compact.match(/^(\d{1,2})[/-](\d{4})$/);
+    if (m) {
+      month = Number(m[1]);
+      year = Number(m[2]);
+    }
+  }
+
+  // Hebrew/English month name + year (e.g. "מרץ 2026", "March 2026")
+  if (!year || !month) {
+    m = compact.match(/^([^\d]+)\s+(\d{4})$/);
+    if (m) {
+      const rawMonthName = norm(m[1]).toLowerCase();
+      year = Number(m[2]);
+      month = hebrewMonths[rawMonthName] ?? englishMonths[rawMonthName] ?? null;
+    }
+  }
+
+  if (!year || !month || month < 1 || month > 12 || year < 1980 || year > 2100) return null;
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 0));
   return { start, end };
 }
 
