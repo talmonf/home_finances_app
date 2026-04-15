@@ -53,7 +53,7 @@ export function formatHouseholdDate(
   d: Date | null | undefined,
   format: HouseholdDateDisplayFormat,
 ): string {
-  if (!d) return "—";
+  if (!d || Number.isNaN(d.getTime())) return "—";
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth() + 1;
   const day = d.getUTCDate();
@@ -80,7 +80,7 @@ export function formatHouseholdDateUtcWithTime(
   d: Date | null | undefined,
   format: HouseholdDateDisplayFormat,
 ): string {
-  if (!d) return "—";
+  if (!d || Number.isNaN(d.getTime())) return "—";
   const datePart = formatHouseholdDate(d, format);
   const hh = pad2(d.getUTCHours());
   const mm = pad2(d.getUTCMinutes());
@@ -92,7 +92,7 @@ export function formatHouseholdDateUtcWithOptionalTime(
   d: Date | null | undefined,
   format: HouseholdDateDisplayFormat,
 ): string {
-  if (!d) return "—";
+  if (!d || Number.isNaN(d.getTime())) return "—";
   if (
     d.getUTCHours() === 0 &&
     d.getUTCMinutes() === 0 &&
@@ -102,6 +102,12 @@ export function formatHouseholdDateUtcWithOptionalTime(
     return formatHouseholdDate(d, format);
   }
   return formatHouseholdDateUtcWithTime(d, format);
+}
+
+/** `yyyy-mm-dd` for `<input type="date">` (UTC calendar day); empty if missing or invalid. */
+export function utcDateToHtmlDateInputValue(d: Date | null | undefined): string {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
 }
 
 export const HOUSEHOLD_DATE_FORMAT_LABELS: Record<HouseholdDateDisplayFormat, string> = {

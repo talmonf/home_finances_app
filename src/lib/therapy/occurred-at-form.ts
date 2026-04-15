@@ -35,6 +35,7 @@ export function parseTherapyOccurredAtFromForm(
 }
 
 export function defaultOccurredTimeInputValue(d: Date): string {
+  if (Number.isNaN(d.getTime())) return "";
   if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0) {
     return "";
   }

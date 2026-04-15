@@ -7,7 +7,11 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
+import {
+  formatHouseholdDate,
+  formatHouseholdDateUtcWithOptionalTime,
+  utcDateToHtmlDateInputValue,
+} from "@/lib/household-date-format";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -516,7 +520,9 @@ export default async function TreatmentsPage({
                       <td className="max-w-[14rem] px-3 py-2 text-slate-400">
                         {(() => {
                           const parts: string[] = [];
-                          if (t.payment_date) parts.push(formatHouseholdDate(t.payment_date, dateDisplayFormat));
+                          if (t.payment_date && !Number.isNaN(t.payment_date.getTime())) {
+                            parts.push(formatHouseholdDate(t.payment_date, dateDisplayFormat));
+                          }
                           if (t.payment_method === "bank_transfer") {
                             parts.push(tr.paymentBankTransfer);
                             if (t.payment_bank_account) {
@@ -577,7 +583,7 @@ export default async function TreatmentsPage({
                             <input
                               name="occurred_date"
                               type="date"
-                              defaultValue={t.occurred_at.toISOString().slice(0, 10)}
+                              defaultValue={utcDateToHtmlDateInputValue(t.occurred_at)}
                               required
                               className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                             />
@@ -615,7 +621,7 @@ export default async function TreatmentsPage({
                             <input
                               name="payment_date"
                               type="date"
-                              defaultValue={t.payment_date ? t.payment_date.toISOString().slice(0, 10) : ""}
+                              defaultValue={utcDateToHtmlDateInputValue(t.payment_date)}
                               className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                             />
                             <label className="block text-[10px] text-slate-500">{tr.paymentMethod}</label>
