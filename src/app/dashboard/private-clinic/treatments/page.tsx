@@ -19,8 +19,12 @@ import { privateClinicCommon, privateClinicTreatments, treatmentPaymentStatusLab
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
-import { TherapyTreatmentsImportDialog } from "@/components/therapy-treatments-import-dialog";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
+import {
+  jobWhereInPrivateClinicModule,
+  jobsWhereActiveForPrivateClinicPickers,
+  formatPrivateClinicJobLabel,
+} from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +42,7 @@ export default async function TreatmentsPage({
 }: {
   searchParams?: Promise<Search & { created?: string; updated?: string; error?: string }>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
@@ -54,6 +58,12 @@ export default async function TreatmentsPage({
   const clientFilter = sp.client || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
 
   const [linkedJobRows, linkedProgramRows] = await Promise.all([
     prisma.therapy_treatments.findMany({
@@ -77,6 +87,7 @@ export default async function TreatmentsPage({
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({
         householdId,
+        familyMemberId,
         includeJobIds: linkedJobIds,
       }),
       orderBy: { start_date: "desc" },
@@ -85,7 +96,12 @@ export default async function TreatmentsPage({
       where: {
         household_id: householdId,
         OR: [
-          { job: jobWhereInPrivateClinicModule },
+          {
+            job: {
+              ...jobWhereInPrivateClinicModule,
+              ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+            },
+          },
           ...(linkedProgramIds.length ? [{ id: { in: linkedProgramIds } }] : []),
         ],
       },
@@ -143,7 +159,10 @@ export default async function TreatmentsPage({
     prisma.therapy_visit_type_default_amounts.findMany({
       where: {
         household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
+        job: {
+          ...jobWhereInPrivateClinicModule,
+          ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+        },
       },
       select: {
         job_id: true,
@@ -240,7 +259,7 @@ export default async function TreatmentsPage({
               <option value="">{c.any}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.job_title}
+                  {formatPrivateClinicJobLabel(j)}
                 </option>
               ))}
             </select>
@@ -255,7 +274,7 @@ export default async function TreatmentsPage({
               <option value="">{c.anyF}</option>
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.job.job_title} — {p.name}
+                  {formatPrivateClinicJobLabel(p.job)} — {p.name}
                 </option>
               ))}
             </select>
@@ -306,40 +325,9 @@ export default async function TreatmentsPage({
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium text-slate-200">{tr.logTreatment}</h2>
-          <TherapyTreatmentsImportDialog
-            jobs={jobs.map((j) => ({ id: j.id, title: j.job_title }))}
-            programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, name: p.name }))}
-            labels={{
-              importBtn: tr.importBtn,
-              title: tr.importTitle,
-              instructions: tr.importInstructions,
-              profile: tr.importProfile,
-              profilePrivate: tr.importProfilePrivate,
-              profileOrg: tr.importProfileOrg,
-              job: c.job,
-              program: c.program,
-              autoProgramHint: tr.importAutoProgramHint,
-              chooseFile: tr.importChooseFile,
-              sheet: tr.importSheet,
-              missingVisitType: tr.importMissingVisitType,
-              noFallback: tr.importNoFallback,
-              visitClinic: tr.importVisitClinic,
-              visitHome: tr.importVisitHome,
-              visitPhone: tr.importVisitPhone,
-              visitVideo: tr.importVisitVideo,
-              analyze: tr.importAnalyze,
-              confirm: tr.importConfirm,
-              cancel: c.cancel,
-              summaryTitle: tr.importSummaryTitle,
-              newClients: tr.importNewClients,
-              treatments: tr.importTreatments,
-              receipts: tr.importReceipts,
-              programsToCreate: tr.importProgramsToCreate,
-              warningTitle: tr.importWarnings,
-              errorsTitle: tr.importErrors,
-              conflictsTitle: tr.importConflicts,
-              applyNote: tr.importApplyNote,
-            }}
+          <OpenPrivateClinicTreatmentsImportButton
+            label={tr.importBtn}
+            importPath="/dashboard/private-clinic/treatments/import"
           />
         </div>
         <form
@@ -363,12 +351,12 @@ export default async function TreatmentsPage({
           </div>
           <TherapyTreatmentDefaultAmountFields
             uiLanguage={uiLanguage}
-            jobs={jobs.map((j) => ({ id: j.id, job_title: j.job_title }))}
+            jobs={jobs.map((j) => ({ id: j.id, job_title: formatPrivateClinicJobLabel(j) }))}
             programs={programs.map((p) => ({
               id: p.id,
               job_id: p.job_id,
               name: p.name,
-              job: { job_title: p.job.job_title },
+              job: { job_title: formatPrivateClinicJobLabel(p.job) },
             }))}
             visitDefaults={visitDefaults}
             labels={{
@@ -500,7 +488,7 @@ export default async function TreatmentsPage({
                       <td className="px-3 py-2 text-slate-100">
                         {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)}
                       </td>
-                      <td className="px-3 py-2 text-slate-400">{t.job.job_title}</td>
+                      <td className="px-3 py-2 text-slate-400">{formatPrivateClinicJobLabel(t.job)}</td>
                       <td className="px-3 py-2 text-slate-200">
                         {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency)}
                       </td>
@@ -556,7 +544,7 @@ export default async function TreatmentsPage({
                             >
                               {jobs.map((j) => (
                                 <option key={j.id} value={j.id}>
-                                  {j.job_title}
+                                  {formatPrivateClinicJobLabel(j)}
                                 </option>
                               ))}
                             </select>
@@ -568,7 +556,7 @@ export default async function TreatmentsPage({
                             >
                               {programs.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                  {p.job.job_title} — {p.name}
+                                  {formatPrivateClinicJobLabel(p.job)} — {p.name}
                                 </option>
                               ))}
                             </select>

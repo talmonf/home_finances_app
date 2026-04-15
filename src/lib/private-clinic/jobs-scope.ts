@@ -26,3 +26,10 @@ export function jobsWhereActiveForPrivateClinicPickers({
 
 /** Use as `job: jobWhereInPrivateClinicModule` on therapy-related queries. */
 export const jobWhereInPrivateClinicModule = { is_private_clinic: true } satisfies Prisma.jobsWhereInput;
+
+export function formatPrivateClinicJobLabel(job: {
+  job_title: string;
+  employer_name: string | null;
+}): string {
+  return job.employer_name ? `${job.job_title} · ${job.employer_name}` : job.job_title;
+}

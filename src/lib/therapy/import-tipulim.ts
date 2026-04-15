@@ -2,7 +2,40 @@ import { prisma } from "@/lib/auth";
 import type { PrismaClient } from "@/generated/prisma/client";
 import * as XLSX from "xlsx";
 
-type ImportProfile = "tipulim_private" | "tipulim_org_monthly";
+export type TipulimImportProfile = "tipulim_private" | "tipulim_org_monthly";
+
+const TIPULIM_PRIVATE_HEADERS = [
+  "קבלה",
+  "תאריך תשלום",
+  "שולם",
+  "סכום",
+  "מטופל",
+  "תאריך",
+  "סוג ביקור",
+  "הערות",
+  "דרך תשלום",
+] as const;
+
+const TIPULIM_ORG_MONTHLY_HEADERS = [
+  "תכנית",
+  "סוג ביקור",
+  "מטופל",
+  "סכום",
+  "תאריך",
+  "קבלה",
+  "תאריך תשלום",
+  "דרך תשלום",
+  "הערות",
+] as const;
+
+/** UTF-8 CSV with BOM: header row only, matching the parser column names. */
+export function tipulimImportExampleCsv(profile: TipulimImportProfile): string {
+  const headers =
+    profile === "tipulim_org_monthly" ? TIPULIM_ORG_MONTHLY_HEADERS : TIPULIM_PRIVATE_HEADERS;
+  return `\uFEFF${headers.join(",")}\n`;
+}
+
+type ImportProfile = TipulimImportProfile;
 
 type Row = Record<string, unknown>;
 

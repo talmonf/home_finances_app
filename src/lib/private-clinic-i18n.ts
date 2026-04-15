@@ -381,6 +381,8 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "שויך לקבלה/ות למטה. ניתן לערוך שיוך מעמוד הקבלה.",
     ),
     importBtn: p("Import treatments", "ייבוא טיפולים"),
+    importBackToTreatments: p("Back to treatments", "חזרה לטיפולים"),
+    importDownloadExample: p("Download example CSV (headers only)", "הורדת קובץ לדוגמה (כותרות בלבד)"),
     importTitle: p("Import treatments workbook", "ייבוא קובץ טיפולים"),
     importInstructions: p(
       "Upload a workbook, review the preview, then confirm to import. You can cancel, fix the file, and analyze again.",
