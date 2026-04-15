@@ -185,6 +185,8 @@ export function privateClinicCommon(lang: UiLanguage) {
       "משמש בעת רישום טיפול. ברירות מחדל לתכנית גוברות על ברירות המחדל של המשרה.",
     ),
     saveDefaults: p("Save defaults", "שמירת ברירות מחדל"),
+    filteredByReceipt: (receiptNumber: string) =>
+      p(`Filtered by receipt #${receiptNumber}`, `סינון לפי קבלה #${receiptNumber}`),
   };
 }
 

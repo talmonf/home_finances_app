@@ -219,7 +219,7 @@ export default async function ConsultationsPage({
         <h2 className="text-lg font-medium text-slate-200">{co.filters}</h2>
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
-            Filtered by receipt #{filteredReceipt.receipt_number}{" "}
+            {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <a href="/dashboard/private-clinic/consultations" className="text-sky-400 hover:underline">
               {c.cancel}
             </a>

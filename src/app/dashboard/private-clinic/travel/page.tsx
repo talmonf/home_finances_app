@@ -224,7 +224,7 @@ export default async function TravelPage({
         <h2 className="text-lg font-medium text-slate-200">{tv.filters}</h2>
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
-            Filtered by receipt #{filteredReceipt.receipt_number}{" "}
+            {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <a href="/dashboard/private-clinic/travel" className="text-sky-400 hover:underline">
               {c.cancel}
             </a>
