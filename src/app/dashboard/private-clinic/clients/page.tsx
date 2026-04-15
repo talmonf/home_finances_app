@@ -125,7 +125,7 @@ function SortHeader({
   const href = clientsListHref({ ...filters, sort: column, dir: nextDir });
   const active = sort === column;
   return (
-    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
       <Link
         href={href}
         className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300"
@@ -433,7 +433,7 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
-                <th scope="col" className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {cl.colActions}
                 </th>
               </tr>
