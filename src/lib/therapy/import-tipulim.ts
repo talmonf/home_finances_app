@@ -51,6 +51,7 @@ type ClientRef =
 
 type PendingTreatment = {
   key: string;
+  rowNumber: number;
   clientRef: ClientRef;
   programName: string | null;
   occurredAt: Date;
@@ -175,19 +176,25 @@ function normalizeDigits(v: string): string {
 }
 
 function receiptMatchKey(raw: unknown): string {
+  return receiptMatchKeys(raw)[0] ?? "";
+}
+
+function receiptMatchKeys(raw: unknown): string[] {
   const base = String(raw ?? "")
     .replace(/\u00A0/g, " ")
+    .replace(/[\u200E\u200F\u202A-\u202E]/g, "")
     .trim();
-  if (!base) return "";
-  const text = base
-    .replace(/^'+/, "")
-    .replace(/^#+/, "")
-    .replace(/\s+/g, "");
-  if (!text) return "";
-  const withoutExcelFraction = text.replace(/\.0+$/, "");
-  const digits = normalizeDigits(withoutExcelFraction);
-  if (digits) return digits.replace(/^0+/, "") || "0";
-  return norm(text).toLowerCase();
+  if (!base) return [];
+  const out = new Set<string>();
+  out.add(norm(base).toLowerCase());
+  const noPrefix = base.replace(/^'+/, "").replace(/^#+/, "");
+  const tight = noPrefix.replace(/\s+/g, "");
+  if (tight) out.add(tight.toLowerCase());
+  const noExcelFraction = tight.replace(/\.0+$/, "");
+  if (noExcelFraction) out.add(noExcelFraction.toLowerCase());
+  const digits = normalizeDigits(noExcelFraction);
+  if (digits) out.add(digits.replace(/^0+/, "") || "0");
+  return Array.from(out).filter((k) => k.length > 0);
 }
 
 function parseMoney(raw: string): string | null {
@@ -263,6 +270,10 @@ function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
 }
 
 function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function utcDayKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
@@ -549,6 +560,7 @@ async function analyzePrivateProfile(
       if (!scratch.pendingTreatments.has(tKey)) {
         scratch.pendingTreatments.set(tKey, {
           key: tKey,
+          rowNumber,
           clientRef,
           programName: null,
           occurredAt,
@@ -561,10 +573,13 @@ async function analyzePrivateProfile(
           paymentDigitalMethodId: null,
         });
       }
-      if (receiptKey) {
-        const arr = pendingAllocByReceipt.get(receiptKey) ?? [];
-        arr.push({ amount, treatmentKey: tKey });
-        pendingAllocByReceipt.set(receiptKey, arr);
+      const receiptKeys = receiptMatchKeys(row["קבלה"]);
+      if (receiptKeys.length > 0) {
+        for (const rk of receiptKeys) {
+          const arr = pendingAllocByReceipt.get(rk) ?? [];
+          arr.push({ amount, treatmentKey: tKey });
+          pendingAllocByReceipt.set(rk, arr);
+        }
       }
       const hasPaymentDateCell =
         (paymentDateRaw && paymentDateRaw.length > 0) ||
@@ -602,7 +617,6 @@ async function analyzePrivateProfile(
     const row = rows[idx]!;
     const rowNumber = idx + 2;
     const receiptNum = s(row["קבלה"]);
-    const receiptKey = receiptMatchKey(row["קבלה"]);
     const paidRaw = s(row["שולם"]);
     const amountRaw = s(row["סכום"]);
     const amount = parseMoney(amountRaw);
@@ -630,7 +644,31 @@ async function analyzePrivateProfile(
     const bankId = resolvedIds.bankId;
     const digitalId = resolvedIds.digitalId;
 
-    const allocations = pendingAllocByReceipt.get(receiptKey) ?? [];
+    const allocationKeys = receiptMatchKeys(row["קבלה"]);
+    const allocationsSeen = new Set<string>();
+    const allocations: PendingAllocation[] = [];
+    for (const k of allocationKeys) {
+      const arr = pendingAllocByReceipt.get(k) ?? [];
+      for (const a of arr) {
+        const uniq = `${a.treatmentKey}|${a.amount}`;
+        if (allocationsSeen.has(uniq)) continue;
+        allocationsSeen.add(uniq);
+        allocations.push(a);
+      }
+    }
+    if (allocations.length === 0) {
+      const issueDay = utcDayKey(issuedAt);
+      const inferred = Array.from(scratch.pendingTreatments.values())
+        .filter((t) => t.paymentDate && utcDayKey(t.paymentDate) === issueDay)
+        .sort((a, b) => a.rowNumber - b.rowNumber)
+        .map((t) => ({ amount: t.amount, treatmentKey: t.key }));
+      if (inferred.length > 0) {
+        const inferredSum = inferred.reduce((sum, a) => sum + Number(a.amount), 0);
+        if (Math.abs(inferredSum - Number(totalAmount)) <= 0.01) {
+          allocations.push(...inferred);
+        }
+      }
+    }
     const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
     if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
       scratch.errors.push(
@@ -827,6 +865,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       const key = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|${vt}`;
       scratch.pendingTreatments.set(key, {
         key,
+        rowNumber,
         clientRef,
         programName: programName || null,
         occurredAt,
