@@ -30,6 +30,9 @@ export type ReceiptListRowDto = {
   covered_period_start_iso: string | null;
   covered_period_end_iso: string | null;
   linked_treatments_count: number;
+  linked_treatment_allocations_count: number;
+  linked_consultation_allocations_count: number;
+  linked_travel_allocations_count: number;
   client_id: string | null;
   client_first_name: string | null;
   client_last_name: string | null;
@@ -168,6 +171,9 @@ export async function loadReceiptsCursorPage(params: {
         currency: rec.currency,
         covered_period_start_iso: rec.covered_period_start ? rec.covered_period_start.toISOString() : null,
         covered_period_end_iso: rec.covered_period_end ? rec.covered_period_end.toISOString() : null,
+        linked_treatment_allocations_count: rec._count.allocations,
+        linked_consultation_allocations_count: rec._count.consultation_allocations,
+        linked_travel_allocations_count: rec._count.travel_allocations,
         linked_treatments_count:
           rec._count.allocations + rec._count.consultation_allocations + rec._count.travel_allocations,
         client_id: firstClient?.id ?? null,

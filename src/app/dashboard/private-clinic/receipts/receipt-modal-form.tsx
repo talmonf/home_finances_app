@@ -1,4 +1,5 @@
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import type { ReactNode } from "react";
 
 type JobOption = { id: string; label: string };
 
@@ -54,6 +55,7 @@ export function ReceiptModalForm({
   jobs,
   labels,
   initial,
+  extraContent,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -64,6 +66,7 @@ export function ReceiptModalForm({
   jobs: JobOption[];
   labels: Labels;
   initial?: ReceiptModalInitial;
+  extraContent?: ReactNode;
 }) {
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
@@ -216,6 +219,7 @@ export function ReceiptModalForm({
               {labels.cancel}
             </a>
           </div>
+          {extraContent ? <div className="md:col-span-2">{extraContent}</div> : null}
         </form>
       </div>
     </div>

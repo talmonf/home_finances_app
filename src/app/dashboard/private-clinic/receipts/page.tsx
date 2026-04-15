@@ -170,6 +170,15 @@ export default async function ReceiptsPage({
             household_id: householdId,
             job: jobWhereInPrivateClinicModule,
           },
+          include: {
+            _count: {
+              select: {
+                allocations: true,
+                consultation_allocations: true,
+                travel_allocations: true,
+              },
+            },
+          },
         })
       : null;
 
@@ -324,6 +333,7 @@ export default async function ReceiptsPage({
               loadingMore: r.loadingMore,
               noMoreRows: r.noMoreRows,
               loadMore: r.loadMore,
+              recipientOrg: r.recipientOrg,
             }}
           />
         )}
@@ -414,6 +424,15 @@ export default async function ReceiptsPage({
             linked_transaction_id: editReceipt.linked_transaction_id ?? "",
             notes: editReceipt.notes ?? "",
           }}
+          extraContent={
+            <div className="rounded border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+              <p className="font-medium text-slate-200">{r.tableTreatmentsCount}</p>
+              <p>
+                T: {editReceipt._count.allocations} | C: {editReceipt._count.consultation_allocations} | TR:{" "}
+                {editReceipt._count.travel_allocations}
+              </p>
+            </div>
+          }
         />
       ) : null}
     </div>

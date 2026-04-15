@@ -1163,7 +1163,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       totalAmount: payRow.total,
       notes: payRow.note,
       paymentMethod: payment.receiptMethod,
-      recipientType: ctx.isPrivateClinic ? "client" : "organization",
+      recipientType: "organization",
       coveredPeriodStart:
         coveredMonth?.start ??
         new Date(Date.UTC(payRow.issuedAt.getUTCFullYear(), payRow.issuedAt.getUTCMonth(), 1)),

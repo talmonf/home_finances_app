@@ -20,6 +20,7 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
+  recipientOrg: string;
 };
 
 type ColumnSortKey = "number" | "date" | "client" | "job" | "amount" | "coverage" | "treatments" | "edit";
@@ -205,7 +206,7 @@ export function ReceiptsListClient({
                       {formatClientNameForDisplay(obfuscate, rec.client_first_name, rec.client_last_name)}
                     </Link>
                   ) : (
-                    "—"
+                    labels.recipientOrg
                   )}
                 </td>
                 <td className="px-3 py-2 text-slate-400">{rec.job_label}</td>
@@ -217,7 +218,13 @@ export function ReceiptsListClient({
                     ? `${rec.covered_period_start_iso.slice(0, 10)} - ${rec.covered_period_end_iso.slice(0, 10)}`
                     : "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-300">{rec.linked_treatments_count}</td>
+                <td className="px-3 py-2 text-slate-300">
+                  <div>{rec.linked_treatments_count}</div>
+                  <div className="text-xs text-slate-500">
+                    T:{rec.linked_treatment_allocations_count} C:{rec.linked_consultation_allocations_count} TR:
+                    {rec.linked_travel_allocations_count}
+                  </div>
+                </td>
                 <td className="px-3 py-2 text-xs">
                   <Link href={`${listBaseHref}&modal=edit&edit_id=${encodeURIComponent(rec.id)}`} className="text-sky-400">
                     {labels.edit}
