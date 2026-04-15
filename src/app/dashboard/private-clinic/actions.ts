@@ -34,6 +34,13 @@ const CLIENT_STATUS_OPTIONS = new Set([
   "filed_worsening",
 ]);
 
+function redirectTherapyClientFormError(formData: FormData, fallbackPath: string, errorKey: string): never {
+  let path = (formData.get("redirect_on_error") as string)?.trim() || fallbackPath;
+  if (!path.startsWith(`${BASE}/clients`)) path = fallbackPath;
+  const sep = path.includes("?") ? "&" : "?";
+  redirect(`${path}${sep}error=${encodeURIComponent(errorKey)}`);
+}
+
 function parseVisitCount(raw: string | null | undefined): number | null {
   const n = Number((raw ?? "").trim());
   if (!Number.isFinite(n)) return null;
@@ -831,19 +838,22 @@ export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
 export async function createTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackErrorPath = `${BASE}/clients/new`;
   const first_name = (formData.get("first_name") as string)?.trim() || "";
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
   if (!first_name || !default_job_id) {
-    redirect(`${BASE}/clients?error=missing`);
+    redirectTherapyClientFormError(formData, fallbackErrorPath, "missing");
   }
   if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, default_job_id))) {
-    redirect(`${BASE}/clients?error=job`);
+    redirectTherapyClientFormError(formData, fallbackErrorPath, "job");
   }
   let default_program_id: string | null = null;
   if (default_program_id_raw) {
     const prog = await assertProgram(householdId, default_program_id_raw);
-    if (!prog || prog.job_id !== default_job_id) redirect(`${BASE}/clients?error=program`);
+    if (!prog || prog.job_id !== default_job_id) {
+      redirectTherapyClientFormError(formData, fallbackErrorPath, "program");
+    }
     default_program_id = prog.id;
   }
 
@@ -901,6 +911,7 @@ export async function createTherapyClient(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/clients/new`);
   revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?created=1`);
 }
@@ -909,18 +920,24 @@ export async function updateTherapyClient(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!(await assertClient(householdId, id))) redirect(`${BASE}/clients?error=notfound`);
+  if (!(await assertClient(householdId, id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
 
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
-  if (!default_job_id) redirect(`${BASE}/clients?error=missing`);
+  if (!default_job_id) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "missing");
+  }
   if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, default_job_id))) {
-    redirect(`${BASE}/clients?error=job`);
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "job");
   }
   let default_program_id: string | null = null;
   if (default_program_id_raw) {
     const prog = await assertProgram(householdId, default_program_id_raw);
-    if (!prog || prog.job_id !== default_job_id) redirect(`${BASE}/clients?error=program`);
+    if (!prog || prog.job_id !== default_job_id) {
+      redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "program");
+    }
     default_program_id = prog.id;
   }
 
@@ -977,6 +994,7 @@ export async function updateTherapyClient(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/clients/${id}/edit`);
   revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?updated=1`);
 }
