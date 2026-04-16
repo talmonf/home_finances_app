@@ -1,10 +1,7 @@
- "use client";
-
-import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; job_id: string; label: string };
@@ -118,11 +115,6 @@ export function TreatmentModalForm({
   extraContent?: ReactNode;
 }) {
   const visitOptions = ["clinic", "home", "phone", "video"] as const;
-  const [selectedClientId, setSelectedClientId] = useState(initial?.client_id ?? clients[0]?.id ?? "");
-  const selectedClientDefaults = useMemo(
-    () => clients.find((cl) => cl.id === selectedClientId) ?? null,
-    [clients, selectedClientId],
-  );
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
       <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
@@ -137,63 +129,24 @@ export function TreatmentModalForm({
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
           {mode === "edit" && initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
 
-          {mode === "create" ? (
-            <div>
-              <label className="block text-xs text-slate-400">{labels.c.client}</label>
-              <select
-                name="client_id"
-                required
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">{labels.c.select}</option>
-                {clients.map((cl) => (
-                  <option key={cl.id} value={cl.id}>
-                    {cl.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs text-slate-400">{labels.c.client}</label>
-              <div className="mt-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                {initial?.client_label || "—"}
-              </div>
-            </div>
-          )}
-          <TherapyTreatmentDefaultAmountFields
-            key={`${mode}-${selectedClientDefaults?.id ?? "none"}`}
+          <TreatmentClientDefaultsSection
+            mode={mode}
             uiLanguage={uiLanguage}
-            jobs={jobs.map((j) => ({ id: j.id, job_title: j.label }))}
-            programs={programs.map((p) => ({
-              id: p.id,
-              job_id: p.job_id,
-              name: p.label,
-              job: { job_title: jobs.find((j) => j.id === p.job_id)?.label ?? "" },
-            }))}
-            visitDefaults={visitDefaults}
             clients={clients}
-            defaultClientId={selectedClientDefaults?.id ?? ""}
+            jobs={jobs}
+            programs={programs}
+            visitDefaults={visitDefaults}
+            initial={initial}
             labels={{
+              client: labels.c.client,
               job: labels.c.job,
               program: labels.c.program,
               date: labels.c.date,
-              timeOptional: labels.tr.occurredTimeOptional,
+              occurredTimeOptional: labels.tr.occurredTimeOptional,
               amount: labels.c.amount,
               currency: labels.c.currency,
               visitType: labels.tr.visitType,
               select: labels.c.select,
-            }}
-            defaultValues={{
-              job_id: initial?.job_id ?? "",
-              program_id: initial?.program_id ?? "",
-              occurred_date: initial?.occurred_date ?? "",
-              occurred_time: initial?.occurred_time ?? "",
-              amount: initial?.amount ?? "",
-              currency: initial?.currency ?? "ILS",
-              visit_type: initial?.visit_type ?? "clinic",
             }}
           />
           <div className="md:col-span-2">
