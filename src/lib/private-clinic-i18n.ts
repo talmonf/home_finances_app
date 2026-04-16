@@ -403,7 +403,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "שויך לקבלה/ות למטה. ניתן לערוך שיוך מעמוד הקבלה.",
     ),
     createReceiptForSelected: p("Create receipt for selected", "יצירת קבלה לנבחרים"),
-    unlinkFromReceipt: p("Unlink from receipt", "ניתוק מקבלה"),
+    unlinkFromReceipt: p("Unlink", "נתק"),
     inlineReceiptNumber: p("Receipt number (optional)", "מספר קבלה (אופציונלי)"),
     inlineReceiptDate: p("Receipt payment date", "תאריך תשלום בקבלה"),
     importBtn: p("Import treatments", "ייבוא טיפולים"),

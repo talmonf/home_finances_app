@@ -262,14 +262,14 @@ export function TreatmentsListClient({
                     {t.receipt_allocations.length > 0 ? (
                       <ul className="list-none space-y-1">
                         {t.receipt_allocations.map((a) => (
-                          <li key={a.id}>
+                          <li key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <Link href={`/dashboard/private-clinic/receipts/${a.receipt_id}`} className="text-sky-400 hover:underline">
                               #{a.receipt_number}
                             </Link>
-                            <form action={deleteReceiptAllocation}>
+                            <form action={deleteReceiptAllocation} className="m-0">
                               <input type="hidden" name="receipt_id" value={a.receipt_id} />
                               <input type="hidden" name="treatment_id" value={t.id} />
-                              <button type="submit" className="ml-2 text-[11px] text-rose-400 hover:underline">
+                              <button type="submit" className="text-[11px] text-rose-400 hover:underline">
                                 {labels.unlinkLabel}
                               </button>
                             </form>
