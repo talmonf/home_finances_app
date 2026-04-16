@@ -216,7 +216,7 @@ model bank_accounts {
 model credit_cards {
   id                         String   @id @default(uuid())
   household_id               String
-  family_member_id           String
+  family_member_id           String?
   card_name                  String
   scheme                     CardScheme
   issuer_name                String
@@ -237,7 +237,7 @@ model credit_cards {
   updated_at                 DateTime @updatedAt
 
   household     households    @relation(fields: [household_id], references: [id])
-  family_member family_members @relation(fields: [family_member_id], references: [id])
+  family_member family_members? @relation(fields: [family_member_id], references: [id])
   bank_account  bank_accounts? @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
   significant_purchases significant_purchases[]

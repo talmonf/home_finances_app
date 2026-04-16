@@ -84,6 +84,13 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
               >
                 System useful links
               </Link>
+              <span className="text-slate-500"> · </span>
+              <Link
+                href="/admin/import-audits"
+                className="font-medium text-sky-400 hover:text-sky-300"
+              >
+                Import audit log
+              </Link>
               <span className="text-slate-500"> — </span>
               <span className="text-slate-400">
                 Per-section links for all households (shown when each section is enabled).

@@ -468,6 +468,18 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importCreatedPrograms: p("programs", "תוכניות"),
     importDetailedMessagePrefix: p("Import completed successfully in", "הייבוא הושלם בהצלחה בתוך"),
     importDetailedMessageCreated: p("Created:", "נוצרו:"),
+    importWorkingAnalyze: p("Analyzing file…", "מנתח קובץ…"),
+    importWorkingCommit: p("Import in progress…", "הייבוא מתבצע…"),
+    importWorkingElapsed: p("Elapsed", "זמן שחלף"),
+    importWorkingProgress: p("Progress (estimate)", "התקדמות (הערכה)"),
+    importWorkingLeaveWarning: p(
+      "Import is still running. Leaving this page may interrupt your request.",
+      "הייבוא עדיין רץ. מעבר עמוד עלול להפריע לבקשה.",
+    ),
+    importWorkingDoNotNavigate: p(
+      "Please do not close the browser or navigate away until import completes.",
+      "נא לא לסגור את הדפדפן או לעבור עמוד עד שהייבוא יסתיים.",
+    ),
     importDebugUnlinkedReceipts: p("Unlinked receipts", "קבלות ללא שיוך"),
     importDebugOrgPaymentRows: p("Org payment diagnostics", "דיאגנוסטיקת תשלומי ארגון"),
     importDebugCommitLinkTitle: p("Commit link diagnostics", "דיאגנוסטיקת קישור בשמירה"),

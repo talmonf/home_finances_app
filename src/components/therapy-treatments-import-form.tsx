@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TipulimImportProfile } from "@/lib/therapy/import-tipulim";
 import { FileUploadField } from "@/components/file-upload-field";
 
@@ -152,6 +152,12 @@ export function TherapyTreatmentsImportForm({
     importCreatedPrograms: string;
     importDetailedMessagePrefix: string;
     importDetailedMessageCreated: string;
+    importWorkingAnalyze: string;
+    importWorkingCommit: string;
+    importWorkingElapsed: string;
+    importWorkingProgress: string;
+    importWorkingLeaveWarning: string;
+    importWorkingDoNotNavigate: string;
     importDebugUnlinkedReceipts: string;
     importDebugOrgPaymentRows: string;
     importDebugCommitLinkTitle: string;
@@ -165,6 +171,9 @@ export function TherapyTreatmentsImportForm({
   const [programId, setProgramId] = useState("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyMode, setBusyMode] = useState<"preview" | "commit" | null>(null);
+  const [busyStartedAtMs, setBusyStartedAtMs] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
   const [clientResolutions, setClientResolutions] = useState<Record<string, string>>({});
   const [sheetName, setSheetName] = useState("");
@@ -187,9 +196,40 @@ export function TherapyTreatmentsImportForm({
 
   const exampleHref = `/api/private-clinic/import/tipulim/example?profile=${encodeURIComponent(profile)}`;
 
+  useEffect(() => {
+    if (!busy || !busyStartedAtMs) {
+      setElapsedMs(0);
+      return;
+    }
+    setElapsedMs(Math.max(0, Date.now() - busyStartedAtMs));
+    const timer = window.setInterval(() => {
+      setElapsedMs(Math.max(0, Date.now() - busyStartedAtMs));
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [busy, busyStartedAtMs]);
+
+  useEffect(() => {
+    if (!busy) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = labels.importWorkingLeaveWarning;
+      return labels.importWorkingLeaveWarning;
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [busy, labels.importWorkingLeaveWarning]);
+
+  const progressPercent = useMemo(() => {
+    if (!busy) return 0;
+    const expectedMs = busyMode === "commit" ? 180_000 : 45_000;
+    return Math.max(3, Math.min(95, Math.round((elapsedMs / expectedMs) * 100)));
+  }, [busy, busyMode, elapsedMs]);
+
   async function post(mode: "preview" | "commit") {
     if (!file || !jobId) return;
     setBusy(true);
+    setBusyMode(mode);
+    setBusyStartedAtMs(Date.now());
     setMsg(null);
     const fd = new FormData();
     fd.append("file", file);
@@ -246,6 +286,8 @@ export function TherapyTreatmentsImportForm({
       setMsg(String(e));
     } finally {
       setBusy(false);
+      setBusyMode(null);
+      setBusyStartedAtMs(null);
     }
   }
 
@@ -408,6 +450,26 @@ export function TherapyTreatmentsImportForm({
           {labels.clearPreview}
         </button>
       </div>
+      {busy && (
+        <div className="rounded border border-sky-700 bg-sky-950/30 p-3 text-xs text-sky-100">
+          <p className="font-medium">{busyMode === "commit" ? labels.importWorkingCommit : labels.importWorkingAnalyze}</p>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-slate-800">
+            <div
+              className="h-full rounded bg-sky-400 transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+              aria-label={labels.importWorkingProgress}
+            />
+          </div>
+          <p className="mt-2">
+            {labels.importWorkingProgress}: {progressPercent}% · {labels.importWorkingElapsed}: {formatDuration(elapsedMs)}
+          </p>
+          <p className="mt-1 text-[11px] text-sky-200">{labels.importWorkingDoNotNavigate}</p>
+        </div>
+      )}
       {msg && <p className="text-sm text-slate-200">{msg}</p>}
       {preview && (
         <div className="space-y-3 rounded border border-slate-700 bg-slate-950/60 p-3">

@@ -52,36 +52,6 @@ export default async function HouseholdUsersPage({
     orderBy: { full_name: "asc" },
     select: { id: true, full_name: true },
   });
-  const importAudits = await prisma.therapy_import_audits.findMany({
-    where: { household_id: householdId },
-    orderBy: { created_at: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      user_id: true,
-      status: true,
-      profile: true,
-      job_id: true,
-      selected_program_id: true,
-      sheet_name: true,
-      started_at: true,
-      completed_at: true,
-      duration_ms: true,
-      created_clients: true,
-      created_treatments: true,
-      created_receipts: true,
-      created_allocations: true,
-      created_consultations: true,
-      created_travel: true,
-      created_programs: true,
-      created_consultation_allocations: true,
-      created_travel_allocations: true,
-      blocking_errors_count: true,
-      warnings_count: true,
-      failure_message: true,
-      created_at: true,
-    },
-  });
 
   async function createUser(formData: FormData) {
     "use server";
@@ -272,70 +242,6 @@ export default async function HouseholdUsersPage({
             </div>
           )}
         </header>
-
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-200">Therapy import audit (non-PII)</h2>
-          <p className="mb-3 text-xs text-slate-500">
-            For system administration only. This table intentionally excludes client names, receipt numbers, notes, and
-            file contents.
-          </p>
-          {importAudits.length === 0 ? (
-            <p className="text-sm text-slate-500">No import attempts logged yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs text-slate-200">
-                <thead>
-                  <tr className="border-b border-slate-700 uppercase text-slate-400">
-                    <th className="py-2 pr-3">Started</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Duration</th>
-                    <th className="py-2 pr-3">User ID</th>
-                    <th className="py-2 pr-3">Profile</th>
-                    <th className="py-2 pr-3">Created totals</th>
-                    <th className="py-2 pr-3">Warnings/Blocking</th>
-                    <th className="py-2 pr-3">Failure</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {importAudits.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-800 align-top last:border-0">
-                      <td className="py-2 pr-3 text-slate-300">{new Date(a.started_at).toLocaleString("en-CA")}</td>
-                      <td className="py-2 pr-3">
-                        <span
-                          className={`rounded-full px-2 py-0.5 ${
-                            a.status === "successful"
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : a.status === "failed"
-                                ? "bg-rose-500/20 text-rose-300"
-                                : "bg-amber-500/20 text-amber-200"
-                          }`}
-                        >
-                          {a.status}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-3 text-slate-300">
-                        {typeof a.duration_ms === "number" ? `${Math.round(a.duration_ms / 1000)}s` : "—"}
-                      </td>
-                      <td className="py-2 pr-3 font-mono text-[11px] text-slate-400">{a.user_id}</td>
-                      <td className="py-2 pr-3 text-slate-300">{a.profile}</td>
-                      <td className="py-2 pr-3 text-slate-300">
-                        C={a.created_clients}, T={a.created_treatments}, R={a.created_receipts}, A=
-                        {a.created_allocations}, Cons={a.created_consultations}, Trv={a.created_travel}, Prog=
-                        {a.created_programs}, CA={a.created_consultation_allocations}, TA={a.created_travel_allocations}
-                      </td>
-                      <td className="py-2 pr-3 text-slate-300">
-                        {a.warnings_count}/{a.blocking_errors_count}
-                      </td>
-                      <td className="max-w-xs truncate py-2 pr-3 text-slate-400" title={a.failure_message ?? ""}>
-                        {a.failure_message ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">Family members</h2>
