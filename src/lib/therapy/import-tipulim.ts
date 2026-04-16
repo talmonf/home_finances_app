@@ -1478,6 +1478,23 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
 
     const treatmentIdByKey = new Map<string, string>();
     const preferredProgramByClient = new Map<string, { programId: string; occurredAtMs: number }>();
+    const treatmentRows: Array<{
+      id: string;
+      key: string;
+      household_id: string;
+      client_id: string;
+      job_id: string;
+      program_id: string | null;
+      occurred_at: Date;
+      amount: Prisma.Decimal;
+      currency: string;
+      visit_type: "clinic" | "home" | "phone" | "video";
+      note_1: string | null;
+      payment_date: Date | null;
+      payment_method: "bank_transfer" | "digital_payment" | null;
+      payment_bank_account_id: string | null;
+      payment_digital_payment_method_id: string | null;
+    }> = [];
     for (const t of scratch.pendingTreatments.values()) {
       const clientId =
         t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
@@ -1486,26 +1503,25 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       const programIdForRow = t.programName
         ? (programMap.get(norm(t.programName)) ?? defaultProg)
         : defaultProg;
-      const row = await tx.therapy_treatments.create({
-        data: {
-          id: crypto.randomUUID(),
-          household_id: params.householdId,
-          client_id: clientId,
-          job_id: params.jobId,
-          program_id: programIdForRow,
-          occurred_at: t.occurredAt,
-          amount: t.amount,
-          currency: "ILS",
-          visit_type: t.visitType,
-          note_1: t.note,
-          payment_date: t.paymentDate,
-          payment_method: t.paymentMethod,
-          payment_bank_account_id: t.paymentBankAccountId,
-          payment_digital_payment_method_id: t.paymentDigitalMethodId,
-        },
-        select: { id: true },
+      const treatmentId = crypto.randomUUID();
+      treatmentRows.push({
+        id: treatmentId,
+        key: t.key,
+        household_id: params.householdId,
+        client_id: clientId,
+        job_id: params.jobId,
+        program_id: programIdForRow,
+        occurred_at: t.occurredAt,
+        amount: t.amount,
+        currency: "ILS",
+        visit_type: t.visitType,
+        note_1: t.note,
+        payment_date: t.paymentDate,
+        payment_method: t.paymentMethod,
+        payment_bank_account_id: t.paymentBankAccountId,
+        payment_digital_payment_method_id: t.paymentDigitalMethodId,
       });
-      treatmentIdByKey.set(t.key, row.id);
+      treatmentIdByKey.set(t.key, treatmentId);
       if (programIdForRow) {
         const occurredAtMs = t.occurredAt.getTime();
         const existingPreferred = preferredProgramByClient.get(clientId);
@@ -1513,11 +1529,27 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           preferredProgramByClient.set(clientId, { programId: programIdForRow, occurredAtMs });
         }
       }
-      createdCount.treatments += 1;
+    }
+    if (treatmentRows.length > 0) {
+      await tx.therapy_treatments.createMany({
+        data: treatmentRows.map(({ key: _key, ...row }) => row),
+      });
+      createdCount.treatments += treatmentRows.length;
     }
 
     const consultationTypeIdByName = new Map<string, string>();
     const consultationIdByKey = new Map<string, string>();
+    const consultationRows: Array<{
+      id: string;
+      key: string;
+      household_id: string;
+      job_id: string;
+      consultation_type_id: string;
+      occurred_at: Date;
+      income_amount: Prisma.Decimal;
+      income_currency: string;
+      notes: string | null;
+    }> = [];
     for (const ct of consultationTypes) {
       consultationTypeIdByName.set(norm(ct.name_he || ct.name), ct.id);
       consultationTypeIdByName.set(norm(ct.name), ct.id);
@@ -1540,46 +1572,86 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         typeId = createdType.id;
         consultationTypeIdByName.set(lookup, typeId);
       }
-      const createdConsultation = await tx.therapy_consultations.create({
-        data: {
-          id: crypto.randomUUID(),
-          household_id: params.householdId,
-          job_id: params.jobId,
-          consultation_type_id: typeId,
-          occurred_at: c.occurredAt,
-          income_amount: c.amount,
-          income_currency: "ILS",
-          notes: c.note,
-        },
-        select: { id: true },
+      const consultationId = crypto.randomUUID();
+      consultationRows.push({
+        id: consultationId,
+        key: c.key,
+        household_id: params.householdId,
+        job_id: params.jobId,
+        consultation_type_id: typeId,
+        occurred_at: c.occurredAt,
+        income_amount: c.amount,
+        income_currency: "ILS",
+        notes: c.note,
       });
-      consultationIdByKey.set(c.key, createdConsultation.id);
-      createdCount.consultations += 1;
+      consultationIdByKey.set(c.key, consultationId);
+    }
+    if (consultationRows.length > 0) {
+      await tx.therapy_consultations.createMany({
+        data: consultationRows.map(({ key: _key, ...row }) => row),
+      });
+      createdCount.consultations += consultationRows.length;
     }
 
     const travelIdByKey = new Map<string, string>();
+    const travelRows: Array<{
+      id: string;
+      key: string;
+      household_id: string;
+      job_id: string;
+      treatment_id: string | null;
+      occurred_at: Date;
+      amount: Prisma.Decimal;
+      currency: string;
+      notes: string | null;
+    }> = [];
     for (const tr of scratch.pendingTravel) {
-      const createdTravel = await tx.therapy_travel_entries.create({
-        data: {
-          id: crypto.randomUUID(),
-          household_id: params.householdId,
-          job_id: params.jobId,
-          treatment_id: tr.treatmentKey ? treatmentIdByKey.get(tr.treatmentKey) ?? null : null,
-          occurred_at: tr.occurredAt,
-          amount: tr.amount,
-          currency: "ILS",
-          notes: tr.note,
-        },
-        select: { id: true },
+      const travelId = crypto.randomUUID();
+      travelRows.push({
+        id: travelId,
+        key: tr.key,
+        household_id: params.householdId,
+        job_id: params.jobId,
+        treatment_id: tr.treatmentKey ? treatmentIdByKey.get(tr.treatmentKey) ?? null : null,
+        occurred_at: tr.occurredAt,
+        amount: tr.amount,
+        currency: "ILS",
+        notes: tr.note,
       });
-      travelIdByKey.set(tr.key, createdTravel.id);
-      createdCount.travel += 1;
+      travelIdByKey.set(tr.key, travelId);
+    }
+    if (travelRows.length > 0) {
+      await tx.therapy_travel_entries.createMany({
+        data: travelRows.map(({ key: _key, ...row }) => row),
+      });
+      createdCount.travel += travelRows.length;
     }
 
+    const receiptRows: Array<{
+      id: string;
+      row: (typeof scratch.pendingReceipts extends Array<infer U> ? U : never);
+      data: {
+        id: string;
+        household_id: string;
+        job_id: string;
+        receipt_number: string;
+        issued_at: Date;
+        total_amount: Prisma.Decimal;
+        currency: string;
+        recipient_type: "client" | "organization";
+        payment_method: "cash" | "bank_transfer" | "digital_card" | "credit_card";
+        covered_period_start: Date | null;
+        covered_period_end: Date | null;
+        notes: string | null;
+      };
+    }> = [];
     for (const r of scratch.pendingReceipts) {
-      const receipt = await tx.therapy_receipts.create({
+      const receiptId = crypto.randomUUID();
+      receiptRows.push({
+        id: receiptId,
+        row: r,
         data: {
-          id: crypto.randomUUID(),
+          id: receiptId,
           household_id: params.householdId,
           job_id: params.jobId,
           receipt_number: r.receiptNumber,
@@ -1592,9 +1664,48 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           covered_period_end: r.coveredPeriodEnd ?? null,
           notes: r.notes,
         },
-        select: { id: true },
       });
-      createdCount.receipts += 1;
+    }
+    if (receiptRows.length > 0) {
+      await tx.therapy_receipts.createMany({
+        data: receiptRows.map((r) => r.data),
+      });
+      createdCount.receipts += receiptRows.length;
+    }
+
+    const receiptAllocationRows: Array<{
+      id: string;
+      household_id: string;
+      receipt_id: string;
+      treatment_id: string;
+      amount: Prisma.Decimal;
+    }> = [];
+    const receiptConsultationAllocationRows: Array<{
+      id: string;
+      household_id: string;
+      receipt_id: string;
+      consultation_id: string;
+      amount: Prisma.Decimal;
+    }> = [];
+    const receiptTravelAllocationRows: Array<{
+      id: string;
+      household_id: string;
+      receipt_id: string;
+      travel_entry_id: string;
+      amount: Prisma.Decimal;
+    }> = [];
+    const markPaidGroups = new Map<
+      string,
+      {
+        treatmentIds: string[];
+        paymentDate: Date;
+        paymentMethod: "bank_transfer" | "digital_payment" | null;
+        paymentBankAccountId: string | null;
+        paymentDigitalMethodId: string | null;
+      }
+    >();
+    for (const receiptEntry of receiptRows) {
+      const r = receiptEntry.row;
       for (const a of r.allocations) {
         const treatmentId = treatmentIdByKey.get(a.treatmentKey);
         if (!treatmentId) {
@@ -1602,46 +1713,51 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           if (linkDiagnostics.missingTreatmentKeys.size < 20) linkDiagnostics.missingTreatmentKeys.add(a.treatmentKey);
           continue;
         }
-        await tx.therapy_receipt_allocations.create({
-          data: {
-            id: crypto.randomUUID(),
-            household_id: params.householdId,
-            receipt_id: receipt.id,
-            treatment_id: treatmentId,
-            amount: a.amount,
-          },
+        receiptAllocationRows.push({
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          receipt_id: receiptEntry.id,
+          treatment_id: treatmentId,
+          amount: a.amount,
         });
-        createdCount.allocations += 1;
       }
       for (const a of r.consultationAllocations ?? []) {
         const consultationId = consultationIdByKey.get(a.consultationKey);
         if (!consultationId) continue;
-        await tx.therapy_receipt_consultation_allocations.create({
-          data: {
-            id: crypto.randomUUID(),
-            household_id: params.householdId,
-            receipt_id: receipt.id,
-            consultation_id: consultationId,
-            amount: a.amount,
-          },
+        receiptConsultationAllocationRows.push({
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          receipt_id: receiptEntry.id,
+          consultation_id: consultationId,
+          amount: a.amount,
         });
-        createdCount.consultationAllocations += 1;
       }
       for (const a of r.travelAllocations ?? []) {
         const travelId = travelIdByKey.get(a.travelKey);
         if (!travelId) continue;
-        await tx.therapy_receipt_travel_allocations.create({
-          data: {
-            id: crypto.randomUUID(),
-            household_id: params.householdId,
-            receipt_id: receipt.id,
-            travel_entry_id: travelId,
-            amount: a.amount,
-          },
+        receiptTravelAllocationRows.push({
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          receipt_id: receiptEntry.id,
+          travel_entry_id: travelId,
+          amount: a.amount,
         });
-        createdCount.travelAllocations += 1;
       }
       if (r.treatmentKeysToMarkPaid && r.treatmentKeysToMarkPaid.length > 0) {
+        const groupKey = [
+          r.issuedAt.toISOString(),
+          r.treatmentPaymentMethod ?? "",
+          r.treatmentBankAccountId ?? "",
+          r.treatmentDigitalMethodId ?? "",
+        ].join("|");
+        const group =
+          markPaidGroups.get(groupKey) ?? {
+            treatmentIds: [],
+            paymentDate: r.issuedAt,
+            paymentMethod: r.treatmentPaymentMethod ?? null,
+            paymentBankAccountId: r.treatmentBankAccountId ?? null,
+            paymentDigitalMethodId: r.treatmentDigitalMethodId ?? null,
+          };
         for (const tKey of r.treatmentKeysToMarkPaid) {
           const treatmentId = treatmentIdByKey.get(tKey);
           if (!treatmentId) {
@@ -1649,17 +1765,34 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
             if (linkDiagnostics.missingTreatmentKeys.size < 20) linkDiagnostics.missingTreatmentKeys.add(tKey);
             continue;
           }
-          await tx.therapy_treatments.update({
-            where: { id: treatmentId },
-            data: {
-              payment_date: r.issuedAt,
-              payment_method: r.treatmentPaymentMethod ?? null,
-              payment_bank_account_id: r.treatmentBankAccountId ?? null,
-              payment_digital_payment_method_id: r.treatmentDigitalMethodId ?? null,
-            },
-          });
+          group.treatmentIds.push(treatmentId);
         }
+        markPaidGroups.set(groupKey, group);
       }
+    }
+    if (receiptAllocationRows.length > 0) {
+      await tx.therapy_receipt_allocations.createMany({ data: receiptAllocationRows });
+      createdCount.allocations += receiptAllocationRows.length;
+    }
+    if (receiptConsultationAllocationRows.length > 0) {
+      await tx.therapy_receipt_consultation_allocations.createMany({ data: receiptConsultationAllocationRows });
+      createdCount.consultationAllocations += receiptConsultationAllocationRows.length;
+    }
+    if (receiptTravelAllocationRows.length > 0) {
+      await tx.therapy_receipt_travel_allocations.createMany({ data: receiptTravelAllocationRows });
+      createdCount.travelAllocations += receiptTravelAllocationRows.length;
+    }
+    for (const group of markPaidGroups.values()) {
+      if (group.treatmentIds.length === 0) continue;
+      await tx.therapy_treatments.updateMany({
+        where: { id: { in: group.treatmentIds } },
+        data: {
+          payment_date: group.paymentDate,
+          payment_method: group.paymentMethod,
+          payment_bank_account_id: group.paymentBankAccountId,
+          payment_digital_payment_method_id: group.paymentDigitalMethodId,
+        },
+      });
     }
 
     const touchedClientIds = new Set<string>();
