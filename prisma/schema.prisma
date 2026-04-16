@@ -91,6 +91,7 @@ model households {
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
   therapy_treatment_attachments      therapy_treatment_attachments[]
   private_clinic_reminders           private_clinic_reminders[]
+  therapy_import_audits              therapy_import_audits[]
 }
 
 model loans {
@@ -1247,6 +1248,7 @@ model users {
   user_enabled_sections user_enabled_sections[]
   tasks_assigned       tasks[]
   useful_links         useful_links[]
+  therapy_import_audits therapy_import_audits[]
 }
 
 model user_enabled_sections {
@@ -1372,6 +1374,14 @@ enum TherapyAppointmentRecurrence {
   biweekly
 
   @@map("therapy_appointment_recurrence")
+}
+
+enum TherapyImportAuditStatus {
+  in_progress
+  successful
+  failed
+
+  @@map("therapy_import_audit_status")
 }
 
 enum TherapyTreatmentAttachmentTranscriptionStatus {
@@ -1587,6 +1597,41 @@ model therapy_treatment_attachments {
   treatment therapy_treatments @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
 
   @@index([household_id, treatment_id])
+}
+
+model therapy_import_audits {
+  id                               String                  @id @default(uuid())
+  household_id                     String
+  user_id                          String
+  status                           TherapyImportAuditStatus @default(in_progress)
+  profile                          String
+  job_id                           String
+  selected_program_id              String?
+  sheet_name                       String?
+  started_at                       DateTime                @default(now())
+  completed_at                     DateTime?
+  duration_ms                      Int?
+  created_clients                  Int                     @default(0)
+  created_treatments               Int                     @default(0)
+  created_receipts                 Int                     @default(0)
+  created_allocations              Int                     @default(0)
+  created_consultations            Int                     @default(0)
+  created_travel                   Int                     @default(0)
+  created_programs                 Int                     @default(0)
+  created_consultation_allocations Int                     @default(0)
+  created_travel_allocations       Int                     @default(0)
+  blocking_errors_count            Int                     @default(0)
+  warnings_count                   Int                     @default(0)
+  failure_message                  String?
+  created_at                       DateTime                @default(now())
+  updated_at                       DateTime                @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id, created_at(sort: Desc)])
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([status, created_at(sort: Desc)])
 }
 
 model therapy_receipts {

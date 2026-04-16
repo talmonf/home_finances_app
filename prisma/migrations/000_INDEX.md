@@ -85,6 +85,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 073 | `073_therapy_treatments_program_optional.sql` | ALTER | `therapy_treatments`: make `program_id` nullable so sessions can exist without a service program (jobs with no programs). |
 | 074 | `074_therapy_receipt_allocations_consultations_travel.sql` | CREATE | Add receipt allocation tables for consultations and travel entries so organization receipts can fully link non-treatment income. |
 | 075 | `075_therapy_clients_default_visit_type.sql` | ALTER | `therapy_clients`: add nullable `default_visit_type` to store client-level default visit type for treatment entry/import. |
+| 076 | `076_therapy_import_audits.sql` | CREATE | Add non-PII import audit trail (attempt status, duration, counts, failure details) linked to household user for superadmin visibility. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -163,6 +164,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 073_therapy_treatments_program_optional.sql
 - [x] 074_therapy_receipt_allocations_consultations_travel.sql
 - [x] 075_therapy_clients_default_visit_type.sql
+- [x] 076_therapy_import_audits.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

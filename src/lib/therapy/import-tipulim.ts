@@ -1748,8 +1748,9 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     return createdCount;
   }, {
     // Large monthly imports can exceed Prisma's default interactive transaction timeout (5s).
-    maxWait: 10_000,
-    timeout: 120_000,
+    // Give enough headroom for very large workbooks and slower DBs (prior 120s was hit).
+    maxWait: 30_000,
+    timeout: 600_000,
   });
 
   return {

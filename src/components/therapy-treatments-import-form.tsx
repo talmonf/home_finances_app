@@ -41,7 +41,12 @@ type PreviewData = {
     travel: number;
     consultations: number;
     programs: number;
+    consultationAllocations: number;
+    travelAllocations: number;
   };
+  durationMs?: number;
+  completedAtIso?: string;
+  auditId?: string;
   importDebug?: {
     unlinkedReceiptsCount: number;
     unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
@@ -138,9 +143,15 @@ export function TherapyTreatmentsImportForm({
     importErrAllocationMismatch: string;
     importDebugTitle: string;
     importCreatedCountsTitle: string;
+    importCreatedClients: string;
     importCreatedAllocations: string;
     importCreatedTreatments: string;
     importCreatedReceipts: string;
+    importCreatedConsultations: string;
+    importCreatedTravel: string;
+    importCreatedPrograms: string;
+    importDetailedMessagePrefix: string;
+    importDetailedMessageCreated: string;
     importDebugUnlinkedReceipts: string;
     importDebugOrgPaymentRows: string;
     importDebugCommitLinkTitle: string;
@@ -159,6 +170,15 @@ export function TherapyTreatmentsImportForm({
   const [sheetName, setSheetName] = useState("");
   const [sheetOptions, setSheetOptions] = useState<string[]>([]);
   const [missingVisitType, setMissingVisitType] = useState("");
+
+  function formatDuration(ms: number): string {
+    if (!Number.isFinite(ms) || ms < 0) return "0s";
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes <= 0) return `${seconds}s`;
+    return `${minutes}m ${seconds}s`;
+  }
 
   const jobPrograms = useMemo(
     () => programs.filter((p) => p.jobId === jobId),
@@ -210,7 +230,17 @@ export function TherapyTreatmentsImportForm({
         }
       } else {
         setPreview(data);
-        setMsg(data.blockingErrors.length ? labels.errorsTitle : labels.applyNote);
+        if (data.blockingErrors.length > 0) {
+          const durationPart = typeof data.durationMs === "number" ? ` (${formatDuration(data.durationMs)})` : "";
+          setMsg(`${labels.errorsTitle}${durationPart}`);
+        } else {
+          const created = data.created;
+          const durationPart = typeof data.durationMs === "number" ? formatDuration(data.durationMs) : "n/a";
+          const details = created
+            ? `${labels.importDetailedMessagePrefix} ${durationPart}. ${labels.importDetailedMessageCreated} ${labels.importCreatedClients}=${created.clients}, ${labels.importCreatedTreatments}=${created.treatments}, ${labels.importCreatedReceipts}=${created.receipts}, ${labels.importCreatedAllocations}=${created.allocations}, ${labels.importCreatedConsultations}=${created.consultations}, ${labels.importCreatedTravel}=${created.travel}, ${labels.importCreatedPrograms}=${created.programs}, consultation allocations=${created.consultationAllocations}, travel allocations=${created.travelAllocations}.`
+            : labels.applyNote;
+          setMsg(details);
+        }
       }
     } catch (e) {
       setMsg(String(e));
@@ -463,8 +493,11 @@ export function TherapyTreatmentsImportForm({
               <p className="font-medium">{labels.importDebugTitle}</p>
               {preview.created && (
                 <p>
-                  {labels.importCreatedCountsTitle}: {labels.importCreatedTreatments}={preview.created.treatments}, {labels.importCreatedReceipts}=
-                  {preview.created.receipts}, {labels.importCreatedAllocations}={preview.created.allocations}
+                  {labels.importCreatedCountsTitle}: {labels.importCreatedClients}={preview.created.clients},{" "}
+                  {labels.importCreatedTreatments}={preview.created.treatments}, {labels.importCreatedReceipts}=
+                  {preview.created.receipts}, {labels.importCreatedAllocations}={preview.created.allocations},{" "}
+                  {labels.importCreatedConsultations}={preview.created.consultations}, {labels.importCreatedTravel}=
+                  {preview.created.travel}, {labels.importCreatedPrograms}={preview.created.programs}
                 </p>
               )}
               {preview.importDebug && (
