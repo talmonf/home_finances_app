@@ -114,7 +114,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       : sort === "expiry"
                         ? compare(a.expiry_date, b.expiry_date)
                         : sort === "family_member"
-                          ? compare(a.family_member.full_name, b.family_member.full_name)
+                          ? compare(a.family_member?.full_name ?? null, b.family_member?.full_name ?? null)
                           : sort === "settlement_account"
                             ? compare(
                                 a.bank_account?.account_name ?? null,
@@ -460,7 +460,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
                       <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.family_member.full_name}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.family_member?.full_name ?? "—"}</td>
                       <td className="px-4 py-3">
                         {(() => {
                           const status = getCreditCardStatus(c);

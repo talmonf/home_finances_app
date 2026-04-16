@@ -46,11 +46,12 @@ function buildCreditCardLabel(card: {
   co_brand: string | null;
   product_name: string | null;
   card_last_four: string;
-  family_member: { full_name: string };
+  family_member: { full_name: string } | null;
 }) {
   const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
   const productPart = card.product_name ? ` / ${card.product_name}` : "";
-  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four} (${card.family_member.full_name})`;
+  const familyMemberName = card.family_member?.full_name ?? "Unassigned";
+  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four} (${familyMemberName})`;
 }
 
 type PageProps = {

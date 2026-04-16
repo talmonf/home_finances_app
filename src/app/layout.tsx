@@ -1,20 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { getAuthSession, getCurrentUiLanguage } from "@/lib/auth";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
 import { SignOutButton } from "@/components/sign-out-button";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Home Finance Management",
@@ -37,9 +26,7 @@ export default async function RootLayout({
 
   return (
     <html lang={uiLanguage} dir={dir}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-50`}
-      >
+      <body className="antialiased bg-slate-950 text-slate-50">
         <div className="min-h-screen">
           <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">

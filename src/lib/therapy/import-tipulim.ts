@@ -1486,7 +1486,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       job_id: string;
       program_id: string | null;
       occurred_at: Date;
-      amount: Prisma.Decimal;
+      amount: string | number;
       currency: string;
       visit_type: "clinic" | "home" | "phone" | "video";
       note_1: string | null;
@@ -1546,7 +1546,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       job_id: string;
       consultation_type_id: string;
       occurred_at: Date;
-      income_amount: Prisma.Decimal;
+      income_amount: string | number;
       income_currency: string;
       notes: string | null;
     }> = [];
@@ -1601,11 +1601,13 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       job_id: string;
       treatment_id: string | null;
       occurred_at: Date;
-      amount: Prisma.Decimal;
+      amount: string | number;
       currency: string;
       notes: string | null;
     }> = [];
     for (const tr of scratch.pendingTravel) {
+      if (!tr.occurredAt) continue;
+      if (tr.amount == null) continue;
       const travelId = crypto.randomUUID();
       travelRows.push({
         id: travelId,
@@ -1636,7 +1638,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         job_id: string;
         receipt_number: string;
         issued_at: Date;
-        total_amount: Prisma.Decimal;
+        total_amount: string | number;
         currency: string;
         recipient_type: "client" | "organization";
         payment_method: "cash" | "bank_transfer" | "digital_card" | "credit_card";
@@ -1678,21 +1680,21 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       household_id: string;
       receipt_id: string;
       treatment_id: string;
-      amount: Prisma.Decimal;
+      amount: string | number;
     }> = [];
     const receiptConsultationAllocationRows: Array<{
       id: string;
       household_id: string;
       receipt_id: string;
       consultation_id: string;
-      amount: Prisma.Decimal;
+      amount: string | number;
     }> = [];
     const receiptTravelAllocationRows: Array<{
       id: string;
       household_id: string;
       receipt_id: string;
       travel_entry_id: string;
-      amount: Prisma.Decimal;
+      amount: string | number;
     }> = [];
     const markPaidGroups = new Map<
       string,

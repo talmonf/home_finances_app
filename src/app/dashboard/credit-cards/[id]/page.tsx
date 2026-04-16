@@ -231,7 +231,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               id="family_member_id"
               name="family_member_id"
               required
-              defaultValue={card.family_member_id}
+              defaultValue={card.family_member_id ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               {familyMembers.map((m) => (
