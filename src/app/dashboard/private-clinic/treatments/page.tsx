@@ -379,6 +379,8 @@ export default async function TreatmentsPage({
               receiptCol: tr.receiptCol,
               paymentDetailsCol: tr.paymentDetailsCol,
               edit: c.edit,
+              createReceiptLabel: tr.createReceiptForSelected,
+              unlinkLabel: tr.unlinkFromReceipt,
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
@@ -396,7 +398,13 @@ export default async function TreatmentsPage({
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
           uiLanguage={uiLanguage}
-          clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}` }))}
+          clients={clients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`,
+            default_job_id: cl.default_job_id,
+            default_program_id: cl.default_program_id,
+            default_visit_type: cl.default_visit_type,
+          }))}
           jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
           visitDefaults={visitDefaults}
@@ -415,7 +423,13 @@ export default async function TreatmentsPage({
           redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editTreatment.id)}`}
           householdId={householdId}
           uiLanguage={uiLanguage}
-          clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}` }))}
+          clients={clients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`,
+            default_job_id: cl.default_job_id,
+            default_program_id: cl.default_program_id,
+            default_visit_type: cl.default_visit_type,
+          }))}
           jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
           visitDefaults={visitDefaults}

@@ -8,17 +8,27 @@ type ProgramOption = { id: string; jobId: string; label: string };
 export type ClientJobProgramFieldLabels = {
   defaultJob: string;
   defaultProgramOptional: string;
+  defaultVisitTypeOptional: string;
   selectJob: string;
   none: string;
   alsoSeenUnder: string;
+  visitClinic: string;
+  visitHome: string;
+  visitPhone: string;
+  visitVideo: string;
 };
 
 const DEFAULT_LABELS: ClientJobProgramFieldLabels = {
   defaultJob: "Default job",
   defaultProgramOptional: "Default program (optional)",
+  defaultVisitTypeOptional: "Default visit type (optional)",
   selectJob: "Select job",
   none: "None",
   alsoSeenUnder: "Also seen under these jobs (includes default)",
+  visitClinic: "Clinic",
+  visitHome: "Home",
+  visitPhone: "Phone",
+  visitVideo: "Video",
 };
 
 export function ClientJobProgramFields({
@@ -26,6 +36,7 @@ export function ClientJobProgramFields({
   programs,
   defaultJobId,
   defaultProgramId,
+  defaultVisitType,
   defaultCheckedJobIds,
   requiredProgram,
   labels = DEFAULT_LABELS,
@@ -34,6 +45,7 @@ export function ClientJobProgramFields({
   programs: ProgramOption[];
   defaultJobId?: string | null;
   defaultProgramId?: string | null;
+  defaultVisitType?: "clinic" | "home" | "phone" | "video" | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
   labels?: ClientJobProgramFieldLabels;
@@ -107,6 +119,21 @@ export function ClientJobProgramFields({
               {p.label}
             </option>
           ))}
+        </select>
+      </div>
+
+      <div className="md:col-span-2 space-y-1">
+        <label className="block text-xs text-slate-400">{labels.defaultVisitTypeOptional}</label>
+        <select
+          name="default_visit_type"
+          defaultValue={defaultVisitType ?? ""}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="">{labels.none}</option>
+          <option value="clinic">{labels.visitClinic}</option>
+          <option value="home">{labels.visitHome}</option>
+          <option value="phone">{labels.visitPhone}</option>
+          <option value="video">{labels.visitVideo}</option>
         </select>
       </div>
 

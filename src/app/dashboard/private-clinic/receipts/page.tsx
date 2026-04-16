@@ -9,7 +9,12 @@ import {
 } from "@/lib/auth";
 import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
-import { createTherapyReceipt, updateTherapyReceipt } from "../actions";
+import {
+  createTherapyReceipt,
+  updateTherapyReceipt,
+  linkTreatmentsToReceipt,
+  deleteReceiptAllocation,
+} from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import {
@@ -181,6 +186,28 @@ export default async function ReceiptsPage({
           },
         })
       : null;
+  const editableTreatments =
+    editReceipt
+      ? await prisma.therapy_treatments.findMany({
+          where: {
+            household_id: householdId,
+            job_id: editReceipt.job_id,
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            currency: true,
+            client: { select: { first_name: true, last_name: true } },
+            receipt_allocations: {
+              where: { receipt_id: editReceipt.id },
+              select: { id: true, receipt_id: true },
+            },
+          },
+          orderBy: { occurred_at: "desc" },
+          take: 150,
+        })
+      : [];
 
   return (
     <div className="space-y-8">
@@ -425,12 +452,58 @@ export default async function ReceiptsPage({
             notes: editReceipt.notes ?? "",
           }}
           extraContent={
-            <div className="rounded border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
-              <p className="font-medium text-slate-200">{r.tableTreatmentsCount}</p>
-              <p>
-                T: {editReceipt._count.allocations} | C: {editReceipt._count.consultation_allocations} | TR:{" "}
-                {editReceipt._count.travel_allocations}
-              </p>
+            <div className="space-y-3 rounded border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+              <div>
+                <p className="font-medium text-slate-200">{r.tableTreatmentsCount}</p>
+                <p>
+                  T: {editReceipt._count.allocations} | C: {editReceipt._count.consultation_allocations} | TR:{" "}
+                  {editReceipt._count.travel_allocations}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="font-medium text-slate-200">{c.treatmentsWord}</p>
+                {editableTreatments.some((t) => t.receipt_allocations.length > 0) ? (
+                  <div className="space-y-1">
+                    {editableTreatments
+                      .filter((t) => t.receipt_allocations.length > 0)
+                      .map((t) => (
+                        <form key={t.id} action={deleteReceiptAllocation} className="flex items-center justify-between gap-3 rounded border border-slate-700/80 px-2 py-1">
+                          <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                          <input type="hidden" name="treatment_id" value={t.id} />
+                          <span>
+                            {t.client.first_name} {t.client.last_name ?? ""} | {t.occurred_at.toISOString().slice(0, 10)} |{" "}
+                            {t.amount.toString()} {t.currency}
+                          </span>
+                          <button type="submit" className="text-rose-400 hover:underline">
+                            {c.delete}
+                          </button>
+                        </form>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500">{c.noEntriesYet}</p>
+                )}
+              </div>
+              <form action={linkTreatmentsToReceipt} className="space-y-2">
+                <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                <p className="text-slate-200">{r.createAllocate}</p>
+                <div className="max-h-52 space-y-1 overflow-auto rounded border border-slate-700 p-2">
+                  {editableTreatments
+                    .filter((t) => t.receipt_allocations.length === 0)
+                    .map((t) => (
+                    <label key={t.id} className="flex items-center gap-2">
+                      <input type="checkbox" name="treatment_ids" value={t.id} />
+                      <span>
+                        {t.client.first_name} {t.client.last_name ?? ""} | {t.occurred_at.toISOString().slice(0, 10)} |{" "}
+                        {t.amount.toString()} {t.currency}
+                      </span>
+                    </label>
+                    ))}
+                </div>
+                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                  {r.createAllocate}
+                </button>
+              </form>
             </div>
           }
         />

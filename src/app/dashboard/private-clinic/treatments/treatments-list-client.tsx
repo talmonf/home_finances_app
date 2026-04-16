@@ -8,6 +8,7 @@ import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { TreatmentListRowDto } from "./treatments-list-data";
 import { treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
+import { createTherapyReceiptForSelectedTreatments, deleteReceiptAllocation } from "../actions";
 
 type Labels = {
   when: string;
@@ -19,6 +20,8 @@ type Labels = {
   receiptCol: string;
   paymentDetailsCol: string;
   edit: string;
+  createReceiptLabel: string;
+  unlinkLabel: string;
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
@@ -52,6 +55,7 @@ export function TreatmentsListClient({
   const [hasMore, setHasMore] = useState(Boolean(initialCursor));
   const [sortKey, setSortKey] = useState<ColumnSortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadMore = useCallback(async () => {
@@ -144,10 +148,26 @@ export function TreatmentsListClient({
 
   return (
     <div className="space-y-3">
+      {selectedIds.size > 0 ? (
+        <form action={createTherapyReceiptForSelectedTreatments} className="flex flex-wrap items-end gap-2 rounded border border-slate-700 bg-slate-900/60 p-2">
+          {Array.from(selectedIds).map((id) => (
+            <input key={id} type="hidden" name="treatment_ids" value={id} />
+          ))}
+          <input type="hidden" name="redirect_on_success" value={listBaseHref} />
+          <input type="hidden" name="redirect_on_error" value={listBaseHref} />
+          <input required name="receipt_number" placeholder="#" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+          <input required type="date" name="issued_at" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+          <input required name="total_amount" placeholder="0.00" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+          <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+            {labels.createReceiptLabel}
+          </button>
+        </form>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-700 bg-slate-800/80">
+              <th className="px-3 py-2 text-slate-300" />
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("occurred_at")} className="hover:text-slate-100">
                   {labels.when}
@@ -207,6 +227,20 @@ export function TreatmentsListClient({
 
               return (
                 <tr key={t.id} className="border-b border-slate-700/80">
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(t.id)}
+                      onChange={(e) =>
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(t.id);
+                          else next.delete(t.id);
+                          return next;
+                        })
+                      }
+                    />
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                     {formatHouseholdDateUtcWithOptionalTime(new Date(t.occurred_at_iso), dateDisplayFormat)}
                   </td>
@@ -232,6 +266,13 @@ export function TreatmentsListClient({
                             <Link href={`/dashboard/private-clinic/receipts/${a.receipt_id}`} className="text-sky-400 hover:underline">
                               #{a.receipt_number}
                             </Link>
+                            <form action={deleteReceiptAllocation}>
+                              <input type="hidden" name="receipt_id" value={a.receipt_id} />
+                              <input type="hidden" name="treatment_id" value={t.id} />
+                              <button type="submit" className="ml-2 text-[11px] text-rose-400 hover:underline">
+                                {labels.unlinkLabel}
+                              </button>
+                            </form>
                           </li>
                         ))}
                       </ul>

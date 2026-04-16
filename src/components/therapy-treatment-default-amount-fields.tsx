@@ -29,6 +29,13 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     visitType: string;
     select: string;
   };
+  clients: {
+    id: string;
+    default_job_id: string;
+    default_program_id: string | null;
+    default_visit_type: TherapyVisitType | null;
+  }[];
+  defaultClientId?: string;
   defaultValues?: {
     job_id?: string;
     program_id?: string;
@@ -39,21 +46,22 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     visit_type?: TherapyVisitType;
   };
 }) {
-  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues } = props;
+  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId } = props;
+  const defaultClient = clients.find((cl) => cl.id === defaultClientId);
 
-  const firstJobId = defaultValues?.job_id || jobs[0]?.id || "";
+  const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || jobs[0]?.id || "";
   const programsForFirst = useMemo(
     () => programs.filter((p) => p.job_id === firstJobId),
     [programs, firstJobId],
   );
-  const requestedProgramId = defaultValues?.program_id || "";
+  const requestedProgramId = defaultValues?.program_id || defaultClient?.default_program_id || "";
   const initialProgramId =
     (requestedProgramId && programs.some((p) => p.id === requestedProgramId) ? requestedProgramId : "") ||
     programsForFirst[0]?.id ||
     programs[0]?.id ||
     "";
 
-  const initialVisit: TherapyVisitType = defaultValues?.visit_type ?? "clinic";
+  const initialVisit: TherapyVisitType = defaultValues?.visit_type ?? defaultClient?.default_visit_type ?? "clinic";
   const initialResolved = resolveTherapyVisitTypeDefault(
     visitDefaults,
     firstJobId,

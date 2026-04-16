@@ -1,10 +1,20 @@
+ "use client";
+
 import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; job_id: string; label: string };
+type ClientOption = {
+  id: string;
+  label: string;
+  default_job_id: string;
+  default_program_id: string | null;
+  default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+};
 type VisitDefaultOption = {
   job_id: string;
   program_id: string | null;
@@ -41,6 +51,8 @@ type Labels = {
     paymentDigital: string;
     paymentIntoAccount: string;
     paymentDigitalApp: string;
+    inlineReceiptNumber: string;
+    inlineReceiptDate: string;
   };
   note1: string;
   note2: string;
@@ -95,7 +107,7 @@ export function TreatmentModalForm({
   redirectOnError: string;
   householdId: string;
   uiLanguage: "en" | "he";
-  clients: { id: string; label: string }[];
+  clients: ClientOption[];
   jobs: JobOption[];
   programs: ProgramOption[];
   visitDefaults: VisitDefaultOption[];
@@ -106,6 +118,11 @@ export function TreatmentModalForm({
   extraContent?: ReactNode;
 }) {
   const visitOptions = ["clinic", "home", "phone", "video"] as const;
+  const [selectedClientId, setSelectedClientId] = useState(initial?.client_id ?? clients[0]?.id ?? "");
+  const selectedClientDefaults = useMemo(
+    () => clients.find((cl) => cl.id === selectedClientId) ?? null,
+    [clients, selectedClientId],
+  );
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
       <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
@@ -126,7 +143,8 @@ export function TreatmentModalForm({
               <select
                 name="client_id"
                 required
-                defaultValue={initial?.client_id ?? ""}
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">{labels.c.select}</option>
@@ -146,6 +164,7 @@ export function TreatmentModalForm({
             </div>
           )}
           <TherapyTreatmentDefaultAmountFields
+            key={`${mode}-${selectedClientDefaults?.id ?? "none"}`}
             uiLanguage={uiLanguage}
             jobs={jobs.map((j) => ({ id: j.id, job_title: j.label }))}
             programs={programs.map((p) => ({
@@ -155,6 +174,8 @@ export function TreatmentModalForm({
               job: { job_title: jobs.find((j) => j.id === p.job_id)?.label ?? "" },
             }))}
             visitDefaults={visitDefaults}
+            clients={clients}
+            defaultClientId={selectedClientDefaults?.id ?? ""}
             labels={{
               job: labels.c.job,
               program: labels.c.program,
@@ -242,6 +263,27 @@ export function TreatmentModalForm({
               </div>
             </div>
           </div>
+          {mode === "create" ? (
+            <div className="md:col-span-2 grid gap-3 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3 md:grid-cols-2">
+              <div>
+                <label className="block text-xs text-slate-400">{labels.tr.inlineReceiptNumber}</label>
+                <input
+                  name="receipt_number"
+                  defaultValue=""
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.tr.inlineReceiptDate}</label>
+                <input
+                  name="receipt_issued_at"
+                  type="date"
+                  defaultValue={initial?.payment_date ?? ""}
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+            </div>
+          ) : null}
           <textarea
             name="note_1"
             defaultValue={initial?.note_1 ?? ""}

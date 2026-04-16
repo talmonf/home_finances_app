@@ -1491,6 +1491,7 @@ model therapy_clients {
   notes              String?
   default_job_id     String
   default_program_id String?
+  default_visit_type TherapyVisitType?
   email              String?
   phones             String?
   address            String?

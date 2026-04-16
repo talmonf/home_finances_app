@@ -9,6 +9,7 @@ export function therapyClientFormErrorMessage(error: string | undefined, cl: ClS
     missing: cl.errMissing,
     job: cl.errJob,
     program: cl.errProgram,
+    "visit-type": cl.errVisitType,
     notfound: cl.errNotfound,
   };
   return map[key] ?? decodeURIComponent(key.replace(/\+/g, " "));

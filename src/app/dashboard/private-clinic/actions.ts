@@ -859,6 +859,7 @@ export async function createTherapyClient(formData: FormData) {
   const first_name = (formData.get("first_name") as string)?.trim() || "";
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
+  const default_visit_type_raw = (formData.get("default_visit_type") as string)?.trim() || "";
   if (!first_name || !default_job_id) {
     redirectTherapyClientFormError(formData, fallbackErrorPath, "missing");
   }
@@ -872,6 +873,10 @@ export async function createTherapyClient(formData: FormData) {
       redirectTherapyClientFormError(formData, fallbackErrorPath, "program");
     }
     default_program_id = prog.id;
+  }
+  const default_visit_type = default_visit_type_raw ? parseVisitType(default_visit_type_raw) : null;
+  if (default_visit_type_raw && !default_visit_type) {
+    redirectTherapyClientFormError(formData, fallbackErrorPath, "visit-type");
   }
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
@@ -903,6 +908,7 @@ export async function createTherapyClient(formData: FormData) {
         notes: (formData.get("notes") as string)?.trim() || null,
         default_job_id,
         default_program_id,
+        default_visit_type,
         email: (formData.get("email") as string)?.trim() || null,
         phones,
         address: (formData.get("address") as string)?.trim() || null,
@@ -943,6 +949,7 @@ export async function updateTherapyClient(formData: FormData) {
 
   const default_job_id = (formData.get("default_job_id") as string)?.trim() || "";
   const default_program_id_raw = (formData.get("default_program_id") as string)?.trim() || "";
+  const default_visit_type_raw = (formData.get("default_visit_type") as string)?.trim() || "";
   if (!default_job_id) {
     redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "missing");
   }
@@ -956,6 +963,10 @@ export async function updateTherapyClient(formData: FormData) {
       redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "program");
     }
     default_program_id = prog.id;
+  }
+  const default_visit_type = default_visit_type_raw ? parseVisitType(default_visit_type_raw) : null;
+  if (default_visit_type_raw && !default_visit_type) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "visit-type");
   }
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
@@ -984,6 +995,7 @@ export async function updateTherapyClient(formData: FormData) {
         notes: (formData.get("notes") as string)?.trim() || null,
         default_job_id,
         default_program_id,
+        default_visit_type,
         email: (formData.get("email") as string)?.trim() || null,
         phones,
         address: (formData.get("address") as string)?.trim() || null,
@@ -1061,7 +1073,7 @@ export async function createTherapyTreatment(formData: FormData) {
 
   const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
 
-  await prisma.therapy_treatments.create({
+  const createdTreatment = await prisma.therapy_treatments.create({
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
@@ -1082,6 +1094,34 @@ export async function createTherapyTreatment(formData: FormData) {
       payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
     },
   });
+
+  const inlineReceiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
+  const inlineReceiptIssuedAt = parseDateRequired((formData.get("receipt_issued_at") as string)?.trim() || null);
+  if (inlineReceiptNumber && inlineReceiptIssuedAt) {
+    const receiptId = crypto.randomUUID();
+    await prisma.therapy_receipts.create({
+      data: {
+        id: receiptId,
+        household_id: householdId,
+        job_id,
+        receipt_number: inlineReceiptNumber,
+        issued_at: inlineReceiptIssuedAt,
+        total_amount: amountStr,
+        currency: (formData.get("currency") as string)?.trim() || "ILS",
+        recipient_type: "client",
+        payment_method: "cash",
+      },
+    });
+    await prisma.therapy_receipt_allocations.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        receipt_id: receiptId,
+        treatment_id: createdTreatment.id,
+        amount: amountStr,
+      },
+    });
+  }
 
   revalidatePath(`${BASE}/treatments`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?created=1`);
@@ -1285,7 +1325,7 @@ export async function upsertReceiptAllocation(formData: FormData) {
   const treatment = await prisma.therapy_treatments.findFirst({
     where: { id: treatment_id, household_id: householdId },
   });
-  if (!receipt || !treatment) return;
+  if (!receipt || !treatment || receipt.job_id !== treatment.job_id) return;
 
   await prisma.therapy_receipt_allocations.upsert({
     where: {
@@ -1321,6 +1361,97 @@ export async function deleteReceiptAllocation(formData: FormData) {
   });
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/treatments`);
+  redirect(`${BASE}/receipts/${receiptId}`);
+}
+
+export async function createTherapyReceiptForSelectedTreatments(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const fallbackPath = `${BASE}/treatments`;
+  const treatmentIds = (formData.getAll("treatment_ids") as string[]).map((id) => id.trim()).filter(Boolean);
+  const receiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
+  const issuedAt = parseDateRequired((formData.get("issued_at") as string)?.trim() || null);
+  const totalStr = parseMoney(formData.get("total_amount") as string);
+  if (!treatmentIds.length || !receiptNumber || !issuedAt || !totalStr) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  }
+  const treatments = await prisma.therapy_treatments.findMany({
+    where: { household_id: householdId, id: { in: treatmentIds } },
+    select: { id: true, job_id: true, amount: true, currency: true },
+  });
+  if (treatments.length !== treatmentIds.length) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  }
+  const jobId = treatments[0]!.job_id;
+  if (treatments.some((t) => t.job_id !== jobId)) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
+  const receiptId = crypto.randomUUID();
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_receipts.create({
+      data: {
+        id: receiptId,
+        household_id: householdId,
+        job_id: jobId,
+        receipt_number: receiptNumber,
+        issued_at: issuedAt,
+        total_amount: totalStr,
+        currency: treatments[0]!.currency,
+        recipient_type: "client",
+        payment_method: "cash",
+      },
+    });
+    for (const treatment of treatments) {
+      await tx.therapy_receipt_allocations.upsert({
+        where: { receipt_id_treatment_id: { receipt_id: receiptId, treatment_id: treatment.id } },
+        create: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          receipt_id: receiptId,
+          treatment_id: treatment.id,
+          amount: treatment.amount,
+        },
+        update: { amount: treatment.amount },
+      });
+    }
+  });
+  revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/receipts`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${receiptId}`);
+}
+
+export async function linkTreatmentsToReceipt(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
+  const treatmentIds = (formData.getAll("treatment_ids") as string[]).map((id) => id.trim()).filter(Boolean);
+  if (!receiptId || treatmentIds.length === 0) return;
+  const receipt = await prisma.therapy_receipts.findFirst({
+    where: { id: receiptId, household_id: householdId },
+    select: { id: true, job_id: true },
+  });
+  if (!receipt) return;
+  const treatments = await prisma.therapy_treatments.findMany({
+    where: { household_id: householdId, id: { in: treatmentIds }, job_id: receipt.job_id },
+    select: { id: true, amount: true },
+  });
+  await prisma.$transaction(
+    treatments.map((treatment) =>
+      prisma.therapy_receipt_allocations.upsert({
+        where: { receipt_id_treatment_id: { receipt_id: receiptId, treatment_id: treatment.id } },
+        create: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          receipt_id: receiptId,
+          treatment_id: treatment.id,
+          amount: treatment.amount,
+        },
+        update: { amount: treatment.amount },
+      }),
+    ),
+  );
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/treatments`);
   redirect(`${BASE}/receipts/${receiptId}`);
 }
 

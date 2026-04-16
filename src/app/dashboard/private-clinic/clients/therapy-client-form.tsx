@@ -26,6 +26,7 @@ export type TherapyClientFormEditRow = {
   notes: string | null;
   default_job_id: string;
   default_program_id: string | null;
+  default_visit_type: "clinic" | "home" | "phone" | "video" | null;
   is_active: boolean;
   client_jobs: { job_id: string }[];
 };
@@ -81,9 +82,14 @@ export function TherapyClientForm({
   const jobFieldLabels = {
     defaultJob: cl.defaultJob,
     defaultProgramOptional: cl.defaultProgramOptional,
+    defaultVisitTypeOptional: cl.defaultVisitTypeOptional,
     selectJob: cl.selectJob,
     none: c.none,
     alsoSeenUnder: cl.alsoSeenUnder,
+    visitClinic: cl.visitClinic,
+    visitHome: cl.visitHome,
+    visitPhone: cl.visitPhone,
+    visitVideo: cl.visitVideo,
   };
 
   const rowId = client?.id ?? "new";
@@ -166,32 +172,6 @@ export function TherapyClientForm({
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         )}
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
-          {c.startDate}
-        </label>
-        <input
-          id={`${idPrefix}_start_date`}
-          name="start_date"
-          type="date"
-          defaultValue={toDateInputValue(client?.start_date)}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_end_date`} className="block text-xs text-slate-400">
-          {cl.endDate}
-        </label>
-        <input
-          id={`${idPrefix}_end_date`}
-          name="end_date"
-          type="date"
-          defaultValue={toDateInputValue(client?.end_date)}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
       </div>
 
       <div className="space-y-1">
@@ -343,6 +323,32 @@ export function TherapyClientForm({
       </div>
 
       <div className="space-y-1">
+        <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
+          {c.startDate}
+        </label>
+        <input
+          id={`${idPrefix}_start_date`}
+          name="start_date"
+          type="date"
+          defaultValue={toDateInputValue(client?.start_date)}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor={`${idPrefix}_end_date`} className="block text-xs text-slate-400">
+          {cl.endDate}
+        </label>
+        <input
+          id={`${idPrefix}_end_date`}
+          name="end_date"
+          type="date"
+          defaultValue={toDateInputValue(client?.end_date)}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </div>
+
+      <div className="space-y-1">
         <label htmlFor={`${idPrefix}_disability_status`} className="block text-xs text-slate-400">
           {cl.disabilityStatus}
         </label>
@@ -405,6 +411,7 @@ export function TherapyClientForm({
         programs={programs}
         defaultJobId={client?.default_job_id}
         defaultProgramId={client?.default_program_id}
+        defaultVisitType={client?.default_visit_type}
         defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
         labels={jobFieldLabels}
       />

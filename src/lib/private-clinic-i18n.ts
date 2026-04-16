@@ -306,6 +306,11 @@ export function privateClinicClients(lang: UiLanguage) {
     saveClient: p("Save client", "שמירת לקוח"),
     defaultJob: p("Default job", "משרה ברירת מחדל"),
     defaultProgramOptional: p("Default program (optional)", "תכנית ברירת מחדל (אופציונלי)"),
+    defaultVisitTypeOptional: p("Default visit type (optional)", "סוג ביקור ברירת מחדל (אופציונלי)"),
+    visitClinic: p("Clinic", "קליניקה"),
+    visitHome: p("Home", "בית"),
+    visitPhone: p("Phone", "טלפון"),
+    visitVideo: p("Video", "וידאו"),
     selectJob: p("Select job", "בחרו משרה"),
     alsoSeenUnder: p(
       "Also seen under these jobs (includes default)",
@@ -346,6 +351,7 @@ export function privateClinicClients(lang: UiLanguage) {
     errMissing: p("First name and default job are required.", "נדרשים שם פרטי ומשרת ברירת מחדל."),
     errJob: p("That job is not available for your account.", "המשרה אינה זמינה לחשבון שלך."),
     errProgram: p("Default program must belong to the default job.", "תכנית ברירת המחדל חייבת להשתייך למשרת ברירת המחדל."),
+    errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
   };
 }
@@ -396,6 +402,10 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "Allocated on receipt(s) below. Edit allocations from the receipt page.",
       "שויך לקבלה/ות למטה. ניתן לערוך שיוך מעמוד הקבלה.",
     ),
+    createReceiptForSelected: p("Create receipt for selected", "יצירת קבלה לנבחרים"),
+    unlinkFromReceipt: p("Unlink from receipt", "ניתוק מקבלה"),
+    inlineReceiptNumber: p("Receipt number (optional)", "מספר קבלה (אופציונלי)"),
+    inlineReceiptDate: p("Receipt payment date", "תאריך תשלום בקבלה"),
     importBtn: p("Import treatments", "ייבוא טיפולים"),
     importClearPreview: p("Clear preview", "ניקוי תצוגה"),
     importBackToTreatments: p("Back to treatments", "חזרה לטיפולים"),

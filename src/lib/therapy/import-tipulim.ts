@@ -142,7 +142,12 @@ export type ProgramsToAutoCreate = {
 export type TipulimAnalyzeResult = {
   newClientsCount: number;
   treatmentsTotal: number;
-  treatmentsPerClient: Array<{ displayName: string; clientId: string | null; count: number }>;
+  treatmentsPerClient: Array<{
+    displayName: string;
+    clientId: string | null;
+    count: number;
+    majorityVisitType: "clinic" | "home" | "phone" | "video" | null;
+  }>;
   receiptsToCreateCount: number;
   programsToAutoCreate: ProgramsToAutoCreate[];
   warnings: string[];
@@ -270,8 +275,6 @@ function excelSerialToUtcDate(serial: number): Date | null {
 function parseDate(raw: string): Date | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const d = new Date(trimmed);
-  if (!Number.isNaN(d.getTime())) return d;
   const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
   if (m) {
     const day = parseInt(m[1]!, 10);
@@ -281,6 +284,8 @@ function parseDate(raw: string): Date | null {
     const dt = new Date(Date.UTC(year, month, day));
     if (!Number.isNaN(dt.getTime())) return dt;
   }
+  const d = new Date(trimmed);
+  if (!Number.isNaN(d.getTime())) return d;
   // CSV sometimes stores Excel serials as plain digits (e.g. "45321").
   if (/^\d{5,7}(\.\d+)?$/.test(trimmed.replace(/,/g, ""))) {
     const n = Number(trimmed.replace(/,/g, ""));
@@ -830,6 +835,10 @@ async function analyzePrivateProfile(
         }
       }
     }
+    if (allocations.length === 0) {
+      scratch.errors.push(`Row ${rowNumber}: receipt #${receiptNum} could not be linked to any treatments.`);
+      continue;
+    }
     const allocationSum = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
     if (allocations.length > 0 && Math.abs(allocationSum - Number(totalAmount)) > 0.01) {
       scratch.errors.push(
@@ -1149,6 +1158,16 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     }
     const allocationsSum =
       treatmentAmountSum + consultationAmountSum + travelAmountSum;
+    if (
+      allocations.length === 0 &&
+      consultationAllocations.length === 0 &&
+      travelAllocations.length === 0
+    ) {
+      scratch.errors.push(
+        `Row ${payRow.rowNumber}: receipt #${payRow.receiptNum} could not be linked to any treatments.`,
+      );
+      continue;
+    }
     if (allocationsSum > 0 && Math.abs(allocationsSum - Number(payRow.total)) > 0.01) {
       const remainder = Number(payRow.total) - allocationsSum;
       scratch.warnings.push(
@@ -1193,11 +1212,27 @@ export async function analyzeOrgProfileForTest(params: TipulimAnalyzeParams, ctx
 }
 
 function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
-  const treatmentsPerClient = Array.from(scratch.treatmentCountsByDisplay.entries()).map(([displayName, count]) => ({
-    displayName,
-    clientId: null,
-    count,
-  }));
+  const visitCountsByClient = new Map<string, Map<"clinic" | "home" | "phone" | "video", number>>();
+  for (const treatment of scratch.pendingTreatments.values()) {
+    const displayName = treatment.clientRef.displayName;
+    const visitCounts = visitCountsByClient.get(displayName) ?? new Map();
+    visitCounts.set(treatment.visitType, (visitCounts.get(treatment.visitType) ?? 0) + 1);
+    visitCountsByClient.set(displayName, visitCounts);
+  }
+  const visitPriority: Array<"clinic" | "home" | "phone" | "video"> = ["clinic", "home", "phone", "video"];
+  const treatmentsPerClient = Array.from(scratch.treatmentCountsByDisplay.entries()).map(([displayName, count]) => {
+    const visitCounts = visitCountsByClient.get(displayName) ?? new Map();
+    let majorityVisitType: "clinic" | "home" | "phone" | "video" | null = null;
+    let maxCount = 0;
+    for (const vt of visitPriority) {
+      const vtCount = visitCounts.get(vt) ?? 0;
+      if (vtCount > maxCount) {
+        maxCount = vtCount;
+        majorityVisitType = vt;
+      }
+    }
+    return { displayName, clientId: null, count, majorityVisitType };
+  });
   return {
     newClientsCount: scratch.newClients.size,
     treatmentsTotal: Array.from(scratch.treatmentCountsByDisplay.values()).reduce((a, b) => a + b, 0),
@@ -1628,10 +1663,16 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
 
     const touchedClientIds = new Set<string>();
+    const visitCountsByClientId = new Map<string, Map<"clinic" | "home" | "phone" | "video", number>>();
     for (const t of scratch.pendingTreatments.values()) {
       const clientId =
         t.clientRef.kind === "existing" ? t.clientRef.id : clientIdByKey.get(t.clientRef.tempKey) ?? null;
-      if (clientId) touchedClientIds.add(clientId);
+      if (clientId) {
+        touchedClientIds.add(clientId);
+        const counts = visitCountsByClientId.get(clientId) ?? new Map();
+        counts.set(t.visitType, (counts.get(t.visitType) ?? 0) + 1);
+        visitCountsByClientId.set(clientId, counts);
+      }
     }
     const now = new Date();
     const twoMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, now.getUTCDate()));
@@ -1680,11 +1721,23 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       const recent = bounds.max.getTime() >= twoMonthsAgo.getTime();
       const preferredProgramId =
         preferredProgramByClient.get(clientId)?.programId ?? existingClient?.default_program_id ?? null;
+      const visitCounts = visitCountsByClientId.get(clientId) ?? new Map();
+      const visitPriority: Array<"clinic" | "home" | "phone" | "video"> = ["clinic", "home", "phone", "video"];
+      let majorityVisitType: "clinic" | "home" | "phone" | "video" | null = null;
+      let maxCount = 0;
+      for (const vt of visitPriority) {
+        const vtCount = visitCounts.get(vt) ?? 0;
+        if (vtCount > maxCount) {
+          maxCount = vtCount;
+          majorityVisitType = vt;
+        }
+      }
       await tx.therapy_clients.update({
         where: { id: clientId },
         data: {
           default_job_id: params.jobId,
           default_program_id: preferredProgramId,
+          default_visit_type: majorityVisitType,
           start_date: newStart,
           end_date: recent ? null : lastDay,
           is_active: recent,

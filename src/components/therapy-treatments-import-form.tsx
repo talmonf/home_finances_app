@@ -10,7 +10,12 @@ type Program = { id: string; jobId: string; name: string; jobLabel?: string };
 type PreviewData = {
   newClientsCount: number;
   treatmentsTotal: number;
-  treatmentsPerClient: Array<{ displayName: string; clientId: string | null; count: number }>;
+  treatmentsPerClient: Array<{
+    displayName: string;
+    clientId: string | null;
+    count: number;
+    majorityVisitType: "clinic" | "home" | "phone" | "video" | null;
+  }>;
   receiptsToCreateCount: number;
   programsToAutoCreate: Array<{ name: string; source: "system_default" | "sheet"; treatmentCount: number }>;
   warnings: string[];
@@ -393,6 +398,7 @@ export function TherapyTreatmentsImportForm({
               {preview.treatmentsPerClient.map((r) => (
                 <p key={r.displayName}>
                   {r.displayName}: {r.count}
+                  {r.majorityVisitType ? ` (default visit: ${r.majorityVisitType})` : ""}
                 </p>
               ))}
             </div>
@@ -483,7 +489,7 @@ export function TherapyTreatmentsImportForm({
                         <ul className="list-disc pl-5">
                           {preview.importDebug.orgPaymentDiagnosticsSample.map((d, i) => (
                             <li key={`${d.receiptNumber}-${d.rowNumber}-${i}`}>
-                              #{d.receiptNumber} row {d.rowNumber} | raw="{d.coveredMonthRaw || "—"}" | key=
+                              #{d.receiptNumber} row {d.rowNumber} | raw=&quot;{d.coveredMonthRaw || "—"}&quot; | key=
                               {d.monthKeyUsed} | matched: T={d.matchedTreatments}, C={d.matchedConsultations ?? 0},
                               TR={d.matchedTravel ?? 0} | amounts: T={d.matchedTreatmentsAmount ?? "0.00"}, C=
                               {d.matchedConsultationsAmount ?? "0.00"}, TR={d.matchedTravelAmount ?? "0.00"}

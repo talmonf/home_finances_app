@@ -84,6 +84,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 072 | `072_therapy_receipts_covered_period.sql` | ALTER | `therapy_receipts`: add `covered_period_start`/`covered_period_end` (DATE) for month coverage tracking + index for receivables reporting. |
 | 073 | `073_therapy_treatments_program_optional.sql` | ALTER | `therapy_treatments`: make `program_id` nullable so sessions can exist without a service program (jobs with no programs). |
 | 074 | `074_therapy_receipt_allocations_consultations_travel.sql` | CREATE | Add receipt allocation tables for consultations and travel entries so organization receipts can fully link non-treatment income. |
+| 075 | `075_therapy_clients_default_visit_type.sql` | ALTER | `therapy_clients`: add nullable `default_visit_type` to store client-level default visit type for treatment entry/import. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -161,6 +162,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 072_therapy_receipts_covered_period.sql
 - [x] 073_therapy_treatments_program_optional.sql
 - [x] 074_therapy_receipt_allocations_consultations_travel.sql
+- [x] 075_therapy_clients_default_visit_type.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 
