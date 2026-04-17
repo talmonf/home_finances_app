@@ -61,7 +61,7 @@ export function TreatmentClientDefaultsSection({
   };
   labels: SectionLabels;
 }) {
-  const [selectedClientId, setSelectedClientId] = useState(initial?.client_id ?? clients[0]?.id ?? "");
+  const [selectedClientId, setSelectedClientId] = useState(initial?.client_id ?? "");
   const selectedClientDefaults = useMemo(
     () => clients.find((cl) => cl.id === selectedClientId) ?? null,
     [clients, selectedClientId],

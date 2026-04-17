@@ -48,8 +48,9 @@ export function TherapyTreatmentDefaultAmountFields(props: {
 }) {
   const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId } = props;
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
+  const isEditing = Boolean(defaultValues?.job_id);
 
-  const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || jobs[0]?.id || "";
+  const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
   const programsForFirst = useMemo(
     () => programs.filter((p) => p.job_id === firstJobId),
     [programs, firstJobId],
@@ -58,27 +59,32 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   const initialProgramId =
     (requestedProgramId && programs.some((p) => p.id === requestedProgramId) ? requestedProgramId : "") ||
     programsForFirst[0]?.id ||
-    programs[0]?.id ||
     "";
 
-  const initialVisit: TherapyVisitType = defaultValues?.visit_type ?? defaultClient?.default_visit_type ?? "clinic";
-  const initialResolved = resolveTherapyVisitTypeDefault(
-    visitDefaults,
-    firstJobId,
-    initialProgramId,
-    initialVisit,
-  );
+  const initialVisit: TherapyVisitType | "" =
+    defaultValues?.visit_type ??
+    defaultClient?.default_visit_type ??
+    (isEditing ? "clinic" : "");
+  const initialResolved = initialVisit
+    ? resolveTherapyVisitTypeDefault(
+        visitDefaults,
+        firstJobId,
+        initialProgramId,
+        initialVisit,
+      )
+    : null;
 
   const [jobId, setJobId] = useState(firstJobId);
   const [programId, setProgramId] = useState(initialProgramId);
-  const [visitType, setVisitType] = useState<TherapyVisitType>(initialVisit);
+  const [visitType, setVisitType] = useState<TherapyVisitType | "">(initialVisit);
   const [amount, setAmount] = useState(defaultValues?.amount ?? initialResolved?.amount ?? "");
   const [currency, setCurrency] = useState(defaultValues?.currency ?? initialResolved?.currency ?? "ILS");
 
   const programsForJob = useMemo(() => programs.filter((p) => p.job_id === jobId), [programs, jobId]);
 
   const applyDefault = useCallback(
-    (j: string, p: string, vt: TherapyVisitType) => {
+    (j: string, p: string, vt: TherapyVisitType | "") => {
+      if (!vt) return;
       const d = resolveTherapyVisitTypeDefault(visitDefaults, j, p, vt);
       if (d) {
         setAmount(d.amount);
@@ -101,7 +107,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     applyDefault(jobId, nextProgramId, visitType);
   };
 
-  const onVisitTypeChange = (vt: TherapyVisitType) => {
+  const onVisitTypeChange = (vt: TherapyVisitType | "") => {
     setVisitType(vt);
     applyDefault(jobId, programId, vt);
   };
@@ -119,6 +125,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           onChange={(e) => onJobChange(e.target.value)}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
+          <option value="">{labels.select}</option>
           {jobs.map((j) => (
             <option key={j.id} value={j.id}>
               {j.job_title}
@@ -135,15 +142,12 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           onChange={(e) => onProgramChange(e.target.value)}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          {programsForJob.length === 0 ? (
-            <option value="">{labels.select}</option>
-          ) : (
-            programsForJob.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.job.job_title} — {p.name}
-              </option>
-            ))
-          )}
+          <option value="">{labels.select}</option>
+          {programsForJob.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.job.job_title} — {p.name}
+            </option>
+          ))}
         </select>
       </div>
       <div>
@@ -193,9 +197,10 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           name="visit_type"
           required
           value={visitType}
-          onChange={(e) => onVisitTypeChange(e.target.value as TherapyVisitType)}
+          onChange={(e) => onVisitTypeChange(e.target.value as TherapyVisitType | "")}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
+          <option value="">{labels.select}</option>
           {visitOptions.map((v) => (
             <option key={v} value={v}>
               {therapyVisitTypeLabel(uiLanguage, v)}

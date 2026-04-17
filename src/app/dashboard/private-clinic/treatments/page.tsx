@@ -175,6 +175,7 @@ export default async function TreatmentsPage({
     amount: r.amount.toString(),
     currency: r.currency,
   }));
+  const activeClients = clients.filter((client) => client.is_active);
 
   const note1 = therapyLocalizedNoteLabel(
     settings?.note_1_label ?? "Note 1",
@@ -398,7 +399,7 @@ export default async function TreatmentsPage({
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
           uiLanguage={uiLanguage}
-          clients={clients.map((cl) => ({
+          clients={activeClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`,
             default_job_id: cl.default_job_id,

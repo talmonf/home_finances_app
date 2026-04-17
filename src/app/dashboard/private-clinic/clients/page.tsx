@@ -95,7 +95,7 @@ function clientsListHref(p: {
 }) {
   const sp = new URLSearchParams();
   if (p.q?.trim()) sp.set("q", p.q.trim());
-  if (p.status && p.status !== "all") sp.set("status", p.status);
+  if (p.status && p.status !== "active") sp.set("status", p.status);
   if (p.job?.trim()) sp.set("job", p.job.trim());
   if (p.from?.trim()) sp.set("from", p.from.trim());
   if (p.to?.trim()) sp.set("to", p.to.trim());
@@ -166,7 +166,7 @@ export default async function ClientsPage({
 
   const resolved = searchParams ? await searchParams : undefined;
   const q = (resolved?.q ?? "").trim();
-  const status = resolved?.status === "active" || resolved?.status === "inactive" ? resolved.status : "all";
+  const status = resolved?.status === "all" || resolved?.status === "inactive" ? resolved.status : "active";
   const fromRaw = (resolved?.from ?? "").trim();
   const toRaw = (resolved?.to ?? "").trim();
   const sort = parseSortKey(resolved?.sort);
@@ -257,7 +257,7 @@ export default async function ClientsPage({
   );
 
   const hasActiveFilters =
-    Boolean(q) || status !== "all" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
+    Boolean(q) || status !== "active" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
 
   return (
     <div className="space-y-6">
