@@ -14,7 +14,7 @@ import {
   updateTherapyConsultation,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
@@ -35,9 +35,16 @@ export default async function ConsultationsPage({
     income_bank?: string;
   }>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
@@ -52,7 +59,7 @@ export default async function ConsultationsPage({
 
   const [jobs, types, rows] = await Promise.all([
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -62,7 +69,7 @@ export default async function ConsultationsPage({
     prisma.therapy_consultations.findMany({
       where: {
         household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
         ...(jobFilter ? { job_id: jobFilter } : {}),
         ...(receiptFilter
           ? {
@@ -93,7 +100,7 @@ export default async function ConsultationsPage({
   ]);
   const filteredReceipt = receiptFilter
     ? await prisma.therapy_receipts.findFirst({
-        where: { id: receiptFilter, household_id: householdId },
+        where: { id: receiptFilter, household_id: householdId, job: jobScope },
         select: { id: true, receipt_number: true },
       })
     : null;

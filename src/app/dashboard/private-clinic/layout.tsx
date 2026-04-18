@@ -47,10 +47,19 @@ export default async function PrivateClinicLayout({
   let reminderBadgeCount: number | null = null;
   if (
     householdId &&
+    userId &&
     !session?.user?.isSuperAdmin &&
     navItems.some((i) => i.key === "reminders")
   ) {
-    reminderBadgeCount = await getPrivateClinicReminderBadgeCount(prisma, householdId);
+    const userRow = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId, is_active: true },
+      select: { family_member_id: true },
+    });
+    reminderBadgeCount = await getPrivateClinicReminderBadgeCount(
+      prisma,
+      householdId,
+      userRow?.family_member_id ?? null,
+    );
   }
 
   return (

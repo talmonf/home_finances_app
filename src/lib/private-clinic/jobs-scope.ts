@@ -28,6 +28,39 @@ export function jobsWhereActiveForPrivateClinicPickers({
 /** Use as `job: jobWhereInPrivateClinicModule` on therapy-related queries. */
 export const jobWhereInPrivateClinicModule = { is_private_clinic: true } satisfies Prisma.jobsWhereInput;
 
+/**
+ * Private-clinic jobs visible to the current user: all household private-clinic jobs,
+ * or only those tied to the user's linked family member when set.
+ */
+export function jobWherePrivateClinicScoped(
+  familyMemberId: string | null | undefined,
+): Prisma.jobsWhereInput {
+  return {
+    ...jobWhereInPrivateClinicModule,
+    ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+  };
+}
+
+/**
+ * Therapy clients that belong to this practitioner's private-clinic job(s).
+ * When `familyMemberId` is null, returns `{}` (no extra filter — e.g. unlinked household admin).
+ */
+export function therapyClientsWhereLinkedPrivateClinicJobs(
+  familyMemberId: string | null | undefined,
+): Partial<Prisma.therapy_clientsWhereInput> {
+  if (!familyMemberId) return {};
+  return {
+    OR: [
+      { default_job: { is_private_clinic: true, family_member_id: familyMemberId } },
+      {
+        client_jobs: {
+          some: { job: { is_private_clinic: true, family_member_id: familyMemberId } },
+        },
+      },
+    ],
+  };
+}
+
 export function formatPrivateClinicJobLabel(job: {
   job_title: string;
   employer_name: string | null;

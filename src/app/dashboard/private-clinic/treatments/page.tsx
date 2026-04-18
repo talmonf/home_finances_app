@@ -18,6 +18,7 @@ import {
   formatPrivateClinicJobLabel,
   jobsWhereActiveForPrivateClinicPickers,
   jobWhereInPrivateClinicModule,
+  therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
@@ -80,19 +81,27 @@ export default async function TreatmentsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
+  const jobScopeWhere = {
+    household_id: householdId,
+    job: {
+      ...jobWhereInPrivateClinicModule,
+      ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+    },
+  } as const;
+
   const [linkedJobRows, linkedProgramRows, linkedClientRows] = await Promise.all([
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId },
+      where: jobScopeWhere,
       distinct: ["job_id"],
       select: { job_id: true },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId },
+      where: jobScopeWhere,
       distinct: ["program_id"],
       select: { program_id: true },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId },
+      where: jobScopeWhere,
       distinct: ["client_id"],
       select: { client_id: true },
     }),
@@ -136,6 +145,7 @@ export default async function TreatmentsPage({
       prisma.therapy_clients.findMany({
       where: {
         household_id: householdId,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
         OR: [
           { is_active: true },
           ...(filters.client ? [{ id: filters.client }] : []),
@@ -165,7 +175,7 @@ export default async function TreatmentsPage({
       where: { household_id: householdId, is_active: true },
       orderBy: { name: "asc" },
     }),
-      loadTreatmentsCursorPage({ householdId, filters, take: 50 }),
+      loadTreatmentsCursorPage({ householdId, familyMemberId, filters, take: 50 }),
   ]);
 
   const visitDefaults = visitDefaultsRows.map((r) => ({
@@ -211,7 +221,14 @@ export default async function TreatmentsPage({
   const editTreatment =
     modalMode === "edit" && editId
       ? await prisma.therapy_treatments.findFirst({
-          where: { id: editId, household_id: householdId },
+          where: {
+            id: editId,
+            household_id: householdId,
+            job: {
+              ...jobWhereInPrivateClinicModule,
+              ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+            },
+          },
           include: {
             client: { select: { first_name: true, last_name: true } },
             attachments: { orderBy: { created_at: "asc" } },
@@ -224,7 +241,14 @@ export default async function TreatmentsPage({
       : null;
   const filteredReceipt = filters.receipt
     ? await prisma.therapy_receipts.findFirst({
-        where: { id: filters.receipt, household_id: householdId },
+        where: {
+          id: filters.receipt,
+          household_id: householdId,
+          job: {
+            ...jobWhereInPrivateClinicModule,
+            ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+          },
+        },
         select: { id: true, receipt_number: true },
       })
     : null;

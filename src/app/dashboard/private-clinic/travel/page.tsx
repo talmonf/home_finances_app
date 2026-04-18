@@ -16,7 +16,11 @@ import {
   updateTherapyTravelEntry,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  jobsWhereActiveForPrivateClinicPickers,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
@@ -37,9 +41,16 @@ export default async function TravelPage({
     bank?: string;
   }>;
 }) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
@@ -56,18 +67,19 @@ export default async function TravelPage({
 
   const [jobs, clients, treatments, entries] = await Promise.all([
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_clients.findMany({
       where: {
         household_id: householdId,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
         OR: [{ is_active: true }, ...(clientFilter ? [{ id: clientFilter }] : [])],
       },
       orderBy: { first_name: "asc" },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { occurred_at: "desc" },
       take: 300,
       include: { client: true, job: true },
@@ -77,10 +89,7 @@ export default async function TravelPage({
         household_id: householdId,
         AND: [
           {
-            OR: [
-              { job: jobWhereInPrivateClinicModule },
-              { treatment: { job: jobWhereInPrivateClinicModule } },
-            ],
+            OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
           },
           ...(jobFilter
             ? [
@@ -122,7 +131,7 @@ export default async function TravelPage({
   ]);
   const filteredReceipt = receiptFilter
     ? await prisma.therapy_receipts.findFirst({
-        where: { id: receiptFilter, household_id: householdId },
+        where: { id: receiptFilter, household_id: householdId, job: jobScope },
         select: { id: true, receipt_number: true },
       })
     : null;

@@ -14,6 +14,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
+import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 
 type ListFilterQs = {
   q: string;
@@ -205,6 +206,7 @@ export default async function ClientsPage({
 
   const where: Prisma.therapy_clientsWhereInput = {
     household_id: householdId,
+    ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
     ...(status === "active" ? { is_active: true } : status === "inactive" ? { is_active: false } : {}),
     ...(q
       ? {
@@ -231,7 +233,9 @@ export default async function ClientsPage({
   };
 
   const [baseClientCount, clients] = await Promise.all([
-    prisma.therapy_clients.count({ where: { household_id: householdId } }),
+    prisma.therapy_clients.count({
+      where: { household_id: householdId, ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId) },
+    }),
     prisma.therapy_clients.findMany({
       where,
       orderBy: orderByForSort(sort, dir),

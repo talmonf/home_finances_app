@@ -1,12 +1,17 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
 import { countUpcomingReminders, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 
 export async function getPrivateClinicReminderBadgeCount(
   prisma: PrismaClient,
   householdId: string,
+  familyMemberId: string | null,
 ): Promise<number> {
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const today = startOfTodayLocal();
 
   const [manualRows, subscriptions, clients, clinicInsurance, clinicRentals] = await Promise.all([
@@ -18,7 +23,7 @@ export async function getPrivateClinicReminderBadgeCount(
       where: {
         household_id: householdId,
         job_id: { not: null },
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
       },
       select: {
         id: true,
@@ -32,7 +37,7 @@ export async function getPrivateClinicReminderBadgeCount(
       },
     }),
     prisma.therapy_clients.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId) },
       select: {
         id: true,
         is_active: true,

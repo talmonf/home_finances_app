@@ -22,15 +22,26 @@ import {
   updateTherapyAppointmentStatus,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  jobsWhereActiveForPrivateClinicPickers,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppointmentsPage() {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
@@ -41,7 +52,7 @@ export default async function AppointmentsPage() {
 
   const [jobs, programs, clients, upcoming, series] = await Promise.all([
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
       include: { family_member: true },
     }),
@@ -49,18 +60,22 @@ export default async function AppointmentsPage() {
       where: {
         household_id: householdId,
         is_active: true,
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
       },
       include: { job: true },
     }),
     prisma.therapy_clients.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+      },
       orderBy: { first_name: "asc" },
     }),
     prisma.therapy_appointments.findMany({
       where: {
         household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
         start_at: { gte: now },
         status: "scheduled",
       },
@@ -72,7 +87,7 @@ export default async function AppointmentsPage() {
       where: {
         household_id: householdId,
         is_active: true,
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
       },
       orderBy: { start_date: "desc" },
       include: { client: true, job: true },

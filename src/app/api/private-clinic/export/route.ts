@@ -1,5 +1,8 @@
 import { getAuthSession, prisma } from "@/lib/auth";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
@@ -16,6 +19,13 @@ export async function GET() {
   if (!session?.user || !householdId || session.user.isSuperAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const [
     jobs,
@@ -36,33 +46,33 @@ export async function GET() {
     privateClinicReminders,
   ] = await Promise.all([
     prisma.jobs.findMany({
-      where: { household_id: householdId, is_private_clinic: true },
+      where: { household_id: householdId, ...jobScope },
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_service_programs.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_clients.findMany({
-      where: { household_id: householdId },
+      where: { household_id: householdId, ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId) },
       orderBy: { created_at: "desc" },
     }),
     prisma.therapy_clients_jobs.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
     }),
     prisma.therapy_treatments.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { occurred_at: "desc" },
     }),
     prisma.therapy_receipts.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { issued_at: "desc" },
     }),
     prisma.therapy_receipt_allocations.findMany({
-      where: { household_id: householdId, receipt: { job: jobWhereInPrivateClinicModule } },
+      where: { household_id: householdId, receipt: { job: jobScope } },
     }),
     prisma.therapy_job_expenses.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { expense_date: "desc" },
     }),
     prisma.therapy_expense_categories.findMany({
@@ -71,11 +81,11 @@ export async function GET() {
     }),
     prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
     prisma.therapy_appointments.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { start_at: "asc" },
     }),
     prisma.therapy_appointment_series.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -83,13 +93,13 @@ export async function GET() {
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_consultations.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { occurred_at: "desc" },
     }),
     prisma.therapy_travel_entries.findMany({
       where: {
         household_id: householdId,
-        OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+        OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
       },
       orderBy: { created_at: "desc" },
     }),

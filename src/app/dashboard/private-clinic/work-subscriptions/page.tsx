@@ -13,7 +13,7 @@ import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "@/app/dashboard/subscriptions/actions";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +42,16 @@ type PageProps = {
 };
 
 export default async function WorkSubscriptionsPage({ searchParams }: PageProps) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
@@ -57,13 +64,13 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
       where: {
         household_id: householdId,
         job_id: { not: null },
-        job: jobWhereInPrivateClinicModule,
+        job: jobScope,
       },
       include: { job: true },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);

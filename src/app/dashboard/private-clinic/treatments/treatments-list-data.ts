@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/auth";
 import { decimalToNumber, treatmentPaymentStatus, type TherapyPaymentStatus } from "@/lib/therapy/payment";
-import { formatPrivateClinicJobLabel, jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import {
+  formatPrivateClinicJobLabel,
+  jobWherePrivateClinicScoped,
+} from "@/lib/private-clinic/jobs-scope";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type TreatmentsSortKey = "occurred_at" | "client" | "job" | "amount";
@@ -77,17 +80,19 @@ function orderByForTreatments(
 
 export async function loadTreatmentsCursorPage(params: {
   householdId: string;
+  /** When set, only treatments whose job belongs to this family member are listed. */
+  familyMemberId?: string | null;
   filters: TreatmentsListFilters;
   take: number;
   cursorId?: string;
 }): Promise<TreatmentsCursorPage> {
-  const { householdId, filters, take, cursorId } = params;
+  const { householdId, familyMemberId, filters, take, cursorId } = params;
   const from = parseDateFilter(filters.from);
   const to = parseDateFilter(filters.to);
 
   const baseWhere: Prisma.therapy_treatmentsWhereInput = {
     household_id: householdId,
-    job: jobWhereInPrivateClinicModule,
+    job: jobWherePrivateClinicScoped(familyMemberId),
     ...(filters.job ? { job_id: filters.job } : {}),
     ...(filters.program ? { program_id: filters.program } : {}),
     ...(filters.client ? { client_id: filters.client } : {}),

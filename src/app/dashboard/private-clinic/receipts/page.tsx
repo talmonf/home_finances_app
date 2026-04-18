@@ -16,7 +16,11 @@ import {
   deleteReceiptAllocation,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  jobsWhereActiveForPrivateClinicPickers,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import {
   loadReceiptsCursorPage,
   parseReceiptsBankFilter,
@@ -87,6 +91,7 @@ export default async function ReceiptsPage({
     prisma.therapy_clients.findMany({
       where: {
         household_id: householdId,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
         OR: [{ is_active: true }, ...(filters.client ? [{ id: filters.client }] : [])],
       },
       orderBy: { first_name: "asc" },
@@ -94,6 +99,7 @@ export default async function ReceiptsPage({
     }),
     loadReceiptsCursorPage({
       householdId,
+      familyMemberId,
       filters,
       take: 50,
     }),
@@ -173,7 +179,7 @@ export default async function ReceiptsPage({
           where: {
             id: editId,
             household_id: householdId,
-            job: jobWhereInPrivateClinicModule,
+            job: jobWherePrivateClinicScoped(familyMemberId),
           },
           include: {
             _count: {

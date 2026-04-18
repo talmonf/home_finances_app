@@ -13,7 +13,10 @@ import {
   buildUnifiedReminderRows,
   startOfTodayLocal,
 } from "@/lib/private-clinic/reminders-logic";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import { privateClinicReminders } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -45,9 +48,16 @@ type PageProps = {
 };
 
 export default async function PrivateClinicRemindersPage({ searchParams }: PageProps) {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
@@ -68,11 +78,11 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
         where: {
           household_id: householdId,
           job_id: { not: null },
-          job: jobWhereInPrivateClinicModule,
+          job: jobScope,
         },
       }),
       prisma.therapy_clients.findMany({
-        where: { household_id: householdId },
+        where: { household_id: householdId, ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId) },
         select: {
           id: true,
           is_active: true,

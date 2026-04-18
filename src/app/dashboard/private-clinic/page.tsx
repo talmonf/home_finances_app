@@ -1,44 +1,60 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { privateClinicOverviewCardLabel } from "@/lib/private-clinic-i18n";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWherePrivateClinicScoped,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrivateClinicOverviewPage() {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const uiLanguage = await getCurrentUiLanguage();
 
   const [clients, treatments, receipts, expenses, appointments, consultations, travel] =
     await Promise.all([
-      prisma.therapy_clients.count({ where: { household_id: householdId, is_active: true } }),
+      prisma.therapy_clients.count({
+        where: {
+          household_id: householdId,
+          is_active: true,
+          ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+        },
+      }),
       prisma.therapy_treatments.count({
-        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+        where: { household_id: householdId, job: jobScope },
       }),
       prisma.therapy_receipts.count({
-        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+        where: { household_id: householdId, job: jobScope },
       }),
       prisma.therapy_job_expenses.count({
-        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+        where: { household_id: householdId, job: jobScope },
       }),
       prisma.therapy_appointments.count({
         where: {
           household_id: householdId,
-          job: jobWhereInPrivateClinicModule,
+          job: jobScope,
           status: "scheduled",
           start_at: { gte: new Date() },
         },
       }),
       prisma.therapy_consultations.count({
-        where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+        where: { household_id: householdId, job: jobScope },
       }),
       prisma.therapy_travel_entries.count({
         where: {
           household_id: householdId,
-          OR: [{ job: jobWhereInPrivateClinicModule }, { treatment: { job: jobWhereInPrivateClinicModule } }],
+          OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
         },
       }),
     ]);

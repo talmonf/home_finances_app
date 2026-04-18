@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/auth";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type ReceiptsSortKey = "issued_at" | "number" | "job" | "amount" | "treatments";
@@ -82,11 +82,12 @@ function orderByForReceipts(
 
 export async function loadReceiptsCursorPage(params: {
   householdId: string;
+  familyMemberId?: string | null;
   filters: ReceiptsListFilters;
   take: number;
   cursorId?: string;
 }): Promise<ReceiptsCursorPage> {
-  const { householdId, filters, take, cursorId } = params;
+  const { householdId, familyMemberId, filters, take, cursorId } = params;
   const from = parseDateFilter(filters.from);
   const to = parseDateFilter(filters.to);
 
@@ -100,7 +101,7 @@ export async function loadReceiptsCursorPage(params: {
     const chunk = await prisma.therapy_receipts.findMany({
       where: {
         household_id: householdId,
-        job: jobWhereInPrivateClinicModule,
+        job: jobWherePrivateClinicScoped(familyMemberId),
         ...(filters.job ? { job_id: filters.job } : {}),
         ...(filters.client
           ? {

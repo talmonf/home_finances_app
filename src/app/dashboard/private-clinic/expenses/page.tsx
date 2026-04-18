@@ -15,14 +15,20 @@ import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-l
 import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-upload";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage() {
-  await requireHouseholdMember();
+  const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
@@ -30,7 +36,7 @@ export default async function ExpensesPage() {
 
   const [jobs, categories, expenses] = await Promise.all([
     prisma.jobs.findMany({
-      where: jobsWhereActiveForPrivateClinicPickers({ householdId }),
+      where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
     }),
     prisma.therapy_expense_categories.findMany({
@@ -38,7 +44,7 @@ export default async function ExpensesPage() {
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
     prisma.therapy_job_expenses.findMany({
-      where: { household_id: householdId, job: jobWhereInPrivateClinicModule },
+      where: { household_id: householdId, job: jobScope },
       orderBy: { expense_date: "desc" },
       take: 200,
       include: { job: true, category: true },
