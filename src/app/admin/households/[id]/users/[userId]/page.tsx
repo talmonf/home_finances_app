@@ -253,6 +253,21 @@ export default async function EditHouseholdUserPage({
                 ))}
               </select>
             </div>
+            <div className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+              <input
+                type="checkbox"
+                id="show_useful_links"
+                name="show_useful_links"
+                defaultChecked={user.show_useful_links ?? true}
+                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+              />
+              <label htmlFor="show_useful_links" className="cursor-pointer text-sm text-slate-200">
+                <span className="font-medium">Show useful links</span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  When enabled, the user sees section quick links on dashboard pages. Super-admin only.
+                </span>
+              </label>
+            </div>
             <div>
               <label
                 htmlFor="family_member_id"

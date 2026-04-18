@@ -916,6 +916,10 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   const existingProgramNames = new Set(
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
   );
+  const jobProgramsForOrg = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
+  const soleProgramNameNorm =
+    jobProgramsForOrg.length === 1 ? norm(jobProgramsForOrg[0]!.name) : null;
+  let soleProgramDefaultWarningAdded = false;
   const treatmentKeysByMonth = new Map<string, string[]>();
   const consultationKeysByMonth = new Map<string, string[]>();
   const travelKeysByMonth = new Map<string, string[]>();
@@ -991,13 +995,20 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         continue;
       }
       if (!clientRef) continue;
+      const effectiveProgramName = programName || soleProgramNameNorm || null;
+      if (!programName && soleProgramNameNorm && !soleProgramDefaultWarningAdded) {
+        scratch.warnings.push(
+          `Empty program column: using the only program defined for this job (${soleProgramNameNorm}).`,
+        );
+        soleProgramDefaultWarningAdded = true;
+      }
       const baseKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|${vt}`;
       const key = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
       scratch.pendingTreatments.set(key, {
         key,
         rowNumber,
         clientRef,
-        programName: programName || null,
+        programName: effectiveProgramName,
         occurredAt,
         amount,
         visitType: vt,
@@ -1058,11 +1069,18 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         const fallbackKeyBase = `${clientRef?.displayName ?? "unknown"}|${monthKey(occurredAt)}|${amount}|${params.missingVisitType}`;
         const fallbackKey = uniqueTreatmentKey(scratch.pendingTreatments, fallbackKeyBase, rowNumber);
         if (!clientRef) continue;
+        const effectiveProgramName = programName || soleProgramNameNorm || null;
+        if (!programName && soleProgramNameNorm && !soleProgramDefaultWarningAdded) {
+          scratch.warnings.push(
+            `Empty program column: using the only program defined for this job (${soleProgramNameNorm}).`,
+          );
+          soleProgramDefaultWarningAdded = true;
+        }
         scratch.pendingTreatments.set(fallbackKey, {
           key: fallbackKey,
           rowNumber,
           clientRef,
-          programName: programName || null,
+          programName: effectiveProgramName,
           occurredAt,
           amount,
           visitType: params.missingVisitType,

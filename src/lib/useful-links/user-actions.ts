@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, getAuthSession } from "@/lib/auth";
+import { getAuthSession, getCurrentShowUsefulLinks, prisma } from "@/lib/auth";
 import {
   normalizeAndValidateUrl,
   parseSortOrder,
@@ -33,6 +33,10 @@ export async function createMyUsefulLink(formData: FormData) {
   }
   const householdId = session.user.householdId;
   const userId = session.user.id;
+
+  if (!(await getCurrentShowUsefulLinks())) {
+    redirect("/");
+  }
 
   const returnPath = returnPathOnly(formData.get("return_path") as string | null);
   if (!isAllowedUsefulLinkReturnPath(returnPath)) {
@@ -88,6 +92,10 @@ export async function deleteMyUsefulLink(formData: FormData) {
   }
   const householdId = session.user.householdId;
   const userId = session.user.id;
+
+  if (!(await getCurrentShowUsefulLinks())) {
+    redirect("/");
+  }
 
   const returnPath = returnPathOnly(formData.get("return_path") as string | null);
   if (!isAllowedUsefulLinkReturnPath(returnPath)) {

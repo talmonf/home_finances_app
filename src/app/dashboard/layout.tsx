@@ -4,6 +4,7 @@ import {
   getAuthSession,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentObfuscateSensitive,
+  getCurrentShowUsefulLinks,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { HouseholdPreferencesProvider } from "@/components/household-preferences-context";
@@ -35,8 +36,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
-  const usefulSectionId =
+  const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin
+      ? await getCurrentShowUsefulLinks()
+      : false;
+  const usefulSectionId =
+    showUsefulLinks && session?.user?.householdId && !session.user.isSuperAdmin
       ? sectionIdFromDashboardPathname(pathname)
       : null;
 
@@ -55,13 +60,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Suspense fallback={null}>
                 <DashboardUserToolbar />
               </Suspense>
-              <Suspense fallback={null}>
-                <UsefulLinksActionFlash />
-              </Suspense>
-              {usefulSectionId ? (
-                <Suspense fallback={null}>
-                  <UsefulLinksBanner sectionId={usefulSectionId} returnPath={pathname} />
-                </Suspense>
+              {showUsefulLinks ? (
+                <>
+                  <Suspense fallback={null}>
+                    <UsefulLinksActionFlash />
+                  </Suspense>
+                  {usefulSectionId ? (
+                    <Suspense fallback={null}>
+                      <UsefulLinksBanner sectionId={usefulSectionId} returnPath={pathname} />
+                    </Suspense>
+                  ) : null}
+                </>
               ) : null}
             </div>
           </div>

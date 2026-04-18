@@ -89,6 +89,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 077 | `077_credit_cards_family_member_nullable.sql` | ALTER | `credit_cards`: make `family_member_id` nullable to support auto-created cards from statement imports (including RiseUp). |
 | 078 | `078_household_home_frequent_links.sql` | ALTER | `households`: optional `home_frequent_links_json` (JSONB) for per-household home dashboard frequent-link shortcuts. |
 | 079 | `079_private_clinic_reminders_family_member.sql` | ALTER | `private_clinic_reminders`: optional `family_member_id` → `family_members` (per-practitioner manual reminders); backfill + index. |
+| 080 | `080_users_show_useful_links.sql` | ALTER | `users`: `show_useful_links` (boolean, default true) — super-admin toggle for dashboard useful-links UI per user. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -171,6 +172,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 077_credit_cards_family_member_nullable.sql
 - [x] 078_household_home_frequent_links.sql
 - [x] 079_private_clinic_reminders_family_member.sql
+- [x] 080_users_show_useful_links.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

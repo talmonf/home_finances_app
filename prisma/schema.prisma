@@ -1243,6 +1243,8 @@ model users {
   ui_language          String?
   family_member_id     String?
   is_active            Boolean  @default(true)
+  /// When false, dashboard useful-links blocks are hidden for this user (super-admin only).
+  show_useful_links    Boolean  @default(true)
   created_at           DateTime @default(now())
   last_login_at        DateTime?
 

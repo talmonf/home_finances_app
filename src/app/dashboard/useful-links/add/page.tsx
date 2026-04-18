@@ -1,4 +1,4 @@
-import { getAuthSession, getCurrentUiLanguage } from "@/lib/auth";
+import { getAuthSession, getCurrentShowUsefulLinks, getCurrentUiLanguage } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { isDashboardSectionVisibleForMember } from "@/lib/useful-links/section-visible";
 import { isAllowedUsefulLinkReturnPath } from "@/lib/useful-links/return-path";
@@ -24,6 +24,9 @@ export default async function AddUsefulLinkPage({ searchParams }: PageProps) {
 
   const householdId = session.user.householdId;
   const userId = session.user.id;
+  if (!(await getCurrentShowUsefulLinks())) {
+    redirect("/dashboard");
+  }
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
 

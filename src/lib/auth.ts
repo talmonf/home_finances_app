@@ -242,6 +242,22 @@ export async function getCurrentObfuscateSensitive(): Promise<boolean> {
   return cookieStore.get(SESSION_OBFUSCATE_COOKIE)?.value === "1";
 }
 
+/** Per-user (super-admin managed): dashboard section useful-links banner and related UI. */
+export async function getCurrentShowUsefulLinks(): Promise<boolean> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  const householdId = session?.user?.householdId ?? null;
+  if (!householdId || session?.user?.isSuperAdmin) {
+    return true;
+  }
+  if (!userId) return true;
+  const row = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId },
+    select: { show_useful_links: true },
+  });
+  return row?.show_useful_links ?? true;
+}
+
 /** Super-admin can disable per-entity Links (URL) panels for a household. */
 export async function getHouseholdShowEntityUrlPanels(): Promise<boolean> {
   const session = await getAuthSession();

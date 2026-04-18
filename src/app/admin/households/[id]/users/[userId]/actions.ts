@@ -31,6 +31,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const rawUiLanguage = (formData.get("ui_language") as string | null)?.trim();
   const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
   const newPassword = (formData.get("new_password") as string | null)?.trim() || "";
+  const showUsefulLinks = formData.get("show_useful_links") === "on";
 
   if (!householdId || !userId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
@@ -100,6 +101,7 @@ export async function updateHouseholdUser(formData: FormData) {
         ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
         : null,
       ui_language: rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null,
+      show_useful_links: showUsefulLinks,
       ...(password_hash ? { password_hash } : {}),
     },
   });
