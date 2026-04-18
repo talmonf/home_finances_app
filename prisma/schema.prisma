@@ -30,6 +30,8 @@ model households {
   ui_language           String                     @default("en")
   /// When false, super-admin can hide per-entity "Links" (URL) panels on insurance, savings, etc.
   show_entity_url_panels Boolean                  @default(true)
+  /// Optional JSON map of home dashboard shortcut keys → enabled. Null means all defaults (enabled).
+  home_frequent_links_json Json?
   created_at            DateTime                   @default(now())
   updated_at            DateTime                   @updatedAt
   is_active             Boolean                    @default(true)

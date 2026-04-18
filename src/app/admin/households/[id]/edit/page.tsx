@@ -21,6 +21,12 @@ import {
   ensureTherapySettings,
 } from "@/lib/therapy/bootstrap";
 import { saveHouseholdSettings } from "./actions";
+import {
+  HOME_FREQUENT_LINK_ADMIN_LABELS,
+  HOME_FREQUENT_LINK_KEYS,
+  homeFrequentLinksApplyToVisibleDashboard,
+  parseHomeFrequentLinksJson,
+} from "@/lib/home-frequent-links";
 import { createHouseholdUsefulLink, deleteHouseholdUsefulLink } from "@/lib/useful-links/admin-actions";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +91,7 @@ export default async function EditHouseholdPage({
     }),
   ]);
   const privateClinicNavVisibility = mergePrivateClinicNavVisibility(therapySettings?.nav_tabs_json);
+  const frequentLinkToggles = parseHomeFrequentLinksJson(household.home_frequent_links_json);
 
   const enabledRows = await getHouseholdEnabledSections(householdId);
   const enabledBySectionId = new Map(
@@ -95,6 +102,10 @@ export default async function EditHouseholdPage({
 
   const setupSections = DASHBOARD_SECTIONS.filter((s) => s.group === "setup");
   const ongoingSections = DASHBOARD_SECTIONS.filter((s) => s.group === "ongoing");
+
+  const householdVisibleDashboardSections = DASHBOARD_SECTIONS.filter((s) => isSectionEnabled(s.id));
+  const showHomeFrequentLinksSettings =
+    homeFrequentLinksApplyToVisibleDashboard(householdVisibleDashboardSections);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -173,6 +184,39 @@ export default async function EditHouseholdPage({
               </span>
             </label>
           </section>
+
+          {showHomeFrequentLinksSettings ? (
+            <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-slate-200">
+                Home dashboard — frequent links
+              </h2>
+              <p className="mb-4 text-xs text-slate-500">
+                Shortcuts at the top of the household home screen. Each can be hidden independently.
+                Links to Private clinic or Upcoming renewals only appear when that section is enabled
+                for the household.
+              </p>
+              <input type="hidden" name="home_frequent_links_form" value="1" />
+              <ul className="space-y-2">
+                {HOME_FREQUENT_LINK_KEYS.map((key) => (
+                  <li
+                    key={key}
+                    className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      id={`hf_${key}`}
+                      name={`hf_${key}`}
+                      defaultChecked={frequentLinkToggles[key]}
+                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                    />
+                    <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
+                      {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-200">

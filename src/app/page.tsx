@@ -9,6 +9,11 @@ import {
   type DashboardOngoingTileProps,
   type DashboardSetupTileProps,
 } from "@/components/household-dashboard-panel";
+import {
+  getVisibleHomeFrequentLinks,
+  homeFrequentLinksApplyToVisibleDashboard,
+  homeFrequentLinksSectionTitle,
+} from "@/lib/home-frequent-links";
 
 function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"): string {
   if (language === "he") {
@@ -45,6 +50,14 @@ export default async function Home() {
   const uiLanguage = isSuperAdmin ? "en" : await getCurrentUiLanguage();
   const householdId = session.user.householdId ?? null;
   const userId = session.user.id;
+
+  const householdFrequentLinksRow =
+    !isSuperAdmin && householdId
+      ? await prisma.households.findUnique({
+          where: { id: householdId },
+          select: { home_frequent_links_json: true },
+        })
+      : null;
 
   const setupCounts: SetupCounts | null = !isSuperAdmin && householdId
     ? await Promise.all([
@@ -136,10 +149,18 @@ export default async function Home() {
     doneRows.map((r) => [r.section_id, r.is_done] as const),
   );
 
-  const hasHouseholdSetupOptions = setupSections.length > 0;
-  const showHouseholdsCard = isSuperAdmin || hasHouseholdSetupOptions;
-
   const hasAnyTiles = setupSections.length > 0 || ongoingSections.length > 0;
+
+  const frequentHomeLinks =
+    !isSuperAdmin &&
+    householdId &&
+    homeFrequentLinksApplyToVisibleDashboard(visibleSections)
+      ? getVisibleHomeFrequentLinks({
+          rawJson: householdFrequentLinksRow?.home_frequent_links_json,
+          enabledBySectionId,
+          language: uiLanguage,
+        })
+      : [];
 
   const setupTiles: DashboardSetupTileProps[] =
     !isSuperAdmin && setupCounts
@@ -170,9 +191,8 @@ export default async function Home() {
       }))
     : [];
 
-  const welcomeSubtitleNonAdmin = showHouseholdsCard
-    ? "This dashboard will show your households, accounts, and key finance insights."
-    : "This dashboard will show your enabled finance sections and key finance insights.";
+  const welcomeSubtitleNonAdmin =
+    "Your shortcuts, setup checklist, and ongoing finance tools for this household.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -190,22 +210,20 @@ export default async function Home() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
-              {showHouseholdsCard && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                  <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                    Households (Super Admin)
-                  </h2>
-                  <p className="mb-3 text-xs text-slate-400">
-                    Create and manage all households on the platform.
-                  </p>
-                  <Link
-                    href="/admin/households"
-                    className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                  >
-                    Open household admin
-                  </Link>
-                </div>
-              )}
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Households (Super Admin)
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Create and manage all households on the platform.
+                </p>
+                <Link
+                  href="/admin/households"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open household admin
+                </Link>
+              </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   System useful links
@@ -240,7 +258,8 @@ export default async function Home() {
           <HouseholdDashboardPanel
             userName={session.user.name ?? "user"}
             welcomeSubtitle={welcomeSubtitleNonAdmin}
-            showHouseholdsCard={showHouseholdsCard}
+            frequentLinksTitle={homeFrequentLinksSectionTitle(uiLanguage)}
+            frequentLinks={frequentHomeLinks}
             hasAnyTiles={hasAnyTiles}
             setupTiles={setupTiles}
             ongoingTiles={ongoingTiles}

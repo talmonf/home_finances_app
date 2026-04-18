@@ -87,6 +87,7 @@ Run scripts in order by number. Check off each script after you run it.
 | 075 | `075_therapy_clients_default_visit_type.sql` | ALTER | `therapy_clients`: add nullable `default_visit_type` to store client-level default visit type for treatment entry/import. |
 | 076 | `076_therapy_import_audits.sql` | CREATE | Add non-PII import audit trail (attempt status, duration, counts, failure details) linked to household user for superadmin visibility. |
 | 077 | `077_credit_cards_family_member_nullable.sql` | ALTER | `credit_cards`: make `family_member_id` nullable to support auto-created cards from statement imports (including RiseUp). |
+| 078 | `078_household_home_frequent_links.sql` | ALTER | `households`: optional `home_frequent_links_json` (JSONB) for per-household home dashboard frequent-link shortcuts. |
 
 **Your checklist (mark when run; skip if your DB already has these):**
 
@@ -167,6 +168,7 @@ Run scripts in order by number. Check off each script after you run it.
 - [x] 075_therapy_clients_default_visit_type.sql
 - [x] 076_therapy_import_audits.sql
 - [x] 077_credit_cards_family_member_nullable.sql
+- [x] 078_household_home_frequent_links.sql
 
 **Optional (not in default checklist):** `optional_migrate_legacy_digital_wallet.sql` — edit and run by hand if migrating from a legacy wallet table.
 

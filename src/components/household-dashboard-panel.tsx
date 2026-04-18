@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { SectionId } from "@/lib/dashboard-sections";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
+import type { HomeFrequentLinkItem } from "@/lib/home-frequent-links";
 
 export type DashboardSetupTileProps = {
   id: SectionId;
@@ -27,7 +28,8 @@ export type DashboardOngoingTileProps = {
 type HouseholdDashboardPanelProps = {
   userName: string;
   welcomeSubtitle: string;
-  showHouseholdsCard: boolean;
+  frequentLinksTitle: string;
+  frequentLinks: HomeFrequentLinkItem[];
   hasAnyTiles: boolean;
   setupTiles: DashboardSetupTileProps[];
   ongoingTiles: DashboardOngoingTileProps[];
@@ -42,7 +44,8 @@ function matchesSearch(queryLower: string, title: string, description: string) {
 export function HouseholdDashboardPanel({
   userName,
   welcomeSubtitle,
-  showHouseholdsCard,
+  frequentLinksTitle,
+  frequentLinks,
   hasAnyTiles,
   setupTiles,
   ongoingTiles,
@@ -91,23 +94,30 @@ export function HouseholdDashboardPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {showHouseholdsCard && (
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">Households</h2>
-            <p className="mb-3 text-xs text-slate-400">
-              A households overview page will appear here once implemented.
-            </p>
+      {frequentLinks.length > 0 ? (
+        <section className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold text-slate-200">{frequentLinksTitle}</h2>
+          <div className="flex flex-wrap gap-2">
+            {frequentLinks.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className="inline-flex items-center rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-sky-500/60 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
-        )}
+        </section>
+      ) : null}
 
-        <div className="col-span-full">
-          {filteredEmpty ? (
-            <p className="text-sm text-slate-400">{emptyMessage}</p>
-          ) : (
-            <>
-              {filteredSetup.length > 0 && (
-                <SetupHouseholdCollapsible>
+      <div>
+        {filteredEmpty ? (
+          <p className="text-sm text-slate-400">{emptyMessage}</p>
+        ) : (
+          <>
+            {filteredSetup.length > 0 && (
+              <SetupHouseholdCollapsible>
                   {filteredSetup.map((section) => (
                     <div
                       key={section.id}
@@ -186,7 +196,6 @@ export function HouseholdDashboardPanel({
               )}
             </>
           )}
-        </div>
       </div>
     </>
   );

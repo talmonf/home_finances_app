@@ -7,6 +7,7 @@ import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
 import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import { ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import type { TherapyHebrewTranscriptionProvider } from "@/generated/prisma/enums";
+import { HOME_FREQUENT_LINK_KEYS, type HomeFrequentLinkKey } from "@/lib/home-frequent-links";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -35,9 +36,22 @@ export async function saveHouseholdSettings(formData: FormData) {
   const ui_language = normalizeUiLanguage((formData.get("ui_language") as string | null)?.trim());
   const show_entity_url_panels = formData.get("show_entity_url_panels") === "on";
 
+  const updateHomeFrequentLinks = formData.get("home_frequent_links_form") === "1";
+  const home_frequent_links_json = {} as Record<HomeFrequentLinkKey, boolean>;
+  if (updateHomeFrequentLinks) {
+    for (const key of HOME_FREQUENT_LINK_KEYS) {
+      home_frequent_links_json[key] = formData.get(`hf_${key}`) === "on";
+    }
+  }
+
   await prisma.households.update({
     where: { id: householdId },
-    data: { date_display_format, ui_language, show_entity_url_panels },
+    data: {
+      date_display_format,
+      ui_language,
+      show_entity_url_panels,
+      ...(updateHomeFrequentLinks ? { home_frequent_links_json } : {}),
+    },
   });
 
   const enabledBySectionId: Record<string, boolean> = {};

@@ -7,7 +7,7 @@ type Props = {
 };
 
 export function SetupHouseholdCollapsible({ children }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-4">
