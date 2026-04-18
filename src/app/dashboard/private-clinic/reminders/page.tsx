@@ -68,10 +68,20 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
 
   const today = startOfTodayLocal();
 
-  const [manualRows, subscriptions, clients, clinicInsurance, clinicRentals, editingRow] =
+  const manualReminderWhere =
+    familyMemberId != null
+      ? { household_id: householdId, family_member_id: familyMemberId }
+      : { household_id: householdId };
+
+  const [householdMembers, manualRows, subscriptions, clients, clinicInsurance, clinicRentals, editingRow] =
     await Promise.all([
+      prisma.family_members.findMany({
+        where: { household_id: householdId, is_active: true },
+        orderBy: { full_name: "asc" },
+        select: { id: true, full_name: true },
+      }),
       prisma.private_clinic_reminders.findMany({
-        where: { household_id: householdId },
+        where: manualReminderWhere,
         orderBy: { reminder_date: "asc" },
       }),
       prisma.subscriptions.findMany({
@@ -108,7 +118,7 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
       }),
       editId
         ? prisma.private_clinic_reminders.findFirst({
-            where: { id: editId, household_id: householdId },
+            where: { id: editId, ...manualReminderWhere },
           })
         : Promise.resolve(null),
     ]);
@@ -229,6 +239,29 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
           action={createPrivateClinicReminder}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2"
         >
+          {familyMemberId ? <input type="hidden" name="family_member_id" value={familyMemberId} /> : null}
+          {!familyMemberId && householdMembers.length === 0 ? (
+            <p className="sm:col-span-2 text-sm text-amber-200/90">{t.addManualNeedMember}</p>
+          ) : !familyMemberId ? (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-slate-400">{t.familyMember}</label>
+              <select
+                name="family_member_id"
+                required
+                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  {t.familyMemberPlaceholder}
+                </option>
+                {householdMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div>
             <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
             <input
@@ -252,7 +285,8 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
           </div>
           <button
             type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            disabled={!familyMemberId && householdMembers.length === 0}
+            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t.addManual}
           </button>

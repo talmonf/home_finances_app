@@ -16,7 +16,10 @@ export async function getPrivateClinicReminderBadgeCount(
 
   const [manualRows, subscriptions, clients, clinicInsurance, clinicRentals] = await Promise.all([
     prisma.private_clinic_reminders.findMany({
-      where: { household_id: householdId },
+      where:
+        familyMemberId != null
+          ? { household_id: householdId, family_member_id: familyMemberId }
+          : { household_id: householdId },
       select: { id: true, reminder_date: true, category: true, description: true },
     }),
     prisma.subscriptions.findMany({

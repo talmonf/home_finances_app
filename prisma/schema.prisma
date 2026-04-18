@@ -178,6 +178,7 @@ model family_members {
   petrol_fillups_tanked_up car_petrol_fillups[] @relation("PetrolFillupTanker")
   insurance_policies   insurance_policies[]
   savings_policies     savings_policies[]
+  private_clinic_reminders private_clinic_reminders[]
 }
 
 model bank_accounts {
@@ -1403,17 +1404,19 @@ enum TherapyHebrewTranscriptionProvider {
 }
 
 model private_clinic_reminders {
-  id             String   @id @default(uuid())
-  household_id   String
-  reminder_date  DateTime @db.Date
-  category       String   @default("")
-  description    String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id               String   @id @default(uuid())
+  household_id     String
+  family_member_id String?
+  reminder_date    DateTime @db.Date
+  category         String   @default("")
+  description      String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
-  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  household     households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: Cascade)
 
-  @@index([household_id, reminder_date])
+  @@index([household_id, family_member_id, reminder_date])
 }
 
 model therapy_settings {

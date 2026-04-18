@@ -903,8 +903,8 @@ export function privateClinicReminders(lang: UiLanguage) {
   return {
     title: p("Reminders", "תזכורות"),
     blurb: p(
-      "Manual reminders plus upcoming renewals: work subscriptions, active clients with an end date, clinic insurance, and clinic lease end.",
-      "תזכורות ידניות ותאריכי חידוש קרובים: מנויים מקצועיים, לקוחות פעילים עם תאריך סיום, ביטוח קליניקה וסיום חוזה שכירות הקליניקה.",
+      "Manual reminders are per family member (your linked profile, or one you choose if your account is not linked). Also shown: upcoming renewals from work subscriptions, active clients with an end date, clinic insurance, and clinic lease end.",
+      "תזכורות ידניות שייכות לבן/בת משפחה (לפרופיל המקושר, או לבחירה אם החשבון לא מקושר). בנוסף: תאריכי חידוש ממנויים מקצועיים, לקוחות פעילים עם תאריך סיום, ביטוח קליניקה וסיום חוזה שכירות הקליניקה.",
     ),
     addManual: p("Add reminder", "הוספת תזכורת"),
     category: p("Category", "קטגוריה"),
@@ -929,6 +929,12 @@ export function privateClinicReminders(lang: UiLanguage) {
     upcomingTitle: p("Upcoming (next 60 days, including overdue)", "קרוב (60 יום, כולל באיחור)"),
     deletedMsg: p("Reminder deleted.", "התזכורת נמחקה."),
     cancelEdit: p("Cancel", "ביטול"),
+    familyMember: p("Family member", "בן/בת משפחה"),
+    familyMemberPlaceholder: p("Select…", "בחרו…"),
+    addManualNeedMember: p(
+      "Add at least one family member in the household before creating manual reminders.",
+      "יש להוסיף לפחות בן/בת משפחה בבית לפני יצירת תזכורות ידניות.",
+    ),
   };
 }
 

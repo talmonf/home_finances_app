@@ -104,7 +104,10 @@ export async function GET() {
       orderBy: { created_at: "desc" },
     }),
     prisma.private_clinic_reminders.findMany({
-      where: { household_id: householdId },
+      where:
+        familyMemberId != null
+          ? { household_id: householdId, family_member_id: familyMemberId }
+          : { household_id: householdId },
       orderBy: { reminder_date: "asc" },
     }),
   ]);
@@ -314,6 +317,7 @@ export async function GET() {
       "PrivateClinicReminders",
       privateClinicReminders.map((r) => ({
         id: r.id,
+        family_member_id: r.family_member_id ?? "",
         reminder_date: String(r.reminder_date),
         category: r.category,
         description: r.description ?? "",
