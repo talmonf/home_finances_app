@@ -1,8 +1,13 @@
 import { prisma } from "@/lib/auth";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWhereInPrivateClinicModule,
+  jobsWhereActiveForPrivateClinicPickers,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
 
 export type TherapyClientFormJobOption = { id: string; label: string };
+export type TherapyClientRelationshipPickerOption = { id: string; label: string };
 export type TherapyClientFormProgramOption = {
   id: string;
   jobId: string;
@@ -76,4 +81,24 @@ export async function loadTherapyClientFormOptions(params: {
       visits_per_period_weeks: p.visits_per_period_weeks,
     })),
   };
+}
+
+export async function loadTherapyClientRelationshipPickerClients(params: {
+  householdId: string;
+  familyMemberId: string | null;
+  excludeClientId: string;
+}): Promise<TherapyClientRelationshipPickerOption[]> {
+  const rows = await prisma.therapy_clients.findMany({
+    where: {
+      household_id: params.householdId,
+      id: { not: params.excludeClientId },
+      ...therapyClientsWhereLinkedPrivateClinicJobs(params.familyMemberId),
+    },
+    select: { id: true, first_name: true, last_name: true },
+    orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    label: [r.first_name, r.last_name].filter(Boolean).join(" "),
+  }));
 }

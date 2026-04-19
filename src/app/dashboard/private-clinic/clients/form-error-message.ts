@@ -11,6 +11,12 @@ export function therapyClientFormErrorMessage(error: string | undefined, cl: ClS
     program: cl.errProgram,
     "visit-type": cl.errVisitType,
     notfound: cl.errNotfound,
+    "rel-missing": cl.errRelMissing,
+    "rel-self": cl.errRelSelf,
+    "rel-type": cl.errRelType,
+    "rel-client": cl.errRelClient,
+    "rel-duplicate": cl.errRelDuplicate,
+    "rel-notfound": cl.errRelNotfound,
   };
   return map[key] ?? decodeURIComponent(key.replace(/\+/g, " "));
 }

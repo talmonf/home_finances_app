@@ -9,8 +9,12 @@ import {
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { redirect, notFound } from "next/navigation";
 import { TherapyClientForm } from "../../therapy-client-form";
-import { loadTherapyClientFormOptions } from "../../load-therapy-client-form-options";
+import {
+  loadTherapyClientFormOptions,
+  loadTherapyClientRelationshipPickerClients,
+} from "../../load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "../../form-error-message";
+import { TherapyClientRelationshipsSection } from "../../therapy-client-relationships-section";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +47,22 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
 
   const client = await prisma.therapy_clients.findFirst({
     where: { id, household_id: householdId },
-    include: { client_jobs: true },
+    include: {
+      client_jobs: true,
+      relationships_from: {
+        include: {
+          to_client: { select: { id: true, first_name: true, last_name: true } },
+        },
+        orderBy: { created_at: "asc" },
+      },
+    },
   });
   if (!client) notFound();
 
-  const { jobs, programs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
+  const [{ jobs, programs }, otherClients] = await Promise.all([
+    loadTherapyClientFormOptions({ householdId, familyMemberId }),
+    loadTherapyClientRelationshipPickerClients({ householdId, familyMemberId, excludeClientId: id }),
+  ]);
 
   const editPath = `${LIST_PATH}/${id}/edit`;
 
@@ -76,6 +91,19 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         c={c}
         redirectOnError={editPath}
         client={client}
+      />
+
+      <TherapyClientRelationshipsSection
+        cl={cl}
+        obfuscate={obfuscate}
+        fromClientId={id}
+        redirectOnError={editPath}
+        relationships={client.relationships_from.map((r) => ({
+          id: r.id,
+          relationship: r.relationship,
+          to_client: r.to_client,
+        }))}
+        otherClients={otherClients}
       />
     </div>
   );

@@ -22,6 +22,7 @@ import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import type {
   TherapyAppointmentRecurrence,
   TherapyAppointmentStatus,
+  TherapyClientRelationshipType,
   TherapyReceiptPaymentMethod,
   TherapyReceiptRecipientType,
   TherapyTreatmentPaymentMethod,
@@ -173,6 +174,19 @@ function parseDateRequired(raw: string | null | undefined): Date | null {
 
 function parseVisitType(raw: string | null | undefined): TherapyVisitType | null {
   if (raw === "clinic" || raw === "home" || raw === "phone" || raw === "video") return raw;
+  return null;
+}
+
+function parseTherapyClientRelationshipType(raw: string | null | undefined): TherapyClientRelationshipType | null {
+  if (
+    raw === "mother" ||
+    raw === "father" ||
+    raw === "husband" ||
+    raw === "wife" ||
+    raw === "referred_by"
+  ) {
+    return raw;
+  }
   return null;
 }
 
@@ -1112,6 +1126,78 @@ export async function updateTherapyClient(formData: FormData) {
   revalidatePath(`${BASE}/clients/${id}/edit`);
   revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?updated=1`);
+}
+
+export async function addTherapyClientRelationship(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const from_client_id = (formData.get("from_client_id") as string)?.trim() || "";
+  const to_client_id = (formData.get("to_client_id") as string)?.trim() || "";
+  const relRaw = (formData.get("relationship") as string)?.trim() || "";
+  const fallbackEdit = from_client_id ? `${BASE}/clients/${from_client_id}/edit` : `${BASE}/clients`;
+
+  if (!from_client_id || !to_client_id || !relRaw) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "rel-missing");
+  }
+  if (from_client_id === to_client_id) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${from_client_id}/edit`, "rel-self");
+  }
+  const relationship = parseTherapyClientRelationshipType(relRaw);
+  if (!relationship) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${from_client_id}/edit`, "rel-type");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, from_client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, to_client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${from_client_id}/edit`, "rel-client");
+  }
+
+  try {
+    await prisma.therapy_client_relationships.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        from_client_id,
+        to_client_id,
+        relationship,
+      },
+    });
+  } catch (e: unknown) {
+    const code = e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
+    if (code === "P2002") {
+      redirectTherapyClientFormError(formData, `${BASE}/clients/${from_client_id}/edit`, "rel-duplicate");
+    }
+    throw e;
+  }
+
+  revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/clients/${from_client_id}/edit`);
+  redirect(`${BASE}/clients/${from_client_id}/edit?updated=1`);
+}
+
+export async function removeTherapyClientRelationship(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const id = (formData.get("id") as string)?.trim() || "";
+  const from_client_id = (formData.get("from_client_id") as string)?.trim() || "";
+  if (!id || !from_client_id) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "rel-missing");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, from_client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+  const row = await prisma.therapy_client_relationships.findFirst({
+    where: { id, household_id: householdId, from_client_id },
+    select: { id: true },
+  });
+  if (!row) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${from_client_id}/edit`, "rel-notfound");
+  }
+  await prisma.therapy_client_relationships.delete({ where: { id } });
+  revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/clients/${from_client_id}/edit`);
+  redirect(`${BASE}/clients/${from_client_id}/edit?updated=1`);
 }
 
 // --- Treatments ---

@@ -112,6 +112,19 @@ export async function GET() {
     }),
   ]);
 
+  const scopedClientIds = clients.map((c) => c.id);
+  const clientRelationships =
+    scopedClientIds.length === 0
+      ? []
+      : await prisma.therapy_client_relationships.findMany({
+          where: {
+            household_id: householdId,
+            from_client_id: { in: scopedClientIds },
+            to_client_id: { in: scopedClientIds },
+          },
+          orderBy: { created_at: "desc" },
+        });
+
   const wb = XLSX.utils.book_new();
   const sheets = [
     sheet(
@@ -171,6 +184,16 @@ export async function GET() {
         client_id: r.client_id,
         job_id: r.job_id,
         is_primary: r.is_primary,
+      })),
+    ),
+    sheet(
+      "ClientRelationships",
+      clientRelationships.map((r) => ({
+        id: r.id,
+        household_id: r.household_id,
+        from_client_id: r.from_client_id,
+        to_client_id: r.to_client_id,
+        relationship: r.relationship,
       })),
     ),
     sheet(

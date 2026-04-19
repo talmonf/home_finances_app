@@ -95,6 +95,7 @@ model households {
   private_clinic_reminders           private_clinic_reminders[]
   therapy_import_audits              therapy_import_audits[]
   therapy_appointment_audits         therapy_appointment_audits[]
+  therapy_client_relationships       therapy_client_relationships[]
 }
 
 model loans {
@@ -1445,6 +1446,17 @@ enum TherapyHebrewTranscriptionProvider {
   @@map("therapy_hebrew_transcription_provider")
 }
 
+/// For `therapy_client_relationships`: `to_client` is the `relationship` of `from_client` (e.g. mother = to is from’s mother; referred_by = from was referred by to).
+enum TherapyClientRelationshipType {
+  mother
+  father
+  husband
+  wife
+  referred_by
+
+  @@map("therapy_client_relationship_type")
+}
+
 model private_clinic_reminders {
   id               String   @id @default(uuid())
   household_id     String
@@ -1568,6 +1580,26 @@ model therapy_clients {
   appointments    therapy_appointments[]
   series          therapy_appointment_series[]
   therapy_receipts therapy_receipts[]
+  relationships_from therapy_client_relationships[] @relation("TherapyClientRelationshipFrom")
+  relationships_to   therapy_client_relationships[] @relation("TherapyClientRelationshipTo")
+}
+
+model therapy_client_relationships {
+  id             String                       @id @default(uuid())
+  household_id   String
+  from_client_id String
+  to_client_id   String
+  relationship   TherapyClientRelationshipType
+  created_at     DateTime                     @default(now())
+
+  household   households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  from_client therapy_clients @relation("TherapyClientRelationshipFrom", fields: [from_client_id], references: [id], onDelete: Cascade)
+  to_client   therapy_clients @relation("TherapyClientRelationshipTo", fields: [to_client_id], references: [id], onDelete: Cascade)
+
+  @@unique([from_client_id, to_client_id, relationship])
+  @@index([household_id])
+  @@index([from_client_id])
+  @@index([to_client_id])
 }
 
 model therapy_clients_jobs {
