@@ -3,16 +3,19 @@
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { validatePassword } from "@/lib/password-policy";
 import bcrypt from "bcryptjs";
-import { redirect } from "next/navigation";
 
-function failPasswordChange(message: string): never {
-  redirect(`/change-password?error=${encodeURIComponent(message)}`);
-}
+/** Avoid `redirect()` in the action so the client performs navigation (reliable with App Router + server actions). */
+export type ChangePasswordActionState =
+  | { error: string }
+  | { redirectTo: string };
 
-export async function changePasswordAction(formData: FormData) {
+export async function changePasswordAction(
+  _prev: ChangePasswordActionState | null,
+  formData: FormData,
+): Promise<ChangePasswordActionState> {
   const session = await getAuthSession();
   if (!session?.user?.id) {
-    redirect("/login");
+    return { redirectTo: "/login" };
   }
 
   const lang = await getCurrentUiLanguage();
@@ -23,26 +26,28 @@ export async function changePasswordAction(formData: FormData) {
   const confirmPassword = (formData.get("confirm_password") as string | null) ?? "";
 
   if (!currentPassword.trim() || !newPassword || !confirmPassword) {
-    failPasswordChange(he ? "כל השדות נדרשים." : "All fields are required.");
+    return { error: he ? "כל השדות נדרשים." : "All fields are required." };
   }
 
   if (newPassword !== confirmPassword) {
-    failPasswordChange(
-      he ? "הסיסמה החדשה והאימות אינם תואמים." : "New password and confirmation do not match.",
-    );
+    return {
+      error: he
+        ? "הסיסמה החדשה והאימות אינם תואמים."
+        : "New password and confirmation do not match.",
+    };
   }
 
   if (currentPassword === newPassword) {
-    failPasswordChange(
-      he
+    return {
+      error: he
         ? "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית."
         : "New password must be different from your current password.",
-    );
+    };
   }
 
   const pwCheck = validatePassword(newPassword, lang);
   if (!pwCheck.ok) {
-    failPasswordChange(pwCheck.errors[0] ?? (he ? "סיסמה לא תקינה." : "Invalid password."));
+    return { error: pwCheck.errors[0] ?? (he ? "סיסמה לא תקינה." : "Invalid password.") };
   }
 
   const userId = session.user.id;
@@ -53,11 +58,11 @@ export async function changePasswordAction(formData: FormData) {
       where: { id: userId },
     });
     if (!row) {
-      failPasswordChange(he ? "החשבון לא נמצא." : "Account not found.");
+      return { error: he ? "החשבון לא נמצא." : "Account not found." };
     }
     const valid = await bcrypt.compare(currentPassword, row.password_hash);
     if (!valid) {
-      failPasswordChange(he ? "הסיסמה הנוכחית שגויה." : "Current password is incorrect.");
+      return { error: he ? "הסיסמה הנוכחית שגויה." : "Current password is incorrect." };
     }
     const password_hash = await bcrypt.hash(newPassword, 12);
     await prisma.super_admins.update({
@@ -73,11 +78,11 @@ export async function changePasswordAction(formData: FormData) {
       where: { id: userId },
     });
     if (!row) {
-      failPasswordChange(he ? "החשבון לא נמצא." : "Account not found.");
+      return { error: he ? "החשבון לא נמצא." : "Account not found." };
     }
     const valid = await bcrypt.compare(currentPassword, row.password_hash);
     if (!valid) {
-      failPasswordChange(he ? "הסיסמה הנוכחית שגויה." : "Current password is incorrect.");
+      return { error: he ? "הסיסמה הנוכחית שגויה." : "Current password is incorrect." };
     }
     const password_hash = await bcrypt.hash(newPassword, 12);
     await prisma.users.update({
@@ -91,5 +96,5 @@ export async function changePasswordAction(formData: FormData) {
   }
 
   const homeWithNotice = encodeURIComponent("/?passwordUpdated=1");
-  redirect(`/api/auth/sync-session?callbackUrl=${homeWithNotice}`);
+  return { redirectTo: `/api/auth/sync-session?callbackUrl=${homeWithNotice}` };
 }

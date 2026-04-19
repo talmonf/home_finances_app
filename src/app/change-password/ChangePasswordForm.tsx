@@ -2,8 +2,9 @@
 
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import type { UiLanguage } from "@/lib/ui-language";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
-import { changePasswordAction } from "./actions";
+import { changePasswordAction, type ChangePasswordActionState } from "./actions";
 
 function SubmitButton({ language }: { language: UiLanguage }) {
   const { pending } = useFormStatus();
@@ -26,8 +27,22 @@ type ChangePasswordFormProps = {
 
 export function ChangePasswordForm({ error, language }: ChangePasswordFormProps) {
   const he = language === "he";
+  const [state, formAction] = useActionState<
+    ChangePasswordActionState | null,
+    FormData
+  >(changePasswordAction, null);
+
+  useEffect(() => {
+    if (state && "redirectTo" in state) {
+      window.location.assign(state.redirectTo);
+    }
+  }, [state]);
+
+  const displayError =
+    state && "error" in state ? state.error : error;
+
   return (
-    <form action={changePasswordAction} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-200">
           {he ? "סיסמה נוכחית" : "Current password"}
@@ -61,7 +76,7 @@ export function ChangePasswordForm({ error, language }: ChangePasswordFormProps)
           className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
         />
       </div>
-      {error ? <p className="text-sm font-medium text-rose-400">{error}</p> : null}
+      {displayError ? <p className="text-sm font-medium text-rose-400">{displayError}</p> : null}
       <SubmitButton language={language} />
     </form>
   );
