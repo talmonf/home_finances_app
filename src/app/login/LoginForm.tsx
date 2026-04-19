@@ -1,5 +1,6 @@
 "use client";
 
+import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 
@@ -69,12 +70,12 @@ export function LoginForm({
             <label className="mb-1 block text-sm font-medium text-slate-200">
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInputWithToggle
               className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
             />
           </div>
           {error && (

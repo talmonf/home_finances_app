@@ -1,3 +1,4 @@
+import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
 import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
@@ -367,10 +368,10 @@ export default async function HouseholdUsersPage({
               <label className="mb-1 block text-xs font-medium text-slate-300">
                 Password
               </label>
-              <input
+              <PasswordInputWithToggle
                 name="password"
-                type="password"
                 required
+                autoComplete="new-password"
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
               <p className="mt-1 text-xs text-slate-500">{passwordPolicyHint()} User must change it on first sign-in.</p>

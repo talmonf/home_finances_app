@@ -32,6 +32,7 @@ export async function updateHouseholdUser(formData: FormData) {
   const rawUiLanguage = (formData.get("ui_language") as string | null)?.trim();
   const familyMemberId = (formData.get("family_member_id") as string | null)?.trim() || null;
   const newPassword = (formData.get("new_password") as string | null)?.trim() || "";
+  const mustChangePasswordRequested = formData.get("must_change_password") === "on";
   const showUsefulLinks = formData.get("show_useful_links") === "on";
 
   if (!householdId || !userId) {
@@ -111,7 +112,7 @@ export async function updateHouseholdUser(formData: FormData) {
             must_change_password: true,
             password_changed_at: now,
           }
-        : {}),
+        : { must_change_password: mustChangePasswordRequested }),
     },
   });
 

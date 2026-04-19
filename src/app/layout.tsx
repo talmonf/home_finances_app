@@ -34,7 +34,7 @@ export default async function RootLayout({
                 {h.appTitle}
               </Link>
               {session?.user ? (
-                <div className="flex items-center gap-3 text-xs text-slate-300">
+                <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-slate-300">
                   <span>
                     {h.signedInAs}{" "}
                     <span className="font-medium text-slate-50">
@@ -46,6 +46,12 @@ export default async function RootLayout({
                       </span>
                     )}
                   </span>
+                  <Link
+                    href="/change-password"
+                    className="rounded-lg border border-slate-600 px-3 py-1 font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                  >
+                    {h.changePassword}
+                  </Link>
                   <SignOutButton label={h.signOut} confirmMessage={h.signOutConfirm} />
                 </div>
               ) : (

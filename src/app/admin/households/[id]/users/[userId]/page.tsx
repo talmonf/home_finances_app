@@ -1,3 +1,4 @@
+import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { getAuthSession, prisma } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
@@ -297,18 +298,35 @@ export default async function EditHouseholdUserPage({
               >
                 New password (optional)
               </label>
-              <input
+              <PasswordInputWithToggle
                 id="new_password"
                 name="new_password"
-                type="password"
                 autoComplete="new-password"
                 placeholder="Leave blank to keep current password"
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
               <p className="mt-1 text-xs text-slate-500">
                 When set, must meet the password policy; the user will be asked to change it on next sign-in. Only super
-                admins can change passwords here.
+                admins can change passwords here. Passwords are stored as a hash; nobody can view an existing user&apos;s
+                password.
               </p>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+              <input
+                type="checkbox"
+                id="must_change_password"
+                name="must_change_password"
+                defaultChecked={user.must_change_password}
+                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+              />
+              <label htmlFor="must_change_password" className="cursor-pointer text-sm text-slate-200">
+                <span className="font-medium">Require password change on next sign-in</span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  Applies when you are not setting a new password above. If you enter a new password, the user must change it
+                  on next sign-in automatically.
+                </span>
+              </label>
             </div>
 
             <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">

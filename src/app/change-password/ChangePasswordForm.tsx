@@ -1,6 +1,6 @@
 "use client";
 
-import { passwordPolicyHint } from "@/lib/password-policy";
+import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { useFormStatus } from "react-dom";
 import { changePasswordAction } from "./actions";
 
@@ -26,9 +26,8 @@ export function ChangePasswordForm({ error }: ChangePasswordFormProps) {
     <form action={changePasswordAction} className="space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-200">Current password</label>
-        <input
+        <PasswordInputWithToggle
           name="current_password"
-          type="password"
           autoComplete="current-password"
           required
           className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
@@ -36,20 +35,17 @@ export function ChangePasswordForm({ error }: ChangePasswordFormProps) {
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-200">New password</label>
-        <input
+        <PasswordInputWithToggle
           name="new_password"
-          type="password"
           autoComplete="new-password"
           required
           className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
         />
-        <p className="mt-1 text-xs text-slate-500">{passwordPolicyHint()}</p>
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-200">Confirm new password</label>
-        <input
+        <PasswordInputWithToggle
           name="confirm_password"
-          type="password"
           autoComplete="new-password"
           required
           className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"

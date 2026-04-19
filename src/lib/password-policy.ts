@@ -1,6 +1,6 @@
 /** Password rules for creation, admin reset, and self-service change (OWASP-style baseline). */
 
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 /** Default when `PASSWORD_MAX_AGE_MONTHS` is unset. */
@@ -51,6 +51,16 @@ export function validatePassword(password: string): PasswordValidationResult {
 
 export function passwordPolicyHint(): string {
   return `At least ${PASSWORD_MIN_LENGTH} and at most ${PASSWORD_MAX_LENGTH} characters, with uppercase, lowercase, and a digit.`;
+}
+
+/** Human-readable rules for UI (e.g. change-password screen). Matches {@link validatePassword}. */
+export function passwordPolicyRequirementLines(): readonly string[] {
+  return [
+    `Between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`,
+    "At least one lowercase letter (a–z)",
+    "At least one uppercase letter (A–Z)",
+    "At least one digit (0–9)",
+  ];
 }
 
 /**

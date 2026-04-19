@@ -23,6 +23,7 @@ export function appHeaderStrings(lang: UiLanguage) {
     return {
       appTitle: "ניהול כספי הבית",
       signedInAs: "מחובר כ־",
+      changePassword: "שינוי סיסמה",
       signOut: "התנתק",
       signOutConfirm: "האם להתנתק עכשיו?",
       signIn: "התחבר",
@@ -32,6 +33,7 @@ export function appHeaderStrings(lang: UiLanguage) {
   return {
     appTitle: "Home Finance Management",
     signedInAs: "Signed in as",
+    changePassword: "Change password",
     signOut: "Sign out",
     signOutConfirm: "Do you want to sign out now?",
     signIn: "Sign in",
