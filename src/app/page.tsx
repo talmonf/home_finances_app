@@ -22,7 +22,14 @@ function formatOpenReimbursementRequestsLabel(n: number, language: "en" | "he"):
   return n === 1 ? "1 open reimbursement request" : `${n} open reimbursement requests`;
 }
 
-export default async function Home() {
+type HomeProps = {
+  searchParams?: Promise<{ passwordUpdated?: string }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const passwordJustUpdated = resolvedSearchParams?.passwordUpdated === "1";
+
   const session = await getAuthSession();
 
   if (!session?.user) {
@@ -125,7 +132,9 @@ export default async function Home() {
     visibleSections.length === 1 &&
     visibleSections[0].id === "privateClinic"
   ) {
-    redirect("/dashboard/private-clinic");
+    redirect(
+      passwordJustUpdated ? "/dashboard/private-clinic?passwordUpdated=1" : "/dashboard/private-clinic",
+    );
   }
 
   const allSetupSections = visibleSections.filter((s) => s.group === "setup");
@@ -200,9 +209,21 @@ export default async function Home() {
   const welcomeTitleNonAdmin =
     uiLanguage === "he" ? `ברוך שובך, ${displayName}` : `Welcome back, ${displayName}`;
 
+  const passwordUpdatedBanner =
+    passwordJustUpdated && uiLanguage === "he" ? (
+      <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
+        הסיסמה עודכנה בהצלחה.
+      </p>
+    ) : passwordJustUpdated ? (
+      <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
+        Your password was updated successfully.
+      </p>
+    ) : null;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
       <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        {passwordUpdatedBanner}
         {isSuperAdmin ? (
           <>
             <div className="mb-6 flex items-start justify-between gap-4">

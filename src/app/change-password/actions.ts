@@ -90,6 +90,6 @@ export async function changePasswordAction(formData: FormData) {
     });
   }
 
-  const loginSuccess = encodeURIComponent("/login?passwordUpdated=1");
-  redirect(`/api/auth/signout?callbackUrl=${loginSuccess}`);
+  const homeWithNotice = encodeURIComponent("/?passwordUpdated=1");
+  redirect(`/api/auth/sync-session?callbackUrl=${homeWithNotice}`);
 }

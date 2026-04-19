@@ -8,7 +8,14 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function PrivateClinicOverviewPage() {
+export default async function PrivateClinicOverviewPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ passwordUpdated?: string }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const passwordJustUpdated = resolvedSearchParams?.passwordUpdated === "1";
+
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -69,8 +76,19 @@ export default async function PrivateClinicOverviewPage() {
     { id: "travel" as const, value: travel },
   ];
 
+  const passwordBanner = passwordJustUpdated ? (
+    <p
+      className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200"
+      role="status"
+    >
+      {uiLanguage === "he" ? "הסיסמה עודכנה בהצלחה." : "Your password was updated successfully."}
+    </p>
+  ) : null;
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <>
+      {passwordBanner}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
         <div
           key={c.id}
@@ -84,6 +102,7 @@ export default async function PrivateClinicOverviewPage() {
           <p className="text-2xl font-semibold text-slate-100">{c.value}</p>
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
 }
