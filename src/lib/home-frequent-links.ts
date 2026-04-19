@@ -33,7 +33,7 @@ const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
   reportReceipt: "/dashboard/private-clinic/receipts?modal=new",
   upcomingAppointments: "/dashboard/private-clinic/appointments",
   upcomingRenewals: "/dashboard/upcoming-renewals",
-  riseUpImport: "/dashboard/private-clinic/import-export",
+  riseUpImport: "/dashboard/import?format=riseup",
 };
 
 const REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
@@ -41,7 +41,7 @@ const REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
   reportReceipt: "privateClinic",
   upcomingAppointments: "privateClinic",
   upcomingRenewals: "upcomingRenewals",
-  riseUpImport: "privateClinic",
+  riseUpImport: "importStatements",
 };
 
 export function parseHomeFrequentLinksJson(raw: unknown): Record<HomeFrequentLinkKey, boolean> {

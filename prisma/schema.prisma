@@ -117,7 +117,8 @@ model loans {
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
 
-  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  household   households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  transactions transactions[]
 }
 
 model household_enabled_sections {
@@ -184,6 +185,7 @@ model family_members {
 model bank_accounts {
   id             String   @id @default(uuid())
   household_id   String
+  property_id    String?
   account_name   String
   bank_name      String
   branch_number  String?
@@ -200,6 +202,7 @@ model bank_accounts {
   updated_at     DateTime @updatedAt
 
   household    households   @relation(fields: [household_id], references: [id])
+  property     properties?  @relation(fields: [property_id], references: [id], onDelete: SetNull)
   credit_cards credit_cards[]
   jobs_linked_for_payment jobs[] @relation("JobLinkedBankAccount")
   documents    documents[]
@@ -214,11 +217,13 @@ model bank_accounts {
   car_license_payments            car_licenses[]
   savings_policies                savings_policies[]
   therapy_treatments_payment_destination therapy_treatments[] @relation("TherapyTreatmentPaymentBankAccount")
+  property_utilities_linked       property_utilities[] @relation("PropertyUtilityBankAccount")
 }
 
 model credit_cards {
   id                         String   @id @default(uuid())
   household_id               String
+  property_id                String?
   family_member_id           String?
   card_name                  String
   scheme                     CardScheme
@@ -240,6 +245,7 @@ model credit_cards {
   updated_at                 DateTime @updatedAt
 
   household     households    @relation(fields: [household_id], references: [id])
+  property      properties?   @relation(fields: [property_id], references: [id], onDelete: SetNull)
   family_member family_members? @relation(fields: [family_member_id], references: [id])
   bank_account  bank_accounts? @relation(fields: [settlement_bank_account_id], references: [id])
   subscriptions subscriptions[]
@@ -253,6 +259,8 @@ model credit_cards {
   primary_digital_payment_methods  digital_payment_methods[] @relation("PrimaryDigitalPaymentCreditCard")
   secondary_digital_payment_methods digital_payment_methods[] @relation("SecondaryDigitalPaymentCreditCard")
   jobs_linked_for_payment jobs[] @relation("JobLinkedCreditCard")
+  property_utilities_linked property_utilities[] @relation("PropertyUtilityCreditCard")
+  transactions_riseup       transactions[]       @relation("TransactionRiseupCreditCard")
 }
 
 enum CardScheme {
@@ -336,13 +344,16 @@ model properties {
   landlord_name        String?
   landlord_contact     String?
   notes                String?
+  is_default_for_household Boolean @default(false)
   is_active            Boolean  @default(true)
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
 
-  household  households         @relation(fields: [household_id], references: [id])
-  utilities  property_utilities[]
-  rentals    rentals[]
+  household     households         @relation(fields: [household_id], references: [id])
+  utilities     property_utilities[]
+  rentals       rentals[]
+  bank_accounts bank_accounts[]
+  credit_cards  credit_cards[]
 }
 
 /// Monthly rent under a lease/contract (any duration, e.g. 5 months or years). DB value: long_term.
@@ -698,15 +709,19 @@ model property_utilities {
   utility_type   PropertyUtilityType
   provider_name  String
   payee_id       String?
+  bank_account_id String?
+  credit_card_id  String?
   account_number String?
   renewal_date   DateTime?
   notes          String?
   created_at     DateTime           @default(now())
   updated_at     DateTime           @updatedAt
 
-  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
-  property  properties @relation(fields: [property_id], references: [id], onDelete: Cascade)
-  payee     payees?    @relation(fields: [payee_id], references: [id])
+  household    households    @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  property     properties    @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  payee        payees?       @relation(fields: [payee_id], references: [id])
+  bank_account bank_accounts? @relation("PropertyUtilityBankAccount", fields: [bank_account_id], references: [id], onDelete: SetNull)
+  credit_card  credit_cards?  @relation("PropertyUtilityCreditCard", fields: [credit_card_id], references: [id], onDelete: SetNull)
 }
 
 model identities {
@@ -1088,6 +1103,7 @@ model source_records {
   parsed_date      DateTime?
   parsed_amount    Decimal? @db.Decimal(15, 2)
   parsed_direction String?
+  riseup_row       Json?
   created_at       DateTime @default(now())
 
   document     documents     @relation(fields: [document_id], references: [id], onDelete: Cascade)
@@ -1098,6 +1114,8 @@ model transactions {
   id                    String    @id @default(uuid())
   household_id          String
   bank_account_id       String?
+  credit_card_id        String?
+  loan_id               String?
   source_record_id      String?
   document_id           String?
   transaction_date      DateTime
@@ -1116,12 +1134,18 @@ model transactions {
   car_id                String?
   job_id                String?
   subscription_id     String?
+  riseup_charge_date              DateTime?
+  riseup_cashflow_month           String?
+  riseup_is_zero_amount_pending   Boolean   @default(false)
+  riseup_original_amount          Decimal?  @db.Decimal(15, 2)
   import_status         TransactionImportStatus @default(pending_review)
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
 
   household      households     @relation(fields: [household_id], references: [id])
   bank_account   bank_accounts? @relation(fields: [bank_account_id], references: [id])
+  credit_card    credit_cards?  @relation("TransactionRiseupCreditCard", fields: [credit_card_id], references: [id], onDelete: SetNull)
+  loan           loans?         @relation(fields: [loan_id], references: [id], onDelete: SetNull)
   source_record  source_records? @relation(fields: [source_record_id], references: [id])
   document       documents?      @relation(fields: [document_id], references: [id])
   category       categories?     @relation(fields: [category_id], references: [id])

@@ -1,0 +1,20 @@
+export type RiseUpCommitRowPayload = {
+  rowIndex: number;
+  businessName: string;
+  paymentDate: string;
+  chargeDate: string | null;
+  amount: number;
+  originalAmount: number | null;
+  sourceKind: string;
+  cashflowCategory: string;
+  isZeroAmountPending: boolean;
+  raw: Record<string, string>;
+  bank_account_id: string | null;
+  credit_card_id: string | null;
+  payee_id: string | null;
+  new_payee_name: string | null;
+  category_id: string | null;
+  job_id: string | null;
+  subscription_id: string | null;
+  loan_id: string | null;
+};

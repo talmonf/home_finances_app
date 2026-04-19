@@ -2,17 +2,24 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLang
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ImportUploadForm } from "./ImportUploadForm";
+import { RiseUpImportFlow } from "./RiseUpImportFlow";
 
 export const dynamic = "force-dynamic";
 
-export default async function ImportPage() {
+type PageProps = {
+  searchParams?: Promise<{ format?: string }>;
+};
+
+export default async function ImportPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const sp = searchParams ? await searchParams : undefined;
+  const format = sp?.format === "riseup" ? "riseup" : "bank";
 
-  const [documents, bankAccounts] = await Promise.all([
+  const [documents, bankAccounts, creditCards] = await Promise.all([
     prisma.documents.findMany({
       where: { household_id: householdId },
       orderBy: { created_at: "desc" },
@@ -26,11 +33,28 @@ export default async function ImportPage() {
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
     }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+    }),
   ]);
+
+  const bankAccountOptions = bankAccounts.map((a) => ({
+    id: a.id,
+    label: `${a.bank_name} · ${a.account_name}${a.account_number ? ` (${a.account_number})` : ""}`,
+  }));
+  const creditCardOptions = creditCards.map((c) => ({
+    id: c.id,
+    label: `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
+  }));
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+      <div
+        className={`w-full space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700 ${
+          format === "riseup" ? "max-w-[96rem]" : "max-w-5xl"
+        }`}
+      >
         <header>
           <Link
             href="/"
@@ -39,15 +63,51 @@ export default async function ImportPage() {
             {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">
-            Import bank statements
+            {isHebrew ? "ייבוא דפי חשבון" : "Import bank statements"}
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Upload a PDF or Excel bank statement. Transactions will be extracted for review.
-            Then choose <strong>Review</strong> to edit categories and details, or <strong>Assisted</strong> for AI help.
+            {format === "riseup"
+              ? isHebrew
+                ? "ייבוא CSV מ-RiseUp: ניתוח, התאמה לישויות הקיימות, ואישור לפני שמירה."
+                : "RiseUp CSV: analyze, match to existing entities, then confirm before saving."
+              : isHebrew
+                ? "העלאת PDF או Excel. התנועות יחולצו לסקירה — סקירה או מונחה."
+                : "Upload PDF or Excel. Transactions are extracted for review — Review or Assisted."}
           </p>
         </header>
 
-        <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />
+        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-2">
+          <Link
+            href="/dashboard/import"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              format === "bank"
+                ? "bg-sky-600 text-white"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            {isHebrew ? "בנק PDF / Excel" : "Bank PDF / Excel"}
+          </Link>
+          <Link
+            href="/dashboard/import?format=riseup"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              format === "riseup"
+                ? "bg-violet-600 text-white"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            {isHebrew ? "RiseUp (CSV)" : "RiseUp (CSV)"}
+          </Link>
+        </div>
+
+        {format === "riseup" ? (
+          <RiseUpImportFlow
+            uiLanguage={uiLanguage}
+            bankAccounts={bankAccountOptions}
+            creditCards={creditCardOptions}
+          />
+        ) : (
+          <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />
+        )}
 
         <section className="space-y-4">
           <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "יבואים אחרונים" : "Recent imports"}</h2>
