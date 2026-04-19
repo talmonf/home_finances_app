@@ -1,0 +1,224 @@
+import Link from "next/link";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { privateClinicCommon, privateClinicPrograms } from "@/lib/private-clinic-i18n";
+import { redirect, notFound } from "next/navigation";
+import { deleteTherapyProgram, saveTherapyProgramVisitTypeDefaults, updateTherapyProgram } from "../../../actions";
+import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { formatJobDisplayLabel } from "@/lib/job-label";
+import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+
+export const dynamic = "force-dynamic";
+
+const PROGRAMS_BASE = "/dashboard/private-clinic/programs";
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ updated?: string; error?: string }>;
+};
+
+export default async function EditProgramPage({ params, searchParams }: PageProps) {
+  const session = await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const { id } = await params;
+  const uiLanguage = await getCurrentUiLanguage();
+  const c = privateClinicCommon(uiLanguage);
+  const pr = privateClinicPrograms(uiLanguage);
+  const resolved = searchParams ? await searchParams : undefined;
+
+  const user = await prisma.users.findFirst({
+    where: { id: session.user.id, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  const familyMemberId = user?.family_member_id ?? null;
+
+  const program = await prisma.therapy_service_programs.findFirst({
+    where: {
+      id,
+      household_id: householdId,
+      job: {
+        ...jobWhereInPrivateClinicModule,
+        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+      },
+    },
+    include: { job: true },
+  });
+  if (!program) notFound();
+
+  const programVisitDefaults = await prisma.therapy_visit_type_default_amounts.findMany({
+    where: {
+      household_id: householdId,
+      program_id: program.id,
+    },
+  });
+
+  const visitTypes = therapyVisitTypesOrdered();
+
+  function programDefaultFor(vt: (typeof visitTypes)[number]) {
+    const row = programVisitDefaults.find((r) => r.visit_type === vt);
+    return row ? { amount: row.amount.toString(), currency: row.currency } : { amount: "", currency: "ILS" };
+  }
+
+  const editHref = `${PROGRAMS_BASE}/${id}/edit`;
+  const errorMessage =
+    resolved?.error === "missing"
+      ? pr.programErrMissing
+      : resolved?.error === "job"
+        ? pr.programErrJob
+        : resolved?.error === "notfound"
+          ? pr.programErrNotfound
+          : resolved?.error === "id"
+            ? pr.programErrId
+            : resolved?.error
+              ? c.saveFailedGeneric
+              : null;
+
+  const jobLabel = formatJobDisplayLabel(program.job);
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-xl font-semibold text-slate-50">{pr.editProgramPageTitle}</h1>
+        <Link
+          href={PROGRAMS_BASE}
+          className="inline-flex shrink-0 items-center rounded-lg border border-slate-600 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
+        >
+          {pr.backToPrograms}
+        </Link>
+      </header>
+
+      {errorMessage ? (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">{errorMessage}</p>
+      ) : null}
+      {resolved?.updated && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">{c.saved}</p>
+      )}
+
+      <p className="text-sm text-slate-400">
+        {c.job}: <span className="text-slate-200">{jobLabel}</span>
+      </p>
+
+      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <form action={updateTherapyProgram} className="grid gap-3 md:grid-cols-2">
+          <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
+          <input type="hidden" name="redirect_on_error" value={editHref} />
+          <input type="hidden" name="id" value={program.id} />
+          <input
+            name="name"
+            defaultValue={program.name}
+            required
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <input
+            name="sort_order"
+            type="number"
+            defaultValue={program.sort_order}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <label className="flex items-center gap-2 text-sm text-slate-300 md:col-span-2">
+            <input type="checkbox" name="is_active" defaultChecked={program.is_active} />
+            {pr.active}
+          </label>
+          <textarea
+            name="description"
+            defaultValue={program.description ?? ""}
+            placeholder={c.description}
+            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <div className="md:col-span-2 space-y-1">
+            <p className="text-xs text-slate-400">{pr.visitFrequency}</p>
+            <p className="text-xs text-slate-500">{pr.visitFrequencyHint}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="edit_program_visits_per_period_count">
+                {pr.visitsPer}
+              </label>
+              <input
+                id="edit_program_visits_per_period_count"
+                name="visits_per_period_count"
+                type="number"
+                min={1}
+                max={14}
+                step={1}
+                defaultValue={program.visits_per_period_count ?? ""}
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{pr.visitsPer}</span>
+              <label className="sr-only" htmlFor="edit_program_visits_per_period_weeks">
+                {pr.weeks}
+              </label>
+              <input
+                id="edit_program_visits_per_period_weeks"
+                name="visits_per_period_weeks"
+                type="number"
+                min={1}
+                max={12}
+                step={1}
+                defaultValue={program.visits_per_period_weeks ?? ""}
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{pr.weeks}</span>
+            </div>
+          </div>
+          <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              {c.save}
+            </button>
+            <ConfirmDeleteForm action={deleteTherapyProgram}>
+              <input type="hidden" name="redirect_on_success" value={`${PROGRAMS_BASE}?updated=1`} />
+              <input type="hidden" name="redirect_on_error" value={editHref} />
+              <input type="hidden" name="id" value={program.id} />
+              <button type="submit" className="text-sm text-rose-400 hover:text-rose-300">
+                {c.delete}
+              </button>
+            </ConfirmDeleteForm>
+          </div>
+        </form>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <h2 className="text-sm font-medium text-slate-200">{c.defaultFeesByVisitType}</h2>
+        <p className="text-xs text-slate-500">{c.defaultFeesByVisitTypeHint}</p>
+        <form action={saveTherapyProgramVisitTypeDefaults} className="space-y-3">
+          <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
+          <input type="hidden" name="redirect_on_error" value={editHref} />
+          <input type="hidden" name="program_id" value={program.id} />
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {visitTypes.map((vt) => {
+              const d = programDefaultFor(vt);
+              return (
+                <div key={vt} className="rounded border border-slate-700/80 bg-slate-950/40 p-2">
+                  <label className="block text-xs text-slate-400">{therapyVisitTypeLabel(uiLanguage, vt)}</label>
+                  <input
+                    name={`amount_${vt}`}
+                    type="text"
+                    defaultValue={d.amount}
+                    placeholder="0.00"
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                  <input
+                    name={`currency_${vt}`}
+                    type="text"
+                    defaultValue={d.currency}
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+          >
+            {c.saveDefaults}
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}

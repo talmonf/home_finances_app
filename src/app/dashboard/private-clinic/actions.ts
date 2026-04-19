@@ -721,10 +721,14 @@ export async function deletePrivateClinicPetrolFillup(id: string, carId: string)
 export async function createTherapyProgram(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/programs?created=1`;
+  const fallbackError = `${BASE}/programs`;
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const name = (formData.get("name") as string)?.trim() || "";
-  if (!job_id || !name) redirect(`${BASE}/programs?error=missing`);
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/programs?error=job`);
+  if (!job_id || !name) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
 
   const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
   const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
@@ -744,19 +748,22 @@ export async function createTherapyProgram(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/programs`);
-  redirect(`${BASE}/programs?created=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 export async function updateTherapyProgram(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/programs?error=id`);
+  const fallbackError = `${BASE}/programs`;
+  if (!id) redirectPrivateClinicScoped(formData, "error", fallbackError, "id");
   const row = await prisma.therapy_service_programs.findFirst({
     where: { id, household_id: householdId },
   });
-  if (!row) redirect(`${BASE}/programs?error=notfound`);
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) redirect(`${BASE}/programs?error=job`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
 
   const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
   const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
@@ -774,25 +781,31 @@ export async function updateTherapyProgram(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/programs`);
-  redirect(`${BASE}/programs?updated=1`);
+  revalidatePath(`${BASE}/programs/${id}/edit`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/programs/${id}/edit?updated=1`);
 }
 
 export async function deleteTherapyProgram(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/programs?error=id`);
+  const fallbackSuccess = `${BASE}/programs?updated=1`;
+  const fallbackError = `${BASE}/programs`;
+  if (!id) redirectPrivateClinicScoped(formData, "error", fallbackError, "id");
   const row = await prisma.therapy_service_programs.findFirst({
     where: { id, household_id: householdId },
     select: { job_id: true },
   });
-  if (!row) redirect(`${BASE}/programs?error=notfound`);
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) redirect(`${BASE}/programs?error=job`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
+  revalidatePath(`${BASE}/programs/${id}/edit`);
   await prisma.therapy_service_programs.deleteMany({
     where: { id, household_id: householdId },
   });
   revalidatePath(`${BASE}/programs`);
-  redirect(`${BASE}/programs?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 const THERAPY_VISIT_TYPES: TherapyVisitType[] = ["clinic", "home", "phone", "video"];
@@ -853,12 +866,13 @@ export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
   const program_id = (formData.get("program_id") as string)?.trim() || "";
-  if (!program_id) redirect(`${BASE}/programs?error=missing`);
+  const fallbackError = `${BASE}/programs`;
+  if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
 
   const prog = await assertProgram(householdId, program_id);
-  if (!prog) redirect(`${BASE}/programs?error=notfound`);
+  if (!prog) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
   if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, prog.job_id))) {
-    redirect(`${BASE}/programs?error=job`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
   }
 
   const job_id = prog.job_id;
@@ -901,8 +915,9 @@ export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
   }
 
   revalidatePath(`${BASE}/programs`);
+  revalidatePath(`${BASE}/programs/${program_id}/edit`);
   revalidatePath(`${BASE}/treatments`);
-  redirect(`${BASE}/programs?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/programs/${program_id}/edit?updated=1`);
 }
 
 // --- Clients ---

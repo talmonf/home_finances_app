@@ -268,6 +268,13 @@ export function privateClinicPrograms(lang: UiLanguage) {
     addProgramTitle: p("Add program", "הוספת תכנית"),
     addProgramBtn: p("Add program", "הוספת תכנית"),
     programsHeading: p("Programs", "תוכניות"),
+    editProgramPageTitle: p("Edit program", "עריכת תכנית"),
+    backToPrograms: p("Back to programs", "חזרה לרשימת תוכניות"),
+    colActions: p("Actions", "פעולות"),
+    programErrMissing: p("Select a job and enter a program name.", "יש לבחור משרה ולהזין שם תכנית."),
+    programErrJob: p("That job is not available for your account.", "המשרה אינה זמינה לחשבון שלך."),
+    programErrNotfound: p("Program not found.", "התכנית לא נמצאה."),
+    programErrId: p("Invalid program.", "תכנית לא תקינה."),
     programName: p("Program name", "שם תכנית"),
     visitFrequency: p("Visit frequency", "תדירות ביקורים"),
     visitFrequencyHint: p(
