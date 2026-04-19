@@ -192,7 +192,13 @@ export default async function Home() {
     : [];
 
   const welcomeSubtitleNonAdmin =
-    "Your shortcuts, setup checklist, and ongoing finance tools for this household.";
+    uiLanguage === "he"
+      ? "קיצורי דרך, משימות להשלמת ההקמה, וכלים שוטפים לניהול כספי משק הבית."
+      : "Your shortcuts, setup checklist, and ongoing finance tools for this household.";
+
+  const displayName = session.user.name ?? (uiLanguage === "he" ? "משתמש" : "user");
+  const welcomeTitleNonAdmin =
+    uiLanguage === "he" ? `ברוך שובך, ${displayName}` : `Welcome back, ${displayName}`;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -256,7 +262,7 @@ export default async function Home() {
           </>
         ) : (
           <HouseholdDashboardPanel
-            userName={session.user.name ?? "user"}
+            welcomeTitle={welcomeTitleNonAdmin}
             welcomeSubtitle={welcomeSubtitleNonAdmin}
             frequentLinksTitle={homeFrequentLinksSectionTitle(uiLanguage)}
             frequentLinks={frequentHomeLinks}

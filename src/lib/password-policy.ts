@@ -1,5 +1,7 @@
 /** Password rules for creation, admin reset, and self-service change (OWASP-style baseline). */
 
+import type { UiLanguage } from "@/lib/ui-language";
+
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
@@ -26,35 +28,68 @@ export type PasswordValidationResult = {
 /**
  * Validates password strength. Allows any Unicode; requires mixed case ASCII letters and a digit.
  */
-export function validatePassword(password: string): PasswordValidationResult {
+export function validatePassword(
+  password: string,
+  lang: UiLanguage = "en",
+): PasswordValidationResult {
   const errors: string[] = [];
+  const he = lang === "he";
 
   if (password.length < PASSWORD_MIN_LENGTH) {
-    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
+    errors.push(
+      he
+        ? `הסיסמה חייבת להכיל לפחות ${PASSWORD_MIN_LENGTH} תווים.`
+        : `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+    );
   }
   if (password.length > PASSWORD_MAX_LENGTH) {
-    errors.push(`Password must be at most ${PASSWORD_MAX_LENGTH} characters.`);
+    errors.push(
+      he
+        ? `הסיסמה לא יכולה לעלות על ${PASSWORD_MAX_LENGTH} תווים.`
+        : `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`,
+    );
   }
 
   if (!/[a-z]/.test(password)) {
-    errors.push("Password must include at least one lowercase letter.");
+    errors.push(
+      he
+        ? "הסיסמה חייבת לכלול לפחות אות קטנה אחת באנגלית (a–z)."
+        : "Password must include at least one lowercase letter.",
+    );
   }
   if (!/[A-Z]/.test(password)) {
-    errors.push("Password must include at least one uppercase letter.");
+    errors.push(
+      he
+        ? "הסיסמה חייבת לכלול לפחות אות גדולה אחת באנגלית (A–Z)."
+        : "Password must include at least one uppercase letter.",
+    );
   }
   if (!/[0-9]/.test(password)) {
-    errors.push("Password must include at least one digit.");
+    errors.push(
+      he ? "הסיסמה חייבת לכלול לפחות ספרה אחת." : "Password must include at least one digit.",
+    );
   }
 
   return { ok: errors.length === 0, errors };
 }
 
-export function passwordPolicyHint(): string {
+export function passwordPolicyHint(lang: UiLanguage = "en"): string {
+  if (lang === "he") {
+    return `לפחות ${PASSWORD_MIN_LENGTH} ולא יותר מ-${PASSWORD_MAX_LENGTH} תווים, כולל אותיות גדולות וקטנות באנגלית וספרה אחת לפחות.`;
+  }
   return `At least ${PASSWORD_MIN_LENGTH} and at most ${PASSWORD_MAX_LENGTH} characters, with uppercase, lowercase, and a digit.`;
 }
 
 /** Human-readable rules for UI (e.g. change-password screen). Matches {@link validatePassword}. */
-export function passwordPolicyRequirementLines(): readonly string[] {
+export function passwordPolicyRequirementLines(lang: UiLanguage = "en"): readonly string[] {
+  if (lang === "he") {
+    return [
+      `בין ${PASSWORD_MIN_LENGTH} ל-${PASSWORD_MAX_LENGTH} תווים`,
+      "לפחות אות קטנה אחת באנגלית (a–z)",
+      "לפחות אות גדולה אחת באנגלית (A–Z)",
+      "לפחות ספרה אחת (0–9)",
+    ];
+  }
   return [
     `Between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`,
     "At least one lowercase letter (a–z)",

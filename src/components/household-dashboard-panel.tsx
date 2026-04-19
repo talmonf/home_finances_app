@@ -26,7 +26,7 @@ export type DashboardOngoingTileProps = {
 };
 
 type HouseholdDashboardPanelProps = {
-  userName: string;
+  welcomeTitle: string;
   welcomeSubtitle: string;
   frequentLinksTitle: string;
   frequentLinks: HomeFrequentLinkItem[];
@@ -42,7 +42,7 @@ function matchesSearch(queryLower: string, title: string, description: string) {
 }
 
 export function HouseholdDashboardPanel({
-  userName,
+  welcomeTitle,
   welcomeSubtitle,
   frequentLinksTitle,
   frequentLinks,
@@ -75,7 +75,7 @@ export function HouseholdDashboardPanel({
     <>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50">Welcome back, {userName}</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">{welcomeTitle}</h1>
           <p className="text-sm text-slate-400">{welcomeSubtitle}</p>
         </div>
         <div className="w-full max-w-[220px] shrink-0">
