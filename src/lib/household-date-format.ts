@@ -110,6 +110,13 @@ export function utcDateToHtmlDateInputValue(d: Date | null | undefined): string 
   return d.toISOString().slice(0, 10);
 }
 
+/** Local date+time for `<input type="datetime-local">`; empty if invalid. */
+export function dateToDatetimeLocalValue(d: Date | null | undefined): string {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export const HOUSEHOLD_DATE_FORMAT_LABELS: Record<HouseholdDateDisplayFormat, string> = {
   YMD: "yyyy-MM-dd (ISO)",
   DMY: "dd/MM/yyyy",

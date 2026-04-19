@@ -10,6 +10,7 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
   },
   { key: "treatments", href: "/dashboard/private-clinic/treatments", label: "Treatments" },
   { key: "receipts", href: "/dashboard/private-clinic/receipts", label: "Receipts" },
+  { key: "reports", href: "/dashboard/private-clinic/reports", label: "Reports" },
   { key: "expenses", href: "/dashboard/private-clinic/expenses", label: "Expenses" },
   { key: "appointments", href: "/dashboard/private-clinic/appointments", label: "Appointments" },
   { key: "consultations", href: "/dashboard/private-clinic/consultations", label: "Consultations" },

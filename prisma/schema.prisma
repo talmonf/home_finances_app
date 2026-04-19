@@ -94,6 +94,7 @@ model households {
   therapy_treatment_attachments      therapy_treatment_attachments[]
   private_clinic_reminders           private_clinic_reminders[]
   therapy_import_audits              therapy_import_audits[]
+  therapy_appointment_audits         therapy_appointment_audits[]
 }
 
 model loans {
@@ -1278,6 +1279,7 @@ model users {
   tasks_assigned       tasks[]
   useful_links         useful_links[]
   therapy_import_audits therapy_import_audits[]
+  therapy_appointment_audits therapy_appointment_audits[]
 }
 
 model user_enabled_sections {
@@ -1403,6 +1405,16 @@ enum TherapyAppointmentRecurrence {
   biweekly
 
   @@map("therapy_appointment_recurrence")
+}
+
+enum TherapyAppointmentAuditAction {
+  create
+  update
+  reschedule
+  cancel
+  delete
+
+  @@map("therapy_appointment_audit_action")
 }
 
 enum TherapyImportAuditStatus {
@@ -1822,8 +1834,26 @@ model therapy_appointments {
   program    therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
   series     therapy_appointment_series? @relation(fields: [series_id], references: [id], onDelete: SetNull)
   treatment  therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: SetNull)
+  appointment_audits therapy_appointment_audits[]
 
   @@index([household_id, start_at])
+}
+
+model therapy_appointment_audits {
+  id             String                       @id @default(uuid())
+  household_id   String
+  user_id        String
+  appointment_id String?
+  action         TherapyAppointmentAuditAction
+  metadata       Json                         @default("{}")
+  created_at     DateTime                     @default(now())
+
+  household   households           @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user        users                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  appointment therapy_appointments? @relation(fields: [appointment_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, created_at(sort: Desc)])
+  @@index([user_id, created_at(sort: Desc)])
 }
 
 model therapy_consultation_types {

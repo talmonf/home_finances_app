@@ -10,6 +10,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   upcomingVisits: "ביקורים קרובים",
   treatments: "טיפולים",
   receipts: "קבלות",
+  reports: "דוחות",
   expenses: "הוצאות",
   appointments: "תורים",
   consultations: "ייעוצים",
@@ -711,7 +712,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     recurringSeries: p("Recurring series", "סדרה חוזרת"),
     recurringRules: p("Recurring rules", "כללים חוזרים"),
     noneShort: p("None.", "אין."),
-    upcoming: p("Upcoming", "קרובים"),
+    upcoming: p("Upcoming appointments", "תורים קרובים"),
     noUpcoming: p("No upcoming appointments.", "אין תורים קרובים."),
     programOptional: p("Program (optional)", "תכנית (אופציונלי)"),
     schedule: p("Schedule", "תזמון"),
@@ -724,6 +725,57 @@ export function privateClinicAppointments(lang: UiLanguage) {
     statusCancelled: p("cancelled", "בוטל"),
     statusCompleted: p("completed", "הושלם"),
     setStatus: p("Set", "החל"),
+    addAppointment: p("Add appointment", "הוספת תור"),
+    recurringToggle: p("Recurring appointment", "תור חוזר"),
+    actionsCol: p("Actions", "פעולות"),
+    cancel: p("Cancel", "ביטול"),
+    reschedule: p("Reschedule", "דחייה"),
+    edit: p("Edit", "עריכה"),
+    cancelConfirm: p(
+      "Mark this appointment as cancelled?",
+      "לסמן את התור כמבוטל?",
+    ),
+    backToAppointments: p("Back to appointments", "חזרה לתורים"),
+    newTitle: p("New appointment", "תור חדש"),
+    editTitle: p("Edit appointment", "עריכת תור"),
+    rescheduleTitle: p("Reschedule", "דחיית תור"),
+    save: p("Save", "שמירה"),
+    partOfSeries: p("Part of a recurring series", "חלק מסדרה חוזרת"),
+    endRecurring: p("End recurring (remove future visits)", "סיום חזרתיות (מחיקת עתידיים)"),
+    endRecurringConfirm: p(
+      "This removes all future scheduled visits in this series and stops new ones from being generated.",
+      "פעולה זו תמחק את כל התורים העתידיים המתוזמנים בסדרה ותעצור יצירת תורים חדשים.",
+    ),
+    deleteEntireSeries: p("Delete entire series", "מחיקת כל הסדרה"),
+    deleteEntireSeriesConfirm: p(
+      "Delete this recurring series and every appointment linked to it? This cannot be undone.",
+      "למחוק את הסדרה החוזרת ואת כל התורים הקשורים אליה? לא ניתן לבטל.",
+    ),
+    visitTypeCol: p("Visit type", "סוג ביקור"),
+    endOptional: p("End (optional)", "סיום (אופציונלי)"),
+  };
+}
+
+export function privateClinicReports(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    title: p("Reports", "דוחות"),
+    intro: p(
+      "Compliance and clinic reports. Download extracts for your records.",
+      "דוחות עמידה ורישום קליניקה. הורידו קבצים לתיעוד.",
+    ),
+    therapistDiaryTitle: p("Therapist diary (יומן מטפל)", "יומן מטפל"),
+    therapistDiaryDesc: p(
+      "All create, update, reschedule, cancel, and delete actions on appointments (audit trail).",
+      "כל פעולות היצירה, העדכון, דחייה, ביטול ומחיקה על תורים (יומן ביקורת).",
+    ),
+    download: p("Download spreadsheet", "הורדת גיליון"),
+    empty: p("No audit entries yet.", "אין רשומות ביקורת עדיין."),
+    tableWhen: p("When", "מתי"),
+    tableUser: p("User", "משתמש"),
+    tableAction: p("Action", "פעולה"),
+    tableAppointment: p("Appointment", "תור"),
+    tableDetails: p("Details", "פרטים"),
   };
 }
 

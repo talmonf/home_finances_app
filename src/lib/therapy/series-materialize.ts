@@ -1,4 +1,9 @@
 import { prisma } from "@/lib/auth";
+import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
+import {
+  appointmentToSnapshot,
+  logTherapyAppointmentAudit,
+} from "@/lib/therapy/appointment-audit";
 
 function stripTime(d: Date): Date {
   const x = new Date(d);
@@ -32,6 +37,12 @@ function firstOccurrenceOnOrAfter(start: Date, dayOfWeek: number): Date {
   return addDays(s, diff);
 }
 
+const appointmentInclude = {
+  client: true,
+  job: true,
+  program: true,
+} as const;
+
 /**
  * Creates scheduled appointments for a recurring series within the horizon.
  * Removes future scheduled rows for this series first to avoid duplicates.
@@ -39,9 +50,10 @@ function firstOccurrenceOnOrAfter(start: Date, dayOfWeek: number): Date {
 export async function materializeSeriesAppointments(params: {
   householdId: string;
   seriesId: string;
+  userId: string;
   horizonMonths?: number;
 }) {
-  const { householdId, seriesId, horizonMonths = 6 } = params;
+  const { householdId, seriesId, userId, horizonMonths = 6 } = params;
 
   const series = await prisma.therapy_appointment_series.findFirst({
     where: { id: seriesId, household_id: householdId },
@@ -49,6 +61,29 @@ export async function materializeSeriesAppointments(params: {
   if (!series || !series.is_active) return { created: 0 };
 
   const now = new Date();
+
+  const toRemove = await prisma.therapy_appointments.findMany({
+    where: {
+      series_id: seriesId,
+      household_id: householdId,
+      status: "scheduled",
+      start_at: { gte: now },
+    },
+    include: appointmentInclude,
+  });
+
+  for (const row of toRemove) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: row.id,
+      action: TherapyAppointmentAuditAction.delete,
+      metadata: {
+        snapshot: appointmentToSnapshot(row),
+        reason: "series_regeneration",
+      },
+    });
+  }
 
   await prisma.therapy_appointments.deleteMany({
     where: {
@@ -81,7 +116,7 @@ export async function materializeSeriesAppointments(params: {
   let created = 0;
   while (stripTime(d) <= lastDate) {
     const startAt = combineDateWithTime(d, series.time_of_day);
-    await prisma.therapy_appointments.create({
+    const createdRow = await prisma.therapy_appointments.create({
       data: {
         id: crypto.randomUUID(),
         household_id: householdId,
@@ -93,6 +128,17 @@ export async function materializeSeriesAppointments(params: {
         start_at: startAt,
         end_at: null,
         status: "scheduled",
+      },
+      include: appointmentInclude,
+    });
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: createdRow.id,
+      action: TherapyAppointmentAuditAction.create,
+      metadata: {
+        snapshot: appointmentToSnapshot(createdRow),
+        reason: "series_materialized",
       },
     });
     created += 1;

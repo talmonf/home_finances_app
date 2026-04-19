@@ -9,6 +9,10 @@ import {
 } from "@/lib/auth";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
+import {
+  appointmentToSnapshot,
+  logTherapyAppointmentAudit,
+} from "@/lib/therapy/appointment-audit";
 import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
@@ -23,6 +27,7 @@ import type {
   TherapyTreatmentPaymentMethod,
   TherapyVisitType,
 } from "@/generated/prisma/enums";
+import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 
 const BASE = "/dashboard/private-clinic";
 const ADMIN_HOUSEHOLDS = "/admin/households";
@@ -1790,8 +1795,23 @@ export async function deleteTherapyJobExpense(formData: FormData) {
 
 // --- Appointments ---
 
+const APPOINTMENT_AUDIT_INCLUDE = {
+  client: true,
+  job: true,
+  program: true,
+} as const;
+
+function appointmentsSuccessRedirect(formData: FormData, fallback: string): never {
+  let path = (formData.get("redirect_on_success") as string | null)?.trim() || fallback;
+  if (!path.startsWith(`${BASE}/`)) path = fallback;
+  redirect(path);
+}
+
 export async function createTherapyAppointment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const client_id = (formData.get("client_id") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
@@ -1815,9 +1835,10 @@ export async function createTherapyAppointment(formData: FormData) {
     if (!p || p.job_id !== job_id) programIdOrNull = null;
   }
 
-  await prisma.therapy_appointments.create({
+  const appointmentId = crypto.randomUUID();
+  const created = await prisma.therapy_appointments.create({
     data: {
-      id: crypto.randomUUID(),
+      id: appointmentId,
       household_id: householdId,
       client_id,
       job_id,
@@ -1827,36 +1848,191 @@ export async function createTherapyAppointment(formData: FormData) {
       end_at: parseDate((formData.get("end_at") as string) || null),
       status: "scheduled",
     },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+
+  await logTherapyAppointmentAudit({
+    householdId,
+    userId,
+    appointmentId: created.id,
+    action: TherapyAppointmentAuditAction.create,
+    metadata: { snapshot: appointmentToSnapshot(created) },
   });
 
   revalidatePath(`${BASE}/appointments`);
-  redirect(`${BASE}/appointments?created=1`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?created=1`);
 }
 
-export async function updateTherapyAppointmentStatus(formData: FormData) {
+export async function cancelTherapyAppointment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
-  const status = parseAppointmentStatus((formData.get("status") as string)?.trim() || null);
-  if (!id || !status) return;
+  if (!id) redirect(`${BASE}/appointments?error=missing`);
 
-  const apt = await prisma.therapy_appointments.findFirst({
+  const before = await prisma.therapy_appointments.findFirst({
     where: { id, household_id: householdId },
-    select: { job_id: true },
+    include: APPOINTMENT_AUDIT_INCLUDE,
   });
-  if (!apt) return;
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, apt.job_id))) return;
+  if (!before) redirect(`${BASE}/appointments?error=notfound`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, before.job_id))) {
+    redirect(`${BASE}/appointments?error=job`);
+  }
 
   await prisma.therapy_appointments.updateMany({
     where: { id, household_id: householdId },
-    data: { status },
+    data: { status: "cancelled" },
   });
 
+  const after = await prisma.therapy_appointments.findFirst({
+    where: { id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  if (after) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: id,
+      action: TherapyAppointmentAuditAction.cancel,
+      metadata: {
+        before: appointmentToSnapshot(before),
+        after: appointmentToSnapshot(after),
+      },
+    });
+  }
+
   revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
+}
+
+export async function rescheduleTherapyAppointment(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const id = (formData.get("id") as string)?.trim() || "";
+  const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
+  if (!id || !start_at_raw) redirect(`${BASE}/appointments?error=missing`);
+
+  const before = await prisma.therapy_appointments.findFirst({
+    where: { id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  if (!before) redirect(`${BASE}/appointments?error=notfound`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, before.job_id))) {
+    redirect(`${BASE}/appointments?error=job`);
+  }
+
+  const start_at = new Date(start_at_raw);
+  if (Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
+  const end_at = parseDate((formData.get("end_at") as string) || null);
+
+  await prisma.therapy_appointments.updateMany({
+    where: { id, household_id: householdId },
+    data: { start_at, end_at },
+  });
+
+  const after = await prisma.therapy_appointments.findFirst({
+    where: { id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  if (after) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: id,
+      action: TherapyAppointmentAuditAction.reschedule,
+      metadata: {
+        before: appointmentToSnapshot(before),
+        after: appointmentToSnapshot(after),
+      },
+    });
+  }
+
+  revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
+}
+
+export async function updateTherapyAppointment(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const id = (formData.get("id") as string)?.trim() || "";
+  const client_id = (formData.get("client_id") as string)?.trim() || "";
+  const job_id = (formData.get("job_id") as string)?.trim() || "";
+  const program_id = (formData.get("program_id") as string)?.trim() || "";
+  const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
+  const status = parseAppointmentStatus((formData.get("status") as string)?.trim() || null);
+  if (!id || !client_id || !job_id || !visit_type || !status) {
+    redirect(`${BASE}/appointments?error=missing`);
+  }
+
+  const before = await prisma.therapy_appointments.findFirst({
+    where: { id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  if (!before) redirect(`${BASE}/appointments?error=notfound`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, before.job_id))) {
+    redirect(`${BASE}/appointments?error=job`);
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFm, client_id))) {
+    redirect(`${BASE}/appointments?error=client`);
+  }
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/appointments?error=job`);
+
+  let programIdOrNull: string | null = program_id || null;
+  if (programIdOrNull) {
+    const p = await assertProgram(householdId, programIdOrNull);
+    if (!p || p.job_id !== job_id) programIdOrNull = null;
+  }
+
+  await prisma.therapy_appointments.updateMany({
+    where: { id, household_id: householdId },
+    data: {
+      client_id,
+      job_id,
+      program_id: programIdOrNull,
+      visit_type,
+      status,
+      end_at: parseDate((formData.get("end_at") as string) || null),
+    },
+  });
+
+  const after = await prisma.therapy_appointments.findFirst({
+    where: { id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  if (after) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: id,
+      action: TherapyAppointmentAuditAction.update,
+      metadata: {
+        before: appointmentToSnapshot(before),
+        after: appointmentToSnapshot(after),
+      },
+    });
+  }
+
+  revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
 }
 
 export async function createTherapyAppointmentSeries(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const client_id = (formData.get("client_id") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
@@ -1905,14 +2081,18 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
     },
   });
 
-  await materializeSeriesAppointments({ householdId, seriesId });
+  await materializeSeriesAppointments({ householdId, seriesId, userId });
 
   revalidatePath(`${BASE}/appointments`);
-  redirect(`${BASE}/appointments?series=1`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?series=1`);
 }
 
 export async function deleteTherapyAppointmentSeries(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
   if (!id) redirect(`${BASE}/appointments?error=id`);
@@ -1924,6 +2104,24 @@ export async function deleteTherapyAppointmentSeries(formData: FormData) {
   if (!(await assertJobForCurrentUserScope(householdId, userFm, series.job_id))) {
     redirect(`${BASE}/appointments?error=job`);
   }
+
+  const appts = await prisma.therapy_appointments.findMany({
+    where: { series_id: id, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+  for (const row of appts) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: row.id,
+      action: TherapyAppointmentAuditAction.delete,
+      metadata: {
+        snapshot: appointmentToSnapshot(row),
+        reason: "series_deleted",
+      },
+    });
+  }
+
   await prisma.therapy_appointments.deleteMany({
     where: { series_id: id, household_id: householdId },
   });
@@ -1931,7 +2129,70 @@ export async function deleteTherapyAppointmentSeries(formData: FormData) {
     where: { id, household_id: householdId },
   });
   revalidatePath(`${BASE}/appointments`);
-  redirect(`${BASE}/appointments?updated=1`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
+}
+
+/** Stop generating future visits; removes future scheduled rows for this series (audited). */
+export async function endTherapyRecurringSeries(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const seriesId = (formData.get("series_id") as string)?.trim() || "";
+  if (!seriesId) redirect(`${BASE}/appointments?error=id`);
+
+  const series = await prisma.therapy_appointment_series.findFirst({
+    where: { id: seriesId, household_id: householdId },
+    select: { job_id: true },
+  });
+  if (!series) redirect(`${BASE}/appointments?error=notfound`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, series.job_id))) {
+    redirect(`${BASE}/appointments?error=job`);
+  }
+
+  const now = new Date();
+  const future = await prisma.therapy_appointments.findMany({
+    where: {
+      series_id: seriesId,
+      household_id: householdId,
+      status: "scheduled",
+      start_at: { gte: now },
+    },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+
+  for (const row of future) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId: row.id,
+      action: TherapyAppointmentAuditAction.delete,
+      metadata: {
+        snapshot: appointmentToSnapshot(row),
+        reason: "recurring_series_ended",
+      },
+    });
+  }
+
+  await prisma.therapy_appointments.deleteMany({
+    where: {
+      series_id: seriesId,
+      household_id: householdId,
+      status: "scheduled",
+      start_at: { gte: now },
+    },
+  });
+
+  await prisma.therapy_appointment_series.updateMany({
+    where: { id: seriesId, household_id: householdId },
+    data: { is_active: false },
+  });
+
+  revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/reports`);
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
 }
 
 async function resolveTransactionLink(
