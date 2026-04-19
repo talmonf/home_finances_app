@@ -1498,6 +1498,7 @@ model therapy_service_programs {
   appointment_series  therapy_appointment_series[]
   appointments        therapy_appointments[]
   visit_type_default_amounts therapy_visit_type_default_amounts[]
+  therapy_receipts    therapy_receipts[]
 }
 
 model therapy_visit_type_default_amounts {
@@ -1550,6 +1551,7 @@ model therapy_clients {
   treatments      therapy_treatments[]
   appointments    therapy_appointments[]
   series          therapy_appointment_series[]
+  therapy_receipts therapy_receipts[]
 }
 
 model therapy_clients_jobs {
@@ -1671,6 +1673,8 @@ model therapy_receipts {
   id                    String   @id @default(uuid())
   household_id          String
   job_id                String
+  client_id             String?
+  program_id            String?
   receipt_number        String
   issued_at             DateTime @db.Date
   total_amount          Decimal  @db.Decimal(15, 2)
@@ -1687,6 +1691,8 @@ model therapy_receipts {
 
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  client             therapy_clients? @relation(fields: [client_id], references: [id], onDelete: SetNull)
+  program            therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
   linked_transaction transactions? @relation("TherapyReceiptTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
   allocations                 therapy_receipt_allocations[]
   consultation_allocations    therapy_receipt_consultation_allocations[]

@@ -14,8 +14,9 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
-- [ ] 082_therapy_program_visit_frequency.sql (2026-04-19)
-- [ ] 081_riseup_import_and_property_links.sql (—)
+- [x] 083_therapy_receipts_client_program.sql (2026-04-19)
+- [x] 082_therapy_program_visit_frequency.sql (2026-04-19)
+- [x] 081_riseup_import_and_property_links.sql (—)
 - [x] 080_users_show_useful_links.sql (2026-04-18)
 - [x] 079_private_clinic_reminders_family_member.sql (2026-04-18)
 - [x] 078_household_home_frequent_links.sql (2026-04-18)
@@ -105,6 +106,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 083 | `083_therapy_receipts_client_program.sql` (2026-04-19) | ALTER | `therapy_receipts`: optional `client_id` → `therapy_clients`, `program_id` → `therapy_service_programs` (indexes + FKs). |
 | 082 | `082_therapy_program_visit_frequency.sql` (2026-04-19) | ALTER | `therapy_service_programs`: optional `visits_per_period_count`, `visits_per_period_weeks` (program-level default visit frequency). |
 | 081 | `081_riseup_import_and_property_links.sql` (—) | ALTER | RiseUp: `properties.is_default_for_household`; `bank_accounts`/`credit_cards.property_id`; `property_utilities` payment FKs; `source_records.riseup_row`; `transactions` credit card, loan, RiseUp metadata columns. |
 | 080 | `080_users_show_useful_links.sql` (2026-04-18) | ALTER | `users`: `show_useful_links` (boolean, default true) — super-admin toggle for dashboard useful-links UI per user. |

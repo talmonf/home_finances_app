@@ -105,13 +105,18 @@ export async function loadReceiptsCursorPage(params: {
         ...(filters.job ? { job_id: filters.job } : {}),
         ...(filters.client
           ? {
-              allocations: {
-                some: {
-                  treatment: {
-                    client_id: filters.client,
+              OR: [
+                { client_id: filters.client },
+                {
+                  allocations: {
+                    some: {
+                      treatment: {
+                        client_id: filters.client,
+                      },
+                    },
                   },
                 },
-              },
+              ],
             }
           : {}),
         ...(from || to
@@ -133,6 +138,7 @@ export async function loadReceiptsCursorPage(params: {
       take: filters.sort === "treatments" ? chunkSize : take,
       include: {
         job: true,
+        client: { select: { id: true, first_name: true, last_name: true } },
         allocations: {
           orderBy: { created_at: "asc" },
           include: {
@@ -161,7 +167,7 @@ export async function loadReceiptsCursorPage(params: {
     nextCursor = chunk[chunk.length - 1]?.id ?? null;
 
     const mappedChunk: ReceiptListRowDto[] = chunk.map((rec) => {
-      const firstClient = rec.allocations[0]?.treatment.client;
+      const firstClient = rec.client ?? rec.allocations[0]?.treatment.client;
       return {
         id: rec.id,
         receipt_number: rec.receipt_number,

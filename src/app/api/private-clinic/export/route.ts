@@ -200,6 +200,8 @@ export async function GET() {
       receipts.map((r) => ({
         id: r.id,
         job_id: r.job_id,
+        client_id: r.client_id ?? "",
+        program_id: r.program_id ?? "",
         receipt_number: r.receipt_number,
         issued_at: String(r.issued_at),
         total_amount: r.total_amount.toString(),

@@ -17,6 +17,7 @@ import {
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import {
+  jobWhereInPrivateClinicModule,
   jobWherePrivateClinicScoped,
   jobsWhereActiveForPrivateClinicPickers,
   therapyClientsWhereLinkedPrivateClinicJobs,
@@ -31,8 +32,11 @@ import {
 } from "./receipts-list-data";
 import { ReceiptsListClient } from "./receipts-list-client";
 import { ReceiptModalForm } from "./receipt-modal-form";
+import type { Prisma } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
+
+type ReceiptProgramForModal = Prisma.therapy_service_programsGetPayload<{ include: { job: true } }>;
 
 type ReceiptSearch = {
   job?: string;
@@ -192,6 +196,41 @@ export default async function ReceiptsPage({
           },
         })
       : null;
+
+  const emptyReceiptPrograms: ReceiptProgramForModal[] = [];
+  let receiptPrograms: ReceiptProgramForModal[] = emptyReceiptPrograms;
+  let receiptModalClients: { id: string; first_name: string; last_name: string | null }[] = [];
+  if (modalMode === "new" || modalMode === "edit") {
+    [receiptPrograms, receiptModalClients] = await Promise.all([
+      prisma.therapy_service_programs.findMany({
+        where: {
+          household_id: householdId,
+          OR: [
+            {
+              job: {
+                ...jobWhereInPrivateClinicModule,
+                ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+              },
+              is_active: true,
+            },
+            ...(editReceipt?.program_id ? [{ id: editReceipt.program_id }] : []),
+          ],
+        },
+        include: { job: true },
+        orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      }),
+      prisma.therapy_clients.findMany({
+        where: {
+          household_id: householdId,
+          ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+          OR: [{ is_active: true }, ...(editReceipt?.client_id ? [{ id: editReceipt.client_id }] : [])],
+        },
+        orderBy: { first_name: "asc" },
+        select: { id: true, first_name: true, last_name: true },
+      }),
+    ]);
+  }
+
   const editableTreatments =
     editReceipt
       ? await prisma.therapy_treatments.findMany({
@@ -380,12 +419,26 @@ export default async function ReceiptsPage({
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          programs={receiptPrograms.map((p) => ({
+            id: p.id,
+            jobId: p.job_id,
+            label: `${formatJobDisplayLabel(p.job)} — ${p.name}`,
+          }))}
+          clients={receiptModalClients.map((cl) => ({
+            id: cl.id,
+            first_name: cl.first_name,
+            last_name: cl.last_name,
+          }))}
           labels={{
             titleNew: r.newReceipt,
             titleEdit: r.editReceipt,
             save: r.createAllocate,
             cancel: c.cancel,
             job: c.job,
+            program: c.program,
+            programOptionalEmpty: r.programOptionalEmpty,
+            client: c.client,
+            selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
             date: c.date,
             totalAmount: r.totalAmount,
@@ -393,7 +446,9 @@ export default async function ReceiptsPage({
             coveredStart: r.coveredStart,
             coveredEnd: r.coveredEnd,
             recipient: r.filterRecipient,
+            selectRecipient: r.selectRecipient,
             paymentMethod: r.paymentMethodLabel,
+            selectPaymentMethod: r.selectPaymentMethod,
             notes: c.notes,
             recipientClient: r.recipientClient,
             recipientOrg: r.recipientOrg,
@@ -417,12 +472,26 @@ export default async function ReceiptsPage({
           redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editReceipt.id)}`}
           householdId={householdId}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          programs={receiptPrograms.map((p) => ({
+            id: p.id,
+            jobId: p.job_id,
+            label: `${formatJobDisplayLabel(p.job)} — ${p.name}`,
+          }))}
+          clients={receiptModalClients.map((cl) => ({
+            id: cl.id,
+            first_name: cl.first_name,
+            last_name: cl.last_name,
+          }))}
           labels={{
             titleNew: r.newReceipt,
             titleEdit: r.editReceipt,
             save: r.saveReceipt,
             cancel: c.cancel,
             job: c.job,
+            program: c.program,
+            programOptionalEmpty: r.programOptionalEmpty,
+            client: c.client,
+            selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
             date: c.date,
             totalAmount: r.totalAmount,
@@ -430,7 +499,9 @@ export default async function ReceiptsPage({
             coveredStart: r.coveredStart,
             coveredEnd: r.coveredEnd,
             recipient: r.filterRecipient,
+            selectRecipient: r.selectRecipient,
             paymentMethod: r.paymentMethodLabel,
+            selectPaymentMethod: r.selectPaymentMethod,
             notes: c.notes,
             recipientClient: r.recipientClient,
             recipientOrg: r.recipientOrg,
@@ -446,6 +517,8 @@ export default async function ReceiptsPage({
           initial={{
             id: editReceipt.id,
             job_id: editReceipt.job_id,
+            program_id: editReceipt.program_id ?? "",
+            client_id: editReceipt.client_id ?? "",
             receipt_number: editReceipt.receipt_number,
             issued_at: editReceipt.issued_at.toISOString().slice(0, 10),
             total_amount: editReceipt.total_amount.toString(),
