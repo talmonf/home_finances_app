@@ -266,7 +266,7 @@ export function TherapyClientForm({
         )}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 md:col-span-2">
         <label htmlFor={`${idPrefix}_address`} className="block text-xs text-slate-400">
           {cl.address}
         </label>

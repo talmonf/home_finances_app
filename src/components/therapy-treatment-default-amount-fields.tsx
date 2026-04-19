@@ -48,7 +48,6 @@ export function TherapyTreatmentDefaultAmountFields(props: {
 }) {
   const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId } = props;
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
-  const isEditing = Boolean(defaultValues?.job_id);
 
   const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
   const programsForFirst = useMemo(
@@ -64,7 +63,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   const initialVisit: TherapyVisitType | "" =
     defaultValues?.visit_type ??
     defaultClient?.default_visit_type ??
-    (isEditing ? "clinic" : "");
+    (defaultClient ? "clinic" : "");
   const initialResolved = initialVisit
     ? resolveTherapyVisitTypeDefault(
         visitDefaults,
@@ -151,6 +150,23 @@ export function TherapyTreatmentDefaultAmountFields(props: {
         </select>
       </div>
       <div>
+        <label className="block text-xs text-slate-400">{labels.visitType}</label>
+        <select
+          name="visit_type"
+          required
+          value={visitType}
+          onChange={(e) => onVisitTypeChange(e.target.value as TherapyVisitType | "")}
+          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="">{labels.select}</option>
+          {visitOptions.map((v) => (
+            <option key={v} value={v}>
+              {therapyVisitTypeLabel(uiLanguage, v)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="block text-xs text-slate-400">{labels.date}</label>
         <input
           name="occurred_date"
@@ -190,23 +206,6 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           onChange={(e) => setCurrency(e.target.value)}
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
-      </div>
-      <div>
-        <label className="block text-xs text-slate-400">{labels.visitType}</label>
-        <select
-          name="visit_type"
-          required
-          value={visitType}
-          onChange={(e) => onVisitTypeChange(e.target.value as TherapyVisitType | "")}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="">{labels.select}</option>
-          {visitOptions.map((v) => (
-            <option key={v} value={v}>
-              {therapyVisitTypeLabel(uiLanguage, v)}
-            </option>
-          ))}
-        </select>
       </div>
     </>
   );

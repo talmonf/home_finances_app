@@ -126,7 +126,7 @@ export function TreatmentClientDefaultsSection({
           occurred_time: initial?.occurred_time ?? "",
           amount: initial?.amount ?? "",
           currency: initial?.currency ?? "ILS",
-          visit_type: initial?.visit_type ?? "clinic",
+          ...(initial?.visit_type !== undefined ? { visit_type: initial.visit_type } : {}),
         }}
       />
     </>
