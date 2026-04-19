@@ -1,4 +1,5 @@
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
+import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
@@ -72,6 +73,13 @@ export default async function HouseholdUsersPage({
       );
     }
 
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.ok) {
+      redirect(
+        `/admin/households/${householdId}?error=${encodeURIComponent(pwCheck.errors[0] ?? "Invalid password.")}`,
+      );
+    }
+
     if (role !== "admin" && role !== "member") {
       redirect(
         `/admin/households/${householdId}?error=${encodeURIComponent("Please select a role")}`,
@@ -112,6 +120,7 @@ export default async function HouseholdUsersPage({
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const now = new Date();
     await prisma.users.create({
       data: {
         id: crypto.randomUUID(),
@@ -123,6 +132,8 @@ export default async function HouseholdUsersPage({
         user_type: userTypeValue,
         family_member_id: familyMemberId,
         is_active: true,
+        must_change_password: true,
+        password_changed_at: now,
       },
     });
 
@@ -362,6 +373,7 @@ export default async function HouseholdUsersPage({
                 required
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
+              <p className="mt-1 text-xs text-slate-500">{passwordPolicyHint()} User must change it on first sign-in.</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-300">

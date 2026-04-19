@@ -1,4 +1,4 @@
-import type { DefaultSession, NextAuthOptions } from "next-auth";
+import type { DefaultSession, NextAuthOptions, User as NextAuthUser } from "next-auth";
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/household-date-format";
 import { DEFAULT_UI_LANGUAGE, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
 import { SESSION_OBFUSCATE_COOKIE } from "@/lib/session-obfuscate-cookie";
+import { isPasswordExpired } from "@/lib/password-policy";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -46,6 +47,7 @@ declare module "next-auth" {
       role: "admin" | "member";
       householdId?: string | null;
       isSuperAdmin?: boolean;
+      passwordActionRequired?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -55,6 +57,37 @@ declare module "next-auth" {
     householdId?: string | null;
     isSuperAdmin?: boolean;
   }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    role?: "admin" | "member";
+    householdId?: string | null;
+    isSuperAdmin?: boolean;
+    passwordActionRequired?: boolean;
+  }
+}
+
+async function computePasswordActionRequired(
+  userId: string,
+  isSuperAdmin: boolean,
+): Promise<boolean> {
+  if (isSuperAdmin) {
+    const row = await prisma.super_admins.findUnique({
+      where: { id: userId },
+      select: { must_change_password: true, password_changed_at: true },
+    });
+    if (!row) return false;
+    return row.must_change_password || isPasswordExpired(row.password_changed_at);
+  }
+
+  const row = await prisma.users.findUnique({
+    where: { id: userId },
+    select: { must_change_password: true, password_changed_at: true },
+  });
+  if (!row) return false;
+  return row.must_change_password || isPasswordExpired(row.password_changed_at);
 }
 
 export const authOptions: NextAuthOptions = {
@@ -128,11 +161,27 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
-        token.householdId = (user as any).householdId ?? null;
-        token.isSuperAdmin = (user as any).isSuperAdmin ?? false;
+        const u = user as NextAuthUser & {
+          id: string;
+          role: "admin" | "member";
+          householdId?: string | null;
+          isSuperAdmin?: boolean;
+        };
+        token.id = u.id;
+        token.sub = u.id;
+        token.role = u.role;
+        token.householdId = u.householdId ?? null;
+        token.isSuperAdmin = u.isSuperAdmin ?? false;
       }
+
+      const userId = (token.id as string | undefined) ?? (token.sub as string | undefined);
+      const isSuperAdmin = (token.isSuperAdmin as boolean) ?? false;
+      if (userId) {
+        token.passwordActionRequired = await computePasswordActionRequired(userId, isSuperAdmin);
+      } else {
+        token.passwordActionRequired = false;
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -141,6 +190,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = (token.role as "admin" | "member") ?? "member";
         session.user.householdId = (token.householdId as string | null) ?? null;
         session.user.isSuperAdmin = (token.isSuperAdmin as boolean) ?? false;
+        session.user.passwordActionRequired = (token.passwordActionRequired as boolean) ?? false;
       }
       return session;
     },

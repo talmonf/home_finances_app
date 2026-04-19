@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthSession, prisma } from "@/lib/auth";
+import { validatePassword } from "@/lib/password-policy";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { upsertUserEnabledSections } from "@/lib/household-sections";
@@ -80,14 +81,16 @@ export async function updateHouseholdUser(formData: FormData) {
   }
 
   if (newPassword) {
-    if (newPassword.length < 8) {
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.ok) {
       redirect(
-        `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("New password must be at least 8 characters.")}`,
+        `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent(pwCheck.errors[0] ?? "Invalid password.")}`,
       );
     }
   }
 
   const password_hash = newPassword ? await bcrypt.hash(newPassword, 12) : undefined;
+  const now = new Date();
 
   await prisma.users.update({
     where: { id: userId },
@@ -102,7 +105,13 @@ export async function updateHouseholdUser(formData: FormData) {
         : null,
       ui_language: rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null,
       show_useful_links: showUsefulLinks,
-      ...(password_hash ? { password_hash } : {}),
+      ...(password_hash
+        ? {
+            password_hash,
+            must_change_password: true,
+            password_changed_at: now,
+          }
+        : {}),
     },
   });
 

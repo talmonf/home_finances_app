@@ -1246,13 +1246,15 @@ enum SubscriptionBillingInterval {
 }
 
 model super_admins {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password_hash String
-  full_name     String
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-  last_login_at DateTime?
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password_hash         String
+  full_name             String
+  is_active             Boolean   @default(true)
+  created_at            DateTime  @default(now())
+  last_login_at         DateTime?
+  must_change_password  Boolean   @default(false)
+  password_changed_at   DateTime  @default(now())
 }
 
 model users {
@@ -1272,6 +1274,8 @@ model users {
   show_useful_links    Boolean  @default(true)
   created_at           DateTime @default(now())
   last_login_at        DateTime?
+  must_change_password Boolean  @default(false)
+  password_changed_at  DateTime @default(now())
 
   household            households     @relation(fields: [household_id], references: [id])
   family_member        family_members? @relation(fields: [family_member_id], references: [id])

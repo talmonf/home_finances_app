@@ -76,8 +76,17 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   const [jobId, setJobId] = useState(firstJobId);
   const [programId, setProgramId] = useState(initialProgramId);
   const [visitType, setVisitType] = useState<TherapyVisitType | "">(initialVisit);
-  const [amount, setAmount] = useState(defaultValues?.amount ?? initialResolved?.amount ?? "");
-  const [currency, setCurrency] = useState(defaultValues?.currency ?? initialResolved?.currency ?? "ILS");
+  // Parent often passes amount: "" when nothing was saved; empty string must not mask visit-type defaults.
+  const [amount, setAmount] = useState(
+    defaultValues?.amount !== undefined && defaultValues.amount !== ""
+      ? defaultValues.amount
+      : (initialResolved?.amount ?? ""),
+  );
+  const [currency, setCurrency] = useState(
+    defaultValues?.currency !== undefined && defaultValues.currency !== ""
+      ? defaultValues.currency
+      : (initialResolved?.currency ?? "ILS"),
+  );
 
   const programsForJob = useMemo(() => programs.filter((p) => p.job_id === jobId), [programs, jobId]);
 

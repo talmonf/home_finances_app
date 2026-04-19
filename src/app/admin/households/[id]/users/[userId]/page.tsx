@@ -306,7 +306,8 @@ export default async function EditHouseholdUserPage({
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
               <p className="mt-1 text-xs text-slate-500">
-                Minimum 8 characters when set. Only super admins can change passwords here.
+                When set, must meet the password policy; the user will be asked to change it on next sign-in. Only super
+                admins can change passwords here.
               </p>
             </div>
 

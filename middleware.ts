@@ -28,6 +28,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const passwordActionRequired = Boolean(
+    (token as { passwordActionRequired?: boolean }).passwordActionRequired,
+  );
+  if (passwordActionRequired) {
+    const exempt =
+      pathname.startsWith("/change-password") || pathname.startsWith("/api/auth");
+    if (!exempt) {
+      const changeUrl = new URL("/change-password", req.url);
+      return NextResponse.redirect(changeUrl);
+    }
+  }
+
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   return NextResponse.next({

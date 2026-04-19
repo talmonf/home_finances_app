@@ -3,7 +3,13 @@
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 
-export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
+export function LoginForm({
+  callbackUrl,
+  passwordUpdated,
+}: {
+  callbackUrl?: string;
+  passwordUpdated?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +47,11 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         <p className="mb-6 text-center text-sm text-slate-400">
           Sign in to manage your households and finances.
         </p>
+        {passwordUpdated ? (
+          <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
+            Password updated. Sign in with your new password.
+          </p>
+        ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-200">

@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 085_password_policy_and_rotation.sql (2026-04-19)
 - [x] 084_therapy_appointment_audits.sql (2026-04-19)
 - [x] 083_therapy_receipts_client_program.sql (2026-04-19)
 - [x] 082_therapy_program_visit_frequency.sql (2026-04-19)
@@ -107,6 +108,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 085 | `085_password_policy_and_rotation.sql` (2026-04-19) | ALTER | `users` and `super_admins`: `must_change_password` (boolean), `password_changed_at` (timestamp, backfilled from login/created). |
 | 084 | `084_therapy_appointment_audits.sql` (2026-04-19) | CREATE | Enum `therapy_appointment_audit_action`; table `therapy_appointment_audits` (household, user, optional appointment FK SET NULL, action, JSONB metadata) for private-clinic appointment CRUD audit trail. |
 | 083 | `083_therapy_receipts_client_program.sql` (2026-04-19) | ALTER | `therapy_receipts`: optional `client_id` → `therapy_clients`, `program_id` → `therapy_service_programs` (indexes + FKs). |
 | 082 | `082_therapy_program_visit_frequency.sql` (2026-04-19) | ALTER | `therapy_service_programs`: optional `visits_per_period_count`, `visits_per_period_weeks` (program-level default visit frequency). |
