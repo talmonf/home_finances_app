@@ -1,9 +1,11 @@
+import { PrivateClinicTherapistFields } from "@/components/admin/private-clinic-therapist-fields";
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
-import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
+import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
@@ -40,30 +42,118 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
     const currency =
       ((formData.get("primary_currency") as string | null) || "ILS").trim();
     const privateClinicModuleOnly = formData.get("private_clinic_module_only") === "on";
+    const therapistFullName = (formData.get("therapist_full_name") as string | null)?.trim();
+    const therapistEmail = (formData.get("therapist_email") as string | null)?.trim();
+    const therapistPassword = (formData.get("therapist_password") as string | null) ?? "";
 
     if (!name) {
       redirect("/admin/households?error=Household+name+is+required");
     }
 
-    const id = crypto.randomUUID();
-    await prisma.households.create({
-      data: {
-        id,
-        name,
-        country,
-        primary_currency: currency,
-      },
-    });
-
     if (privateClinicModuleOnly) {
-      const enabledBySectionId: Record<string, boolean> = {};
-      for (const section of DASHBOARD_SECTIONS) {
-        enabledBySectionId[section.id] = section.id === "privateClinic";
+      if (!therapistFullName || !therapistEmail || !therapistPassword) {
+        redirect(
+          `/admin/households?error=${encodeURIComponent("Therapist name, email, and password are required for a private clinic household.")}`,
+        );
       }
-      await upsertHouseholdEnabledSections({ householdId: id, enabledBySectionId });
+      const pwCheck = validatePassword(therapistPassword);
+      if (!pwCheck.ok) {
+        redirect(
+          `/admin/households?error=${encodeURIComponent(pwCheck.errors[0] ?? "Invalid password.")}`,
+        );
+      }
+      const emailTaken = await prisma.users.findUnique({
+        where: { email: therapistEmail },
+        select: { id: true },
+      });
+      if (emailTaken) {
+        redirect(
+          `/admin/households?error=${encodeURIComponent("That email is already in use by another user.")}`,
+        );
+      }
     }
 
+    const householdId = crypto.randomUUID();
+    const passwordHash = privateClinicModuleOnly
+      ? await bcrypt.hash(therapistPassword, 12)
+      : null;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.households.create({
+        data: {
+          id: householdId,
+          name,
+          country,
+          primary_currency: currency,
+        },
+      });
+
+      if (privateClinicModuleOnly) {
+        for (const section of DASHBOARD_SECTIONS) {
+          const enabled = section.id === "privateClinic";
+          await tx.household_enabled_sections.upsert({
+            where: {
+              household_id_section_id: {
+                household_id: householdId,
+                section_id: section.id,
+              },
+            },
+            update: { enabled },
+            create: {
+              id: crypto.randomUUID(),
+              household_id: householdId,
+              section_id: section.id,
+              enabled,
+            },
+          });
+        }
+
+        const familyMemberId = crypto.randomUUID();
+        await tx.family_members.create({
+          data: {
+            id: familyMemberId,
+            household_id: householdId,
+            full_name: therapistFullName!,
+            is_active: true,
+          },
+        });
+
+        const now = new Date();
+        await tx.users.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: householdId,
+            email: therapistEmail!,
+            password_hash: passwordHash!,
+            full_name: therapistFullName!,
+            role: "member",
+            user_type: "family_member",
+            family_member_id: familyMemberId,
+            is_active: true,
+            must_change_password: true,
+            password_changed_at: now,
+          },
+        });
+
+        const therapyExisting = await tx.therapy_settings.findUnique({
+          where: { household_id: householdId },
+        });
+        if (!therapyExisting) {
+          await tx.therapy_settings.create({
+            data: {
+              id: crypto.randomUUID(),
+              household_id: householdId,
+            },
+          });
+        }
+      }
+    });
+
     revalidatePath("/admin/households");
+    revalidatePath(`/admin/households/${householdId}`);
+    if (privateClinicModuleOnly) {
+      redirect(`/admin/households/${householdId}?created=1`);
+    }
     redirect("/admin/households?created=1");
   }
 
@@ -155,22 +245,7 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
-            <div className="md:col-span-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="private_clinic_module_only"
-                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                />
-                <span className="text-sm text-slate-300">
-                  <span className="font-medium text-slate-200">Private clinic module only</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    Enable only the Private clinic dashboard section for this household (all other sections off). You
-                    can change this later under Edit household.
-                  </span>
-                </span>
-              </label>
-            </div>
+            <PrivateClinicTherapistFields passwordPolicyHintText={passwordPolicyHint()} />
             <div className="md:col-span-3 flex justify-end">
               <button
                 type="submit"
