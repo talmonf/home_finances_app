@@ -28,6 +28,10 @@ import {
   parseHomeFrequentLinksJson,
 } from "@/lib/home-frequent-links";
 import { createHouseholdUsefulLink, deleteHouseholdUsefulLink } from "@/lib/useful-links/admin-actions";
+import {
+  HouseholdPrivateClinicOnlyButton,
+  HouseholdSectionGroupActions,
+} from "@/components/household-dashboard-section-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -246,12 +250,23 @@ export default async function EditHouseholdPage({
               Uncheck to hide a section from the household&apos;s home dashboard. Users
               won&apos;t see disabled areas in the nav.
             </p>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-slate-500">Quick preset:</span>
+              <HouseholdPrivateClinicOnlyButton />
+              <span className="text-[11px] text-slate-600">
+                (only &quot;Private clinic&quot; on; save to apply)
+              </span>
+            </div>
 
-            <div className="space-y-6">
+            <div id="household-enabled-dashboard-sections" className="space-y-6">
               <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Setup
-                </h3>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Setup
+                  </h3>
+                  <HouseholdSectionGroupActions containerId="household-enabled-setup" />
+                </div>
+                <div id="household-enabled-setup">
                 <ul className="space-y-2">
                   {setupSections.map((section) => (
                     <li
@@ -277,12 +292,17 @@ export default async function EditHouseholdPage({
                     </li>
                   ))}
                 </ul>
+                </div>
               </div>
 
               <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Ongoing & tools
-                </h3>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Ongoing & tools
+                  </h3>
+                  <HouseholdSectionGroupActions containerId="household-enabled-ongoing" />
+                </div>
+                <div id="household-enabled-ongoing">
                 <ul className="space-y-2">
                   {ongoingSections.map((section) => (
                     <li
@@ -308,6 +328,7 @@ export default async function EditHouseholdPage({
                     </li>
                   ))}
                 </ul>
+                </div>
               </div>
             </div>
           </section>

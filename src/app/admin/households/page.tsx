@@ -1,4 +1,6 @@
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
+import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
+import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -37,19 +39,29 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
     const country = ((formData.get("country") as string | null) || "IL").trim();
     const currency =
       ((formData.get("primary_currency") as string | null) || "ILS").trim();
+    const privateClinicModuleOnly = formData.get("private_clinic_module_only") === "on";
 
     if (!name) {
       redirect("/admin/households?error=Household+name+is+required");
     }
 
+    const id = crypto.randomUUID();
     await prisma.households.create({
       data: {
-        id: crypto.randomUUID(),
+        id,
         name,
         country,
         primary_currency: currency,
       },
     });
+
+    if (privateClinicModuleOnly) {
+      const enabledBySectionId: Record<string, boolean> = {};
+      for (const section of DASHBOARD_SECTIONS) {
+        enabledBySectionId[section.id] = section.id === "privateClinic";
+      }
+      await upsertHouseholdEnabledSections({ householdId: id, enabledBySectionId });
+    }
 
     revalidatePath("/admin/households");
     redirect("/admin/households?created=1");
@@ -142,6 +154,22 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                 defaultValue="ILS"
                 className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
+            </div>
+            <div className="md:col-span-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="private_clinic_module_only"
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                />
+                <span className="text-sm text-slate-300">
+                  <span className="font-medium text-slate-200">Private clinic module only</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    Enable only the Private clinic dashboard section for this household (all other sections off). You
+                    can change this later under Edit household.
+                  </span>
+                </span>
+              </label>
             </div>
             <div className="md:col-span-3 flex justify-end">
               <button
