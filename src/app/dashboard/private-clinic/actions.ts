@@ -10,6 +10,7 @@ import {
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
 import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
+import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -56,22 +57,6 @@ function redirectTherapyClientFormError(formData: FormData, fallbackPath: string
   if (!path.startsWith(`${BASE}/clients`)) path = fallbackPath;
   const sep = path.includes("?") ? "&" : "?";
   redirect(`${path}${sep}error=${encodeURIComponent(errorKey)}`);
-}
-
-function parseVisitCount(raw: string | null | undefined): number | null {
-  const n = Number((raw ?? "").trim());
-  if (!Number.isFinite(n)) return null;
-  const int = Math.trunc(n);
-  if (int < 1 || int > 14) return null;
-  return int;
-}
-
-function parseVisitWeeks(raw: string | null | undefined): number | null {
-  const n = Number((raw ?? "").trim());
-  if (!Number.isFinite(n)) return null;
-  const int = Math.trunc(n);
-  if (int < 1 || int > 12) return null;
-  return int;
 }
 
 async function requireSuperAdminHouseholdFromForm(formData: FormData): Promise<string> {
@@ -717,6 +702,9 @@ export async function createTherapyProgram(formData: FormData) {
   if (!job_id || !name) redirect(`${BASE}/programs?error=missing`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/programs?error=job`);
 
+  const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
+  const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+
   await prisma.therapy_service_programs.create({
     data: {
       id: crypto.randomUUID(),
@@ -726,6 +714,8 @@ export async function createTherapyProgram(formData: FormData) {
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || 0) || 0,
       is_active: formData.has("is_active"),
+      visits_per_period_count,
+      visits_per_period_weeks,
     },
   });
 
@@ -744,6 +734,9 @@ export async function updateTherapyProgram(formData: FormData) {
   if (!row) redirect(`${BASE}/programs?error=notfound`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) redirect(`${BASE}/programs?error=job`);
 
+  const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
+  const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+
   await prisma.therapy_service_programs.update({
     where: { id },
     data: {
@@ -751,6 +744,8 @@ export async function updateTherapyProgram(formData: FormData) {
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || row.sort_order) || 0,
       is_active: formData.has("is_active"),
+      visits_per_period_count,
+      visits_per_period_weeks,
     },
   });
 
@@ -924,8 +919,24 @@ export async function createTherapyClient(formData: FormData) {
   const mobile = (formData.get("mobile_phone") as string)?.trim() || "";
   const home = (formData.get("home_phone") as string)?.trim() || "";
   const phones = [mobile, home].filter(Boolean).join("\n") || null;
-  const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
-  const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  let visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
+  let visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  if (default_program_id) {
+    const prog = await prisma.therapy_service_programs.findFirst({
+      where: { id: default_program_id, household_id: householdId },
+      select: { visits_per_period_count: true, visits_per_period_weeks: true },
+    });
+    if (prog) {
+      if (visits_per_period_count === null && prog.visits_per_period_count != null) {
+        visits_per_period_count = prog.visits_per_period_count;
+      }
+      if (visits_per_period_weeks === null && prog.visits_per_period_weeks != null) {
+        visits_per_period_weeks = prog.visits_per_period_weeks;
+      }
+    }
+  }
+  if (visits_per_period_count === null) visits_per_period_count = 1;
+  if (visits_per_period_weeks === null) visits_per_period_weeks = 1;
   const disability_status_raw = (formData.get("disability_status") as string)?.trim() || "";
   const rehab_basket_status_raw = (formData.get("rehab_basket_status") as string)?.trim() || "";
   const disability_status = CLIENT_STATUS_OPTIONS.has(disability_status_raw) ? disability_status_raw : null;

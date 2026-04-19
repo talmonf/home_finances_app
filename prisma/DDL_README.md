@@ -5,7 +5,7 @@ All database scripts use a **numbering system** so you can track what you’ve r
 ## Where to run scripts
 
 - **Location:** `prisma/migrations/`
-- **Index:** Open **`prisma/migrations/000_INDEX.md`** for the list of scripts and a checklist.
+- **Index:** Open **`prisma/migrations/000_INDEX.md`** — the **checklist is at the top**; the detailed script table with descriptions is below.
 
 ## Numbering
 
@@ -16,9 +16,9 @@ All database scripts use a **numbering system** so you can track what you’ve r
 
 ## Workflow
 
-1. Open `prisma/migrations/000_INDEX.md`.
+1. Open `prisma/migrations/000_INDEX.md` and use the **Checklist** section at the top.
 2. Run each listed script in order (e.g. in Vercel Postgres Query or any SQL client).
-3. Mark the script as run in the checklist in `000_INDEX.md`.
+3. Mark the script as run in that checklist.
 4. When new migrations appear (e.g. `004_alter_...`), run only the new ones and check them off.
 
 ## Table structure changes

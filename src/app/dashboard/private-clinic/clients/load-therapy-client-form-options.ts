@@ -3,7 +3,13 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export type TherapyClientFormJobOption = { id: string; label: string };
-export type TherapyClientFormProgramOption = { id: string; jobId: string; label: string };
+export type TherapyClientFormProgramOption = {
+  id: string;
+  jobId: string;
+  label: string;
+  visits_per_period_count: number | null;
+  visits_per_period_weeks: number | null;
+};
 
 export async function loadTherapyClientFormOptions(params: {
   householdId: string;
@@ -66,6 +72,8 @@ export async function loadTherapyClientFormOptions(params: {
       id: p.id,
       jobId: p.job_id,
       label: `${p.name}${p.job.employer_name ? ` (${p.job.employer_name})` : ""}`,
+      visits_per_period_count: p.visits_per_period_count,
+      visits_per_period_weeks: p.visits_per_period_weeks,
     })),
   };
 }

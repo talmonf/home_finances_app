@@ -1486,6 +1486,8 @@ model therapy_service_programs {
   description  String?
   sort_order   Int      @default(0)
   is_active    Boolean  @default(true)
+  visits_per_period_count Int?
+  visits_per_period_weeks Int?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 

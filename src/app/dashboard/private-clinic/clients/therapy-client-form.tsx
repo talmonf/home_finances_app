@@ -289,40 +289,6 @@ export function TherapyClientForm({
       </div>
 
       <div className="space-y-1">
-        <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
-        <div className="flex items-center gap-2">
-          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_count`}>
-            {cl.visitsPer}
-          </label>
-          <input
-            id={`${idPrefix}_visits_per_period_count`}
-            name="visits_per_period_count"
-            type="number"
-            min={1}
-            max={14}
-            step={1}
-            defaultValue={client?.visits_per_period_count ?? 1}
-            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <span className="text-xs text-slate-400">{cl.visitsPer}</span>
-          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_weeks`}>
-            {cl.weeks}
-          </label>
-          <input
-            id={`${idPrefix}_visits_per_period_weeks`}
-            name="visits_per_period_weeks"
-            type="number"
-            min={1}
-            max={12}
-            step={1}
-            defaultValue={client?.visits_per_period_weeks ?? 1}
-            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <span className="text-xs text-slate-400">{cl.weeks}</span>
-        </div>
-      </div>
-
-      <div className="space-y-1">
         <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
           {c.startDate}
         </label>
@@ -414,7 +380,47 @@ export function TherapyClientForm({
         defaultVisitType={client?.default_visit_type}
         defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
         labels={jobFieldLabels}
+        inheritProgramVisitFrequency={mode === "create"}
+        visitFrequencyCountInputId={`${idPrefix}_visits_per_period_count`}
+        visitFrequencyWeeksInputId={`${idPrefix}_visits_per_period_weeks`}
       />
+
+      <div className="space-y-1 md:col-span-2">
+        <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
+        {mode === "create" ? (
+          <p className="text-xs text-slate-500">{cl.visitFrequencyClientHint}</p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_count`}>
+            {cl.visitsPer}
+          </label>
+          <input
+            id={`${idPrefix}_visits_per_period_count`}
+            name="visits_per_period_count"
+            type="number"
+            min={1}
+            max={14}
+            step={1}
+            defaultValue={client?.visits_per_period_count ?? ""}
+            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <span className="text-xs text-slate-400">{cl.visitsPer}</span>
+          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_weeks`}>
+            {cl.weeks}
+          </label>
+          <input
+            id={`${idPrefix}_visits_per_period_weeks`}
+            name="visits_per_period_weeks"
+            type="number"
+            min={1}
+            max={12}
+            step={1}
+            defaultValue={client?.visits_per_period_weeks ?? ""}
+            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+          <span className="text-xs text-slate-400">{cl.weeks}</span>
+        </div>
+      </div>
 
       {mode === "edit" && client ? (
         <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">

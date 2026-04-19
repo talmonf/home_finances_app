@@ -7,6 +7,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   jobs: "משרות",
   programs: "תוכניות",
   clients: "לקוחות",
+  upcomingVisits: "ביקורים קרובים",
   treatments: "טיפולים",
   receipts: "קבלות",
   expenses: "הוצאות",
@@ -267,6 +268,13 @@ export function privateClinicPrograms(lang: UiLanguage) {
     addProgramBtn: p("Add program", "הוספת תכנית"),
     programsHeading: p("Programs", "תוכניות"),
     programName: p("Program name", "שם תכנית"),
+    visitFrequency: p("Visit frequency", "תדירות ביקורים"),
+    visitFrequencyHint: p(
+      "Optional. Used as the default when you add a client with this program selected.",
+      "אופציונלי. משמש ברירת מחדל בעת הוספת לקוח עם תכנית זו.",
+    ),
+    visitsPer: p("Visits per", "ביקורים בכל"),
+    weeks: p("week(s)", "שבוע/ות"),
     active: c.active,
     tableName: c.name,
     tableJob: c.job,
@@ -292,6 +300,10 @@ export function privateClinicClients(lang: UiLanguage) {
     homePhone: p("Home phone", "טלפון בית"),
     address: p("Address", "כתובת"),
     visitFrequency: p("Visit frequency", "תדירות ביקורים"),
+    visitFrequencyClientHint: p(
+      "Optional. Leave blank to inherit from the default program (if it defines one).",
+      "אופציונלי. השאירו ריק כדי לרשת מתכנית ברירת המחדל (אם הוגדרה שם).",
+    ),
     visitsPer: p("Visits per", "ביקורים בכל"),
     weeks: p("week(s)", "שבוע/ות"),
     disabilityStatus: p("Disability status", "סטטוס נכות"),
@@ -345,6 +357,9 @@ export function privateClinicClients(lang: UiLanguage) {
     colJob: p("Default job", "משרת ברירת מחדל"),
     colProgram: p("Default program", "תכנית ברירת מחדל"),
     colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
+    colNextVisitDue: p("Next visit due", "ביקור הבא (משוער)"),
+    nextVisitNoTreatments: p("No treatments logged", "אין טיפולים רשומים"),
+    nextVisitNoFrequency: p("Set visit frequency", "הגדירו תדירות ביקורים"),
     colStart: p("Start", "התחלה"),
     colEnd: p("End", "סיום"),
     colActions: p("Actions", "פעולות"),
@@ -353,6 +368,38 @@ export function privateClinicClients(lang: UiLanguage) {
     errProgram: p("Default program must belong to the default job.", "תכנית ברירת המחדל חייבת להשתייך למשרת ברירת המחדל."),
     errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
+  };
+}
+
+export function privateClinicUpcomingVisits(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  const c = privateClinicCommon(lang);
+  const cl = privateClinicClients(lang);
+  return {
+    pageTitle: p("Upcoming visits", "ביקורים קרובים"),
+    pageIntro: p(
+      "Active clients with a visit frequency, ordered by estimated next visit after the last logged treatment.",
+      "לקוחות פעילים עם תדירות ביקורים, ממוינים לפי מועד הביקור הבא המשוער אחרי הטיפול האחרון שרשמתם.",
+    ),
+    colClient: p("Client", "לקוח"),
+    colLastVisit: p("Last visit", "ביקור אחרון"),
+    colNextDue: cl.colNextVisitDue,
+    colJob: cl.colJob,
+    colProgram: cl.colProgram,
+    colActions: cl.colActions,
+    overdue: p("Overdue", "באיחור"),
+    dueToday: p("Today", "היום"),
+    logTreatment: p("Log treatment", "רישום טיפול"),
+    editClient: c.edit,
+    sectionNeedsFirstVisit: p("No logged visits yet", "עדיין אין טיפולים רשומים"),
+    sectionNeedsFirstVisitHint: p(
+      "These clients have a visit frequency but no treatments on file — log a first visit to start the schedule.",
+      "ללקוחות אלה יש תדירות ביקורים אבל עדיין אין טיפולים ברשומות — רשמו טיפול ראשון כדי להתחיל את לוח הזמנים.",
+    ),
+    empty: p(
+      "No active clients with a visit frequency. Add a frequency on the client or program, or activate a client.",
+      "אין לקוחות פעילים עם תדירות ביקורים. הגדירו תדירות בלקוח או בתכנית, או הפעילו לקוח.",
+    ),
   };
 }
 

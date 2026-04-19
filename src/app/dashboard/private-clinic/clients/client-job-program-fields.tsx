@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 type JobOption = { id: string; label: string };
-type ProgramOption = { id: string; jobId: string; label: string };
+type ProgramOption = {
+  id: string;
+  jobId: string;
+  label: string;
+  visits_per_period_count: number | null;
+  visits_per_period_weeks: number | null;
+};
 
 export type ClientJobProgramFieldLabels = {
   defaultJob: string;
@@ -39,6 +45,9 @@ export function ClientJobProgramFields({
   defaultVisitType,
   defaultCheckedJobIds,
   requiredProgram,
+  inheritProgramVisitFrequency,
+  visitFrequencyCountInputId,
+  visitFrequencyWeeksInputId,
   labels = DEFAULT_LABELS,
 }: {
   jobs: JobOption[];
@@ -48,6 +57,9 @@ export function ClientJobProgramFields({
   defaultVisitType?: "clinic" | "home" | "phone" | "video" | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
+  inheritProgramVisitFrequency?: boolean;
+  visitFrequencyCountInputId?: string;
+  visitFrequencyWeeksInputId?: string;
   labels?: ClientJobProgramFieldLabels;
 }) {
   const [jobId, setJobId] = useState(defaultJobId ?? "");
@@ -83,6 +95,28 @@ export function ClientJobProgramFields({
       setProgramId("");
     }
   }, [filteredPrograms, programId]);
+
+  useEffect(() => {
+    if (!inheritProgramVisitFrequency || !visitFrequencyCountInputId || !visitFrequencyWeeksInputId) return;
+    const prog = programs.find((x) => x.id === programId);
+    const cEl = document.getElementById(visitFrequencyCountInputId) as HTMLInputElement | null;
+    const wEl = document.getElementById(visitFrequencyWeeksInputId) as HTMLInputElement | null;
+    if (!cEl || !wEl) return;
+    if (
+      prog &&
+      prog.visits_per_period_count != null &&
+      prog.visits_per_period_weeks != null
+    ) {
+      cEl.value = String(prog.visits_per_period_count);
+      wEl.value = String(prog.visits_per_period_weeks);
+    }
+  }, [
+    inheritProgramVisitFrequency,
+    programId,
+    programs,
+    visitFrequencyCountInputId,
+    visitFrequencyWeeksInputId,
+  ]);
 
   return (
     <>

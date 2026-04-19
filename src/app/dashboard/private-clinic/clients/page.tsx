@@ -15,6 +15,7 @@ import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
+import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 
 type ListFilterQs = {
   q: string;
@@ -260,6 +261,21 @@ export default async function ClientsPage({
     treatmentCountsRaw.map((row) => [row.client_id, row._count._all]),
   );
 
+  const lastTreatmentByClientId =
+    clients.length > 0
+      ? await prisma.therapy_treatments.groupBy({
+          by: ["client_id"],
+          where: {
+            household_id: householdId,
+            client_id: { in: clients.map((c) => c.id) },
+          },
+          _max: { occurred_at: true },
+        })
+      : [];
+  const lastVisitAtByClientId = new Map(
+    lastTreatmentByClientId.map((row) => [row.client_id, row._max.occurred_at]),
+  );
+
   const hasActiveFilters =
     Boolean(q) || status !== "active" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
 
@@ -427,6 +443,9 @@ export default async function ClientsPage({
                 <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {cl.colTreatmentsCount}
                 </th>
+                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {cl.colNextVisitDue}
+                </th>
                 <SortHeader
                   column="start_date"
                   label={cl.colStart}
@@ -464,6 +483,22 @@ export default async function ClientsPage({
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
                 const treatmentsCount = treatmentCountByClientId.get(row.id) ?? 0;
+                const lastVisitAt = lastVisitAtByClientId.get(row.id);
+                const vc = row.visits_per_period_count;
+                const vw = row.visits_per_period_weeks;
+                let nextVisitDisp: string;
+                let nextVisitTitle: string | undefined;
+                if (vc == null || vw == null) {
+                  nextVisitDisp = "—";
+                  nextVisitTitle = cl.nextVisitNoFrequency;
+                } else if (!lastVisitAt) {
+                  nextVisitDisp = "—";
+                  nextVisitTitle = cl.nextVisitNoTreatments;
+                } else {
+                  const due = nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw);
+                  nextVisitDisp = formatHouseholdDate(due, dateDisplayFormat);
+                  nextVisitTitle = undefined;
+                }
                 const startDisp = row.start_date
                   ? formatHouseholdDate(row.start_date, dateDisplayFormat)
                   : c.noDate;
@@ -487,6 +522,12 @@ export default async function ClientsPage({
                       <Link href={treatmentsHref} className="font-medium text-sky-400 hover:text-sky-300 hover:underline">
                         {treatmentsCount}
                       </Link>
+                    </td>
+                    <td
+                      className="whitespace-nowrap px-3 py-2 text-slate-300"
+                      title={nextVisitTitle}
+                    >
+                      {nextVisitDisp}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{startDisp}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{endDisp}</td>

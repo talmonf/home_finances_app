@@ -130,6 +130,40 @@ export default async function ProgramsPage({
             placeholder={c.description}
             className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
+          <div className="md:col-span-2 space-y-1">
+            <p className="text-xs text-slate-400">{pr.visitFrequency}</p>
+            <p className="text-xs text-slate-500">{pr.visitFrequencyHint}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="new_program_visits_per_period_count">
+                {pr.visitsPer}
+              </label>
+              <input
+                id="new_program_visits_per_period_count"
+                name="visits_per_period_count"
+                type="number"
+                min={1}
+                max={14}
+                step={1}
+                placeholder="1"
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{pr.visitsPer}</span>
+              <label className="sr-only" htmlFor="new_program_visits_per_period_weeks">
+                {pr.weeks}
+              </label>
+              <input
+                id="new_program_visits_per_period_weeks"
+                name="visits_per_period_weeks"
+                type="number"
+                min={1}
+                max={12}
+                step={1}
+                placeholder="1"
+                className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <span className="text-xs text-slate-400">{pr.weeks}</span>
+            </div>
+          </div>
           <button
             type="submit"
             className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
@@ -180,6 +214,40 @@ export default async function ProgramsPage({
                     placeholder={c.description}
                     className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                   />
+                  <div className="md:col-span-2 space-y-1">
+                    <p className="text-xs text-slate-400">{pr.visitFrequency}</p>
+                    <p className="text-xs text-slate-500">{pr.visitFrequencyHint}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="sr-only" htmlFor={`program_${p.id}_visits_per_period_count`}>
+                        {pr.visitsPer}
+                      </label>
+                      <input
+                        id={`program_${p.id}_visits_per_period_count`}
+                        name="visits_per_period_count"
+                        type="number"
+                        min={1}
+                        max={14}
+                        step={1}
+                        defaultValue={p.visits_per_period_count ?? ""}
+                        className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                      <span className="text-xs text-slate-400">{pr.visitsPer}</span>
+                      <label className="sr-only" htmlFor={`program_${p.id}_visits_per_period_weeks`}>
+                        {pr.weeks}
+                      </label>
+                      <input
+                        id={`program_${p.id}_visits_per_period_weeks`}
+                        name="visits_per_period_weeks"
+                        type="number"
+                        min={1}
+                        max={12}
+                        step={1}
+                        defaultValue={p.visits_per_period_weeks ?? ""}
+                        className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                      <span className="text-xs text-slate-400">{pr.weeks}</span>
+                    </div>
+                  </div>
                   <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2">
                     <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
                       {c.save}
