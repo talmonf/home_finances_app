@@ -211,7 +211,7 @@ export default async function UpcomingVisitsPage() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <Link
-                            href={`${treatmentsBase}?client=${encodeURIComponent(r.clientId)}`}
+                            href={`${treatmentsBase}?client=${encodeURIComponent(r.clientId)}&modal=new`}
                             className="font-medium text-sky-400 hover:text-sky-300"
                           >
                             {uv.logTreatment}
@@ -238,7 +238,7 @@ export default async function UpcomingVisitsPage() {
                       <span>{obfuscate ? OBFUSCATED : name}</span>
                       {" — "}
                       <Link
-                        href={`${treatmentsBase}?client=${encodeURIComponent(row.id)}`}
+                        href={`${treatmentsBase}?client=${encodeURIComponent(row.id)}&modal=new`}
                         className="text-sky-400 hover:text-sky-300"
                       >
                         {uv.logTreatment}

@@ -22,7 +22,7 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
-import { TreatmentModalForm } from "./treatment-modal-form";
+import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
 import { TreatmentsListClient } from "./treatments-list-client";
 import {
   loadTreatmentsCursorPage,
@@ -217,6 +217,17 @@ export default async function TreatmentsPage({
   const apiHrefBase = `/api/private-clinic/treatments?${queryParams.toString()}&take=50`;
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const prefilledClientForNewModal =
+    modalMode === "new" && filters.client ? clients.find((cl) => cl.id === filters.client) : null;
+  const newTreatmentInitial: TreatmentModalInitial | undefined = prefilledClientForNewModal
+    ? {
+        client_id: prefilledClientForNewModal.id,
+        client_label: `${prefilledClientForNewModal.first_name} ${prefilledClientForNewModal.last_name ?? ""}`.trim(),
+        job_id: prefilledClientForNewModal.default_job_id,
+        program_id: prefilledClientForNewModal.default_program_id ?? "",
+        visit_type: prefilledClientForNewModal.default_visit_type ?? undefined,
+      }
+    : undefined;
   const editId = sp.edit_id?.trim() || "";
   const editTreatment =
     modalMode === "edit" && editId
@@ -423,6 +434,7 @@ export default async function TreatmentsPage({
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
           uiLanguage={uiLanguage}
+          initial={newTreatmentInitial}
           clients={activeClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`,
