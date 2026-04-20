@@ -3,6 +3,7 @@ import type { DashboardSection, SectionId } from "@/lib/dashboard-sections";
 export const HOME_FREQUENT_LINK_KEYS = [
   "reportTreatment",
   "reportReceipt",
+  "upcomingVisits",
   "upcomingAppointments",
   "upcomingRenewals",
   "riseUpImport",
@@ -14,6 +15,7 @@ export type HomeFrequentLinkKey = (typeof HOME_FREQUENT_LINK_KEYS)[number];
 export const HOME_FREQUENT_LINK_ADMIN_LABELS: Record<HomeFrequentLinkKey, string> = {
   reportTreatment: "Report treatment",
   reportReceipt: "Report receipt",
+  upcomingVisits: "Upcoming visits",
   upcomingAppointments: "Upcoming appointments",
   upcomingRenewals: "Upcoming renewals",
   riseUpImport: "RiseUp import",
@@ -22,6 +24,7 @@ export const HOME_FREQUENT_LINK_ADMIN_LABELS: Record<HomeFrequentLinkKey, string
 const DEFAULT_ENABLED: Record<HomeFrequentLinkKey, boolean> = {
   reportTreatment: true,
   reportReceipt: true,
+  upcomingVisits: true,
   upcomingAppointments: true,
   upcomingRenewals: true,
   riseUpImport: true,
@@ -31,6 +34,7 @@ const DEFAULT_ENABLED: Record<HomeFrequentLinkKey, boolean> = {
 const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
   reportTreatment: "/dashboard/private-clinic/treatments?modal=new",
   reportReceipt: "/dashboard/private-clinic/receipts?modal=new",
+  upcomingVisits: "/dashboard/private-clinic/upcoming-visits",
   upcomingAppointments: "/dashboard/private-clinic/appointments",
   upcomingRenewals: "/dashboard/upcoming-renewals",
   riseUpImport: "/dashboard/import?format=riseup",
@@ -39,6 +43,7 @@ const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
 const REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
   reportTreatment: "privateClinic",
   reportReceipt: "privateClinic",
+  upcomingVisits: "privateClinic",
   upcomingAppointments: "privateClinic",
   upcomingRenewals: "upcomingRenewals",
   riseUpImport: "importStatements",
@@ -69,6 +74,7 @@ function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
     const he: Record<HomeFrequentLinkKey, string> = {
       reportTreatment: "דיווח טיפול",
       reportReceipt: "דיווח קבלה",
+      upcomingVisits: "ביקורים קרובים",
       upcomingAppointments: "תורים קרובים",
       upcomingRenewals: "חידושים קרובים",
       riseUpImport: "ייבוא RiseUp",
@@ -78,6 +84,7 @@ function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
   const en: Record<HomeFrequentLinkKey, string> = {
     reportTreatment: "Report treatment",
     reportReceipt: "Report receipt",
+    upcomingVisits: "Upcoming visits",
     upcomingAppointments: "Upcoming appointments",
     upcomingRenewals: "Upcoming renewals",
     riseUpImport: "RiseUp import",

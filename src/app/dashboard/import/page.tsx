@@ -20,15 +20,17 @@ export default async function ImportPage({ searchParams }: PageProps) {
   const format = sp?.format === "riseup" ? "riseup" : "bank";
 
   const [documents, bankAccounts, creditCards] = await Promise.all([
-    prisma.documents.findMany({
-      where: { household_id: householdId },
-      orderBy: { created_at: "desc" },
-      take: 20,
-      include: {
-        _count: { select: { transactions: true } },
-        bank_account: true,
-      },
-    }),
+    format === "riseup"
+      ? Promise.resolve([])
+      : prisma.documents.findMany({
+          where: { household_id: householdId },
+          orderBy: { created_at: "desc" },
+          take: 20,
+          include: {
+            _count: { select: { transactions: true } },
+            bank_account: true,
+          },
+        }),
     prisma.bank_accounts.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
@@ -109,45 +111,47 @@ export default async function ImportPage({ searchParams }: PageProps) {
           <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />
         )}
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "יבואים אחרונים" : "Recent imports"}</h2>
-          {documents.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין יבואים עדיין. ניתן להעלות קובץ למעלה." : "No imports yet. Upload a file above."}
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {documents.map((doc) => (
-                <li
-                  key={doc.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3"
-                >
-                  <div>
-                    <span className="font-medium text-slate-200">{doc.file_name}</span>
-                    <span className="ml-2 text-xs text-slate-400">
-                      {doc._count.transactions} transactions
-                      {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/dashboard/import/review/${doc.id}`}
-                      className="rounded bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
-                    >
-                      {isHebrew ? "סקירה" : "Review"}
-                    </Link>
-                    <Link
-                      href={`/dashboard/import/assist/${doc.id}`}
-                      className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-500"
-                    >
-                      {isHebrew ? "מונחה" : "Assisted"}
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {format !== "riseup" ? (
+          <section className="space-y-4">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "יבואים אחרונים" : "Recent imports"}</h2>
+            {documents.length === 0 ? (
+              <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+                {isHebrew ? "אין יבואים עדיין. ניתן להעלות קובץ למעלה." : "No imports yet. Upload a file above."}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {documents.map((doc) => (
+                  <li
+                    key={doc.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3"
+                  >
+                    <div>
+                      <span className="font-medium text-slate-200">{doc.file_name}</span>
+                      <span className="ml-2 text-xs text-slate-400">
+                        {doc._count.transactions} transactions
+                        {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/import/review/${doc.id}`}
+                        className="rounded bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+                      >
+                        {isHebrew ? "סקירה" : "Review"}
+                      </Link>
+                      <Link
+                        href={`/dashboard/import/assist/${doc.id}`}
+                        className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-500"
+                      >
+                        {isHebrew ? "מונחה" : "Assisted"}
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 087_documents_table_prisma_alignment.sql (2026-04-20)
 - [x] 086_therapy_client_relationships.sql (2026-04-19)
 - [x] 085_password_policy_and_rotation.sql (2026-04-19)
 - [x] 084_therapy_appointment_audits.sql (2026-04-19)
@@ -109,6 +110,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 087 | `087_documents_table_prisma_alignment.sql` (2026-04-20) | ALTER | Hardens legacy/local `documents` schema for Prisma (`file_type`, `storage_path`, `processing_status`, `bank_account_id`, timestamps), re-applies FK/indexes, and prints a post-run sanity notice for missing required columns. |
 | 086 | `086_therapy_client_relationships.sql` (2026-04-19) | CREATE | Enum `therapy_client_relationship_type`; table `therapy_client_relationships` (directed links between `therapy_clients` within a household: mother/father/husband/wife/referred_by). |
 | 085 | `085_password_policy_and_rotation.sql` (2026-04-19) | ALTER | `users` and `super_admins`: `must_change_password` (boolean), `password_changed_at` (timestamp, backfilled from login/created). |
 | 084 | `084_therapy_appointment_audits.sql` (2026-04-19) | CREATE | Enum `therapy_appointment_audit_action`; table `therapy_appointment_audits` (household, user, optional appointment FK SET NULL, action, JSONB metadata) for private-clinic appointment CRUD audit trail. |

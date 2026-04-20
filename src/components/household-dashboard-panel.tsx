@@ -41,6 +41,21 @@ function matchesSearch(queryLower: string, title: string, description: string) {
   return haystack.includes(queryLower);
 }
 
+const FREQUENT_LINK_BUTTON_CLASSES: Record<HomeFrequentLinkItem["key"], string> = {
+  reportTreatment:
+    "border-rose-400/50 bg-gradient-to-r from-rose-500/25 via-pink-500/20 to-fuchsia-500/25 hover:border-rose-300/70",
+  reportReceipt:
+    "border-emerald-400/50 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-cyan-500/25 hover:border-emerald-300/70",
+  upcomingVisits:
+    "border-violet-400/50 bg-gradient-to-r from-violet-500/25 via-indigo-500/20 to-blue-500/25 hover:border-violet-300/70",
+  upcomingAppointments:
+    "border-amber-400/50 bg-gradient-to-r from-amber-500/25 via-orange-500/20 to-rose-500/25 hover:border-amber-300/70",
+  upcomingRenewals:
+    "border-lime-400/50 bg-gradient-to-r from-lime-500/25 via-emerald-500/20 to-teal-500/25 hover:border-lime-300/70",
+  riseUpImport:
+    "border-sky-400/50 bg-gradient-to-r from-sky-500/25 via-cyan-500/20 to-blue-500/25 hover:border-sky-300/70",
+};
+
 export function HouseholdDashboardPanel({
   welcomeTitle,
   welcomeSubtitle,
@@ -102,7 +117,7 @@ export function HouseholdDashboardPanel({
               <Link
                 key={link.key}
                 href={link.href}
-                className="inline-flex items-center rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-sky-500/60 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className={`inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium text-slate-50 shadow-sm shadow-slate-950/40 transition hover:-translate-y-0.5 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 ${FREQUENT_LINK_BUTTON_CLASSES[link.key]}`}
               >
                 {link.label}
               </Link>
