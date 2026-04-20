@@ -6,6 +6,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import Link from "next/link";
 import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
@@ -25,6 +26,7 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
+const TRAVEL_BASE = "/dashboard/private-clinic/travel";
 
 export default async function TravelPage({
   searchParams,
@@ -39,6 +41,7 @@ export default async function TravelPage({
     from?: string;
     to?: string;
     bank?: string;
+    modal?: string;
   }>;
 }) {
   const session = await requireHouseholdMember();
@@ -58,12 +61,21 @@ export default async function TravelPage({
   const c = privateClinicCommon(uiLanguage);
   const tv = privateClinicTravel(uiLanguage);
   const sp = searchParams ? await searchParams : {};
+  const modalMode = sp.modal === "new" ? "new" : null;
   const jobFilter = sp.job || "";
   const clientFilter = sp.client || "";
   const receiptFilter = sp.receipt || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
   const bankFilter = sp.bank || "all";
+  const listParams = new URLSearchParams();
+  if (jobFilter) listParams.set("job", jobFilter);
+  if (clientFilter) listParams.set("client", clientFilter);
+  if (receiptFilter) listParams.set("receipt", receiptFilter);
+  if (sp.from) listParams.set("from", sp.from);
+  if (sp.to) listParams.set("to", sp.to);
+  if (bankFilter && bankFilter !== "all") listParams.set("bank", bankFilter);
+  const baseListHref = listParams.size > 0 ? `${TRAVEL_BASE}?${listParams.toString()}` : TRAVEL_BASE;
 
   const [jobs, clients, treatments, entries] = await Promise.all([
     prisma.jobs.findMany({
@@ -151,85 +163,6 @@ export default async function TravelPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{tv.addTravel}</h2>
-        <form
-          action={createTherapyTravelEntry}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-        >
-          <div className="md:col-span-2 flex flex-wrap gap-4 text-sm text-slate-300">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="link_scope" value="job" defaultChecked />
-              {tv.relatedJob}
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="link_scope" value="treatment" />
-              {tv.relatedTreatment}
-            </label>
-          </div>
-          <select
-            name="job_id"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{tv.jobWhenScope}</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {formatJobDisplayLabel(j)}
-              </option>
-            ))}
-          </select>
-          <select
-            name="treatment_id"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{tv.treatmentWhenScope}</option>
-            {treatments.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
-                {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — {formatJobDisplayLabel(t.job)}
-              </option>
-            ))}
-          </select>
-          <input
-            name="occurred_at"
-            type="datetime-local"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <div className="flex gap-2">
-            <input
-              name="amount"
-              placeholder={tv.costAmountOptional}
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="currency"
-              defaultValue="ILS"
-              className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <TherapyTransactionLinkSelect
-              name="linked_transaction_id"
-              householdId={householdId}
-              label={tv.linkTravelTx}
-              hint={tv.linkTravelHint}
-              noneOptionLabel={c.txNoneLinked}
-            />
-          </div>
-          <textarea
-            name="notes"
-            placeholder={tv.notesRoute}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {c.save}
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{tv.filters}</h2>
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
@@ -315,7 +248,15 @@ export default async function TravelPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{tv.entriesCount(entries.length)}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{tv.entriesCount(entries.length)}</h2>
+          <Link
+            href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`}
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            {tv.addTravel}
+          </Link>
+        </div>
         {entries.length === 0 ? (
           <p className="text-sm text-slate-500">{c.travelEmpty}</p>
         ) : (
@@ -438,6 +379,98 @@ export default async function TravelPage({
           </div>
         )}
       </section>
+
+      {modalMode === "new" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
+          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{tv.addTravel}</h3>
+              <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                {c.cancel}
+              </Link>
+            </div>
+            <form action={createTherapyTravelEntry} className="grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="redirect_on_success" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`} />
+              <input type="hidden" name="redirect_on_error" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} />
+              <div className="md:col-span-2 flex flex-wrap gap-4 text-sm text-slate-300">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="link_scope" value="job" defaultChecked />
+                  {tv.relatedJob}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="link_scope" value="treatment" />
+                  {tv.relatedTreatment}
+                </label>
+              </div>
+              <select
+                name="job_id"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{tv.jobWhenScope}</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobDisplayLabel(j)}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="treatment_id"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{tv.treatmentWhenScope}</option>
+                {treatments.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {formatHouseholdDate(t.occurred_at, dateDisplayFormat)} —{" "}
+                    {formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — {formatJobDisplayLabel(t.job)}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="occurred_at"
+                type="datetime-local"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <div className="flex gap-2">
+                <input
+                  name="amount"
+                  placeholder={tv.costAmountOptional}
+                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+                <input
+                  name="currency"
+                  defaultValue="ILS"
+                  className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <TherapyTransactionLinkSelect
+                  name="linked_transaction_id"
+                  householdId={householdId}
+                  label={tv.linkTravelTx}
+                  hint={tv.linkTravelHint}
+                  noneOptionLabel={c.txNoneLinked}
+                />
+              </div>
+              <textarea
+                name="notes"
+                placeholder={tv.notesRoute}
+                className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {c.save}
+                </button>
+                <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                  {c.cancel}
+                </Link>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -259,7 +259,7 @@ export default async function EditHouseholdUserPage({
                 type="checkbox"
                 id="show_useful_links"
                 name="show_useful_links"
-                defaultChecked={user.show_useful_links ?? true}
+                defaultChecked={user.show_useful_links ?? false}
                 className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
               />
               <label htmlFor="show_useful_links" className="cursor-pointer text-sm text-slate-200">

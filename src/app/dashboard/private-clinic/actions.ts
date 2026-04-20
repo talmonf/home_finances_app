@@ -1789,20 +1789,24 @@ export async function createTherapyJobExpense(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   await ensureDefaultExpenseCategories(householdId);
+  const fallbackSuccess = `${BASE}/expenses?created=1`;
+  const fallbackError = `${BASE}/expenses`;
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const category_id = (formData.get("category_id") as string)?.trim() || "";
   const expense_date = parseDateRequired((formData.get("expense_date") as string) || null);
   const amountStr = parseMoney(formData.get("amount") as string);
   if (!job_id || !category_id || !expense_date || !amountStr) {
-    redirect(`${BASE}/expenses?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
   }
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/expenses?error=job`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
 
   const cat = await prisma.therapy_expense_categories.findFirst({
     where: { id: category_id, household_id: householdId },
   });
-  if (!cat) redirect(`${BASE}/expenses?error=cat`);
+  if (!cat) redirectPrivateClinicScoped(formData, "error", fallbackError, "cat");
 
   const linkRaw = (formData.get("linked_transaction_id") as string)?.trim();
   let linked_transaction_id: string | null = null;
@@ -1829,7 +1833,7 @@ export async function createTherapyJobExpense(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/expenses`);
-  redirect(`${BASE}/expenses?created=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 export async function updateTherapyJobExpense(formData: FormData) {
@@ -2403,19 +2407,23 @@ export async function deleteTherapyConsultationType(formData: FormData) {
 export async function createTherapyConsultation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?created=1`;
+  const fallbackError = `${BASE}/consultations`;
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const consultation_type_id = (formData.get("consultation_type_id") as string)?.trim() || "";
   const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
   if (!job_id || !consultation_type_id || !occurred_at_raw) {
-    redirect(`${BASE}/consultations?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
   }
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/consultations?error=job`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
   if (!(await assertConsultationType(householdId, consultation_type_id))) {
-    redirect(`${BASE}/consultations?error=type`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
   }
 
   const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirect(`${BASE}/consultations?error=date`);
+  if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
   const incomeStr = parseMoney((formData.get("income_amount") as string) || null);
   const costStr = parseMoney((formData.get("cost_amount") as string) || null);
@@ -2447,7 +2455,7 @@ export async function createTherapyConsultation(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/consultations?created=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 export async function updateTherapyConsultation(formData: FormData) {
@@ -2529,6 +2537,8 @@ export async function deleteTherapyConsultation(formData: FormData) {
 export async function createTherapyTravelEntry(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/travel?created=1`;
+  const fallbackError = `${BASE}/travel`;
   const scope = (formData.get("link_scope") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const treatment_id = (formData.get("treatment_id") as string)?.trim() || "";
@@ -2540,22 +2550,26 @@ export async function createTherapyTravelEntry(formData: FormData) {
   let treatmentId: string | null = null;
 
   if (scope === "treatment") {
-    if (!treatment_id) redirect(`${BASE}/travel?error=missing`);
+    if (!treatment_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
     const t = await assertTreatmentForHousehold(householdId, treatment_id);
-    if (!t) redirect(`${BASE}/travel?error=treatment`);
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, t.job_id))) redirect(`${BASE}/travel?error=job`);
+    if (!t) redirectPrivateClinicScoped(formData, "error", fallbackError, "treatment");
+    if (!(await assertJobForCurrentUserScope(householdId, userFm, t.job_id))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+    }
     treatmentId = t.id;
   } else if (scope === "job") {
-    if (!job_id) redirect(`${BASE}/travel?error=missing`);
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/travel?error=job`);
+    if (!job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+    if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+    }
     jobId = job_id;
   } else {
-    redirect(`${BASE}/travel?error=scope`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "scope");
   }
 
   const occurred_at = occurredRaw ? new Date(occurredRaw) : null;
   if (occurredRaw && occurred_at && Number.isNaN(occurred_at.getTime())) {
-    redirect(`${BASE}/travel?error=date`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
   }
 
   const linked_transaction_id = await resolveTransactionLink(
@@ -2578,7 +2592,7 @@ export async function createTherapyTravelEntry(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/travel`);
-  redirect(`${BASE}/travel?created=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 export async function updateTherapyTravelEntry(formData: FormData) {

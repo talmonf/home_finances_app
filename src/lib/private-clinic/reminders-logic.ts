@@ -183,7 +183,7 @@ export function buildUnifiedReminderRows(params: {
       summary: [m.category?.trim(), m.description?.trim()].filter(Boolean).join(" — ") || "—",
       sourceId: m.id,
       href: "/dashboard/private-clinic/reminders",
-      editHref: `/dashboard/private-clinic/reminders?edit=${encodeURIComponent(m.id)}`,
+      editHref: `/dashboard/private-clinic/reminders?modal=edit&edit_id=${encodeURIComponent(m.id)}`,
     });
   }
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { formatDecimalAmountForDisplay } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicExpenses } from "@/lib/private-clinic-i18n";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -19,7 +20,13 @@ import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } f
 
 export const dynamic = "force-dynamic";
 
-export default async function ExpensesPage() {
+const EXPENSES_BASE = "/dashboard/private-clinic/expenses";
+
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ created?: string; updated?: string; error?: string; modal?: string }>;
+}) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -33,6 +40,8 @@ export default async function ExpensesPage() {
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const ex = privateClinicExpenses(uiLanguage);
+  const resolved = searchParams ? await searchParams : undefined;
+  const modalMode = resolved?.modal === "new" ? "new" : null;
 
   const [jobs, categories, expenses] = await Promise.all([
     prisma.jobs.findMany({
@@ -53,79 +62,27 @@ export default async function ExpensesPage() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{ex.addExpense}</h2>
-        <form
-          action={createTherapyJobExpense}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-        >
-          <select
-            name="job_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.job}</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {formatJobDisplayLabel(j)}
-              </option>
-            ))}
-          </select>
-          <select
-            name="category_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.category}</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {therapyLocalizedCategoryName(cat, uiLanguage)}
-              </option>
-            ))}
-          </select>
-          <input
-            name="expense_date"
-            type="date"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="amount"
-            placeholder={c.amount}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="currency"
-            defaultValue="ILS"
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
-            <TherapyTransactionLinkSelect
-              name="linked_transaction_id"
-              householdId={householdId}
-              label={ex.linkTxExpense}
-              hint={ex.linkTxExpenseHint}
-              noneOptionLabel={c.txNoneLinked}
-            />
-          </div>
-          <textarea
-            name="notes"
-            placeholder={c.notes}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {c.saveExpense}
-          </button>
-        </form>
-      </section>
+      {resolved?.error && (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
+          {resolved.error}
+        </p>
+      )}
+      {(resolved?.created || resolved?.updated) && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {c.saved}
+        </p>
+      )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
+          <Link
+            href={`${EXPENSES_BASE}?modal=new`}
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            {ex.addExpense}
+          </Link>
+        </div>
         {expenses.length === 0 ? (
           <p className="text-sm text-slate-500">{c.expensesEmpty}</p>
         ) : (
@@ -228,6 +185,90 @@ export default async function ExpensesPage() {
           </div>
         )}
       </section>
+
+      {modalMode === "new" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
+          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{ex.addExpense}</h3>
+              <Link href={EXPENSES_BASE} className="text-sm text-slate-400 hover:text-slate-200">
+                {c.cancel}
+              </Link>
+            </div>
+            <form action={createTherapyJobExpense} className="grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="redirect_on_success" value={`${EXPENSES_BASE}?created=1`} />
+              <input type="hidden" name="redirect_on_error" value={`${EXPENSES_BASE}?modal=new`} />
+              <select
+                name="job_id"
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{c.job}</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobDisplayLabel(j)}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="category_id"
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{c.category}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {therapyLocalizedCategoryName(cat, uiLanguage)}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="expense_date"
+                type="date"
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="amount"
+                placeholder={c.amount}
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="currency"
+                defaultValue="ILS"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <div className="md:col-span-2">
+                <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
+                <TherapyTransactionLinkSelect
+                  name="linked_transaction_id"
+                  householdId={householdId}
+                  label={ex.linkTxExpense}
+                  hint={ex.linkTxExpenseHint}
+                  noneOptionLabel={c.txNoneLinked}
+                />
+              </div>
+              <textarea
+                name="notes"
+                placeholder={c.notes}
+                className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {c.saveExpense}
+                </button>
+                <Link href={EXPENSES_BASE} className="text-sm text-slate-400 hover:text-slate-200">
+                  {c.cancel}
+                </Link>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

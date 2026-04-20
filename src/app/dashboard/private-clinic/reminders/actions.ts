@@ -6,6 +6,22 @@ import { redirect } from "next/navigation";
 
 const BASE = "/dashboard/private-clinic/reminders";
 
+function redirectRemindersScoped(
+  formData: FormData,
+  kind: "success" | "error",
+  fallbackPath: string,
+  errorMessage?: string,
+): never {
+  const field = kind === "success" ? "redirect_on_success" : "redirect_on_error";
+  let path = (formData.get(field) as string | null)?.trim() || fallbackPath;
+  if (!path.startsWith(BASE)) path = fallbackPath;
+  if (kind === "error" && errorMessage) {
+    const sep = path.includes("?") ? "&" : "?";
+    redirect(`${path}${sep}error=${encodeURIComponent(errorMessage)}`);
+  }
+  redirect(path);
+}
+
 function parseDateOnly(raw: string | null | undefined): Date | null {
   const v = raw?.trim();
   if (!v) return null;
@@ -49,16 +65,18 @@ export async function createPrivateClinicReminder(formData: FormData) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const fallbackSuccess = `${BASE}?created=1`;
+  const fallbackError = BASE;
   const resolvedFm = await resolveFamilyMemberIdForManualReminder(householdId, formData);
   if (!resolvedFm.ok) {
-    redirect(`${BASE}?error=${encodeURIComponent("Choose a family member.")}`);
+    redirectRemindersScoped(formData, "error", fallbackError, "Choose a family member.");
   }
 
   const reminder_date = parseDateOnly(formData.get("reminder_date") as string | null);
   const category = (formData.get("category") as string | null)?.trim() ?? "";
   const description = (formData.get("description") as string | null)?.trim() || null;
   if (!reminder_date) {
-    redirect(`${BASE}?error=${encodeURIComponent("Invalid date")}`);
+    redirectRemindersScoped(formData, "error", fallbackError, "Invalid date");
   }
 
   await prisma.private_clinic_reminders.create({
@@ -74,7 +92,7 @@ export async function createPrivateClinicReminder(formData: FormData) {
 
   revalidatePath(BASE);
   revalidatePath("/dashboard/private-clinic");
-  redirect(`${BASE}?created=1`);
+  redirectRemindersScoped(formData, "success", fallbackSuccess);
 }
 
 export async function updatePrivateClinicReminder(formData: FormData) {
@@ -82,20 +100,22 @@ export async function updatePrivateClinicReminder(formData: FormData) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const fallbackSuccess = `${BASE}?updated=1`;
+  const fallbackError = BASE;
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string | null)?.trim();
-  if (!id) redirect(`${BASE}?error=${encodeURIComponent("Missing id")}`);
+  if (!id) redirectRemindersScoped(formData, "error", fallbackError, "Missing id");
 
   const existing = await prisma.private_clinic_reminders.findFirst({
     where: { id, ...manualReminderScopeWhere(householdId, userFm) },
   });
-  if (!existing) redirect(`${BASE}?error=${encodeURIComponent("Not found")}`);
+  if (!existing) redirectRemindersScoped(formData, "error", fallbackError, "Not found");
 
   const reminder_date = parseDateOnly(formData.get("reminder_date") as string | null);
   const category = (formData.get("category") as string | null)?.trim() ?? "";
   const description = (formData.get("description") as string | null)?.trim() || null;
   if (!reminder_date) {
-    redirect(`${BASE}?error=${encodeURIComponent("Invalid date")}`);
+    redirectRemindersScoped(formData, "error", fallbackError, "Invalid date");
   }
 
   await prisma.private_clinic_reminders.update({
@@ -105,7 +125,7 @@ export async function updatePrivateClinicReminder(formData: FormData) {
 
   revalidatePath(BASE);
   revalidatePath("/dashboard/private-clinic");
-  redirect(`${BASE}?updated=1`);
+  redirectRemindersScoped(formData, "success", fallbackSuccess);
 }
 
 export async function deletePrivateClinicReminder(id: string) {

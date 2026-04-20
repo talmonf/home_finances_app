@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import Link from "next/link";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { privateClinicCommon, privateClinicConsultations } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
@@ -20,6 +21,7 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 
 export const dynamic = "force-dynamic";
+const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
 
 export default async function ConsultationsPage({
   searchParams,
@@ -33,6 +35,7 @@ export default async function ConsultationsPage({
     from?: string;
     to?: string;
     income_bank?: string;
+    modal?: string;
   }>;
 }) {
   const session = await requireHouseholdMember();
@@ -51,11 +54,19 @@ export default async function ConsultationsPage({
   const c = privateClinicCommon(uiLanguage);
   const co = privateClinicConsultations(uiLanguage);
   const sp = searchParams ? await searchParams : {};
+  const modalMode = sp.modal === "new" ? "new" : null;
   const jobFilter = sp.job || "";
   const receiptFilter = sp.receipt || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
   const incomeBankFilter = sp.income_bank || "all";
+  const listParams = new URLSearchParams();
+  if (jobFilter) listParams.set("job", jobFilter);
+  if (receiptFilter) listParams.set("receipt", receiptFilter);
+  if (sp.from) listParams.set("from", sp.from);
+  if (sp.to) listParams.set("to", sp.to);
+  if (incomeBankFilter && incomeBankFilter !== "all") listParams.set("income_bank", incomeBankFilter);
+  const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
 
   const [jobs, types, rows] = await Promise.all([
     prisma.jobs.findMany({
@@ -118,109 +129,6 @@ export default async function ConsultationsPage({
           {c.saved}
         </p>
       )}
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{co.addTitle}</h2>
-        <form
-          action={createTherapyConsultation}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-        >
-          <select
-            name="job_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.job}</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {formatJobDisplayLabel(j)}
-              </option>
-            ))}
-          </select>
-          <select
-            name="consultation_type_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.type}</option>
-            {types.map((t) => (
-              <option key={t.id} value={t.id}>
-                {therapyLocalizedCategoryName(t, uiLanguage)}
-              </option>
-            ))}
-          </select>
-          <div>
-            <label className="block text-xs text-slate-400">{co.dateTime}</label>
-            <input
-              name="occurred_at"
-              type="datetime-local"
-              required
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-xs text-slate-400">{co.incomeLabel}</label>
-              <div className="mt-1 flex gap-2">
-                <input
-                  name="income_amount"
-                  placeholder="0.00"
-                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <input
-                  name="income_currency"
-                  defaultValue="ILS"
-                  className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400">{co.costLabel}</label>
-              <div className="mt-1 flex gap-2">
-                <input
-                  name="cost_amount"
-                  placeholder="0.00"
-                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-                <input
-                  name="cost_currency"
-                  defaultValue="ILS"
-                  className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <TherapyTransactionLinkSelect
-              name="linked_income_transaction_id"
-              householdId={householdId}
-              label={co.linkIncome}
-              hint={co.linkIncomeHint}
-              noneOptionLabel={c.txNoneLinked}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <TherapyTransactionLinkSelect
-              name="linked_cost_transaction_id"
-              householdId={householdId}
-              label={co.linkCost}
-              hint={co.linkCostHint}
-              noneOptionLabel={c.txNoneLinked}
-            />
-          </div>
-          <textarea
-            name="notes"
-            placeholder={c.notes}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {c.save}
-          </button>
-        </form>
-      </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{co.filters}</h2>
@@ -292,7 +200,15 @@ export default async function ConsultationsPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{co.consultationsCount(rows.length)}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{co.consultationsCount(rows.length)}</h2>
+          <Link
+            href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`}
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            {co.addTitle}
+          </Link>
+        </div>
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
         ) : (
@@ -401,6 +317,122 @@ export default async function ConsultationsPage({
           </div>
         )}
       </section>
+
+      {modalMode === "new" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
+          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{co.addTitle}</h3>
+              <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                {c.cancel}
+              </Link>
+            </div>
+            <form action={createTherapyConsultation} className="grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="redirect_on_success" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`} />
+              <input type="hidden" name="redirect_on_error" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} />
+              <select
+                name="job_id"
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{c.job}</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobDisplayLabel(j)}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="consultation_type_id"
+                required
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{c.type}</option>
+                {types.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {therapyLocalizedCategoryName(t, uiLanguage)}
+                  </option>
+                ))}
+              </select>
+              <div>
+                <label className="block text-xs text-slate-400">{co.dateTime}</label>
+                <input
+                  name="occurred_at"
+                  type="datetime-local"
+                  required
+                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs text-slate-400">{co.incomeLabel}</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      name="income_amount"
+                      placeholder="0.00"
+                      className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                    <input
+                      name="income_currency"
+                      defaultValue="ILS"
+                      className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400">{co.costLabel}</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      name="cost_amount"
+                      placeholder="0.00"
+                      className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                    <input
+                      name="cost_currency"
+                      defaultValue="ILS"
+                      className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <TherapyTransactionLinkSelect
+                  name="linked_income_transaction_id"
+                  householdId={householdId}
+                  label={co.linkIncome}
+                  hint={co.linkIncomeHint}
+                  noneOptionLabel={c.txNoneLinked}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <TherapyTransactionLinkSelect
+                  name="linked_cost_transaction_id"
+                  householdId={householdId}
+                  label={co.linkCost}
+                  hint={co.linkCostHint}
+                  noneOptionLabel={c.txNoneLinked}
+                />
+              </div>
+              <textarea
+                name="notes"
+                placeholder={c.notes}
+                className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {c.save}
+                </button>
+                <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                  {c.cancel}
+                </Link>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

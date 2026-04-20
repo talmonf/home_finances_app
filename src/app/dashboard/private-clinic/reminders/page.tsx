@@ -43,7 +43,8 @@ type PageProps = {
     updated?: string;
     deleted?: string;
     error?: string;
-    edit?: string;
+    modal?: string;
+    edit_id?: string;
   }>;
 };
 
@@ -64,7 +65,10 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
   const obfuscate = await getCurrentObfuscateSensitive();
   const t = privateClinicReminders(uiLanguage);
   const resolved = searchParams ? await searchParams : undefined;
-  const editId = resolved?.edit?.trim() || null;
+  const modalMode = resolved?.modal === "new" || resolved?.modal === "edit" ? resolved.modal : null;
+  const editId = resolved?.edit_id?.trim() || null;
+  const baseListHref = "/dashboard/private-clinic/reminders";
+  const modalEditHref = editId ? `${baseListHref}?modal=edit&edit_id=${encodeURIComponent(editId)}` : `${baseListHref}?modal=edit`;
 
   const today = startOfTodayLocal();
 
@@ -183,118 +187,16 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
         </div>
       )}
 
-      {editingRow ? (
-        <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h3 className="text-md font-medium text-slate-200">{t.editManual}</h3>
-          <form action={updatePrivateClinicReminder} className="grid gap-3 sm:grid-cols-2">
-            <input type="hidden" name="id" value={editingRow.id} />
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
-              <input
-                name="reminder_date"
-                type="date"
-                required
-                defaultValue={toDateInputValue(editingRow.reminder_date)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">{t.category}</label>
-              <input
-                name="category"
-                defaultValue={editingRow.category}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs text-slate-400">{t.description}</label>
-              <textarea
-                name="description"
-                rows={3}
-                defaultValue={editingRow.description ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-              >
-                {t.save}
-              </button>
-              <Link
-                href="/dashboard/private-clinic/reminders"
-                className="text-sm text-slate-400 hover:text-slate-200"
-              >
-                {t.cancelEdit}
-              </Link>
-            </div>
-          </form>
-        </section>
-      ) : null}
-
       <section className="space-y-4">
-        <h3 className="text-md font-medium text-slate-200">{t.addManual}</h3>
-        <form
-          action={createPrivateClinicReminder}
-          className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2"
-        >
-          {familyMemberId ? <input type="hidden" name="family_member_id" value={familyMemberId} /> : null}
-          {!familyMemberId && householdMembers.length === 0 ? (
-            <p className="sm:col-span-2 text-sm text-amber-200/90">{t.addManualNeedMember}</p>
-          ) : !familyMemberId ? (
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs text-slate-400">{t.familyMember}</label>
-              <select
-                name="family_member_id"
-                required
-                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  {t.familyMemberPlaceholder}
-                </option>
-                {householdMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
-            <input
-              name="reminder_date"
-              type="date"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">{t.category}</label>
-            <input name="category" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs text-slate-400">{t.description}</label>
-            <textarea
-              name="description"
-              rows={2}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!familyMemberId && householdMembers.length === 0}
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-md font-medium text-slate-200">{t.upcomingTitle}</h3>
+          <Link
+            href={`${baseListHref}?modal=new`}
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
           >
             {t.addManual}
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-md font-medium text-slate-200">{t.upcomingTitle}</h3>
+          </Link>
+        </div>
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{t.empty}</p>
         ) : (
@@ -347,6 +249,135 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
           </div>
         )}
       </section>
+
+      {modalMode === "new" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{t.addManual}</h3>
+              <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                {t.cancelEdit}
+              </Link>
+            </div>
+            <form action={createPrivateClinicReminder} className="grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="redirect_on_success" value={`${baseListHref}?created=1`} />
+              <input type="hidden" name="redirect_on_error" value={`${baseListHref}?modal=new`} />
+              {familyMemberId ? <input type="hidden" name="family_member_id" value={familyMemberId} /> : null}
+              {!familyMemberId && householdMembers.length === 0 ? (
+                <p className="sm:col-span-2 text-sm text-amber-200/90">{t.addManualNeedMember}</p>
+              ) : !familyMemberId ? (
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs text-slate-400">{t.familyMember}</label>
+                  <select
+                    name="family_member_id"
+                    required
+                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      {t.familyMemberPlaceholder}
+                    </option>
+                    {householdMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
+                <input
+                  name="reminder_date"
+                  type="date"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">{t.category}</label>
+                <input name="category" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs text-slate-400">{t.description}</label>
+                <textarea
+                  name="description"
+                  rows={2}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={!familyMemberId && householdMembers.length === 0}
+                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t.addManual}
+                </button>
+                <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                  {t.cancelEdit}
+                </Link>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {modalMode === "edit" && editingRow ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{t.editManual}</h3>
+              <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                {t.cancelEdit}
+              </Link>
+            </div>
+            <form action={updatePrivateClinicReminder} className="grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="id" value={editingRow.id} />
+              <input type="hidden" name="redirect_on_success" value={`${baseListHref}?updated=1`} />
+              <input type="hidden" name="redirect_on_error" value={modalEditHref} />
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
+                <input
+                  name="reminder_date"
+                  type="date"
+                  required
+                  defaultValue={toDateInputValue(editingRow.reminder_date)}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">{t.category}</label>
+                <input
+                  name="category"
+                  defaultValue={editingRow.category}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs text-slate-400">{t.description}</label>
+                <textarea
+                  name="description"
+                  rows={3}
+                  defaultValue={editingRow.description ?? ""}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {t.save}
+                </button>
+                <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
+                  {t.cancelEdit}
+                </Link>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
