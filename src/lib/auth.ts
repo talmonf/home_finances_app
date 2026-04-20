@@ -91,6 +91,7 @@ async function computePasswordActionRequired(
 }
 
 export const authOptions: NextAuthOptions = {
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
     // 2 hours of inactivity (rolling expiry)

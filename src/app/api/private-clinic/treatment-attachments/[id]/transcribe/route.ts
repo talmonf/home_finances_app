@@ -88,8 +88,8 @@ export async function POST(
       return NextResponse.json({ error: "Transcription already in progress" }, { status: 409 });
     }
 
-    await prisma.therapy_treatment_attachments.update({
-      where: { id: att.id },
+    await prisma.therapy_treatment_attachments.updateMany({
+      where: { id: att.id, household_id: householdId },
       data: {
         transcription_status: "pending",
         transcription_error: null,
@@ -109,8 +109,8 @@ export async function POST(
       } else {
         audio = await readS3ObjectToBuffer(att.storage_bucket, att.storage_key);
         if (audio.length > OPENAI_AUDIO_MAX_BYTES) {
-          await prisma.therapy_treatment_attachments.update({
-            where: { id: att.id },
+          await prisma.therapy_treatment_attachments.updateMany({
+            where: { id: att.id, household_id: householdId },
             data: {
               transcription_status: "failed",
               transcription_error: "Audio exceeds 25 MB (OpenAI limit).",
@@ -132,8 +132,8 @@ export async function POST(
         hebrewBackend,
       });
 
-      await prisma.therapy_treatment_attachments.update({
-        where: { id: att.id },
+      await prisma.therapy_treatment_attachments.updateMany({
+        where: { id: att.id, household_id: householdId },
         data: {
           transcription_status: "completed",
           transcription_text: text,
@@ -150,8 +150,8 @@ export async function POST(
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Transcription failed";
-      await prisma.therapy_treatment_attachments.update({
-        where: { id: att.id },
+      await prisma.therapy_treatment_attachments.updateMany({
+        where: { id: att.id, household_id: householdId },
         data: {
           transcription_status: "failed",
           transcription_error: message.slice(0, 2000),

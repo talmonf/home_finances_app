@@ -1,5 +1,5 @@
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
-import type { UiLanguage } from "@prisma/client";
+import type { UiLanguage } from "@/lib/ui-language";
 
 type HouseholdMemberOption = {
   id: string;

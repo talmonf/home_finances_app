@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
       created.push(tx.id);
     }
 
-    await prisma.documents.update({
-      where: { id: doc.id },
+    await prisma.documents.updateMany({
+      where: { id: doc.id, household_id: householdId },
       data: { processing_status: "completed" },
     });
 
@@ -126,7 +126,10 @@ export async function POST(req: NextRequest) {
       transactionCount: created.length,
     });
   } catch (e) {
-    console.error("Import upload error:", e);
+    console.error(
+      "Import upload error:",
+      e instanceof Error ? e.message : "unknown",
+    );
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Import failed" },
       { status: 500 }

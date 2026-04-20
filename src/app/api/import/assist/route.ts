@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
+import {
+  sanitizeChatMessagesForLlm,
+  sanitizeTransactionSummaryForLlm,
+} from "@/lib/import-assist-llm";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -70,17 +74,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const txForLlm = sanitizeTransactionSummaryForLlm(txSummary);
     const systemPrompt = `You are helping the user categorize and annotate bank transactions from an imported statement.
 You have access to this list of transactions (id, date, amount, direction, description). The user may ask you to suggest categories, payees, or to assign them.
 Reply in a short, helpful way. If they ask to set a category or payee for specific transactions, suggest exactly which transaction IDs and values to use. Do not make up transaction IDs – only use IDs from the list below.
+Do not repeat or invent national ID numbers, card numbers, or full account numbers if they appear in descriptions.
 Transaction list (JSON):
-${JSON.stringify(txSummary?.slice(0, 150) ?? [])}`;
+${JSON.stringify(txForLlm)}`;
 
     const chatMessages = [
       { role: "system" as const, content: systemPrompt },
-      ...(messages ?? []).map((m: { role: string; text: string }) => ({
-        role: m.role as "user" | "assistant" | "system",
-        content: m.text,
+      ...sanitizeChatMessagesForLlm(messages).map((m) => ({
+        role: m.role,
+        content: m.content,
       })),
     ];
 
@@ -192,11 +198,11 @@ ${JSON.stringify(txSummary?.slice(0, 150) ?? [])}`;
             if (u.notes !== undefined) updateData.notes = u.notes;
 
             if (Object.keys(updateData).length > 0) {
-              await prisma.transactions.update({
-                where: { id: u.transactionId },
+              const { count } = await prisma.transactions.updateMany({
+                where: { id: u.transactionId, household_id: householdId },
                 data: updateData,
               });
-              appliedUpdates += 1;
+              if (count > 0) appliedUpdates += 1;
             }
           }
         }
@@ -207,7 +213,10 @@ ${JSON.stringify(txSummary?.slice(0, 150) ?? [])}`;
 
     return NextResponse.json({ reply, appliedUpdates });
   } catch (e) {
-    console.error("Import assist error:", e);
+    console.error(
+      "Import assist error:",
+      e instanceof Error ? e.message : "unknown",
+    );
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Request failed" },
       { status: 500 }

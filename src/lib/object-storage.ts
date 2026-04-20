@@ -1,5 +1,13 @@
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+/** SSE-S3 (AES256). Set `DISABLE_S3_SSE=true` if your S3-compatible endpoint rejects it. */
+function putObjectEncryptionFields():
+  | { ServerSideEncryption: "AES256" }
+  | Record<string, never> {
+  if (process.env.DISABLE_S3_SSE === "true") return {};
+  return { ServerSideEncryption: "AES256" };
+}
+
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -52,6 +60,7 @@ export async function uploadRentalContractObject(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -152,6 +161,7 @@ export async function uploadJobDocumentObject(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -199,6 +209,7 @@ export async function uploadCarLicenseReceipt(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -246,6 +257,7 @@ export async function uploadInsurancePolicyFile(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -281,6 +293,7 @@ export async function uploadCarServiceAttachment(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -331,6 +344,7 @@ export async function uploadTherapyExpenseImage(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 
@@ -374,6 +388,7 @@ export async function uploadTherapyTreatmentAttachment(
       Key: key,
       Body: content,
       ContentType: mimeType || "application/octet-stream",
+      ...putObjectEncryptionFields(),
     }),
   );
 

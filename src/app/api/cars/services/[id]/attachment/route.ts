@@ -64,8 +64,8 @@ export async function POST(
       bytes,
     );
 
-    await prisma.car_services.update({
-      where: { id: service.id },
+    await prisma.car_services.updateMany({
+      where: { id: service.id, household_id: householdId },
       data: {
         receipt_file_name: file.name || "service-details",
         receipt_mime_type: file.type || null,
@@ -131,8 +131,8 @@ export async function DELETE(
       }
     }
 
-    await prisma.car_services.update({
-      where: { id: service.id },
+    await prisma.car_services.updateMany({
+      where: { id: service.id, household_id: householdId },
       data: {
         receipt_file_name: null,
         receipt_mime_type: null,

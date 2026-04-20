@@ -39,8 +39,8 @@ export async function POST(req: Request) {
     );
   }
 
-  await prisma.therapy_job_expenses.update({
-    where: { id: expenseId },
+  await prisma.therapy_job_expenses.updateMany({
+    where: { id: expenseId, household_id: householdId },
     data: {
       image_file_name: fname,
       image_mime_type: mime,

@@ -65,8 +65,8 @@ export async function POST(
       bytes,
     );
 
-    await prisma.insurance_policies.update({
-      where: { id: policy.id },
+    await prisma.insurance_policies.updateMany({
+      where: { id: policy.id, household_id: householdId },
       data: {
         policy_file_name: file.name || "policy",
         policy_file_mime_type: file.type || null,
@@ -135,8 +135,8 @@ export async function DELETE(
       }
     }
 
-    await prisma.insurance_policies.update({
-      where: { id: policy.id },
+    await prisma.insurance_policies.updateMany({
+      where: { id: policy.id, household_id: householdId },
       data: {
         policy_file_name: null,
         policy_file_mime_type: null,

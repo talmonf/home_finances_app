@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
           file.type,
           bytes,
         );
-        await prisma.car_licenses.update({
-          where: { id: licenseId },
+        await prisma.car_licenses.updateMany({
+          where: { id: licenseId, household_id: householdId },
           data: {
             receipt_file_name: file.name || "receipt",
             receipt_mime_type: file.type || null,
