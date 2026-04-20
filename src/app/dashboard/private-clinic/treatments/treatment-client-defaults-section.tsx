@@ -42,6 +42,7 @@ export function TreatmentClientDefaultsSection({
   visitDefaults,
   initial,
   labels,
+  externalReportingJobIds,
 }: {
   mode: "create" | "edit";
   uiLanguage: "en" | "he";
