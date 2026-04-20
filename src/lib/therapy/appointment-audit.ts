@@ -12,6 +12,11 @@ export type AppointmentAuditSnapshot = {
   end_at: string | null;
   status: string;
   series_id: string | null;
+  family_id: string | null;
+  participant_client_ids: string[];
+  participant_names: string[];
+  cancellation_reason: string | null;
+  reschedule_reason: string | null;
 };
 
 export function formatClientNameForAudit(firstName: string, lastName: string | null): string {
@@ -30,6 +35,10 @@ export function appointmentToSnapshot(row: {
   visit_type: string;
   status: string;
   series_id: string | null;
+  family_id: string | null;
+  cancellation_reason?: string | null;
+  reschedule_reason?: string | null;
+  participants?: { client_id: string; client: { first_name: string; last_name: string | null } }[];
   client: { first_name: string; last_name: string | null };
   job: { job_title: string; employer_name: string | null };
   program: { name: string } | null;
@@ -45,6 +54,13 @@ export function appointmentToSnapshot(row: {
     end_at: row.end_at ? row.end_at.toISOString() : null,
     status: row.status,
     series_id: row.series_id,
+    family_id: row.family_id,
+    participant_client_ids: (row.participants ?? []).map((p) => p.client_id),
+    participant_names: (row.participants ?? []).map((p) =>
+      formatClientNameForAudit(p.client.first_name, p.client.last_name),
+    ),
+    cancellation_reason: row.cancellation_reason ?? null,
+    reschedule_reason: row.reschedule_reason ?? null,
   };
 }
 

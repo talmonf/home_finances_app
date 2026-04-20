@@ -21,6 +21,7 @@ type ListFilterQs = {
   q: string;
   status: string;
   job: string;
+  family: string;
   from: string;
   to: string;
 };
@@ -49,6 +50,7 @@ type SortKey =
   | "start_date"
   | "end_date"
   | "job"
+  | "family"
   | "program"
   | "active";
 
@@ -59,6 +61,7 @@ function parseSortKey(s: string | undefined): SortKey {
     "start_date",
     "end_date",
     "job",
+    "family",
     "program",
     "active",
   ];
@@ -77,6 +80,8 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ end_date: dir }, { id: dir }];
     case "job":
       return [{ default_job: { job_title: dir } }, { id: dir }];
+    case "family":
+      return [{ family: { name: dir } }, { id: dir }];
     case "program":
       return [{ default_program: { name: dir } }, { id: dir }];
     case "active":
@@ -90,6 +95,7 @@ function clientsListHref(p: {
   q?: string;
   status?: string;
   job?: string;
+  family?: string;
   from?: string;
   to?: string;
   sort: SortKey;
@@ -99,6 +105,7 @@ function clientsListHref(p: {
   if (p.q?.trim()) sp.set("q", p.q.trim());
   if (p.status && p.status !== "active") sp.set("status", p.status);
   if (p.job?.trim()) sp.set("job", p.job.trim());
+  if (p.family?.trim()) sp.set("family", p.family.trim());
   if (p.from?.trim()) sp.set("from", p.from.trim());
   if (p.to?.trim()) sp.set("to", p.to.trim());
   sp.set("sort", p.sort);
@@ -150,6 +157,7 @@ export default async function ClientsPage({
     q?: string;
     status?: string;
     job?: string;
+    family?: string;
     from?: string;
     to?: string;
     sort?: string;
@@ -184,9 +192,24 @@ export default async function ClientsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
   const { jobs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
+  const settings = await prisma.therapy_settings.findUnique({
+    where: { household_id: householdId },
+    select: { family_therapy_enabled: true },
+  });
+  const familyTherapyEnabled = Boolean(settings?.family_therapy_enabled);
+  const families = familyTherapyEnabled
+    ? await prisma.therapy_families.findMany({
+        where: { household_id: householdId },
+        select: { id: true, name: true },
+        orderBy: [{ name: "asc" }],
+      })
+    : [];
   const allowedJobIds = new Set(jobs.map((j) => j.id));
   const jobIdRaw = (resolved?.job ?? "").trim();
   const jobId = allowedJobIds.has(jobIdRaw) ? jobIdRaw : "";
+  const familyIdRaw = (resolved?.family ?? "").trim();
+  const allowedFamilyIds = new Set(families.map((f) => f.id));
+  const familyId = allowedFamilyIds.has(familyIdRaw) ? familyIdRaw : "";
 
   let dateFrom = parseFilterYmd(fromRaw);
   let dateTo = parseFilterYmd(toRaw);
@@ -201,6 +224,7 @@ export default async function ClientsPage({
     q,
     status,
     job: jobId,
+    family: familyId,
     from: fromRaw,
     to: toRaw,
   };
@@ -223,6 +247,7 @@ export default async function ClientsPage({
           OR: [{ default_job_id: jobId }, { client_jobs: { some: { job_id: jobId } } }],
         }
       : {}),
+    ...(familyId ? { family_id: familyId } : {}),
     ...(dateRangeActive && dateFrom && dateTo
       ? {
           AND: [
@@ -243,6 +268,7 @@ export default async function ClientsPage({
       include: {
         default_job: true,
         default_program: true,
+        family: true,
       },
     }),
   ]);
@@ -277,7 +303,7 @@ export default async function ClientsPage({
   );
 
   const hasActiveFilters =
-    Boolean(q) || status !== "active" || Boolean(jobId) || Boolean(fromRaw) || Boolean(toRaw);
+    Boolean(q) || status !== "active" || Boolean(jobId) || Boolean(familyId) || Boolean(fromRaw) || Boolean(toRaw);
 
   return (
     <div className="space-y-6">
@@ -338,6 +364,28 @@ export default async function ClientsPage({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="min-w-[10rem] space-y-1">
+              {familyTherapyEnabled ? (
+                <>
+                  <label htmlFor="clients_filter_family" className="block text-xs text-slate-400">
+                    Family
+                  </label>
+                  <select
+                    id="clients_filter_family"
+                    name="family"
+                    defaultValue={familyId}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  >
+                    <option value="">Any family</option>
+                    {families.map((family) => (
+                      <option key={family.id} value={family.id}>
+                        {family.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
             </div>
             <div className="min-w-[10rem] space-y-1">
               <label htmlFor="clients_filter_status" className="block text-xs text-slate-400">
@@ -440,6 +488,17 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
+                {familyTherapyEnabled ? (
+                  <SortHeader
+                    column="family"
+                    label="Family"
+                    sort={sort}
+                    dir={dir}
+                    filters={listFilters}
+                    sortHintAsc={cl.sortHintAsc}
+                    sortHintDesc={cl.sortHintDesc}
+                  />
+                ) : null}
                 <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {cl.colTreatmentsCount}
                 </th>
@@ -518,6 +577,11 @@ export default async function ClientsPage({
                     <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={programLabel}>
                       {programLabel}
                     </td>
+                    {familyTherapyEnabled ? (
+                      <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={row.family?.name ?? "—"}>
+                        {row.family?.name ?? "—"}
+                      </td>
+                    ) : null}
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                       <Link href={treatmentsHref} className="font-medium text-sky-400 hover:text-sky-300 hover:underline">
                         {treatmentsCount}

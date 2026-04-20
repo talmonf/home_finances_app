@@ -41,6 +41,7 @@ type Search = {
   job?: string;
   program?: string;
   client?: string;
+  family?: string;
   receipt?: string;
   from?: string;
   to?: string;
@@ -71,6 +72,7 @@ export default async function TreatmentsPage({
     job: sp.job?.trim() || "",
     program: sp.program?.trim() || "",
     client: sp.client?.trim() || "",
+    family: sp.family?.trim() || "",
     receipt: sp.receipt?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
@@ -92,7 +94,7 @@ export default async function TreatmentsPage({
     },
   } as const;
 
-  const [linkedJobRows, linkedProgramRows, linkedClientRows] = await Promise.all([
+  const [linkedJobRows, linkedProgramRows, linkedClientRows, linkedFamilyRows] = await Promise.all([
     prisma.therapy_treatments.findMany({
       where: jobScopeWhere,
       distinct: ["job_id"],
@@ -108,14 +110,20 @@ export default async function TreatmentsPage({
       distinct: ["client_id"],
       select: { client_id: true },
     }),
+    prisma.therapy_treatments.findMany({
+      where: jobScopeWhere,
+      distinct: ["family_id"],
+      select: { family_id: true },
+    }),
   ]);
   const linkedJobIds = linkedJobRows.map((r) => r.job_id);
   const linkedProgramIds = linkedProgramRows
     .map((r) => r.program_id)
     .filter((id): id is string => Boolean(id));
   const linkedClientIds = linkedClientRows.map((r) => r.client_id);
+  const linkedFamilyIds = linkedFamilyRows.map((r) => r.family_id).filter((x): x is string => Boolean(x));
 
-  const [jobs, programs, clients, settings, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage] =
+  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage] =
     await Promise.all([
       prisma.jobs.findMany({
       where: {
@@ -158,6 +166,13 @@ export default async function TreatmentsPage({
       orderBy: { first_name: "asc" },
     }),
       prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
+      prisma.therapy_families.findMany({
+      where: {
+        household_id: householdId,
+        ...(linkedFamilyIds.length ? { id: { in: linkedFamilyIds } } : {}),
+      },
+      orderBy: [{ name: "asc" }],
+    }),
       prisma.therapy_visit_type_default_amounts.findMany({
       where: {
         household_id: householdId,
@@ -212,6 +227,7 @@ export default async function TreatmentsPage({
   if (filters.job) queryParams.set("job", filters.job);
   if (filters.program) queryParams.set("program", filters.program);
   if (filters.client) queryParams.set("client", filters.client);
+  if (filters.family) queryParams.set("family", filters.family);
   if (filters.receipt) queryParams.set("receipt", filters.receipt);
   if (filters.from) queryParams.set("from", filters.from);
   if (filters.to) queryParams.set("to", filters.to);
@@ -374,6 +390,23 @@ export default async function TreatmentsPage({
               ))}
             </select>
           </div>
+          {settings?.family_therapy_enabled ? (
+            <div>
+              <label className="block text-xs text-slate-400">Family</label>
+              <select
+                name="family"
+                defaultValue={filters.family}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">Any</option>
+                {families.map((family) => (
+                  <option key={family.id} value={family.id}>
+                    {family.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div>
             <label className="block text-xs text-slate-400">{c.from}</label>
             <input
@@ -433,6 +466,7 @@ export default async function TreatmentsPage({
               client: c.client,
               job: c.job,
               program: c.program,
+              family: "Family",
               amount: c.amount,
               paid: c.paid,
               receiptCol: tr.receiptCol,

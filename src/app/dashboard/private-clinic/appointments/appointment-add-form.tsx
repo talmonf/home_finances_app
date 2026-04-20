@@ -72,6 +72,17 @@ export function AppointmentAddForm({
             ))}
           </select>
           <select
+            name="additional_client_ids"
+            multiple
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
+          >
+            {clients.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                + {cl.label}
+              </option>
+            ))}
+          </select>
+          <select
             name="job_id"
             required
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"

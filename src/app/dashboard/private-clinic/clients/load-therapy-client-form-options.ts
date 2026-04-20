@@ -15,11 +15,16 @@ export type TherapyClientFormProgramOption = {
   visits_per_period_count: number | null;
   visits_per_period_weeks: number | null;
 };
+export type TherapyClientFamilyOption = { id: string; name: string };
 
 export async function loadTherapyClientFormOptions(params: {
   householdId: string;
   familyMemberId: string | null;
-}): Promise<{ jobs: TherapyClientFormJobOption[]; programs: TherapyClientFormProgramOption[] }> {
+}): Promise<{
+  jobs: TherapyClientFormJobOption[];
+  programs: TherapyClientFormProgramOption[];
+  families: TherapyClientFamilyOption[];
+}> {
   const { householdId, familyMemberId } = params;
 
   const usedJobIds = new Set<string>();
@@ -39,7 +44,11 @@ export async function loadTherapyClientFormOptions(params: {
     for (const cj of cl.client_jobs) usedJobIds.add(cj.job_id);
   }
 
-  const [jobs, programs] = await Promise.all([
+  const [settings, jobs, programs, families] = await Promise.all([
+    prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: { family_therapy_enabled: true },
+    }),
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({
         householdId,
@@ -66,6 +75,11 @@ export async function loadTherapyClientFormOptions(params: {
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       include: { job: true },
     }),
+    prisma.therapy_families.findMany({
+      where: { household_id: householdId },
+      select: { id: true, name: true },
+      orderBy: [{ name: "asc" }],
+    }),
   ]);
 
   return {
@@ -80,6 +94,7 @@ export async function loadTherapyClientFormOptions(params: {
       visits_per_period_count: p.visits_per_period_count,
       visits_per_period_weeks: p.visits_per_period_weeks,
     })),
+    families: settings?.family_therapy_enabled ? families : [],
   };
 }
 

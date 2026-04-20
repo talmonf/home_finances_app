@@ -59,7 +59,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
   });
   if (!client) notFound();
 
-  const [{ jobs, programs }, otherClients] = await Promise.all([
+  const [{ jobs, programs, families }, otherClients] = await Promise.all([
     loadTherapyClientFormOptions({ householdId, familyMemberId }),
     loadTherapyClientRelationshipPickerClients({ householdId, familyMemberId, excludeClientId: id }),
   ]);
@@ -87,6 +87,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         obfuscate={obfuscate}
         jobs={jobs}
         programs={programs}
+        families={families}
         cl={cl}
         c={c}
         redirectOnError={editPath}

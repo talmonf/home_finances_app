@@ -41,7 +41,7 @@ export default async function PrivateClinicNewClientPage({ searchParams }: PageP
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const { jobs, programs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
+  const { jobs, programs, families } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -69,6 +69,7 @@ export default async function PrivateClinicNewClientPage({ searchParams }: PageP
         obfuscate={obfuscate}
         jobs={jobs}
         programs={programs}
+        families={families}
         cl={cl}
         c={c}
         redirectOnError={NEW_PATH}

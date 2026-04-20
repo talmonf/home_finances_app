@@ -7,6 +7,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   jobs: "משרות",
   programs: "תוכניות",
   clients: "לקוחות",
+  families: "משפחות",
   upcomingVisits: "ביקורים קרובים",
   treatments: "טיפולים",
   receipts: "קבלות",

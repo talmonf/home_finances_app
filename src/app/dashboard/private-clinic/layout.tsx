@@ -33,9 +33,12 @@ export default async function PrivateClinicLayout({
   if (householdId && !session?.user?.isSuperAdmin) {
     const settings = await prisma.therapy_settings.findUnique({
       where: { household_id: householdId },
-      select: { nav_tabs_json: true },
+      select: { nav_tabs_json: true, family_therapy_enabled: true },
     });
     navItems = getVisiblePrivateClinicNavItems(settings?.nav_tabs_json);
+    if (!settings?.family_therapy_enabled) {
+      navItems = navItems.filter((item) => item.key !== "families");
+    }
   }
 
   const onlyPrivateClinic =

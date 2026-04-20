@@ -2,7 +2,7 @@ import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
-import type { TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
+import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 type CommonStrings = ReturnType<typeof privateClinicCommon>;
@@ -27,6 +27,9 @@ export type TherapyClientFormEditRow = {
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+  family_id: string | null;
+  billing_basis: "per_treatment" | "per_month" | null;
+  billing_timing: "in_advance" | "in_arrears" | null;
   is_active: boolean;
   client_jobs: { job_id: string }[];
 };
@@ -54,6 +57,7 @@ export function TherapyClientForm({
   obfuscate,
   jobs,
   programs,
+  families,
   cl,
   c,
   redirectOnError,
@@ -63,6 +67,7 @@ export function TherapyClientForm({
   obfuscate: boolean;
   jobs: TherapyClientFormJobOption[];
   programs: TherapyClientFormProgramOption[];
+  families: TherapyClientFamilyOption[];
   cl: ClStrings;
   c: CommonStrings;
   redirectOnError: string;
@@ -371,6 +376,59 @@ export function TherapyClientForm({
           />
         )}
       </div>
+
+      {families.length > 0 ? (
+        <>
+          <div className="space-y-1">
+            <label htmlFor={`${idPrefix}_family_id`} className="block text-xs text-slate-400">
+              Family
+            </label>
+            <select
+              id={`${idPrefix}_family_id`}
+              name="family_id"
+              defaultValue={client?.family_id ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">No family</option>
+              {families.map((family) => (
+                <option key={family.id} value={family.id}>
+                  {family.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor={`${idPrefix}_billing_basis`} className="block text-xs text-slate-400">
+              Billing basis
+            </label>
+            <select
+              id={`${idPrefix}_billing_basis`}
+              name="billing_basis"
+              defaultValue={client?.billing_basis ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">Use family/default</option>
+              <option value="per_treatment">Per treatment</option>
+              <option value="per_month">Per month</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor={`${idPrefix}_billing_timing`} className="block text-xs text-slate-400">
+              Billing timing
+            </label>
+            <select
+              id={`${idPrefix}_billing_timing`}
+              name="billing_timing"
+              defaultValue={client?.billing_timing ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">Use family/default</option>
+              <option value="in_advance">In advance</option>
+              <option value="in_arrears">In arrears</option>
+            </select>
+          </div>
+        </>
+      ) : null}
 
       <ClientJobProgramFields
         jobs={jobs}

@@ -11,6 +11,7 @@ export type ReceiptsBankFilter = "all" | "linked" | "unlinked";
 export type ReceiptsListFilters = {
   job: string;
   client: string;
+  family: string;
   from: string;
   to: string;
   recipient: ReceiptsRecipientFilter;
@@ -36,6 +37,7 @@ export type ReceiptListRowDto = {
   client_id: string | null;
   client_first_name: string | null;
   client_last_name: string | null;
+  family_name: string | null;
 };
 
 export type ReceiptsCursorPage = {
@@ -119,6 +121,7 @@ export async function loadReceiptsCursorPage(params: {
               ],
             }
           : {}),
+        ...(filters.family ? { family_id: filters.family } : {}),
         ...(from || to
           ? {
               issued_at: {
@@ -139,6 +142,7 @@ export async function loadReceiptsCursorPage(params: {
       include: {
         job: true,
         client: { select: { id: true, first_name: true, last_name: true } },
+        family: { select: { name: true } },
         allocations: {
           orderBy: { created_at: "asc" },
           include: {
@@ -186,6 +190,7 @@ export async function loadReceiptsCursorPage(params: {
         client_id: firstClient?.id ?? null,
         client_first_name: firstClient?.first_name ?? null,
         client_last_name: firstClient?.last_name ?? null,
+        family_name: rec.family?.name ?? null,
       };
     });
 

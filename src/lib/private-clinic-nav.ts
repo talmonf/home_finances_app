@@ -3,6 +3,7 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
   { key: "jobs", href: "/dashboard/private-clinic/jobs", label: "Jobs" },
   { key: "programs", href: "/dashboard/private-clinic/programs", label: "Programs" },
   { key: "clients", href: "/dashboard/private-clinic/clients", label: "Clients" },
+  { key: "families", href: "/dashboard/private-clinic/families", label: "Families" },
   {
     key: "upcomingVisits",
     href: "/dashboard/private-clinic/upcoming-visits",

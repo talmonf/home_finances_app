@@ -83,6 +83,14 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </label>
+        <label className="text-sm text-slate-300">
+          Reason
+          <input
+            name="reschedule_reason"
+            defaultValue={apt.reschedule_reason ?? ""}
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+        </label>
         <button
           type="submit"
           className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"

@@ -41,6 +41,7 @@ type ReceiptProgramForModal = Prisma.therapy_service_programsGetPayload<{ includ
 type ReceiptSearch = {
   job?: string;
   client?: string;
+  family?: string;
   from?: string;
   to?: string;
   recipient?: string;
@@ -71,6 +72,7 @@ export default async function ReceiptsPage({
   const filters: ReceiptsListFilters = {
     job: sp.job?.trim() || "",
     client: sp.client?.trim() || "",
+    family: sp.family?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
     recipient: parseReceiptsRecipientFilter(sp.recipient),
@@ -87,7 +89,7 @@ export default async function ReceiptsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, clients, firstPage, orgJobs] = await Promise.all([
+  const [jobs, clients, firstPage, orgJobs, settings, families] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -110,6 +112,15 @@ export default async function ReceiptsPage({
     prisma.jobs.findMany({
       where: { household_id: householdId, is_private_clinic: false },
       select: { id: true },
+    }),
+    prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: { family_therapy_enabled: true },
+    }),
+    prisma.therapy_families.findMany({
+      where: { household_id: householdId },
+      select: { id: true, name: true },
+      orderBy: [{ name: "asc" }],
     }),
   ]);
   const orgJobIds = new Set(orgJobs.map((j) => j.id));
@@ -168,6 +179,7 @@ export default async function ReceiptsPage({
   const queryParams = new URLSearchParams();
   if (filters.job) queryParams.set("job", filters.job);
   if (filters.client) queryParams.set("client", filters.client);
+  if (filters.family) queryParams.set("family", filters.family);
   if (filters.from) queryParams.set("from", filters.from);
   if (filters.to) queryParams.set("to", filters.to);
   if (filters.recipient !== "all") queryParams.set("recipient", filters.recipient);
@@ -333,6 +345,23 @@ export default async function ReceiptsPage({
               ))}
             </select>
           </div>
+          {settings?.family_therapy_enabled ? (
+            <div>
+              <label className="block text-xs text-slate-400">Family</label>
+              <select
+                name="family"
+                defaultValue={filters.family}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{c.any}</option>
+                {families.map((family) => (
+                  <option key={family.id} value={family.id}>
+                    {family.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div>
             <label className="block text-xs text-slate-400">{r.filterBankLink}</label>
             <select
@@ -397,6 +426,7 @@ export default async function ReceiptsPage({
               number: r.tableNumber,
               date: r.tableDate,
               client: c.client,
+              family: "Family",
               job: r.tableJob,
               amount: r.tableAmount,
               coverage: r.receivablesRangeLabel,

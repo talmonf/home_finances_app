@@ -23,6 +23,7 @@ import {
   updateTherapyAppointment,
   endTherapyRecurringSeries,
   deleteTherapyAppointmentSeries,
+  reportTreatmentFromAppointment,
 } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { dateToDatetimeLocalValue, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
@@ -62,6 +63,7 @@ export default async function EditAppointmentPage({ params }: PageProps) {
       job: true,
       program: true,
       series: true,
+      participants: true,
     },
   });
 
@@ -163,6 +165,18 @@ export default async function EditAppointmentPage({ params }: PageProps) {
           ))}
         </select>
         <select
+          name="additional_client_ids"
+          multiple
+          defaultValue={apt.participants.map((p) => p.client_id)}
+          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
+        >
+          {clients.map((cl) => (
+            <option key={cl.id} value={cl.id}>
+              {cl.first_name} {cl.last_name ?? ""}
+            </option>
+          ))}
+        </select>
+        <select
           name="job_id"
           required
           defaultValue={apt.job_id}
@@ -209,6 +223,12 @@ export default async function EditAppointmentPage({ params }: PageProps) {
           <option value="cancelled">{ap.statusCancelled}</option>
         </select>
         <input
+          name="cancellation_reason"
+          placeholder={ap.cancel}
+          defaultValue={apt.cancellation_reason ?? ""}
+          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+        <input
           name="end_at"
           type="datetime-local"
           defaultValue={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
@@ -225,6 +245,39 @@ export default async function EditAppointmentPage({ params }: PageProps) {
           className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
         >
           {ap.save}
+        </button>
+      </form>
+
+      <form
+        action={reportTreatmentFromAppointment}
+        className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
+      >
+        <input type="hidden" name="appointment_id" value={apt.id} />
+        <h3 className="md:col-span-2 text-sm font-semibold text-slate-200">Report treatment from appointment</h3>
+        <input
+          name="amount"
+          placeholder="Amount"
+          required
+          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+        <input
+          name="currency"
+          defaultValue="ILS"
+          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+        <textarea name="note_1" placeholder="Note 1" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2" />
+        <select name="additional_participant_ids" multiple className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2">
+          {clients.map((cl) => (
+            <option key={cl.id} value={cl.id}>
+              {cl.first_name} {cl.last_name ?? ""}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+        >
+          Report Treatment
         </button>
       </form>
     </div>

@@ -18,7 +18,11 @@ import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequenc
 
 export const dynamic = "force-dynamic";
 
-export default async function UpcomingVisitsPage() {
+export default async function UpcomingVisitsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ family?: string }>;
+}) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -34,6 +38,20 @@ export default async function UpcomingVisitsPage() {
     select: { family_member_id: true },
   });
   const familyMemberId = user?.family_member_id ?? null;
+  const sp = searchParams ? await searchParams : {};
+  const familyFilter = (sp.family ?? "").trim();
+
+  const settings = await prisma.therapy_settings.findUnique({
+    where: { household_id: householdId },
+    select: { family_therapy_enabled: true },
+  });
+  const families = settings?.family_therapy_enabled
+    ? await prisma.therapy_families.findMany({
+        where: { household_id: householdId },
+        select: { id: true, name: true },
+        orderBy: [{ name: "asc" }],
+      })
+    : [];
 
   const clients = await prisma.therapy_clients.findMany({
     where: {
@@ -41,12 +59,14 @@ export default async function UpcomingVisitsPage() {
       is_active: true,
       visits_per_period_count: { not: null },
       visits_per_period_weeks: { not: null },
+      ...(familyFilter ? { family_id: familyFilter } : {}),
       ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
     },
     orderBy: [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }],
     include: {
       default_job: true,
       default_program: true,
+      family: true,
     },
   });
 
@@ -122,6 +142,26 @@ export default async function UpcomingVisitsPage() {
         <h2 className="text-lg font-medium text-slate-200">{uv.pageTitle}</h2>
         <p className="mt-1 text-sm text-slate-400">{uv.pageIntro}</p>
       </div>
+      {settings?.family_therapy_enabled ? (
+        <form method="get" className="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <label className="mb-1 block text-xs text-slate-400">Family</label>
+          <select
+            name="family"
+            defaultValue={familyFilter}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="">Any family</option>
+            {families.map((family) => (
+              <option key={family.id} value={family.id}>
+                {family.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="ml-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+            {c.apply}
+          </button>
+        </form>
+      ) : null}
 
       {clients.length === 0 ? (
         <p className="text-sm text-slate-500">{uv.empty}</p>
@@ -163,6 +203,14 @@ export default async function UpcomingVisitsPage() {
                       >
                         {uv.colProgram}
                       </th>
+                      {settings?.family_therapy_enabled ? (
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                        >
+                          Family
+                        </th>
+                      ) : null}
                       <th
                         scope="col"
                         className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
@@ -209,6 +257,11 @@ export default async function UpcomingVisitsPage() {
                         <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.programLabel}>
                           {r.programLabel}
                         </td>
+                        {settings?.family_therapy_enabled ? (
+                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>
+                            {clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}
+                          </td>
+                        ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
                           <Link
                             href={`${treatmentsBase}?client=${encodeURIComponent(r.clientId)}&modal=new`}

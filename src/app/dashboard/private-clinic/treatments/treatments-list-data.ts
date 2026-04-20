@@ -17,6 +17,7 @@ export type TreatmentsListFilters = {
   job: string;
   program: string;
   client: string;
+  family: string;
   receipt: string;
   from: string;
   to: string;
@@ -32,6 +33,7 @@ export type TreatmentListRowDto = {
   client_last_name: string | null;
   job_label: string;
   program_label: string | null;
+  family_name: string | null;
   amount: string;
   currency: string;
   payment_status: TherapyPaymentStatus;
@@ -106,6 +108,7 @@ export async function loadTreatmentsCursorPage(params: {
     ...(filters.job ? { job_id: filters.job } : {}),
     ...(filters.program ? { program_id: filters.program } : {}),
     ...(filters.client ? { client_id: filters.client } : {}),
+    ...(filters.family ? { family_id: filters.family } : {}),
     ...(filters.receipt
       ? {
           receipt_allocations: {
@@ -148,6 +151,7 @@ export async function loadTreatmentsCursorPage(params: {
         client: true,
         job: true,
         program: { select: { name: true } },
+        family: { select: { name: true } },
         payment_bank_account: { select: { account_name: true, bank_name: true } },
         payment_digital_payment_method: { select: { name: true } },
         receipt_allocations: {
@@ -176,6 +180,7 @@ export async function loadTreatmentsCursorPage(params: {
         client_last_name: t.client.last_name,
         job_label: formatPrivateClinicJobLabel(t.job),
         program_label: t.program?.name ?? null,
+        family_name: t.family?.name ?? null,
         amount: t.amount.toString(),
         currency: t.currency,
         payment_status: paymentStatus,

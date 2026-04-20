@@ -78,8 +78,11 @@ model households {
   therapy_expense_categories        therapy_expense_categories[]
   therapy_service_programs          therapy_service_programs[]
   therapy_clients                   therapy_clients[]
+  therapy_families                  therapy_families[]
+  therapy_family_members            therapy_family_members[]
   therapy_clients_jobs              therapy_clients_jobs[]
   therapy_treatments                therapy_treatments[]
+  therapy_treatment_participants    therapy_treatment_participants[]
   therapy_receipts                  therapy_receipts[]
   therapy_receipt_allocations       therapy_receipt_allocations[]
   therapy_receipt_consultation_allocations therapy_receipt_consultation_allocations[]
@@ -87,6 +90,7 @@ model households {
   therapy_job_expenses              therapy_job_expenses[]
   therapy_appointment_series        therapy_appointment_series[]
   therapy_appointments              therapy_appointments[]
+  therapy_appointment_participants  therapy_appointment_participants[]
   therapy_consultation_types        therapy_consultation_types[]
   therapy_consultations             therapy_consultations[]
   therapy_travel_entries            therapy_travel_entries[]
@@ -1423,6 +1427,20 @@ enum TherapyAppointmentAuditAction {
   @@map("therapy_appointment_audit_action")
 }
 
+enum TherapyBillingBasis {
+  per_treatment
+  per_month
+
+  @@map("therapy_billing_basis")
+}
+
+enum TherapyBillingTiming {
+  in_advance
+  in_arrears
+
+  @@map("therapy_billing_timing")
+}
+
 enum TherapyImportAuditStatus {
   in_progress
   successful
@@ -1484,6 +1502,7 @@ model therapy_settings {
   note_2_label_he  String?
   note_3_label_he  String?
   nav_tabs_json    Json?
+  family_therapy_enabled Boolean @default(false)
   hebrew_transcription_provider TherapyHebrewTranscriptionProvider @default(openrouter)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
@@ -1552,6 +1571,7 @@ model therapy_visit_type_default_amounts {
 model therapy_clients {
   id                 String    @id @default(uuid())
   household_id       String
+  family_id          String?   @db.Uuid
   first_name         String
   last_name          String?
   id_number          String?
@@ -1565,6 +1585,8 @@ model therapy_clients {
   default_job_id     String
   default_program_id String?
   default_visit_type TherapyVisitType?
+  billing_basis      TherapyBillingBasis?
+  billing_timing     TherapyBillingTiming?
   email              String?
   phones             String?
   address            String?
@@ -1574,6 +1596,7 @@ model therapy_clients {
   updated_at         DateTime  @updatedAt
 
   household       households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family         therapy_families? @relation(fields: [family_id], references: [id], onDelete: SetNull)
   default_job     jobs       @relation("TherapyClientDefaultJob", fields: [default_job_id], references: [id], onDelete: Restrict)
   default_program therapy_service_programs? @relation("TherapyClientDefaultProgram", fields: [default_program_id], references: [id], onDelete: Restrict)
   client_jobs     therapy_clients_jobs[]
@@ -1581,8 +1604,49 @@ model therapy_clients {
   appointments    therapy_appointments[]
   series          therapy_appointment_series[]
   therapy_receipts therapy_receipts[]
+  family_memberships therapy_family_members[]
+  main_for_families   therapy_families[] @relation("TherapyFamilyMainMember")
+  appointment_participations therapy_appointment_participants[]
+  treatment_participations   therapy_treatment_participants[]
   relationships_from therapy_client_relationships[] @relation("TherapyClientRelationshipFrom")
   relationships_to   therapy_client_relationships[] @relation("TherapyClientRelationshipTo")
+}
+
+model therapy_families {
+  id                    String   @id @default(uuid()) @db.Uuid
+  household_id          String   @db.Uuid
+  name                  String
+  notes                 String?
+  main_family_member_id String   @db.Uuid
+  billing_basis         TherapyBillingBasis?
+  billing_timing        TherapyBillingTiming?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household      households       @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  main_member    therapy_clients  @relation("TherapyFamilyMainMember", fields: [main_family_member_id], references: [id], onDelete: Restrict)
+  clients        therapy_clients[]
+  members        therapy_family_members[]
+  treatments     therapy_treatments[]
+  receipts       therapy_receipts[]
+  appointments   therapy_appointments[]
+
+  @@index([household_id, name])
+}
+
+model therapy_family_members {
+  id           String   @id @default(uuid()) @db.Uuid
+  household_id String   @db.Uuid
+  family_id    String   @db.Uuid
+  client_id    String   @db.Uuid
+  created_at   DateTime @default(now())
+
+  household households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family    therapy_families @relation(fields: [family_id], references: [id], onDelete: Cascade)
+  client    therapy_clients  @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@unique([family_id, client_id])
+  @@index([household_id, family_id])
 }
 
 model therapy_client_relationships {
@@ -1623,6 +1687,7 @@ model therapy_treatments {
   id                    String   @id @default(uuid())
   household_id          String
   client_id             String
+  family_id             String?  @db.Uuid
   job_id                String
   program_id            String?
   occurred_at           DateTime
@@ -1644,6 +1709,7 @@ model therapy_treatments {
 
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   client             therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  family             therapy_families? @relation(fields: [family_id], references: [id], onDelete: SetNull)
   job                jobs            @relation(fields: [job_id], references: [id], onDelete: Restrict)
   program            therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: Restrict)
   linked_transaction transactions? @relation("TherapyTreatmentTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
@@ -1653,11 +1719,28 @@ model therapy_treatments {
   appointments_completed therapy_appointments[]
   travel_entries       therapy_travel_entries[]
   attachments          therapy_treatment_attachments[]
+  participants        therapy_treatment_participants[]
 
   @@index([household_id, job_id])
   @@index([household_id, occurred_at])
   @@index([payment_bank_account_id])
   @@index([payment_digital_payment_method_id])
+  @@index([family_id])
+}
+
+model therapy_treatment_participants {
+  id           String   @id @default(uuid()) @db.Uuid
+  household_id String   @db.Uuid
+  treatment_id String   @db.Uuid
+  client_id    String   @db.Uuid
+  created_at   DateTime @default(now())
+
+  household households        @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  treatment therapy_treatments @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  client    therapy_clients    @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@unique([treatment_id, client_id])
+  @@index([household_id, treatment_id])
 }
 
 model therapy_treatment_attachments {
@@ -1724,6 +1807,7 @@ model therapy_receipts {
   household_id          String
   job_id                String
   client_id             String?
+  family_id             String?  @db.Uuid
   program_id            String?
   receipt_number        String
   issued_at             DateTime @db.Date
@@ -1742,6 +1826,7 @@ model therapy_receipts {
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
   client             therapy_clients? @relation(fields: [client_id], references: [id], onDelete: SetNull)
+  family             therapy_families? @relation(fields: [family_id], references: [id], onDelete: SetNull)
   program            therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
   linked_transaction transactions? @relation("TherapyReceiptTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
   allocations                 therapy_receipt_allocations[]
@@ -1750,6 +1835,7 @@ model therapy_receipts {
 
   @@index([household_id, job_id])
   @@index([household_id, covered_period_start, covered_period_end])
+  @@index([family_id])
 }
 
 model therapy_receipt_allocations {
@@ -1855,6 +1941,7 @@ model therapy_appointments {
   id           String   @id @default(uuid())
   household_id String
   client_id    String
+  family_id    String?  @db.Uuid
   job_id       String
   program_id   String?
   series_id    String?
@@ -1863,18 +1950,38 @@ model therapy_appointments {
   end_at       DateTime?
   status       TherapyAppointmentStatus @default(scheduled)
   treatment_id String?
+  reschedule_reason String?
+  cancellation_reason String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
   household  households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   client     therapy_clients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  family     therapy_families? @relation(fields: [family_id], references: [id], onDelete: SetNull)
   job        jobs            @relation(fields: [job_id], references: [id], onDelete: Cascade)
   program    therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
   series     therapy_appointment_series? @relation(fields: [series_id], references: [id], onDelete: SetNull)
   treatment  therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: SetNull)
   appointment_audits therapy_appointment_audits[]
+  participants      therapy_appointment_participants[]
 
   @@index([household_id, start_at])
+  @@index([family_id])
+}
+
+model therapy_appointment_participants {
+  id             String   @id @default(uuid()) @db.Uuid
+  household_id   String   @db.Uuid
+  appointment_id String   @db.Uuid
+  client_id      String   @db.Uuid
+  created_at     DateTime @default(now())
+
+  household   households           @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  appointment therapy_appointments @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  client      therapy_clients      @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@unique([appointment_id, client_id])
+  @@index([household_id, appointment_id])
 }
 
 model therapy_appointment_audits {

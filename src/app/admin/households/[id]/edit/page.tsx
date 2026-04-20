@@ -79,6 +79,7 @@ export default async function EditHouseholdPage({
         note_2_label_he: true,
         note_3_label_he: true,
         hebrew_transcription_provider: true,
+        family_therapy_enabled: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -366,6 +367,24 @@ export default async function EditHouseholdPage({
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+              Private clinic — family therapy
+            </h2>
+            <p className="mb-3 text-xs text-slate-500">
+              Enables family records and family filters/columns across private clinic pages.
+            </p>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="family_therapy_enabled"
+                defaultChecked={therapySettings?.family_therapy_enabled ?? false}
+                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+              />
+              <span className="text-sm text-slate-300">Enable family therapy mode</span>
+            </label>
           </section>
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">

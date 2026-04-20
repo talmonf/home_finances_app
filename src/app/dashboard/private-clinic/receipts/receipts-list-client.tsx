@@ -12,6 +12,7 @@ type Labels = {
   number: string;
   date: string;
   client: string;
+  family: string;
   job: string;
   amount: string;
   coverage: string;
@@ -161,6 +162,9 @@ export function ReceiptsListClient({
                 </button>
               </th>
               <th className="px-3 py-2 text-slate-300">
+                {labels.family}
+              </th>
+              <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("job")} className="hover:text-slate-100">
                   {labels.job}
                   {sortArrow("job")}
@@ -209,6 +213,7 @@ export function ReceiptsListClient({
                     labels.recipientOrg
                   )}
                 </td>
+                <td className="px-3 py-2 text-slate-400">{rec.family_name ?? "—"}</td>
                 <td className="px-3 py-2 text-slate-400">{rec.job_label}</td>
                 <td className="px-3 py-2 text-slate-200">
                   {formatDecimalAmountForDisplay(obfuscate, rec.total_amount, rec.currency, uiLanguage)}

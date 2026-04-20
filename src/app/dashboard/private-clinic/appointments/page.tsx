@@ -16,7 +16,6 @@ import { cancelTherapyAppointment } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import {
   jobWherePrivateClinicScoped,
-  therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
@@ -115,6 +114,7 @@ export default async function AppointmentsPage() {
                       >
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="redirect_on_success" value={`${LIST}?updated=1`} />
+                        <input type="hidden" name="cancellation_reason" value="Cancelled from upcoming list" />
                         <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                           {ap.cancel}
                         </button>

@@ -80,6 +80,7 @@ export async function saveHouseholdSettings(formData: FormData) {
   const hebrew_transcription_provider = parseHebrewTranscriptionProvider(
     formData.get("hebrew_transcription_provider") as string | null,
   );
+  const family_therapy_enabled = formData.get("family_therapy_enabled") === "on";
   await prisma.therapy_settings.update({
     where: { household_id: householdId },
     data: {
@@ -91,6 +92,7 @@ export async function saveHouseholdSettings(formData: FormData) {
       note_2_label_he,
       note_3_label_he,
       hebrew_transcription_provider,
+      family_therapy_enabled,
     },
   });
 
