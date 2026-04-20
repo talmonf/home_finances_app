@@ -1,18 +1,20 @@
+import Link from "next/link";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
-import { createTherapyJob, saveTherapyJobVisitTypeDefaults, updateTherapyJob } from "../actions";
-import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
-import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { createTherapyJob } from "../actions";
+import { JobModalForm } from "./job-modal-form";
 
 export const dynamic = "force-dynamic";
+
+const JOBS_BASE = "/dashboard/private-clinic/jobs";
 
 export default async function PrivateClinicJobsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
+  searchParams?: Promise<{ created?: string; updated?: string; error?: string; modal?: string }>;
 }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -23,6 +25,7 @@ export default async function PrivateClinicJobsPage({
   const c = privateClinicCommon(uiLanguage);
   const j = privateClinicJobs(uiLanguage);
   const resolved = searchParams ? await searchParams : undefined;
+  const modalMode = resolved?.modal === "new" ? "new" : null;
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -51,24 +54,6 @@ export default async function PrivateClinicJobsPage({
       },
     }),
   ]);
-
-  const jobVisitDefaults =
-    jobs.length > 0
-      ? await prisma.therapy_visit_type_default_amounts.findMany({
-          where: {
-            household_id: householdId,
-            program_id: null,
-            job_id: { in: jobs.map((j) => j.id) },
-          },
-        })
-      : [];
-
-  const visitTypes = therapyVisitTypesOrdered();
-
-  function jobDefaultFor(jobId: string, vt: (typeof visitTypes)[number]) {
-    const row = jobVisitDefaults.find((r) => r.job_id === jobId && r.visit_type === vt);
-    return row ? { amount: row.amount.toString(), currency: row.currency } : { amount: "", currency: "ILS" };
-  }
 
   const canAddJob = familyMemberId ? true : householdMembers.length > 0;
   const errorMessage =
@@ -100,97 +85,17 @@ export default async function PrivateClinicJobsPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{j.addJobTitle}</h2>
-        {!canAddJob ? (
-          <p className="text-sm text-amber-200/90">{j.needMemberBeforeJob}</p>
-        ) : (
-          <form action={createTherapyJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            {!familyMemberId ? (
-              <div className="md:col-span-3 space-y-1">
-                <label className="block text-xs text-slate-400">{j.employedPerson}</label>
-                <select
-                  name="family_member_id"
-                  required
-                  className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">{c.select}</option>
-                  {householdMembers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.full_name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500">{j.employedPersonHelp}</p>
-              </div>
-            ) : null}
-            <select name="employment_type" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">{j.employmentType}</option>
-              <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
-              <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
-              <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
-              <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
-            </select>
-            <input
-              name="job_title"
-              placeholder={j.jobTitle}
-              required
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="employer_name"
-              placeholder={j.employerOptional}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">{c.startDate}</label>
-              <input
-                name="start_date"
-                type="date"
-                required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">{c.endDate}</label>
-              <input
-                name="end_date"
-                type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <input
-              name="employer_tax_number"
-              placeholder={j.employerTaxOptional}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="employer_address"
-              placeholder={j.employerAddressOptional}
-              className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input type="checkbox" name="is_active" defaultChecked />
-              {c.active}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input type="checkbox" name="is_private_clinic" defaultChecked />
-              {j.privateClinicRole}
-            </label>
-            <p className="md:col-span-3 text-xs text-slate-500">{j.privateClinicRoleHelp}</p>
-            <textarea
-              name="notes"
-              placeholder={c.notes}
-              className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-              {j.addJobBtn}
-            </button>
-          </form>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{j.jobsHeading}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{j.jobsHeading}</h2>
+          <Link
+            href={`${JOBS_BASE}?modal=new`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${canAddJob ? "bg-sky-500 text-slate-950 hover:bg-sky-400" : "pointer-events-none cursor-not-allowed bg-slate-700 text-slate-300"}`}
+            aria-disabled={!canAddJob}
+          >
+            {j.addJobBtn}
+          </Link>
+        </div>
+        {!canAddJob ? <p className="text-sm text-amber-200/90">{j.needMemberBeforeJob}</p> : null}
         {jobs.length === 0 ? (
           <p className="text-sm text-slate-500">
             {jobCountAnyFlag === 0
@@ -200,127 +105,63 @@ export default async function PrivateClinicJobsPage({
               : j.noPrivateClinicJobsFiltered}
           </p>
         ) : (
-          <div className="space-y-3">
-            {jobs.map((job) => (
-              <details key={job.id} className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-                <summary className="cursor-pointer text-sm text-slate-100">
-                  {formatJobDisplayLabel(job)}{" "}
-                  <span className="text-slate-400">({job.is_active ? c.active : c.inactive})</span>
-                </summary>
-                <form action={updateTherapyJob} className="mt-3 grid gap-2 md:grid-cols-3">
-                  <input type="hidden" name="id" value={job.id} />
-                  <select
-                    name="employment_type"
-                    defaultValue={job.employment_type}
-                    required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  >
-                    <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
-                    <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
-                    <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
-                    <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
-                  </select>
-                  <input
-                    name="job_title"
-                    defaultValue={job.job_title}
-                    required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <input
-                    name="employer_name"
-                    defaultValue={job.employer_name ?? ""}
-                    placeholder={c.employer}
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <input
-                    name="start_date"
-                    type="date"
-                    defaultValue={job.start_date.toISOString().slice(0, 10)}
-                    required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <input
-                    name="end_date"
-                    type="date"
-                    defaultValue={job.end_date ? job.end_date.toISOString().slice(0, 10) : ""}
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <input
-                    name="employer_tax_number"
-                    defaultValue={job.employer_tax_number ?? ""}
-                    placeholder={j.employerTaxOptional}
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <input
-                    name="employer_address"
-                    defaultValue={job.employer_address ?? ""}
-                    placeholder={j.employerAddressOptional}
-                    className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <label className="flex items-center gap-2 text-xs text-slate-300">
-                    <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
-                    {c.active}
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-slate-300">
-                    <input type="checkbox" name="is_private_clinic" defaultChecked={job.is_private_clinic} />
-                    {j.privateClinicRole}
-                  </label>
-                  <p className="md:col-span-3 text-[11px] text-slate-500">{j.privateClinicRoleHelp}</p>
-                  <textarea
-                    name="notes"
-                    defaultValue={job.notes ?? ""}
-                    placeholder={c.notes}
-                    className="md:col-span-3 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                  <div className="md:col-span-3 flex items-center justify-between">
-                    <p className="text-xs text-slate-400">
-                      {employmentTypeOptionLabel(uiLanguage, job.employment_type)} · {formatHouseholdDate(job.start_date, dateDisplayFormat)}
-                      {" - "}
-                      {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : c.present}
-                    </p>
-                    <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                      {c.save}
-                    </button>
-                  </div>
-                </form>
-                <div className="mt-4 border-t border-slate-700 pt-3">
-                  <h3 className="mb-2 text-sm font-medium text-slate-200">{c.defaultFeesByVisitType}</h3>
-                  <p className="mb-2 text-xs text-slate-500">{c.defaultFeesByVisitTypeHint}</p>
-                  <form action={saveTherapyJobVisitTypeDefaults} className="space-y-2">
-                    <input type="hidden" name="job_id" value={job.id} />
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                      {visitTypes.map((vt) => {
-                        const d = jobDefaultFor(job.id, vt);
-                        return (
-                          <div key={vt} className="rounded border border-slate-700/80 bg-slate-950/40 p-2">
-                            <label className="block text-xs text-slate-400">{therapyVisitTypeLabel(uiLanguage, vt)}</label>
-                            <input
-                              name={`amount_${vt}`}
-                              type="text"
-                              defaultValue={d.amount}
-                              placeholder="0.00"
-                              className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                            />
-                            <input
-                              name={`currency_${vt}`}
-                              type="text"
-                              defaultValue={d.currency}
-                              className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <button type="submit" className="rounded bg-slate-600 px-2 py-1 text-xs text-white hover:bg-slate-500">
-                      {c.saveDefaults}
-                    </button>
-                  </form>
-                </div>
-              </details>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-slate-700">
+            <table className="min-w-full divide-y divide-slate-700 text-sm">
+              <thead className="bg-slate-900/80">
+                <tr>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.tableJob}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.tableEmploymentType}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.tableDateRange}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.tableActive}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.colActions}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 bg-slate-900/40">
+                {jobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-slate-800/50">
+                    <td className="max-w-[20rem] truncate px-3 py-2 text-slate-200" title={formatJobDisplayLabel(job)}>
+                      {formatJobDisplayLabel(job)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">{employmentTypeOptionLabel(uiLanguage, job.employment_type)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                      {formatHouseholdDate(job.start_date, dateDisplayFormat)} - {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : c.present}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">{job.is_active ? c.active : c.inactive}</td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <Link href={`${JOBS_BASE}/${job.id}/edit`} className="font-medium text-sky-400 hover:text-sky-300">
+                        {c.edit}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
+      {modalMode === "new" && canAddJob ? (
+        <JobModalForm
+          action={createTherapyJob}
+          householdMembers={householdMembers}
+          familyMemberId={familyMemberId}
+          closeHref={JOBS_BASE}
+          redirectOnSuccess={`${JOBS_BASE}?created=1`}
+          redirectOnError={`${JOBS_BASE}?modal=new`}
+          c={c}
+          j={j}
+          uiLanguage={uiLanguage}
+        />
+      ) : null}
     </div>
   );
 }

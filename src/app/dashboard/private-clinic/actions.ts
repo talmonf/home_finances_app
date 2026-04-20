@@ -502,7 +502,7 @@ export async function createTherapyJob(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const resolvedFm = await resolveFamilyMemberIdForJobCreate(householdId, formData);
   if (!resolvedFm.ok) {
-    redirect(`${BASE}/jobs?error=${resolvedFm.code}`);
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, resolvedFm.code);
   }
   const { family_member_id } = resolvedFm;
 
@@ -512,13 +512,13 @@ export async function createTherapyJob(formData: FormData) {
   const job_title = (formData.get("job_title") as string)?.trim() || "";
 
   if (!employment_type || !start_date_raw || !job_title) {
-    redirect(`${BASE}/jobs?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
   }
   const start_date = parseDate(start_date_raw);
   const end_date = parseDate(end_date_raw || null);
-  if (!start_date) redirect(`${BASE}/jobs?error=start`);
-  if (end_date_raw && !end_date) redirect(`${BASE}/jobs?error=end`);
-  if (end_date && end_date < start_date) redirect(`${BASE}/jobs?error=range`);
+  if (!start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
+  if (end_date_raw && !end_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "end");
+  if (end_date && end_date < start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
 
   await prisma.jobs.create({
     data: {
@@ -540,7 +540,7 @@ export async function createTherapyJob(formData: FormData) {
 
   revalidatePath(`${BASE}/jobs`);
   revalidatePath(`${BASE}/programs`);
-  redirect(`${BASE}/jobs?created=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/jobs?created=1`);
 }
 
 export async function updateTherapyJob(formData: FormData) {
@@ -548,7 +548,7 @@ export async function updateTherapyJob(formData: FormData) {
   const userFm = await getCurrentUserFamilyMemberId(householdId);
 
   const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirect(`${BASE}/jobs?error=id`);
+  if (!id) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "id");
 
   const row = await prisma.jobs.findFirst({
     where: userFm
@@ -556,7 +556,7 @@ export async function updateTherapyJob(formData: FormData) {
       : { id, household_id: householdId },
     select: { id: true },
   });
-  if (!row) redirect(`${BASE}/jobs?error=notfound`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "notfound");
 
   const employment_type = parseEmploymentType((formData.get("employment_type") as string)?.trim() || null);
   const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
@@ -564,13 +564,13 @@ export async function updateTherapyJob(formData: FormData) {
   const job_title = (formData.get("job_title") as string)?.trim() || "";
 
   if (!employment_type || !start_date_raw || !job_title) {
-    redirect(`${BASE}/jobs?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
   }
   const start_date = parseDate(start_date_raw);
   const end_date = parseDate(end_date_raw || null);
-  if (!start_date) redirect(`${BASE}/jobs?error=start`);
-  if (end_date_raw && !end_date) redirect(`${BASE}/jobs?error=end`);
-  if (end_date && end_date < start_date) redirect(`${BASE}/jobs?error=range`);
+  if (!start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
+  if (end_date_raw && !end_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "end");
+  if (end_date && end_date < start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
 
   await prisma.jobs.update({
     where: { id },
@@ -590,7 +590,8 @@ export async function updateTherapyJob(formData: FormData) {
 
   revalidatePath(`${BASE}/jobs`);
   revalidatePath(`${BASE}/programs`);
-  redirect(`${BASE}/jobs?updated=1`);
+  revalidatePath(`${BASE}/jobs/${id}/edit`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/jobs?updated=1`);
 }
 
 // --- Petrol ---
@@ -828,9 +829,9 @@ export async function saveTherapyJobVisitTypeDefaults(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
   const job_id = (formData.get("job_id") as string)?.trim() || "";
-  if (!job_id) redirect(`${BASE}/jobs?error=missing`);
+  if (!job_id) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
   if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, job_id))) {
-    redirect(`${BASE}/jobs?error=job`);
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "job");
   }
 
   for (const vt of THERAPY_VISIT_TYPES) {
@@ -872,8 +873,9 @@ export async function saveTherapyJobVisitTypeDefaults(formData: FormData) {
   }
 
   revalidatePath(`${BASE}/jobs`);
+  revalidatePath(`${BASE}/jobs/${job_id}/edit`);
   revalidatePath(`${BASE}/treatments`);
-  redirect(`${BASE}/jobs?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/jobs?updated=1`);
 }
 
 export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
