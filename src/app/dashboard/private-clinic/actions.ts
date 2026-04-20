@@ -34,6 +34,10 @@ import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 
 const BASE = "/dashboard/private-clinic";
 const ADMIN_HOUSEHOLDS = "/admin/households";
+
+function endOfUtcDayForReceipt(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+}
 const CLIENT_STATUS_OPTIONS = new Set([
   "none",
   "exists",
@@ -2010,12 +2014,35 @@ export async function linkTreatmentsToReceipt(formData: FormData) {
   if (!receiptId || treatmentIds.length === 0) return;
   const receipt = await prisma.therapy_receipts.findFirst({
     where: { id: receiptId, household_id: householdId },
-    select: { id: true, job_id: true },
+    select: {
+      id: true,
+      job_id: true,
+      recipient_type: true,
+      covered_period_start: true,
+      covered_period_end: true,
+    },
   });
   if (!receipt) return;
   if (!(await assertJobForCurrentUserScope(householdId, userFm, receipt.job_id))) return;
+
+  const orgRangeWhere =
+    receipt.recipient_type === "organization" && receipt.covered_period_start && receipt.covered_period_end
+      ? {
+          occurred_at: {
+            gte: receipt.covered_period_start,
+            lte: endOfUtcDayForReceipt(receipt.covered_period_end),
+          },
+        }
+      : {};
+
   const treatments = await prisma.therapy_treatments.findMany({
-    where: { household_id: householdId, id: { in: treatmentIds }, job_id: receipt.job_id },
+    where: {
+      household_id: householdId,
+      id: { in: treatmentIds },
+      job_id: receipt.job_id,
+      receipt_allocations: { none: {} },
+      ...orgRangeWhere,
+    },
     select: { id: true, amount: true },
   });
   await prisma.$transaction(

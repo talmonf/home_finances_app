@@ -61,6 +61,13 @@ export function therapyClientsWhereLinkedPrivateClinicJobs(
   };
 }
 
+/** Clients linked to a specific job (default job or explicit client–job link). */
+export function therapyClientsWhereForJob(jobId: string): Prisma.therapy_clientsWhereInput {
+  return {
+    OR: [{ default_job_id: jobId }, { client_jobs: { some: { job_id: jobId } } }],
+  };
+}
+
 export function formatPrivateClinicJobLabel(job: {
   job_title: string;
   employer_name: string | null;

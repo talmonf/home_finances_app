@@ -36,7 +36,7 @@ export async function ReceiptModalForm({
   householdId: string;
   jobs: { id: string; label: string }[];
   programs: { id: string; jobId: string; label: string }[];
-  clients: { id: string; first_name: string; last_name: string | null }[];
+  clients: { id: string; first_name: string; last_name: string | null; jobIds: string[] }[];
   labels: ReceiptModalFormLabels;
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;

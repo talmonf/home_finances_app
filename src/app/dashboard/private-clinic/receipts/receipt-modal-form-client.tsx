@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type JobOption = { id: string; label: string };
 
-type ClientOption = { id: string; first_name: string; last_name: string | null };
+type ClientOption = { id: string; first_name: string; last_name: string | null; jobIds: string[] };
 
 type ProgramOption = { id: string; jobId: string; label: string };
 
@@ -113,6 +113,24 @@ export function ReceiptModalFormClient({
       setClientId("");
     }
   }, [recipientType]);
+
+  const clientsForJob = useMemo(() => {
+    if (!jobId) return clients;
+    const filtered = clients.filter((cl) => cl.jobIds.includes(jobId));
+    const currentId = initial?.client_id;
+    if (currentId && mode === "edit" && !filtered.some((c) => c.id === currentId)) {
+      const extra = clients.find((c) => c.id === currentId);
+      if (extra) return [...filtered, extra];
+    }
+    return filtered;
+  }, [clients, jobId, initial?.client_id, mode]);
+
+  useEffect(() => {
+    if (!clientId || recipientType !== "client") return;
+    if (!clientsForJob.some((c) => c.id === clientId)) {
+      setClientId("");
+    }
+  }, [clientId, clientsForJob, recipientType]);
 
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
@@ -253,7 +271,7 @@ export function ReceiptModalFormClient({
                 className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">{labels.selectClient}</option>
-                {clients.map((cl) => (
+                {clientsForJob.map((cl) => (
                   <option key={cl.id} value={cl.id}>
                     {cl.first_name} {cl.last_name ?? ""}
                   </option>

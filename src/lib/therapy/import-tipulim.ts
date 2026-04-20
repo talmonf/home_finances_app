@@ -1647,6 +1647,22 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       createdCount.travel += travelRows.length;
     }
 
+    const clientIdByTreatmentId = new Map<string, string>();
+    for (const tr of treatmentRows) {
+      clientIdByTreatmentId.set(tr.id, tr.client_id);
+    }
+    const distinctTreatmentClientIds = [...new Set(treatmentRows.map((t) => t.client_id))];
+    const familyByClientId = new Map<string, string | null>();
+    if (distinctTreatmentClientIds.length > 0) {
+      const clientRows = await tx.therapy_clients.findMany({
+        where: { household_id: params.householdId, id: { in: distinctTreatmentClientIds } },
+        select: { id: true, family_id: true },
+      });
+      for (const cr of clientRows) {
+        familyByClientId.set(cr.id, cr.family_id);
+      }
+    }
+
     const receiptRows: Array<{
       id: string;
       row: (typeof scratch.pendingReceipts extends Array<infer U> ? U : never);
@@ -1654,6 +1670,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         id: string;
         household_id: string;
         job_id: string;
+        client_id: string | null;
+        family_id: string | null;
         receipt_number: string;
         issued_at: Date;
         total_amount: string | number;
@@ -1667,6 +1685,23 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }> = [];
     for (const r of scratch.pendingReceipts) {
       const receiptId = crypto.randomUUID();
+      const clientIdsFromTreatments = new Set<string>();
+      for (const a of r.allocations) {
+        const treatmentId = treatmentIdByKey.get(a.treatmentKey);
+        if (!treatmentId) continue;
+        const cid = clientIdByTreatmentId.get(treatmentId);
+        if (cid) clientIdsFromTreatments.add(cid);
+      }
+      const uniqueClients = [...clientIdsFromTreatments];
+      let resolved_client_id: string | null = null;
+      let resolved_family_id: string | null = null;
+      if (uniqueClients.length === 1) {
+        resolved_client_id = uniqueClients[0]!;
+        resolved_family_id = familyByClientId.get(resolved_client_id) ?? null;
+      } else if (r.recipientType === "client" && uniqueClients.length > 1) {
+        resolved_client_id = uniqueClients[0]!;
+        resolved_family_id = familyByClientId.get(resolved_client_id) ?? null;
+      }
       receiptRows.push({
         id: receiptId,
         row: r,
@@ -1674,6 +1709,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           id: receiptId,
           household_id: params.householdId,
           job_id: params.jobId,
+          client_id: resolved_client_id,
+          family_id: resolved_family_id,
           receipt_number: r.receiptNumber,
           issued_at: r.issuedAt,
           total_amount: r.totalAmount,

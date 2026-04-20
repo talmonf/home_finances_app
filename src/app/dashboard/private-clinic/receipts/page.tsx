@@ -36,7 +36,28 @@ import type { Prisma } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
+function endOfUtcDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+}
+
 type ReceiptProgramForModal = Prisma.therapy_service_programsGetPayload<{ include: { job: true } }>;
+
+type ReceiptModalClientOption = {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  jobIds: string[];
+};
+
+function clientOptionJobIds(row: {
+  default_job_id: string;
+  client_jobs: { job_id: string }[];
+}): string[] {
+  const s = new Set<string>();
+  s.add(row.default_job_id);
+  for (const cj of row.client_jobs) s.add(cj.job_id);
+  return [...s];
+}
 
 type ReceiptSearch = {
   job?: string;
@@ -80,16 +101,13 @@ export default async function ReceiptsPage({
     sort: parseReceiptsSortKey(sp.sort),
     dir: parseReceiptsSortDir(sp.dir),
   };
-  const now = new Date();
-  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
     select: { family_member_id: true },
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, clients, firstPage, orgJobs, settings, families] = await Promise.all([
+  const [jobs, clients, firstPage, settings, families] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -109,10 +127,6 @@ export default async function ReceiptsPage({
       filters,
       take: 50,
     }),
-    prisma.jobs.findMany({
-      where: { household_id: householdId, is_private_clinic: false },
-      select: { id: true },
-    }),
     prisma.therapy_settings.findUnique({
       where: { household_id: householdId },
       select: { family_therapy_enabled: true },
@@ -123,59 +137,6 @@ export default async function ReceiptsPage({
       orderBy: [{ name: "asc" }],
     }),
   ]);
-  const orgJobIds = new Set(orgJobs.map((j) => j.id));
-  const treatmentSum = orgJobIds.size
-    ? await prisma.therapy_treatments.aggregate({
-        where: {
-          household_id: householdId,
-          job_id: { in: Array.from(orgJobIds) },
-          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
-        },
-        _sum: { amount: true },
-      })
-    : { _sum: { amount: null } };
-  const consultationSum = orgJobIds.size
-    ? await prisma.therapy_consultations.aggregate({
-        where: {
-          household_id: householdId,
-          job_id: { in: Array.from(orgJobIds) },
-          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
-        },
-        _sum: { income_amount: true },
-      })
-    : { _sum: { income_amount: null } };
-  const travelSum = orgJobIds.size
-    ? await prisma.therapy_travel_entries.aggregate({
-        where: {
-          household_id: householdId,
-          job_id: { in: Array.from(orgJobIds) },
-          occurred_at: { gte: lastMonthStart, lte: lastMonthEnd },
-        },
-        _sum: { amount: true },
-      })
-    : { _sum: { amount: null } };
-
-  const paidSum = orgJobIds.size
-    ? await prisma.therapy_receipts.aggregate({
-        where: {
-          household_id: householdId,
-          job_id: { in: Array.from(orgJobIds) },
-          recipient_type: "organization",
-          covered_period_start: { lte: lastMonthEnd },
-          covered_period_end: { gte: lastMonthStart },
-        },
-        _sum: { total_amount: true },
-      })
-    : { _sum: { total_amount: null } };
-
-  const earned =
-    Number(treatmentSum._sum.amount ?? 0) +
-    Number(consultationSum._sum.income_amount ?? 0) +
-    Number(travelSum._sum.amount ?? 0);
-  const paid = Number(paidSum._sum.total_amount ?? 0);
-  const outstanding = earned - paid;
-  const monthLabel = `${lastMonthStart.toISOString().slice(0, 10)} - ${lastMonthEnd.toISOString().slice(0, 10)}`;
-  const ilsLabel = uiLanguage === "he" ? 'ש"ח' : "ILS";
   const queryParams = new URLSearchParams();
   if (filters.job) queryParams.set("job", filters.job);
   if (filters.client) queryParams.set("client", filters.client);
@@ -211,9 +172,9 @@ export default async function ReceiptsPage({
 
   const emptyReceiptPrograms: ReceiptProgramForModal[] = [];
   let receiptPrograms: ReceiptProgramForModal[] = emptyReceiptPrograms;
-  let receiptModalClients: { id: string; first_name: string; last_name: string | null }[] = [];
+  let receiptModalClients: ReceiptModalClientOption[] = [];
   if (modalMode === "new" || modalMode === "edit") {
-    [receiptPrograms, receiptModalClients] = await Promise.all([
+    const [programs, clientRows] = await Promise.all([
       prisma.therapy_service_programs.findMany({
         where: {
           household_id: householdId,
@@ -238,17 +199,44 @@ export default async function ReceiptsPage({
           OR: [{ is_active: true }, ...(editReceipt?.client_id ? [{ id: editReceipt.client_id }] : [])],
         },
         orderBy: { first_name: "asc" },
-        select: { id: true, first_name: true, last_name: true },
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          default_job_id: true,
+          client_jobs: { select: { job_id: true } },
+        },
       }),
     ]);
+    receiptPrograms = programs;
+    receiptModalClients = clientRows.map((row) => ({
+      id: row.id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      jobIds: clientOptionJobIds(row),
+    }));
   }
 
-  const editableTreatments =
-    editReceipt
-      ? await prisma.therapy_treatments.findMany({
+  const orgCoverageRangeWhere =
+    editReceipt &&
+    editReceipt.recipient_type === "organization" &&
+    editReceipt.covered_period_start &&
+    editReceipt.covered_period_end
+      ? {
+          occurred_at: {
+            gte: editReceipt.covered_period_start,
+            lte: endOfUtcDay(editReceipt.covered_period_end),
+          },
+        }
+      : {};
+
+  const [treatmentsLinkedToReceipt, treatmentsAvailableToLink] = editReceipt
+    ? await Promise.all([
+        prisma.therapy_treatments.findMany({
           where: {
             household_id: householdId,
             job_id: editReceipt.job_id,
+            receipt_allocations: { some: { receipt_id: editReceipt.id } },
           },
           select: {
             id: true,
@@ -256,15 +244,29 @@ export default async function ReceiptsPage({
             amount: true,
             currency: true,
             client: { select: { first_name: true, last_name: true } },
-            receipt_allocations: {
-              where: { receipt_id: editReceipt.id },
-              select: { id: true, receipt_id: true },
-            },
           },
           orderBy: { occurred_at: "desc" },
-          take: 150,
-        })
-      : [];
+          take: 200,
+        }),
+        prisma.therapy_treatments.findMany({
+          where: {
+            household_id: householdId,
+            job_id: editReceipt.job_id,
+            receipt_allocations: { none: {} },
+            ...orgCoverageRangeWhere,
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            currency: true,
+            client: { select: { first_name: true, last_name: true } },
+          },
+          orderBy: { occurred_at: "desc" },
+          take: 200,
+        }),
+      ])
+    : [[], []];
 
   return (
     <div className="space-y-8">
@@ -276,26 +278,6 @@ export default async function ReceiptsPage({
           {c.saved}
         </p>
       )}
-      <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-        <h2 className="text-lg font-medium text-slate-200">{r.receivablesLastMonth}</h2>
-        <p className="text-xs text-slate-400">
-          {r.receivablesRangeLabel}: {monthLabel}
-        </p>
-        <div className="grid gap-3 text-sm md:grid-cols-3">
-          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
-            <p className="text-slate-400">{r.earnedAmount}</p>
-            <p className="text-slate-100">{`${earned.toFixed(2)} ${ilsLabel}`}</p>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
-            <p className="text-slate-400">{r.paidAmount}</p>
-            <p className="text-slate-100">{`${paid.toFixed(2)} ${ilsLabel}`}</p>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2">
-            <p className="text-slate-400">{r.outstandingAmount}</p>
-            <p className={outstanding > 0 ? "text-amber-300" : "text-emerald-300"}>{`${outstanding.toFixed(2)} ${ilsLabel}`}</p>
-          </div>
-        </div>
-      </section>
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{r.filters}</h2>
         <form
@@ -458,6 +440,7 @@ export default async function ReceiptsPage({
             id: cl.id,
             first_name: cl.first_name,
             last_name: cl.last_name,
+            jobIds: cl.jobIds,
           }))}
           labels={{
             titleNew: r.newReceipt,
@@ -511,6 +494,7 @@ export default async function ReceiptsPage({
             id: cl.id,
             first_name: cl.first_name,
             last_name: cl.last_name,
+            jobIds: cl.jobIds,
           }))}
           labels={{
             titleNew: r.newReceipt,
@@ -571,11 +555,9 @@ export default async function ReceiptsPage({
               </div>
               <div className="space-y-2">
                 <p className="font-medium text-slate-200">{c.treatmentsWord}</p>
-                {editableTreatments.some((t) => t.receipt_allocations.length > 0) ? (
+                {treatmentsLinkedToReceipt.length > 0 ? (
                   <div className="space-y-1">
-                    {editableTreatments
-                      .filter((t) => t.receipt_allocations.length > 0)
-                      .map((t) => (
+                    {treatmentsLinkedToReceipt.map((t) => (
                         <form key={t.id} action={deleteReceiptAllocation} className="flex items-center justify-between gap-3 rounded border border-slate-700/80 px-2 py-1">
                           <input type="hidden" name="receipt_id" value={editReceipt.id} />
                           <input type="hidden" name="treatment_id" value={t.id} />
@@ -584,7 +566,7 @@ export default async function ReceiptsPage({
                             {t.amount.toString()} {t.currency}
                           </span>
                           <button type="submit" className="text-rose-400 hover:underline">
-                            {c.delete}
+                            {r.unlinkFromReceipt}
                           </button>
                         </form>
                       ))}
@@ -595,11 +577,9 @@ export default async function ReceiptsPage({
               </div>
               <form action={linkTreatmentsToReceipt} className="space-y-2">
                 <input type="hidden" name="receipt_id" value={editReceipt.id} />
-                <p className="text-slate-200">{r.createAllocate}</p>
+                <p className="text-slate-200">{r.linkTreatmentsHeading}</p>
                 <div className="max-h-52 space-y-1 overflow-auto rounded border border-slate-700 p-2">
-                  {editableTreatments
-                    .filter((t) => t.receipt_allocations.length === 0)
-                    .map((t) => (
+                  {treatmentsAvailableToLink.map((t) => (
                     <label key={t.id} className="flex items-center gap-2">
                       <input type="checkbox" name="treatment_ids" value={t.id} />
                       <span>
@@ -610,7 +590,7 @@ export default async function ReceiptsPage({
                     ))}
                 </div>
                 <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-                  {r.createAllocate}
+                  {r.linkTreatmentsSubmit}
                 </button>
               </form>
             </div>
