@@ -475,6 +475,7 @@ model jobs {
   employer_name        String?
   employer_tax_number  String?
   employer_address     String?
+  external_reporting_system String?
   notes                String?
   is_active            Boolean           @default(true)
   is_private_clinic    Boolean           @default(true)
@@ -1636,6 +1637,7 @@ model therapy_treatments {
   payment_method                   TherapyTreatmentPaymentMethod?
   payment_bank_account_id          String?
   payment_digital_payment_method_id String?
+  reported_to_external_system      Boolean  @default(false)
   import_key            String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt

@@ -28,6 +28,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     currency: string;
     visitType: string;
     select: string;
+    markReportedInExternalSystem: string;
   };
   clients: {
     id: string;
@@ -44,9 +45,11 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     amount?: string;
     currency?: string;
     visit_type?: TherapyVisitType;
+    reported_to_external_system?: boolean;
   };
+  externalReportingJobIds?: string[];
 }) {
-  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId } = props;
+  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId, externalReportingJobIds = [] } = props;
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
 
   const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
@@ -216,6 +219,18 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
+      {externalReportingJobIds.includes(jobId) ? (
+        <label className="inline-flex items-center gap-2 text-sm text-slate-200 md:col-span-2">
+          <input
+            type="checkbox"
+            name="reported_to_external_system"
+            value="1"
+            defaultChecked={Boolean(defaultValues?.reported_to_external_system)}
+            className="h-4 w-4 rounded border-slate-500 bg-slate-900"
+          />
+          {labels.markReportedInExternalSystem}
+        </label>
+      ) : null}
     </>
   );
 }

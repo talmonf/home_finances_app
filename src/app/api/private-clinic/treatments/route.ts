@@ -3,6 +3,7 @@ import { getCurrentHouseholdId, prisma, requireHouseholdMember } from "@/lib/aut
 import {
   loadTreatmentsCursorPage,
   parseTreatmentsPaidFilter,
+  parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
   parseTreatmentsSortKey,
 } from "@/app/dashboard/private-clinic/treatments/treatments-list-data";
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
     cursorId: cursor,
     filters: {
       paid: parseTreatmentsPaidFilter(url.searchParams.get("paid") ?? undefined),
+      reported: parseTreatmentsReportedFilter(url.searchParams.get("reported") ?? undefined),
       job: url.searchParams.get("job")?.trim() || "",
       program: url.searchParams.get("program")?.trim() || "",
       client: url.searchParams.get("client")?.trim() || "",

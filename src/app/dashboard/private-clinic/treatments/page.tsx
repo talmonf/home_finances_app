@@ -27,6 +27,7 @@ import { TreatmentsListClient } from "./treatments-list-client";
 import {
   loadTreatmentsCursorPage,
   parseTreatmentsPaidFilter,
+  parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
   parseTreatmentsSortKey,
   type TreatmentsListFilters,
@@ -36,6 +37,7 @@ export const dynamic = "force-dynamic";
 
 type Search = {
   paid?: string;
+  reported?: string;
   job?: string;
   program?: string;
   client?: string;
@@ -65,6 +67,7 @@ export default async function TreatmentsPage({
   const sp = searchParams ? await searchParams : {};
   const filters: TreatmentsListFilters = {
     paid: parseTreatmentsPaidFilter(sp.paid),
+    reported: parseTreatmentsReportedFilter(sp.reported),
     job: sp.job?.trim() || "",
     program: sp.program?.trim() || "",
     client: sp.client?.trim() || "",
@@ -205,6 +208,7 @@ export default async function TreatmentsPage({
 
   const queryParams = new URLSearchParams();
   if (filters.paid !== "all") queryParams.set("paid", filters.paid);
+  if (filters.reported !== "all") queryParams.set("reported", filters.reported);
   if (filters.job) queryParams.set("job", filters.job);
   if (filters.program) queryParams.set("program", filters.program);
   if (filters.client) queryParams.set("client", filters.client);
@@ -217,6 +221,10 @@ export default async function TreatmentsPage({
   const apiHrefBase = `/api/private-clinic/treatments?${queryParams.toString()}&take=50`;
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const showExternalReporting =
+    filters.reported !== "all" ||
+    jobs.some((j) => Boolean(j.external_reporting_system)) ||
+    firstPage.rows.some((r) => r.has_external_reporting_system);
   const prefilledClientForNewModal =
     modalMode === "new" && filters.client ? clients.find((cl) => cl.id === filters.client) : null;
   const newTreatmentInitial: TreatmentModalInitial | undefined = prefilledClientForNewModal
@@ -242,6 +250,7 @@ export default async function TreatmentsPage({
           },
           include: {
             client: { select: { first_name: true, last_name: true } },
+            job: { select: { external_reporting_system: true } },
             attachments: { orderBy: { created_at: "asc" } },
             receipt_allocations: {
               orderBy: { created_at: "asc" },
@@ -305,6 +314,20 @@ export default async function TreatmentsPage({
               <option value="unpaid">{tr.filterUnpaid}</option>
             </select>
           </div>
+          {showExternalReporting ? (
+            <div>
+              <label className="block text-xs text-slate-400">{tr.externalReporting}</label>
+              <select
+                name="reported"
+                defaultValue={filters.reported}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">{c.all}</option>
+                <option value="reported">{tr.filterReported}</option>
+                <option value="not_reported">{tr.filterNotReported}</option>
+              </select>
+            </div>
+          ) : null}
           <div>
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
@@ -414,6 +437,9 @@ export default async function TreatmentsPage({
               paid: c.paid,
               receiptCol: tr.receiptCol,
               paymentDetailsCol: tr.paymentDetailsCol,
+              reportedCol: tr.reportedCol,
+              markAsReported: tr.markAsReported,
+              markAsNotReported: tr.markAsNotReported,
               edit: c.edit,
               createReceiptLabel: tr.createReceiptForSelected,
               unlinkLabel: tr.unlinkFromReceipt,
@@ -421,6 +447,7 @@ export default async function TreatmentsPage({
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
             }}
+            showExternalReporting={showExternalReporting}
           />
         )}
       </section>
@@ -442,7 +469,11 @@ export default async function TreatmentsPage({
             default_program_id: cl.default_program_id,
             default_visit_type: cl.default_visit_type,
           }))}
-          jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
+          jobs={jobs.map((j) => ({
+            id: j.id,
+            label: formatPrivateClinicJobLabel(j),
+            external_reporting_system: j.external_reporting_system,
+          }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
           visitDefaults={visitDefaults}
           bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
@@ -467,7 +498,11 @@ export default async function TreatmentsPage({
             default_program_id: cl.default_program_id,
             default_visit_type: cl.default_visit_type,
           }))}
-          jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
+          jobs={jobs.map((j) => ({
+            id: j.id,
+            label: formatPrivateClinicJobLabel(j),
+            external_reporting_system: j.external_reporting_system,
+          }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
           visitDefaults={visitDefaults}
           bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
@@ -489,6 +524,7 @@ export default async function TreatmentsPage({
             payment_method: editTreatment.payment_method ?? "",
             payment_bank_account_id: editTreatment.payment_bank_account_id ?? "",
             payment_digital_payment_method_id: editTreatment.payment_digital_payment_method_id ?? "",
+            reported_to_external_system: editTreatment.reported_to_external_system,
             note_1: editTreatment.note_1 ?? "",
             note_2: editTreatment.note_2 ?? "",
             note_3: editTreatment.note_3 ?? "",

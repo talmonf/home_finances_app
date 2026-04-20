@@ -19,6 +19,9 @@ type Labels = {
   paid: string;
   receiptCol: string;
   paymentDetailsCol: string;
+  reportedCol: string;
+  markAsReported: string;
+  markAsNotReported: string;
   edit: string;
   createReceiptLabel: string;
   unlinkLabel: string;
@@ -39,6 +42,7 @@ export function TreatmentsListClient({
   uiLanguage,
   obfuscate,
   labels,
+  showExternalReporting,
 }: {
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
@@ -48,6 +52,7 @@ export function TreatmentsListClient({
   uiLanguage: UiLanguage;
   obfuscate: boolean;
   labels: Labels;
+  showExternalReporting: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -211,6 +216,7 @@ export function TreatmentsListClient({
                   {sortArrow("payment_details")}
                 </button>
               </th>
+              {showExternalReporting ? <th className="px-3 py-2 text-slate-300">{labels.reportedCol}</th> : null}
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("edit")} className="hover:text-slate-100">
                   {labels.edit}
@@ -281,6 +287,15 @@ export function TreatmentsListClient({
                     )}
                   </td>
                   <td className="max-w-[14rem] px-3 py-2 text-slate-400">{paymentDate}</td>
+                  {showExternalReporting ? (
+                    <td className="px-3 py-2 text-slate-400">
+                      {t.has_external_reporting_system
+                        ? t.reported_to_external_system
+                          ? labels.markAsReported
+                          : labels.markAsNotReported
+                        : "—"}
+                    </td>
+                  ) : null}
                   <td className="px-3 py-2">
                     <Link href={`${listBaseHref}&modal=edit&edit_id=${encodeURIComponent(t.id)}`} className="text-xs text-sky-400">
                       {labels.edit}

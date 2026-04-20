@@ -9,9 +9,11 @@ import type { Prisma } from "@/generated/prisma/client";
 export type TreatmentsSortKey = "occurred_at" | "client" | "job" | "amount";
 export type TreatmentsSortDir = "asc" | "desc";
 export type TreatmentsPaidFilter = "all" | "paid" | "partial" | "unpaid";
+export type TreatmentsReportedFilter = "all" | "reported" | "not_reported";
 
 export type TreatmentsListFilters = {
   paid: TreatmentsPaidFilter;
+  reported: TreatmentsReportedFilter;
   job: string;
   program: string;
   client: string;
@@ -33,6 +35,9 @@ export type TreatmentListRowDto = {
   amount: string;
   currency: string;
   payment_status: TherapyPaymentStatus;
+  job_external_reporting_system: string | null;
+  has_external_reporting_system: boolean;
+  reported_to_external_system: boolean;
   payment_date_iso: string | null;
   payment_method: "bank_transfer" | "digital_payment" | null;
   payment_bank_account_label: string | null;
@@ -57,6 +62,11 @@ export function parseTreatmentsSortDir(raw: string | undefined): TreatmentsSortD
 
 export function parseTreatmentsPaidFilter(raw: string | undefined): TreatmentsPaidFilter {
   if (raw === "paid" || raw === "partial" || raw === "unpaid") return raw;
+  return "all";
+}
+
+export function parseTreatmentsReportedFilter(raw: string | undefined): TreatmentsReportedFilter {
+  if (raw === "reported" || raw === "not_reported") return raw;
   return "all";
 }
 
@@ -113,6 +123,12 @@ export async function loadTreatmentsCursorPage(params: {
           },
         }
       : {}),
+    ...(filters.reported === "all"
+      ? {}
+      : {
+          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
+          reported_to_external_system: filters.reported === "reported",
+        }),
   };
 
   // Paid filtering depends on aggregated allocation amounts, so we over-fetch and then slice.
@@ -163,6 +179,9 @@ export async function loadTreatmentsCursorPage(params: {
         amount: t.amount.toString(),
         currency: t.currency,
         payment_status: paymentStatus,
+        job_external_reporting_system: t.job.external_reporting_system,
+        has_external_reporting_system: Boolean(t.job.external_reporting_system),
+        reported_to_external_system: t.reported_to_external_system,
         payment_date_iso: t.payment_date ? t.payment_date.toISOString() : null,
         payment_method: t.payment_method,
         payment_bank_account_label: t.payment_bank_account

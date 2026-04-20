@@ -30,6 +30,7 @@ type SectionLabels = {
   select: string;
   occurredTimeOptional: string;
   visitType: string;
+  markReportedInExternalSystem: string;
 };
 
 export function TreatmentClientDefaultsSection({
@@ -58,8 +59,10 @@ export function TreatmentClientDefaultsSection({
     amount?: string;
     currency?: string;
     visit_type?: "clinic" | "home" | "phone" | "video";
+    reported_to_external_system?: boolean;
   };
   labels: SectionLabels;
+  externalReportingJobIds?: string[];
 }) {
   const [selectedClientId, setSelectedClientId] = useState(initial?.client_id ?? "");
   const selectedClientDefaults = useMemo(
@@ -118,6 +121,7 @@ export function TreatmentClientDefaultsSection({
           currency: labels.currency,
           visitType: labels.visitType,
           select: labels.select,
+          markReportedInExternalSystem: labels.markReportedInExternalSystem,
         }}
         defaultValues={{
           job_id: initial?.job_id ?? "",
@@ -126,8 +130,10 @@ export function TreatmentClientDefaultsSection({
           occurred_time: initial?.occurred_time ?? "",
           amount: initial?.amount ?? "",
           currency: initial?.currency ?? "ILS",
+          reported_to_external_system: initial?.reported_to_external_system ?? false,
           ...(initial?.visit_type !== undefined ? { visit_type: initial.visit_type } : {}),
         }}
+        externalReportingJobIds={externalReportingJobIds}
       />
     </>
   );

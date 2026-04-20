@@ -116,6 +116,9 @@ export default async function PrivateClinicJobsPage({
                     {j.tableEmploymentType}
                   </th>
                   <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {j.tableExternalReportingSystem}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
                     {j.tableDateRange}
                   </th>
                   <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -133,6 +136,7 @@ export default async function PrivateClinicJobsPage({
                       {formatJobDisplayLabel(job)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{employmentTypeOptionLabel(uiLanguage, job.employment_type)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">{job.external_reporting_system ?? "—"}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                       {formatHouseholdDate(job.start_date, dateDisplayFormat)} - {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : c.present}
                     </td>

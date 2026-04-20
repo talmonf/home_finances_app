@@ -3,7 +3,7 @@ import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
 
-type JobOption = { id: string; label: string };
+type JobOption = { id: string; label: string; external_reporting_system?: string | null };
 type ProgramOption = { id: string; job_id: string; label: string };
 type ClientOption = {
   id: string;
@@ -48,6 +48,7 @@ type Labels = {
     paymentDigital: string;
     paymentIntoAccount: string;
     paymentDigitalApp: string;
+    markReportedInExternalSystem: string;
     inlineReceiptNumber: string;
     inlineReceiptDate: string;
   };
@@ -72,6 +73,7 @@ export type TreatmentModalInitial = {
   payment_method?: "bank_transfer" | "digital_payment" | "";
   payment_bank_account_id?: string;
   payment_digital_payment_method_id?: string;
+  reported_to_external_system?: boolean;
   note_1?: string;
   note_2?: string;
   note_3?: string;
@@ -147,7 +149,11 @@ export function TreatmentModalForm({
               currency: labels.c.currency,
               visitType: labels.tr.visitType,
               select: labels.c.select,
+              markReportedInExternalSystem: labels.tr.markReportedInExternalSystem,
             }}
+            externalReportingJobIds={jobs
+              .filter((job) => Boolean(job.external_reporting_system))
+              .map((job) => job.id)}
           />
           <div className="md:col-span-2">
             <label className="block text-xs text-slate-400">{labels.c.linkBankOptional}</label>

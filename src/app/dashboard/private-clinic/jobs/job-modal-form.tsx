@@ -75,6 +75,11 @@ export function JobModalForm({
             placeholder={j.employerOptional}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
+          <input
+            name="external_reporting_system"
+            placeholder={j.externalReportingSystemOptional}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <input

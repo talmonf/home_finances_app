@@ -530,6 +530,7 @@ export async function createTherapyJob(formData: FormData) {
       end_date,
       job_title,
       employer_name: (formData.get("employer_name") as string)?.trim() || null,
+      external_reporting_system: (formData.get("external_reporting_system") as string)?.trim() || null,
       employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
@@ -580,6 +581,7 @@ export async function updateTherapyJob(formData: FormData) {
       end_date,
       job_title,
       employer_name: (formData.get("employer_name") as string)?.trim() || null,
+      external_reporting_system: (formData.get("external_reporting_system") as string)?.trim() || null,
       employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
@@ -1225,6 +1227,17 @@ export async function createTherapyTreatment(formData: FormData) {
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
+  const selectedJob = await prisma.jobs.findFirst({
+    where: {
+      id: job_id,
+      household_id: householdId,
+      ...(userFm ? { family_member_id: userFm } : {}),
+    },
+    select: { external_reporting_system: true },
+  });
+  if (!selectedJob) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
@@ -1251,6 +1264,8 @@ export async function createTherapyTreatment(formData: FormData) {
   }
 
   const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+  const reportedToExternalSystem =
+    Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 
   const createdTreatment = await prisma.therapy_treatments.create({
     data: {
@@ -1271,6 +1286,7 @@ export async function createTherapyTreatment(formData: FormData) {
       payment_method: payment.payment_method,
       payment_bank_account_id: payment.payment_bank_account_id,
       payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
+      reported_to_external_system: reportedToExternalSystem,
     },
   });
 
@@ -1334,6 +1350,17 @@ export async function updateTherapyTreatment(formData: FormData) {
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
+  const selectedJob = await prisma.jobs.findFirst({
+    where: {
+      id: job_id,
+      household_id: householdId,
+      ...(userFm ? { family_member_id: userFm } : {}),
+    },
+    select: { external_reporting_system: true },
+  });
+  if (!selectedJob) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
   const programCountForJob = await prisma.therapy_service_programs.count({
     where: { household_id: householdId, job_id },
   });
@@ -1360,6 +1387,8 @@ export async function updateTherapyTreatment(formData: FormData) {
   }
 
   const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+  const reportedToExternalSystem =
+    Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 
   await prisma.therapy_treatments.update({
     where: { id },
@@ -1378,6 +1407,7 @@ export async function updateTherapyTreatment(formData: FormData) {
       payment_method: payment.payment_method,
       payment_bank_account_id: payment.payment_bank_account_id,
       payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
+      reported_to_external_system: reportedToExternalSystem,
     },
   });
 
@@ -1428,7 +1458,7 @@ export async function createTherapyReceipt(formData: FormData) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
 
-  let program_id: string | null = program_id_raw || null;
+  const program_id: string | null = program_id_raw || null;
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
     if (!prog || prog.job_id !== job_id) {
@@ -1518,7 +1548,7 @@ export async function updateTherapyReceipt(formData: FormData) {
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
   if (!recipient_type || !payment_method) redirectPrivateClinicScoped(formData, "error", fallbackPath, "badenum");
 
-  let program_id: string | null = program_id_raw || null;
+  const program_id: string | null = program_id_raw || null;
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
     if (!prog || prog.job_id !== job_id) {
