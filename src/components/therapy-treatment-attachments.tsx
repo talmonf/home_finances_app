@@ -47,16 +47,42 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
     }
   }
 
-  async function onUpload(formData: FormData) {
+  async function onUpload() {
+    if (!uploadFile) {
+      setError(s.uploadFailed);
+      return;
+    }
     setBusyUpload(true);
     setError(null);
     try {
-      const res = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
+      const initRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments/direct`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: uploadFile.name,
+          mimeType: uploadFile.type || "application/octet-stream",
+          byteSize: uploadFile.size,
+        }),
       });
-      if (!res.ok) {
-        setError(await readErrorMessage(res, s.uploadFailed));
+      if (!initRes.ok) {
+        setError(await readErrorMessage(initRes, s.uploadFailed));
+        return;
+      }
+      const initData = (await initRes.json()) as {
+        attachmentId: string;
+        uploadUrl: string;
+        uploadHeaders?: Record<string, string>;
+      };
+      const uploadRes = await fetch(initData.uploadUrl, {
+        method: "PUT",
+        headers: initData.uploadHeaders,
+        body: uploadFile,
+      });
+      if (!uploadRes.ok) {
+        await fetch(`/api/private-clinic/treatment-attachments/${initData.attachmentId}`, {
+          method: "DELETE",
+        });
+        setError(await readErrorMessage(uploadRes, s.uploadFailed));
         return;
       }
       router.refresh();
@@ -124,7 +150,13 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
     <div className="mt-3 space-y-2 border-t border-slate-700/80 pt-2">
       <div className="text-xs font-medium text-slate-400">{s.heading}</div>
       <p className="text-[11px] leading-snug text-slate-500">{s.privacyNotice}</p>
-      <form action={onUpload} className="flex flex-wrap items-center gap-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onUpload();
+        }}
+        className="flex flex-wrap items-center gap-2"
+      >
         <FileUploadField
           id={`therapy-treatment-attachment-file-${treatmentId}`}
           name="file"
@@ -136,7 +168,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         />
         <button
           type="submit"
-          disabled={busyUpload}
+          disabled={busyUpload || !uploadFile}
           className="rounded bg-slate-600 px-2 py-1 text-[11px] text-white hover:bg-slate-500 disabled:opacity-60"
         >
           {busyUpload ? s.uploading : s.uploadFile}

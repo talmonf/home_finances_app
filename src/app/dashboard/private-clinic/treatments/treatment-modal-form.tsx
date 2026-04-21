@@ -1,5 +1,4 @@
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
-import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
 
@@ -117,7 +116,6 @@ export function TreatmentModalForm({
   initial?: TreatmentModalInitial;
   extraContent?: ReactNode;
 }) {
-  const visitOptions = ["clinic", "home", "phone", "video"] as const;
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
       <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
@@ -274,11 +272,6 @@ export function TreatmentModalForm({
               {labels.c.cancel}
             </a>
           </div>
-          {mode === "edit" ? (
-            <div className="md:col-span-2 rounded border border-slate-700/80 bg-slate-800/60 px-3 py-2 text-xs text-slate-400">
-              {visitOptions.map((v) => therapyVisitTypeLabel(uiLanguage, v)).join(" · ")}
-            </div>
-          ) : null}
         </form>
         {extraContent ? <div className="mt-4">{extraContent}</div> : null}
       </div>

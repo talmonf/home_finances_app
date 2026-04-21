@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createTherapyTreatment, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
+import { createTherapyTreatment, deleteReceiptAllocation, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
@@ -566,21 +566,43 @@ export default async function TreatmentsPage({
           extraContent={
             <div className="space-y-3">
               <div className="flex items-center gap-4">
-                <ConfirmDeleteForm action={deleteTherapyTreatment}>
-                  <input type="hidden" name="id" value={editTreatment.id} />
-                  <input type="hidden" name="redirect_on_success" value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`} />
-                  <button type="submit" className="text-sm text-rose-400">
-                    {c.delete}
-                  </button>
-                </ConfirmDeleteForm>
-                <p className="text-xs text-slate-500">{tr.receiptLinkedHint}</p>
+                {editTreatment.receipt_allocations.length === 0 ? (
+                  <>
+                    <ConfirmDeleteForm action={deleteTherapyTreatment}>
+                      <input type="hidden" name="id" value={editTreatment.id} />
+                      <input
+                        type="hidden"
+                        name="redirect_on_success"
+                        value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
+                      />
+                      <button type="submit" className="text-sm text-rose-400">
+                        {c.delete}
+                      </button>
+                    </ConfirmDeleteForm>
+                    <p className="text-xs text-slate-500">{tr.receiptNotLinkedHint}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500">{tr.receiptLinkedHint}</p>
+                )}
               </div>
               <ul className="list-none space-y-1 text-xs">
                 {editTreatment.receipt_allocations.map((a) => (
-                  <li key={a.id}>
+                  <li key={a.id} className="flex items-center gap-3">
                     <Link href={`/dashboard/private-clinic/receipts/${a.receipt.id}`} className="text-sky-400 hover:underline">
                       #{a.receipt.receipt_number}
                     </Link>
+                    <form action={deleteReceiptAllocation}>
+                      <input type="hidden" name="receipt_id" value={a.receipt.id} />
+                      <input type="hidden" name="treatment_id" value={editTreatment.id} />
+                      <input
+                        type="hidden"
+                        name="redirect_to"
+                        value={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editTreatment.id)}`}
+                      />
+                      <button type="submit" className="text-amber-400 hover:underline">
+                        {tr.unlinkFromReceipt}
+                      </button>
+                    </form>
                   </li>
                 ))}
               </ul>

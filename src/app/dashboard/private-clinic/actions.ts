@@ -1930,6 +1930,7 @@ export async function deleteReceiptAllocation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
   const treatmentId = (formData.get("treatment_id") as string)?.trim() || "";
+  const redirectTo = (formData.get("redirect_to") as string)?.trim() || "";
   if (!receiptId || !treatmentId) return;
   await prisma.therapy_receipt_allocations.deleteMany({
     where: {
@@ -1941,6 +1942,9 @@ export async function deleteReceiptAllocation(formData: FormData) {
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${receiptId}`);
   revalidatePath(`${BASE}/treatments`);
+  if (redirectTo && redirectTo.startsWith(`${BASE}/`)) {
+    redirect(redirectTo);
+  }
   redirect(`${BASE}/receipts/${receiptId}`);
 }
 

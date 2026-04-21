@@ -509,6 +509,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "Allocated on receipt(s) below. Edit allocations from the receipt page.",
       "שויך לקבלה/ות למטה. ניתן לערוך שיוך מעמוד הקבלה.",
     ),
+    receiptNotLinkedHint: p("Not linked to any receipt.", "לא משויך לאף קבלה."),
     createReceiptForSelected: p("Create receipt for selected", "יצירת קבלה לנבחרים"),
     unlinkFromReceipt: p("Unlink", "נתק"),
     inlineReceiptNumber: p("Receipt number (optional)", "מספר קבלה (אופציונלי)"),
