@@ -140,6 +140,20 @@ export async function importTherapyWorkbook(params: {
       continue;
     }
     try {
+      const billingBasisRaw = str(r.billing_basis);
+      const billing_basis: "per_treatment" | "per_month" | null =
+        billingBasisRaw === "per_month"
+          ? "per_month"
+          : billingBasisRaw === "per_treatment"
+            ? "per_treatment"
+            : null;
+      const billingTimingRaw = str(r.billing_timing);
+      const billing_timing: "in_advance" | "in_arrears" | null =
+        billingTimingRaw === "in_advance"
+          ? "in_advance"
+          : billingTimingRaw === "in_arrears"
+            ? "in_arrears"
+            : null;
       const data = {
         first_name,
         last_name: str(r.last_name) || null,
@@ -161,8 +175,8 @@ export async function importTherapyWorkbook(params: {
         disability_status: str(r.disability_status) || null,
         rehab_basket_status: str(r.rehab_basket_status) || null,
         family_id: str(r.family_id) || null,
-        billing_basis: str(r.billing_basis) === "per_month" ? "per_month" : str(r.billing_basis) === "per_treatment" ? "per_treatment" : null,
-        billing_timing: str(r.billing_timing) === "in_advance" ? "in_advance" : str(r.billing_timing) === "in_arrears" ? "in_arrears" : null,
+        billing_basis,
+        billing_timing,
         default_visit_type: parseVisit(str(r.default_visit_type))
           ? (str(r.default_visit_type) as "clinic" | "home" | "phone" | "video")
           : null,

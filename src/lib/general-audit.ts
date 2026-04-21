@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 
 type GeneralAuditInput = {
   householdId?: string | null;
@@ -25,7 +26,7 @@ export async function logGeneralAuditEvent(input: GeneralAuditInput) {
       action: input.action,
       status: input.status,
       summary: input.summary ?? null,
-      metadata: input.metadata ?? {},
+      metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
     },
   });
 }

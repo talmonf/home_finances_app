@@ -1,6 +1,8 @@
 import { getAuthSession, prisma } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import { logGeneralAuditEvent } from "@/lib/general-audit";
-import { buildPrivateClinicSnapshot, PRIVATE_CLINIC_BACKUP_VERSION } from "@/lib/private-clinic/backup-snapshot";
+import { buildPrivateClinicSnapshot } from "@/lib/private-clinic/backup-snapshot";
+import { PRIVATE_CLINIC_BACKUP_VERSION } from "@/lib/private-clinic/backup-snapshot-format";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
         snapshot_version: PRIVATE_CLINIC_BACKUP_VERSION,
         snapshot_checksum: checksum,
         snapshot_bytes: Buffer.byteLength(payloadText, "utf8"),
-        snapshot_json: payload,
+        snapshot_json: payload as Prisma.InputJsonValue,
         notes: body.notes?.trim() || null,
       },
       select: { id: true, created_at: true, snapshot_checksum: true, snapshot_bytes: true },
