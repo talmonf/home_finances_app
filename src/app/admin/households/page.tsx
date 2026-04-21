@@ -13,6 +13,7 @@ type PageProps = {
   searchParams?: Promise<{
     created?: string;
     updated?: string;
+    deleted?: string;
     error?: string;
   }>;
 };
@@ -190,7 +191,10 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
             />
           </div>
 
-          {(resolvedSearchParams?.created || resolvedSearchParams?.updated || resolvedSearchParams?.error) && (
+          {(resolvedSearchParams?.created ||
+            resolvedSearchParams?.updated ||
+            resolvedSearchParams?.deleted ||
+            resolvedSearchParams?.error) && (
             <div
               className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
                 resolvedSearchParams.error
@@ -203,6 +207,8 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                   ? decodeURIComponent(resolvedSearchParams.error)
                   : resolvedSearchParams.created
                     ? "Household created successfully."
+                    : resolvedSearchParams.deleted
+                      ? "Household deleted successfully."
                     : "Household updated successfully."}
               </span>
               <Link

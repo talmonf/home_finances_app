@@ -20,7 +20,11 @@ import {
   ensureDefaultExpenseCategories,
   ensureTherapySettings,
 } from "@/lib/therapy/bootstrap";
-import { saveHouseholdSettings } from "./actions";
+import {
+  deleteHousehold,
+  getHouseholdDeleteImpactRows,
+  saveHouseholdSettings,
+} from "./actions";
 import {
   HOME_FREQUENT_LINK_ADMIN_LABELS,
   HOME_FREQUENT_LINK_KEYS,
@@ -37,7 +41,12 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ saved?: string; usefulSaved?: string; usefulError?: string }>;
+  searchParams?: Promise<{
+    saved?: string;
+    usefulSaved?: string;
+    usefulError?: string;
+    deleteError?: string;
+  }>;
 };
 
 export default async function EditHouseholdPage({
@@ -105,6 +114,7 @@ export default async function EditHouseholdPage({
   );
 
   const isSectionEnabled = (id: string) => enabledBySectionId.get(id) ?? true;
+  const householdDeleteImpactRows = await getHouseholdDeleteImpactRows(householdId);
 
   const setupSections = DASHBOARD_SECTIONS.filter((s) => s.group === "setup");
   const ongoingSections = DASHBOARD_SECTIONS.filter((s) => s.group === "ongoing");
@@ -147,6 +157,22 @@ export default async function EditHouseholdPage({
               Settings saved.
             </div>
           )}
+          {resolvedSearchParams?.deleteError === "privateClinicLegalBlock" ? (
+            <div className="rounded-lg border border-amber-600 bg-amber-950/60 px-3 py-2 text-xs text-amber-100">
+              This household cannot be deleted due to legal requirements: it has Private clinic appointments.
+              In the future, deletion will be supported after saving a therapist journal (יומן מטפל) for later access.
+            </div>
+          ) : null}
+          {resolvedSearchParams?.deleteError === "foreignKey" ? (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              Household deletion failed due to related data constraints. Review linked records and try again.
+            </div>
+          ) : null}
+          {resolvedSearchParams?.deleteError === "unknown" ? (
+            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+              Household deletion failed due to an unexpected error. Please try again.
+            </div>
+          ) : null}
         </header>
 
         <form action={saveHouseholdSettings} className="space-y-8">
@@ -750,6 +776,47 @@ export default async function EditHouseholdPage({
               </button>
             </div>
           </form>
+        </section>
+
+        <section className="rounded-xl border border-rose-700/70 bg-rose-950/20 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-rose-200">Danger zone — delete household</h2>
+          <p className="mb-3 text-xs text-rose-100/80">
+            Deleting a household is permanent and cannot be undone. All related records listed below will be deleted.
+          </p>
+          <ul className="mb-4 space-y-2 rounded-lg border border-rose-900/70 bg-slate-950/50 p-3 text-xs text-slate-200">
+            {householdDeleteImpactRows.map((row) => (
+              <li key={row.key} className="flex items-center justify-between gap-3">
+                <span>{row.label}</span>
+                <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-slate-100">
+                  {row.count}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mb-4 text-xs text-amber-100/90">
+            Legal guardrail: if this household has the Private clinic feature and any appointments, deletion is blocked.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/households"
+              className="inline-flex items-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+            >
+              Cancel
+            </Link>
+            <ConfirmDeleteForm
+              action={deleteHousehold}
+              className="inline"
+              message={`Delete household "${household.name}" permanently?\n\nThis deletes all related data shown above and cannot be undone.\n\nDeletion is blocked if Private clinic appointments exist due to legal requirements.`}
+            >
+              <input type="hidden" name="household_id" value={householdId} />
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+              >
+                Delete household permanently
+              </button>
+            </ConfirmDeleteForm>
+          </div>
         </section>
       </div>
     </div>

@@ -11,6 +11,48 @@ import { HOME_FREQUENT_LINK_KEYS, type HomeFrequentLinkKey } from "@/lib/home-fr
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@/generated/prisma/client";
+
+export type HouseholdDeleteImpactRow = {
+  key: string;
+  label: string;
+  count: number;
+};
+
+export async function getHouseholdDeleteImpactRows(
+  householdId: string,
+): Promise<HouseholdDeleteImpactRow[]> {
+  const [
+    usersCount,
+    familyMembersCount,
+    jobsCount,
+    transactionsCount,
+    therapyClientsCount,
+    therapyTreatmentsCount,
+    therapyAppointmentsCount,
+    privateClinicRemindersCount,
+  ] = await Promise.all([
+    prisma.users.count({ where: { household_id: householdId } }),
+    prisma.family_members.count({ where: { household_id: householdId } }),
+    prisma.jobs.count({ where: { household_id: householdId } }),
+    prisma.transactions.count({ where: { household_id: householdId } }),
+    prisma.therapy_clients.count({ where: { household_id: householdId } }),
+    prisma.therapy_treatments.count({ where: { household_id: householdId } }),
+    prisma.therapy_appointments.count({ where: { household_id: householdId } }),
+    prisma.private_clinic_reminders.count({ where: { household_id: householdId } }),
+  ]);
+
+  return [
+    { key: "users", label: "Users", count: usersCount },
+    { key: "family_members", label: "Family members", count: familyMembersCount },
+    { key: "jobs", label: "Jobs", count: jobsCount },
+    { key: "transactions", label: "Transactions", count: transactionsCount },
+    { key: "therapy_clients", label: "Private clinic clients", count: therapyClientsCount },
+    { key: "therapy_treatments", label: "Private clinic treatments", count: therapyTreatmentsCount },
+    { key: "therapy_appointments", label: "Private clinic appointments", count: therapyAppointmentsCount },
+    { key: "private_clinic_reminders", label: "Private clinic reminders", count: privateClinicRemindersCount },
+  ];
+}
 
 function parseHebrewTranscriptionProvider(
   raw: string | null | undefined,
@@ -106,4 +148,65 @@ export async function saveHouseholdSettings(formData: FormData) {
   revalidatePath("/dashboard/private-clinic", "layout");
 
   redirect(`/admin/households/${householdId}/edit?saved=1`);
+}
+
+export async function deleteHousehold(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session?.user?.isSuperAdmin) {
+    redirect("/");
+  }
+
+  const householdId = (formData.get("household_id") as string | null)?.trim();
+  if (!householdId) {
+    redirect("/admin/households?error=" + encodeURIComponent("Missing household."));
+  }
+
+  const household = await prisma.households.findUnique({
+    where: { id: householdId },
+    select: { id: true, name: true },
+  });
+
+  if (!household) {
+    redirect("/admin/households?error=" + encodeURIComponent("Household not found."));
+  }
+
+  const [hasPrivateClinicFeature, therapyAppointmentsCount] = await Promise.all([
+    prisma.jobs.count({
+      where: { household_id: householdId, is_private_clinic: true },
+    }),
+    prisma.therapy_appointments.count({
+      where: { household_id: householdId },
+    }),
+  ]);
+
+  if (hasPrivateClinicFeature > 0 && therapyAppointmentsCount > 0) {
+    redirect(
+      `/admin/households/${householdId}/edit?deleteError=privateClinicLegalBlock`,
+    );
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.households.delete({
+        where: { id: householdId },
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      redirect(`/admin/households/${householdId}/edit?deleteError=foreignKey`);
+    }
+    redirect(`/admin/households/${householdId}/edit?deleteError=unknown`);
+  }
+
+  revalidatePath("/admin/households");
+  revalidatePath(`/admin/households/${householdId}`);
+  revalidatePath(`/admin/households/${householdId}/edit`);
+  revalidatePath("/");
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/private-clinic", "layout");
+
+  redirect("/admin/households?deleted=1");
 }
