@@ -1,5 +1,12 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createBankAccount } from "./actions";
@@ -26,6 +33,7 @@ function formatSortCode(value: string | null) {
 export default async function BankAccountsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   if (!householdId) {
@@ -173,6 +181,17 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
+              <label htmlFor="date_opened" className="mb-1 block text-xs font-medium text-slate-400">
+                Opened date (optional)
+              </label>
+              <input
+                id="date_opened"
+                name="date_opened"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
               <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
                 Currency
               </label>
@@ -245,6 +264,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                     <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Opened</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Members</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
@@ -262,6 +282,9 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{a.currency}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {a.date_opened ? formatHouseholdDate(a.date_opened, dateDisplayFormat) : "—"}
+                      </td>
                       <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={a.website_url ?? undefined}>
                         {a.website_url ? (
                           <a

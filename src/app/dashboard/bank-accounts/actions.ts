@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { parseFamilyMemberIdsForHousehold } from "./bankAccountMemberIds";
 
+function parseDateInput(raw: string | null): Date | null {
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -32,6 +39,7 @@ export async function createBankAccount(formData: FormData) {
   const sort_code_raw = (formData.get("sort_code") as string | null)?.trim() || null;
   const sort_code = sort_code_raw ? sort_code_raw.replace(/\D/g, "") : null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const date_opened_raw = (formData.get("date_opened") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const country = (formData.get("country") as string | null)?.trim() || "IL";
@@ -42,6 +50,10 @@ export async function createBankAccount(formData: FormData) {
 
   if (sort_code && !/^\d{6}$/.test(sort_code)) {
     redirect("/dashboard/bank-accounts?error=Sort+code+must+be+exactly+6+digits");
+  }
+  const date_opened = parseDateInput(date_opened_raw);
+  if (date_opened_raw && !date_opened) {
+    redirect("/dashboard/bank-accounts?error=Invalid+opened+date");
   }
   let website_url: string | null = null;
   try {
@@ -64,6 +76,7 @@ export async function createBankAccount(formData: FormData) {
         account_number,
         sort_code,
         notes,
+        date_opened,
         website_url,
         currency,
         country,
@@ -116,6 +129,7 @@ export async function updateBankAccount(formData: FormData) {
   const sort_code_raw = (formData.get("sort_code") as string | null)?.trim() || null;
   const sort_code = sort_code_raw ? sort_code_raw.replace(/\D/g, "") : null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const date_opened_raw = (formData.get("date_opened") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const country = (formData.get("country") as string | null)?.trim() || "IL";
@@ -125,7 +139,8 @@ export async function updateBankAccount(formData: FormData) {
     isActiveRaw === "false" ? false : true; // default to active for backwards-compat
 
   const dateClosedRaw = (formData.get("date_closed") as string | null)?.trim() || null;
-  const dateClosed = dateClosedRaw ? new Date(dateClosedRaw) : null;
+  const dateClosed = parseDateInput(dateClosedRaw);
+  const date_opened = parseDateInput(date_opened_raw);
 
   if (!account_name || !bank_name) {
     redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Account+name+and+bank+required`);
@@ -133,6 +148,9 @@ export async function updateBankAccount(formData: FormData) {
 
   if (sort_code && !/^\d{6}$/.test(sort_code)) {
     redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Sort+code+must+be+exactly+6+digits`);
+  }
+  if (date_opened_raw && !date_opened) {
+    redirect(`/dashboard/bank-accounts/${encodeURIComponent(id)}?error=Invalid+opened+date`);
   }
   let website_url: string | null = null;
   try {
@@ -171,6 +189,7 @@ export async function updateBankAccount(formData: FormData) {
         account_number,
         sort_code,
         notes,
+        date_opened,
         website_url,
         currency,
         country,

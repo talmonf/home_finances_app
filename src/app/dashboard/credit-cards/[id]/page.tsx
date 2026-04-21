@@ -211,6 +211,18 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             />
           </div>
           <div>
+            <label htmlFor="issue_date" className="mb-1 block text-xs font-medium text-slate-400">
+              Issue date (optional)
+            </label>
+            <input
+              id="issue_date"
+              name="issue_date"
+              type="date"
+              defaultValue={card.issue_date ? card.issue_date.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
             <label htmlFor="expiry_month_year" className="mb-1 block text-xs font-medium text-slate-400">
               Expiry (MM/YY)
             </label>

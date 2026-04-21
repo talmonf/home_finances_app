@@ -36,6 +36,11 @@ function getCreditCardStatus(card: { cancelled_at: Date | null; expiry_date: Dat
   return "Active";
 }
 
+function formatOptionalDate(d: Date | null, dateDisplayFormat: Awaited<ReturnType<typeof getCurrentHouseholdDateDisplayFormat>>) {
+  if (!d) return "—";
+  return formatHouseholdDate(d, dateDisplayFormat);
+}
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -111,6 +116,8 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       )
                     : sort === "website"
                       ? compare(a.website_url, b.website_url)
+                        : sort === "issue_date"
+                          ? compare(a.issue_date, b.issue_date)
                       : sort === "expiry"
                         ? compare(a.expiry_date, b.expiry_date)
                         : sort === "family_member"
@@ -314,6 +321,17 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               />
             </div>
             <div>
+              <label htmlFor="issue_date" className="mb-1 block text-xs font-medium text-slate-400">
+                Issue date (optional)
+              </label>
+              <input
+                id="issue_date"
+                name="issue_date"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
               <label htmlFor="expiry_month_year" className="mb-1 block text-xs font-medium text-slate-400">
                 Expiry (MM/YY)
               </label>
@@ -423,6 +441,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     {[
                       { key: "card", label: "Card" },
                       { key: "last4", label: "Last 4" },
+                      { key: "issue_date", label: "Issue date" },
                       { key: "expiry", label: "Expiry" },
                       { key: "family_member", label: "Family member" },
                       { key: "status", label: "Status" },
@@ -470,6 +489,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatOptionalDate(c.issue_date, dateDisplayFormat)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
                       <td className="px-4 py-3 text-slate-400">{c.family_member?.full_name ?? "—"}</td>
                       <td className="px-4 py-3">

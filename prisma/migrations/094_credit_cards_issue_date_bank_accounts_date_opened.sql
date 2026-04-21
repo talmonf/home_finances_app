@@ -1,0 +1,5 @@
+ALTER TABLE credit_cards
+  ADD COLUMN IF NOT EXISTS issue_date TIMESTAMPTZ;
+
+ALTER TABLE bank_accounts
+  ADD COLUMN IF NOT EXISTS date_opened TIMESTAMPTZ;

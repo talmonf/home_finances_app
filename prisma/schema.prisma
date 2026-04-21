@@ -202,6 +202,7 @@ model bank_accounts {
   account_number String?
   notes          String?
   website_url    String?
+  date_opened    DateTime?
   date_closed    DateTime?
   currency       String   @default("ILS")
   country        String   @default("IL")
@@ -242,6 +243,7 @@ model credit_cards {
   digital_wallet_identifier  String?
   charge_day_of_month        Int?
   monthly_cost               Decimal? @db.Decimal(15, 2)
+  issue_date                 DateTime?
   expiry_date                DateTime?
   no_charge_policy_valid_until DateTime? @db.Date
   cancelled_at               DateTime?
