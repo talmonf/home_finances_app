@@ -224,12 +224,21 @@ function parseTreatmentPaymentMethod(raw: string | null | undefined): TherapyTre
 async function resolveTherapyTreatmentPaymentFields(
   householdId: string,
   formData: FormData,
+  forceClear = false,
 ): Promise<{
   payment_date: Date | null;
   payment_method: TherapyTreatmentPaymentMethod | null;
   payment_bank_account_id: string | null;
   payment_digital_payment_method_id: string | null;
 }> {
+  if (forceClear) {
+    return {
+      payment_date: null,
+      payment_method: null,
+      payment_bank_account_id: null,
+      payment_digital_payment_method_id: null,
+    };
+  }
   const payment_date = parseDate((formData.get("payment_date") as string)?.trim() || null);
   const payment_method = parseTreatmentPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
 
@@ -262,6 +271,13 @@ async function resolveTherapyTreatmentPaymentFields(
     payment_bank_account_id,
     payment_digital_payment_method_id,
   };
+}
+
+function isOrganizationPaidPrivateClinicJob(job: {
+  is_private_clinic: boolean;
+  external_reporting_system: string | null;
+}): boolean {
+  return job.is_private_clinic && Boolean(job.external_reporting_system);
 }
 
 function parseAppointmentStatus(raw: string | null | undefined): TherapyAppointmentStatus | null {
@@ -1513,7 +1529,7 @@ export async function createTherapyTreatment(formData: FormData) {
       household_id: householdId,
       ...(userFm ? { family_member_id: userFm } : {}),
     },
-    select: { external_reporting_system: true },
+    select: { is_private_clinic: true, external_reporting_system: true },
   });
   if (!selectedJob) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
@@ -1543,7 +1559,11 @@ export async function createTherapyTreatment(formData: FormData) {
     linked_transaction_id = txRow?.id ?? null;
   }
 
-  const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+  const payment = await resolveTherapyTreatmentPaymentFields(
+    householdId,
+    formData,
+    isOrganizationPaidPrivateClinicJob(selectedJob),
+  );
   const reportedToExternalSystem =
     Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 
@@ -1642,7 +1662,7 @@ export async function updateTherapyTreatment(formData: FormData) {
       household_id: householdId,
       ...(userFm ? { family_member_id: userFm } : {}),
     },
-    select: { external_reporting_system: true },
+    select: { is_private_clinic: true, external_reporting_system: true },
   });
   if (!selectedJob) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
@@ -1672,7 +1692,11 @@ export async function updateTherapyTreatment(formData: FormData) {
     linked_transaction_id = txRow?.id ?? null;
   }
 
-  const payment = await resolveTherapyTreatmentPaymentFields(householdId, formData);
+  const payment = await resolveTherapyTreatmentPaymentFields(
+    householdId,
+    formData,
+    isOrganizationPaidPrivateClinicJob(selectedJob),
+  );
   const reportedToExternalSystem =
     Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 

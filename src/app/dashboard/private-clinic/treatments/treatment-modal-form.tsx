@@ -1,8 +1,14 @@
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
+import { TreatmentPaymentFieldsSection } from "./treatment-payment-fields-section";
 
-type JobOption = { id: string; label: string; external_reporting_system?: string | null };
+type JobOption = {
+  id: string;
+  label: string;
+  is_private_clinic: boolean;
+  external_reporting_system?: string | null;
+};
 type ProgramOption = { id: string; job_id: string; label: string };
 type ClientOption = {
   id: string;
@@ -165,62 +171,24 @@ export function TreatmentModalForm({
               noneOptionLabel={labels.c.txNoneLinked}
             />
           </div>
-          <div className="md:col-span-2 space-y-2 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3">
-            <p className="text-xs text-slate-500">{labels.tr.paymentFieldsHint}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="block text-xs text-slate-400">{labels.tr.paymentDate}</label>
-                <input
-                  name="payment_date"
-                  type="date"
-                  defaultValue={initial?.payment_date ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{labels.tr.paymentMethod}</label>
-                <select
-                  name="payment_method"
-                  defaultValue={initial?.payment_method ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">{labels.tr.paymentMethodUnset}</option>
-                  <option value="bank_transfer">{labels.tr.paymentBankTransfer}</option>
-                  <option value="digital_payment">{labels.tr.paymentDigital}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{labels.tr.paymentIntoAccount}</label>
-                <select
-                  name="payment_bank_account_id"
-                  defaultValue={initial?.payment_bank_account_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">—</option>
-                  {bankAccounts.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400">{labels.tr.paymentDigitalApp}</label>
-                <select
-                  name="payment_digital_payment_method_id"
-                  defaultValue={initial?.payment_digital_payment_method_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">—</option>
-                  {digitalPaymentMethods.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
+          <TreatmentPaymentFieldsSection
+            organizationPaidJobIds={jobs
+              .filter((job) => job.is_private_clinic && Boolean(job.external_reporting_system))
+              .map((job) => job.id)}
+            initial={initial}
+            labels={{
+              paymentFieldsHint: labels.tr.paymentFieldsHint,
+              paymentDate: labels.tr.paymentDate,
+              paymentMethod: labels.tr.paymentMethod,
+              paymentMethodUnset: labels.tr.paymentMethodUnset,
+              paymentBankTransfer: labels.tr.paymentBankTransfer,
+              paymentDigital: labels.tr.paymentDigital,
+              paymentIntoAccount: labels.tr.paymentIntoAccount,
+              paymentDigitalApp: labels.tr.paymentDigitalApp,
+            }}
+            bankAccounts={bankAccounts}
+            digitalPaymentMethods={digitalPaymentMethods}
+          />
           {mode === "create" ? (
             <div className="md:col-span-2 grid gap-3 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3 md:grid-cols-2">
               <p className="md:col-span-2 text-xs text-slate-400">{labels.tr.addTreatmentAttachmentHint}</p>

@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
 
-type JobOption = { id: string; label: string };
+type JobOption = {
+  id: string;
+  label: string;
+  is_private_clinic: boolean;
+  external_reporting_system?: string | null;
+};
 type ProgramOption = { id: string; job_id: string; label: string };
 type ClientOption = {
   id: string;

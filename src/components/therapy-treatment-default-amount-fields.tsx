@@ -49,7 +49,17 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   };
   externalReportingJobIds?: string[];
 }) {
-  const { visitDefaults, jobs, programs, labels, uiLanguage, defaultValues, clients, defaultClientId, externalReportingJobIds = [] } = props;
+  const {
+    visitDefaults,
+    jobs,
+    programs,
+    labels,
+    uiLanguage,
+    defaultValues,
+    clients,
+    defaultClientId,
+    externalReportingJobIds = [],
+  } = props;
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
 
   const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
@@ -124,7 +134,6 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   };
 
   const visitOptions = therapyVisitTypesOrdered();
-
   return (
     <>
       <div>

@@ -511,6 +511,7 @@ export default async function TreatmentsPage({
           jobs={jobs.map((j) => ({
             id: j.id,
             label: formatPrivateClinicJobLabel(j),
+            is_private_clinic: j.is_private_clinic,
             external_reporting_system: j.external_reporting_system,
           }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
@@ -540,6 +541,7 @@ export default async function TreatmentsPage({
           jobs={jobs.map((j) => ({
             id: j.id,
             label: formatPrivateClinicJobLabel(j),
+            is_private_clinic: j.is_private_clinic,
             external_reporting_system: j.external_reporting_system,
           }))}
           programs={programs.map((p) => ({ id: p.id, job_id: p.job_id, label: p.name }))}
