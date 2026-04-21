@@ -96,6 +96,7 @@ export default async function EditHouseholdPage({
     }),
   ]);
   const privateClinicNavVisibility = mergePrivateClinicNavVisibility(therapySettings?.nav_tabs_json);
+  const familyTherapyEnabled = therapySettings?.family_therapy_enabled ?? false;
   const frequentLinkToggles = parseHomeFrequentLinksJson(household.home_frequent_links_json);
 
   const enabledRows = await getHouseholdEnabledSections(householdId);
@@ -355,7 +356,11 @@ export default async function EditHouseholdPage({
                     type="checkbox"
                     id={`pc_nav_${item.key}`}
                     name={`pc_nav_${item.key}`}
-                    defaultChecked={privateClinicNavVisibility[item.key]}
+                    defaultChecked={
+                      item.key === "families"
+                        ? familyTherapyEnabled && privateClinicNavVisibility[item.key]
+                        : privateClinicNavVisibility[item.key]
+                    }
                     className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
                   />
                   <label

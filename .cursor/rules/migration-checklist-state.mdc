@@ -1,0 +1,19 @@
+---
+description: Prevent migration checklist state from being updated without explicit user confirmation
+alwaysApply: true
+---
+
+# Migration Checklist State Safety
+
+- Treat migration execution state as user-owned operational metadata.
+- Do not mark any migration in `prisma/migrations/000_INDEX.md` as run (`[x]`) unless the user explicitly asks to do so.
+- When adding a new migration script:
+  - You may add the script file.
+  - You may add/update its descriptive row in the index.
+  - Keep checklist state unmarked (`[ ]`) unless explicitly instructed otherwise.
+- Do not infer "run" status from creating/editing a migration file.
+- If uncertain whether a migration was executed, ask the user before changing checklist status.
+
+Example:
+- Allowed without extra confirmation: add `092_new_change.sql` and add its description row.
+- Not allowed without explicit user request: change `- [ ] 092_new_change.sql` to `- [x] 092_new_change.sql`.

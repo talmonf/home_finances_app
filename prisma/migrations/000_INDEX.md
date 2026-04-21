@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 091_private_clinic_disable_families_tab_default.sql (2026-04-21)
 - [x] 090_therapy_settings_usual_treatment_cost.sql (2026-04-20)
 - [x] 089_private_clinic_families.sql (2026-04-20)
 - [x] 088_treatments_external_report_flag.sql (2026-04-20)
@@ -114,6 +115,7 @@ Check off each script after you run it. Newest first — same order as the detai
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
 | 090 | `090_therapy_settings_usual_treatment_cost.sql` (2026-04-20) | ALTER | `therapy_settings`: add optional `usual_treatment_cost_for_import` (`DECIMAL(15,2)`) used as default session fee for receipt-import auto-treatment threshold logic. |
+| 091 | `091_private_clinic_disable_families_tab_default.sql` (2026-04-21) | UPDATE | `therapy_settings.nav_tabs_json`: force `families=false` for all households so the Families tab is disabled globally unless re-enabled explicitly. |
 | 089 | `089_private_clinic_families.sql` (2026-04-20) | CREATE/ALTER | Enums `therapy_billing_basis`, `therapy_billing_timing`; tables `therapy_families` (household-scoped family + main client + optional billing), `therapy_family_members`, `therapy_appointment_participants`, `therapy_treatment_participants`; `therapy_settings.family_therapy_enabled`; optional `family_id` on clients/treatments/receipts/appointments; client billing overrides; appointment reschedule/cancellation reasons; backfill `family_id` on treatments/receipts from client. |
 | 088 | `088_treatments_external_report_flag.sql` (2026-04-20) | ALTER | `therapy_treatments`: add `reported_to_external_system` (boolean default false); `jobs`: add optional `external_reporting_system` (text) to control external reporting workflow visibility. |
 | 087 | `087_documents_table_prisma_alignment.sql` (2026-04-20) | ALTER | Hardens legacy/local `documents` schema for Prisma (`file_type`, `storage_path`, `processing_status`, `bank_account_id`, timestamps), re-applies FK/indexes, and prints a post-run sanity notice for missing required columns. |

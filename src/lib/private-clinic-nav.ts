@@ -35,7 +35,7 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
 export type PrivateClinicNavKey = (typeof PRIVATE_CLINIC_NAV_ITEMS)[number]["key"];
 
 const DEFAULT_VISIBILITY: Record<PrivateClinicNavKey, boolean> = Object.fromEntries(
-  PRIVATE_CLINIC_NAV_ITEMS.map((i) => [i.key, true]),
+  PRIVATE_CLINIC_NAV_ITEMS.map((i) => [i.key, i.key === "families" ? false : true]),
 ) as Record<PrivateClinicNavKey, boolean>;
 
 export function mergePrivateClinicNavVisibility(

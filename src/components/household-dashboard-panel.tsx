@@ -42,6 +42,8 @@ function matchesSearch(queryLower: string, title: string, description: string) {
 }
 
 const FREQUENT_LINK_BUTTON_CLASSES: Record<HomeFrequentLinkItem["key"], string> = {
+  privateClinic:
+    "border-cyan-400/50 bg-gradient-to-r from-cyan-500/25 via-sky-500/20 to-blue-500/25 hover:border-cyan-300/70",
   reportTreatment:
     "border-rose-400/50 bg-gradient-to-r from-rose-500/25 via-pink-500/20 to-fuchsia-500/25 hover:border-rose-300/70",
   reportReceipt:

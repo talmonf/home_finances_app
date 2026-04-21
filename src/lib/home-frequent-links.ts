@@ -1,6 +1,7 @@
 import type { DashboardSection, SectionId } from "@/lib/dashboard-sections";
 
 export const HOME_FREQUENT_LINK_KEYS = [
+  "privateClinic",
   "reportTreatment",
   "reportReceipt",
   "upcomingVisits",
@@ -13,6 +14,7 @@ export type HomeFrequentLinkKey = (typeof HOME_FREQUENT_LINK_KEYS)[number];
 
 /** Labels for super-admin household settings (English). */
 export const HOME_FREQUENT_LINK_ADMIN_LABELS: Record<HomeFrequentLinkKey, string> = {
+  privateClinic: "Private clinic",
   reportTreatment: "Report treatment",
   reportReceipt: "Report receipt",
   upcomingVisits: "Upcoming visits",
@@ -22,6 +24,7 @@ export const HOME_FREQUENT_LINK_ADMIN_LABELS: Record<HomeFrequentLinkKey, string
 };
 
 const DEFAULT_ENABLED: Record<HomeFrequentLinkKey, boolean> = {
+  privateClinic: true,
   reportTreatment: true,
   reportReceipt: true,
   upcomingVisits: true,
@@ -32,6 +35,7 @@ const DEFAULT_ENABLED: Record<HomeFrequentLinkKey, boolean> = {
 
 /** Target routes; visibility still gated by household feature toggles and enabled sections. */
 const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
+  privateClinic: "/dashboard/private-clinic",
   reportTreatment: "/dashboard/private-clinic/treatments?modal=new",
   reportReceipt: "/dashboard/private-clinic/receipts?modal=new",
   upcomingVisits: "/dashboard/private-clinic/upcoming-visits",
@@ -41,6 +45,7 @@ const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
 };
 
 const REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
+  privateClinic: "privateClinic",
   reportTreatment: "privateClinic",
   reportReceipt: "privateClinic",
   upcomingVisits: "privateClinic",
@@ -72,6 +77,7 @@ export type HomeFrequentLinkItem = {
 function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
   if (language === "he") {
     const he: Record<HomeFrequentLinkKey, string> = {
+      privateClinic: "קליניקה פרטית",
       reportTreatment: "דיווח טיפול",
       reportReceipt: "דיווח קבלה",
       upcomingVisits: "ביקורים קרובים",
@@ -82,6 +88,7 @@ function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
     return he[key];
   }
   const en: Record<HomeFrequentLinkKey, string> = {
+    privateClinic: "Private clinic",
     reportTreatment: "Report treatment",
     reportReceipt: "Report receipt",
     upcomingVisits: "Upcoming visits",
