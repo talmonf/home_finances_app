@@ -118,7 +118,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
       where: {
         household_id: householdId,
         cancelled_at: null,
-        expiry_date: { not: null, gte: today },
+        OR: [
+          { expiry_date: { not: null, gte: today } },
+          { no_charge_policy_valid_until: { not: null, gte: today } },
+        ],
       },
       include: { family_member: true },
     }),
@@ -249,6 +252,18 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
         ownerId: c.family_member?.id ?? null,
         renewalDate: c.expiry_date as Date,
         renewalType: "—",
+        href: "/dashboard/credit-cards",
+      })),
+    ...creditCards
+      .filter((c) => c.no_charge_policy_valid_until)
+      .map((c) => ({
+        id: `card-no-charge-${c.id}`,
+        category: "Credit card",
+        itemName: c.card_name,
+        owner: c.family_member?.full_name ?? (isHebrew ? "משק הבית" : "Household"),
+        ownerId: c.family_member?.id ?? null,
+        renewalDate: c.no_charge_policy_valid_until as Date,
+        renewalType: isHebrew ? "תוקף ללא חיוב" : "No-charge policy",
         href: "/dashboard/credit-cards",
       })),
     ...insurancePolicies.map((p) => {

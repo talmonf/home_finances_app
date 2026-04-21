@@ -14,6 +14,13 @@ function parseExpiryMonthYear(raw: string | null): Date | null {
   return new Date(year, month, 0);
 }
 
+function parseDateInput(raw: string | null): Date | null {
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -48,6 +55,8 @@ export async function createCreditCard(formData: FormData) {
     (formData.get("charge_day_of_month") as string | null)?.trim() || null;
   const monthly_cost_raw = (formData.get("monthly_cost") as string | null)?.trim() || null;
   const expiry_month_year_raw = (formData.get("expiry_month_year") as string | null)?.trim() || null;
+  const no_charge_policy_valid_until_raw =
+    (formData.get("no_charge_policy_valid_until") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
@@ -93,6 +102,10 @@ export async function createCreditCard(formData: FormData) {
   if (!expiry_date) {
     redirect("/dashboard/credit-cards?error=Invalid+expiry+date.+Use+MM/YY");
   }
+  const no_charge_policy_valid_until = parseDateInput(no_charge_policy_valid_until_raw);
+  if (no_charge_policy_valid_until_raw && !no_charge_policy_valid_until) {
+    redirect("/dashboard/credit-cards?error=Invalid+no-charge+policy+date");
+  }
   let website_url: string | null = null;
   try {
     website_url = normalizeWebsiteUrl(website_url_raw);
@@ -133,6 +146,7 @@ export async function createCreditCard(formData: FormData) {
         charge_day_of_month,
         monthly_cost,
         expiry_date,
+        no_charge_policy_valid_until,
         notes,
         website_url,
         settlement_bank_account_id,
@@ -230,6 +244,8 @@ export async function updateCreditCard(formData: FormData) {
     (formData.get("charge_day_of_month") as string | null)?.trim() || null;
   const monthly_cost_raw = (formData.get("monthly_cost") as string | null)?.trim() || null;
   const expiry_month_year_raw = (formData.get("expiry_month_year") as string | null)?.trim() || null;
+  const no_charge_policy_valid_until_raw =
+    (formData.get("no_charge_policy_valid_until") as string | null)?.trim() || null;
   const family_member_id = (formData.get("family_member_id") as string | null)?.trim();
   const settlement_bank_account_id =
     (formData.get("settlement_bank_account_id") as string | null)?.trim() || null;
@@ -277,6 +293,10 @@ export async function updateCreditCard(formData: FormData) {
   const expiry_date = parseExpiryMonthYear(expiry_month_year_raw);
   if (!expiry_date) {
     redirect(`/dashboard/credit-cards/${id}?error=Invalid+expiry+date.+Use+MM/YY`);
+  }
+  const no_charge_policy_valid_until = parseDateInput(no_charge_policy_valid_until_raw);
+  if (no_charge_policy_valid_until_raw && !no_charge_policy_valid_until) {
+    redirect(`/dashboard/credit-cards/${id}?error=Invalid+no-charge+policy+date`);
   }
   let website_url: string | null = null;
   try {
@@ -331,6 +351,7 @@ export async function updateCreditCard(formData: FormData) {
         charge_day_of_month,
         monthly_cost,
         expiry_date,
+        no_charge_policy_valid_until,
         family_member_id,
         settlement_bank_account_id,
         currency,

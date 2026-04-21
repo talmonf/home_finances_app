@@ -241,6 +241,7 @@ model credit_cards {
   charge_day_of_month        Int?
   monthly_cost               Decimal? @db.Decimal(15, 2)
   expiry_date                DateTime?
+  no_charge_policy_valid_until DateTime? @db.Date
   cancelled_at               DateTime?
   notes                      String?
   website_url                String?

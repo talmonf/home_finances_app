@@ -325,6 +325,17 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
+            <div>
+              <label htmlFor="no_charge_policy_valid_until" className="mb-1 block text-xs font-medium text-slate-400">
+                No-charge policy valid until
+              </label>
+              <input
+                id="no_charge_policy_valid_until"
+                name="no_charge_policy_valid_until"
+                type="date"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
             <div className="sm:col-span-2">
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
                 Website / URL
