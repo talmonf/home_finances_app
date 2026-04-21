@@ -51,6 +51,7 @@ type Labels = {
     markReportedInExternalSystem: string;
     inlineReceiptNumber: string;
     inlineReceiptDate: string;
+    addTreatmentAttachmentHint: string;
   };
   note1: string;
   note2: string;
@@ -224,6 +225,7 @@ export function TreatmentModalForm({
           </div>
           {mode === "create" ? (
             <div className="md:col-span-2 grid gap-3 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3 md:grid-cols-2">
+              <p className="md:col-span-2 text-xs text-slate-400">{labels.tr.addTreatmentAttachmentHint}</p>
               <div>
                 <label className="block text-xs text-slate-400">{labels.tr.inlineReceiptNumber}</label>
                 <input

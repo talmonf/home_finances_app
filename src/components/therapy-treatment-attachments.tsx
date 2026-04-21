@@ -36,6 +36,17 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
+  async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+    const text = await res.text();
+    if (!text.trim()) return fallback;
+    try {
+      const data = JSON.parse(text) as { error?: string; message?: string };
+      return data?.error ?? data?.message ?? text;
+    } catch {
+      return text;
+    }
+  }
+
   async function onUpload(formData: FormData) {
     setBusyUpload(true);
     setError(null);
@@ -44,9 +55,8 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         method: "POST",
         body: formData,
       });
-      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data?.error ?? s.uploadFailed);
+        setError(await readErrorMessage(res, s.uploadFailed));
         return;
       }
       router.refresh();
@@ -65,9 +75,8 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
       const res = await fetch(`/api/private-clinic/treatment-attachments/${id}`, {
         method: "DELETE",
       });
-      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data?.error ?? s.uploadFailed);
+        setError(await readErrorMessage(res, s.uploadFailed));
         return;
       }
       router.refresh();
@@ -87,9 +96,8 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language }),
       });
-      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data?.error ?? s.transcribeFailed);
+        setError(await readErrorMessage(res, s.transcribeFailed));
         router.refresh();
         return;
       }
@@ -134,6 +142,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
           {busyUpload ? s.uploading : s.uploadFile}
         </button>
       </form>
+      <p className="text-[11px] text-slate-500">{s.uploadConstraintsHint}</p>
       {error ? <p className="text-[11px] text-rose-400">{error}</p> : null}
       {attachments.length === 0 ? (
         <p className="text-[11px] text-slate-500">{s.noAttachments}</p>

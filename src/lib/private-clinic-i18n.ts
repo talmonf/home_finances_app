@@ -492,6 +492,10 @@ export function privateClinicTreatments(lang: UiLanguage) {
     sortHintDesc: p("Descending", "סדר יורד"),
     treatmentsTitle: p("Treatments", "טיפולים"),
     addTreatmentBtn: p("Add treatment", "הוספת טיפול"),
+    addTreatmentAttachmentHint: p(
+      "You can add attachments after saving the treatment.",
+      "ניתן להוסיף קבצים מצורפים אחרי שמירת הטיפול.",
+    ),
     editTreatmentTitle: p("Edit treatment", "עריכת טיפול"),
     loadingMore: p("Loading more…", "טוען עוד…"),
     loadMore: p("Load more", "טען עוד"),
@@ -613,6 +617,10 @@ export function privateClinicTreatmentAttachments(lang: UiLanguage) {
     copyTranscript: p("Copy transcript", "העתקת תמליל"),
     copied: p("Copied.", "הועתק."),
     noAttachments: p("No attachments yet.", "אין עדיין קבצים מצורפים."),
+    uploadConstraintsHint: p(
+      "Max file size: 25 MB. Common formats: PDF, images, audio, and documents.",
+      "גודל קובץ מקסימלי: 25MB. פורמטים נפוצים: PDF, תמונות, אודיו ומסמכים.",
+    ),
     uploadFailed: p("Upload failed", "ההעלאה נכשלה"),
     transcribeFailed: p("Transcription failed", "התמלול נכשל"),
   };
