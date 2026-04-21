@@ -1293,6 +1293,7 @@ model users {
   useful_links         useful_links[]
   therapy_import_audits therapy_import_audits[]
   therapy_appointment_audits therapy_appointment_audits[]
+  private_clinic_backup_snapshots_created private_clinic_backup_snapshots[]
   general_audit_events      general_audit_events[]
 }
 
