@@ -14,7 +14,6 @@ export function TherapyImportForm({
   labels: {
     importWorkbook: string;
     importFailed: string;
-    importedRows: (n: number, issues: number, errText: string) => string;
   };
 }) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -40,7 +39,13 @@ export function TherapyImportForm({
       return;
     }
     const errText = j.errors?.length ? j.errors.join("; ") : "";
-    setMsg(labels.importedRows(j.imported ?? 0, j.errorCount ?? 0, errText));
+    const imported = j.imported ?? 0;
+    const issues = j.errorCount ?? 0;
+    const base =
+      locale === "he"
+        ? `יובאו ${imported} שורות. ${issues ? `${issues} בעיות. ` : ""}`
+        : `Imported ${imported} row(s). ${issues ? `${issues} issue(s). ` : ""}`;
+    setMsg(`${base}${errText}`);
   }
 
   return (

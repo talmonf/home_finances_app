@@ -35,7 +35,6 @@ export default async function ImportExportPage() {
           labels={{
             importWorkbook: ie.importWorkbook,
             importFailed: ie.importFailed,
-            importedRows: ie.importedRows,
           }}
         />
       </section>
