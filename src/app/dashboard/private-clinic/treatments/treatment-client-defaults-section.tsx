@@ -113,7 +113,6 @@ export function TreatmentClientDefaultsSection({
           id: p.id,
           job_id: p.job_id,
           name: p.label,
-          job: { job_title: jobs.find((j) => j.id === p.job_id)?.label ?? "" },
         }))}
         visitDefaults={visitDefaults}
         clients={clients}

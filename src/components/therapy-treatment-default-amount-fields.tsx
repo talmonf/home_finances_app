@@ -11,7 +11,7 @@ import {
 } from "@/lib/therapy/visit-type-defaults";
 
 type JobOpt = { id: string; job_title: string };
-type ProgramOpt = { id: string; job_id: string; name: string; job: { job_title: string } };
+type ProgramOpt = { id: string; job_id: string; name: string };
 
 /** Client-only: applies job/program/visit-type default amounts when logging a treatment. */
 export function TherapyTreatmentDefaultAmountFields(props: {
@@ -165,7 +165,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           <option value="">{labels.select}</option>
           {programsForJob.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.job.job_title} — {p.name}
+              {p.name}
             </option>
           ))}
         </select>
