@@ -21,17 +21,26 @@ type Props = {
   treatmentId: string;
   uiLanguage: UiLanguage;
   attachments: TherapyTreatmentAttachmentRow[];
+  showHebrewAwsFallbackHint?: boolean;
 };
 
 function isAudioMime(mime: string): boolean {
   return mime.toLowerCase().startsWith("audio/");
 }
 
-export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachments }: Props) {
+export function TherapyTreatmentAttachments({
+  treatmentId,
+  uiLanguage,
+  attachments,
+  showHebrewAwsFallbackHint = false,
+}: Props) {
   const router = useRouter();
   const s = privateClinicTreatmentAttachments(uiLanguage);
   const [busyUpload, setBusyUpload] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyTranscribe, setBusyTranscribe] = useState<{ id: string; language: "en" | "he" } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -72,17 +81,42 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         attachmentId: string;
         uploadUrl: string;
         uploadHeaders?: Record<string, string>;
+        fileName: string;
+        mimeType: string;
+        byteSize: number;
+        storageBucket: string;
+        storageKey: string;
       };
-      const uploadRes = await fetch(initData.uploadUrl, {
-        method: "PUT",
-        headers: initData.uploadHeaders,
-        body: uploadFile,
-      });
-      if (!uploadRes.ok) {
-        await fetch(`/api/private-clinic/treatment-attachments/${initData.attachmentId}`, {
-          method: "DELETE",
+      try {
+        const uploadRes = await fetch(initData.uploadUrl, {
+          method: "PUT",
+          headers: initData.uploadHeaders,
+          body: uploadFile,
         });
-        setError(await readErrorMessage(uploadRes, s.uploadFailed));
+        if (!uploadRes.ok) {
+          setError(await readErrorMessage(uploadRes, s.uploadFailed));
+          return;
+        }
+      } catch {
+        // Some mobile browsers can report network/CORS errors even when PUT succeeded.
+      }
+      const completeRes = await fetch(
+        `/api/private-clinic/treatments/${treatmentId}/attachments/direct/complete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attachmentId: initData.attachmentId,
+            fileName: initData.fileName,
+            mimeType: initData.mimeType,
+            byteSize: initData.byteSize,
+            storageBucket: initData.storageBucket,
+            storageKey: initData.storageKey,
+          }),
+        },
+      );
+      if (!completeRes.ok) {
+        setError(await readErrorMessage(completeRes, s.uploadFailed));
         return;
       }
       router.refresh();
@@ -114,7 +148,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
   }
 
   async function transcribe(id: string, language: "en" | "he") {
-    setBusyId(id);
+    setBusyTranscribe({ id, language });
     setError(null);
     try {
       const res = await fetch(`/api/private-clinic/treatment-attachments/${id}/transcribe`, {
@@ -123,16 +157,15 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
         body: JSON.stringify({ language }),
       });
       if (!res.ok) {
-        setError(await readErrorMessage(res, s.transcribeFailed));
         router.refresh();
         return;
       }
       router.refresh();
     } catch {
+      // Network/runtime failures may not be persisted on the attachment row.
       setError(s.transcribeFailed);
-      router.refresh();
     } finally {
-      setBusyId(null);
+      setBusyTranscribe(null);
     }
   }
 
@@ -150,6 +183,9 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
     <div className="mt-3 space-y-2 border-t border-slate-700/80 pt-2">
       <div className="text-xs font-medium text-slate-400">{s.heading}</div>
       <p className="text-[11px] leading-snug text-slate-500">{s.privacyNotice}</p>
+      {showHebrewAwsFallbackHint ? (
+        <p className="text-[11px] leading-snug text-amber-300">{s.hebrewAwsFallbackHint}</p>
+      ) : null}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -183,6 +219,7 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
           {attachments.map((a) => {
             const audio = isAudioMime(a.mime_type);
             const busy = busyId === a.id;
+            const transcribeBusy = busyTranscribe?.id === a.id;
             const canTranscribe =
               audio && (a.transcription_status === "none" || a.transcription_status === "failed");
             return (
@@ -224,19 +261,23 @@ export function TherapyTreatmentAttachments({ treatmentId, uiLanguage, attachmen
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={busy || transcribeBusy}
                           onClick={() => transcribe(a.id, "en")}
                           className="rounded bg-indigo-700 px-2 py-0.5 text-white hover:bg-indigo-600 disabled:opacity-50"
                         >
-                          {busy ? s.transcribing : s.transcribeEn}
+                          {busyTranscribe?.id === a.id && busyTranscribe.language === "en"
+                            ? s.transcribing
+                            : s.transcribeEn}
                         </button>
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={busy || transcribeBusy}
                           onClick={() => transcribe(a.id, "he")}
                           className="rounded bg-indigo-700 px-2 py-0.5 text-white hover:bg-indigo-600 disabled:opacity-50"
                         >
-                          {busy ? s.transcribing : s.transcribeHe}
+                          {busyTranscribe?.id === a.id && busyTranscribe.language === "he"
+                            ? s.transcribing
+                            : s.transcribeHe}
                         </button>
                       </div>
                     ) : null}

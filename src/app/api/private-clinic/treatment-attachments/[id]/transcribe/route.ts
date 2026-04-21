@@ -2,7 +2,7 @@ import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
-import { getJobDocumentStorageConfig } from "@/lib/object-storage";
+import { getJobDocumentStorageConfig, getStorageDebugMeta } from "@/lib/object-storage";
 import { runTreatmentTranscription } from "@/lib/transcription/run-treatment-transcription";
 
 const OPENAI_AUDIO_MAX_BYTES = 25 * 1024 * 1024;
@@ -18,6 +18,17 @@ function parseLanguage(raw: unknown): "en" | "he" | null {
 
 async function readS3ObjectToBuffer(bucket: string, key: string): Promise<Buffer> {
   const cfg = getJobDocumentStorageConfig();
+  console.info(
+    "Storage debug:",
+    getStorageDebugMeta({
+      op: "treatment-attachment-transcribe-get",
+      bucket,
+      key,
+      region: cfg.region,
+      endpoint: cfg.endpoint,
+      forcePathStyle: cfg.forcePathStyle,
+    }),
+  );
   const client = new S3Client({
     region: cfg.region,
     endpoint: cfg.endpoint,

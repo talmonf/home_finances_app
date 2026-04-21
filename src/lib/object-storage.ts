@@ -136,6 +136,31 @@ export function getJobDocumentStorageConfig(): {
   };
 }
 
+function maskStorageKey(key: string): string {
+  if (key.length <= 20) return key;
+  return `${key.slice(0, 12)}...${key.slice(-8)}`;
+}
+
+export function getStorageDebugMeta(args: {
+  op: string;
+  bucket: string;
+  key: string;
+  region: string;
+  endpoint?: string;
+  forcePathStyle: boolean;
+}) {
+  return {
+    op: args.op,
+    bucket: args.bucket,
+    keyMasked: maskStorageKey(args.key),
+    keyLength: args.key.length,
+    keyPrefix: args.key.split("/").slice(0, 3).join("/"),
+    region: args.region,
+    endpoint: args.endpoint ?? null,
+    forcePathStyle: args.forcePathStyle,
+  };
+}
+
 export async function uploadJobDocumentObject(
   householdId: string,
   jobId: string,

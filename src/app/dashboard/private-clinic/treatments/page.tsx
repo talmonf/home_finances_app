@@ -8,8 +8,7 @@ import {
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createTherapyTreatment, deleteReceiptAllocation, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
-import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { createTherapyTreatment, deleteReceiptAllocation, updateTherapyTreatment } from "../actions";
 import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
 import { TreatmentsListClient } from "./treatments-list-client";
 import {
@@ -220,6 +220,11 @@ export default async function TreatmentsPage({
     settings?.note_3_label_he,
     uiLanguage,
   );
+  const storageCfg = getJobDocumentStorageConfig();
+  const showHebrewAwsFallbackHint =
+    settings?.hebrew_transcription_provider === "aws" &&
+    Boolean(process.env.TRANSCRIBE_DATA_ACCESS_ROLE_ARN?.trim()) &&
+    Boolean(storageCfg.endpoint || storageCfg.forcePathStyle);
 
   const queryParams = new URLSearchParams();
   if (filters.paid !== "all") queryParams.set("paid", filters.paid);
@@ -565,26 +570,9 @@ export default async function TreatmentsPage({
           }}
           extraContent={
             <div className="space-y-3">
-              <div className="flex items-center gap-4">
-                {editTreatment.receipt_allocations.length === 0 ? (
-                  <>
-                    <ConfirmDeleteForm action={deleteTherapyTreatment}>
-                      <input type="hidden" name="id" value={editTreatment.id} />
-                      <input
-                        type="hidden"
-                        name="redirect_on_success"
-                        value={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
-                      />
-                      <button type="submit" className="text-sm text-rose-400">
-                        {c.delete}
-                      </button>
-                    </ConfirmDeleteForm>
-                    <p className="text-xs text-slate-500">{tr.receiptNotLinkedHint}</p>
-                  </>
-                ) : (
-                  <p className="text-xs text-slate-500">{tr.receiptLinkedHint}</p>
-                )}
-              </div>
+              <p className="text-xs text-slate-500">
+                {editTreatment.receipt_allocations.length > 0 ? tr.receiptLinkedHint : tr.receiptNotLinkedHint}
+              </p>
               <ul className="list-none space-y-1 text-xs">
                 {editTreatment.receipt_allocations.map((a) => (
                   <li key={a.id} className="flex items-center gap-3">
@@ -609,6 +597,7 @@ export default async function TreatmentsPage({
               <TherapyTreatmentAttachments
                 treatmentId={editTreatment.id}
                 uiLanguage={uiLanguage}
+                showHebrewAwsFallbackHint={showHebrewAwsFallbackHint}
                 attachments={editTreatment.attachments.map((a) => ({
                   id: a.id,
                   file_name: a.file_name,

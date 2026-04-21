@@ -3,7 +3,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
-import { getJobDocumentStorageConfig } from "@/lib/object-storage";
+import { getJobDocumentStorageConfig, getStorageDebugMeta } from "@/lib/object-storage";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
@@ -63,6 +63,17 @@ export async function POST(
     const safeFileName = sanitizeFileName(fileName);
     const cfg = getJobDocumentStorageConfig();
     const key = `${householdId}/therapy-treatments/${treatment.id}/${attachmentId}-${safeFileName}`;
+    console.info(
+      "Storage debug:",
+      getStorageDebugMeta({
+        op: "treatment-attachment-upload-init",
+        bucket: cfg.bucket,
+        key,
+        region: cfg.region,
+        endpoint: cfg.endpoint,
+        forcePathStyle: cfg.forcePathStyle,
+      }),
+    );
     const client = new S3Client({
       region: cfg.region,
       endpoint: cfg.endpoint,
@@ -84,24 +95,16 @@ export async function POST(
       { expiresIn: 600 },
     );
 
-    await prisma.therapy_treatment_attachments.create({
-      data: {
-        id: attachmentId,
-        household_id: householdId,
-        treatment_id: treatment.id,
-        file_name: fileName,
-        mime_type: mimeType,
-        byte_size: byteSize,
-        storage_bucket: cfg.bucket,
-        storage_key: key,
-      },
-    });
-
     return NextResponse.json({
       attachmentId,
       uploadUrl,
       uploadMethod: "PUT",
       uploadHeaders: { "Content-Type": mimeType },
+      fileName,
+      mimeType,
+      byteSize,
+      storageBucket: cfg.bucket,
+      storageKey: key,
     });
   } catch (error) {
     console.error("Treatment attachment direct upload init failed:", error);

@@ -2,6 +2,7 @@ import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
+import { getStorageDebugMeta } from "@/lib/object-storage";
 
 function getJobDocumentStorageConfig(): {
   region: string;
@@ -65,6 +66,17 @@ export async function GET(
     if (!att) return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
 
     const cfg = getJobDocumentStorageConfig();
+    console.info(
+      "Storage debug:",
+      getStorageDebugMeta({
+        op: "treatment-attachment-download-get",
+        bucket: att.storage_bucket,
+        key: att.storage_key,
+        region: cfg.region,
+        endpoint: cfg.endpoint,
+        forcePathStyle: cfg.forcePathStyle,
+      }),
+    );
     const client = new S3Client({
       region: cfg.region,
       endpoint: cfg.endpoint,

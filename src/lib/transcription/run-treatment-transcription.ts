@@ -1,5 +1,6 @@
 import { transcribeFromS3WithAwsBatch } from "./aws-transcribe-batch";
 import { transcribeWithOpenAIWhisper } from "./openai-whisper";
+import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 
 export type TreatmentTranscriptionLanguage = "en" | "he";
 
@@ -30,8 +31,11 @@ export async function runTreatmentTranscription(opts: {
   hebrewBackend: HebrewTranscriptionBackend;
 }): Promise<TreatmentTranscriptionResult> {
   const roleArn = process.env.TRANSCRIBE_DATA_ACCESS_ROLE_ARN?.trim();
+  const storageCfg = getJobDocumentStorageConfig();
+  // AWS Transcribe batch only supports AWS S3 URIs, not custom S3-compatible endpoints.
+  const canUseAwsBatch = !storageCfg.endpoint && !storageCfg.forcePathStyle;
   const useAwsHebrew =
-    opts.language === "he" && opts.hebrewBackend === "aws" && Boolean(roleArn);
+    opts.language === "he" && opts.hebrewBackend === "aws" && Boolean(roleArn) && canUseAwsBatch;
 
   if (useAwsHebrew) {
     try {

@@ -101,7 +101,16 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
               </select>
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-slate-400">{isHebrew ? "סוג העסקה" : "Employment type"}</label>
+              <label
+                className="block text-xs text-slate-400"
+                title={
+                  isHebrew
+                    ? "פרילנסר: התקשרות ישירה מול אדם פרטי. קבלן דרך חברה: ההתקשרות והתשלום דרך חברה רשומה."
+                    : "Freelancer: direct contract as an individual. Contractor via company: contract/payment through a registered company."
+                }
+              >
+                {isHebrew ? "סוג העסקה" : "Employment type"}
+              </label>
               <select name="employment_type" defaultValue={job.employment_type} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="employee">{isHebrew ? "שכיר" : "Regular employee"}</option>
                 <option value="freelancer">{isHebrew ? "פרילנסר" : "Freelancer"}</option>
@@ -136,10 +145,22 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                   : "Controls visibility in Private clinic lists/forms and receipt-import behavior (client vs organization)."}
               </span>
             </label>
-            <input name="employer_name" defaultValue={job.employer_name ?? ""} placeholder="Employer (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} placeholder="Employer tax number (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="employer_address" defaultValue={job.employer_address ?? ""} placeholder="Employer address (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <textarea name="notes" defaultValue={job.notes ?? ""} placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">{isHebrew ? "מעסיק (אופציונלי)" : "Employer (optional)"}</label>
+              <input name="employer_name" defaultValue={job.employer_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">{isHebrew ? "מספר מס מעסיק (אופציונלי)" : "Employer tax number (optional)"}</label>
+              <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">{isHebrew ? "כתובת מעסיק (אופציונלי)" : "Employer address (optional)"}</label>
+              <input name="employer_address" defaultValue={job.employer_address ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">{isHebrew ? "הערות" : "Notes"}</label>
+              <textarea name="notes" defaultValue={job.notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">
                 {isHebrew ? "חשבון בנק מקושר (אופציונלי)" : "Linked bank account (optional)"}

@@ -624,6 +624,10 @@ export function privateClinicTreatmentAttachments(lang: UiLanguage) {
     ),
     uploadFailed: p("Upload failed", "ההעלאה נכשלה"),
     transcribeFailed: p("Transcription failed", "התמלול נכשל"),
+    hebrewAwsFallbackHint: p(
+      "Hebrew is set to AWS, but your storage is not native AWS S3; using fallback transcription provider.",
+      "עברית מוגדרת ל-AWS, אבל האחסון אינו AWS S3 מקורי; נעשה שימוש בספק תמלול חלופי.",
+    ),
   };
 }
 

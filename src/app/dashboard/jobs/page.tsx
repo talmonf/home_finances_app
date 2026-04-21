@@ -97,18 +97,32 @@ export default async function JobsPage({ searchParams }: PageProps) {
         <section className="space-y-3">
           <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת משרה" : "Add job"}</h2>
           <form action={createJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            <select name="family_member_id" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Family member</option>
-              {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-            </select>
-            <select name="employment_type" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Employment type</option>
-              <option value="employee">Regular employee</option>
-              <option value="freelancer">Freelancer</option>
-              <option value="self_employed">Self-employed</option>
-              <option value="contractor_via_company">Contractor via company</option>
-            </select>
-            <input name="job_title" placeholder="Job title" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Family member</label>
+              <select name="family_member_id" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Select family member</option>
+                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label
+                className="block text-xs text-slate-400"
+                title="Freelancer: direct contract as an individual. Contractor via company: contract/payment through a registered company."
+              >
+                Job type
+              </label>
+              <select name="employment_type" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Select job type</option>
+                <option value="employee">Regular employee</option>
+                <option value="freelancer">Freelancer</option>
+                <option value="self_employed">Self-employed</option>
+                <option value="contractor_via_company">Contractor via company</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Job title</label>
+              <input name="job_title" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Start date</label>
               <input name="start_date" type="date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -117,9 +131,18 @@ export default async function JobsPage({ searchParams }: PageProps) {
               <label className="block text-xs text-slate-400">End date</label>
               <input name="end_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
-            <input name="employer_name" placeholder="Employer (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="employer_tax_number" placeholder="Employer tax number (optional)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="employer_address" placeholder="Employer address (optional)" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Employer (optional)</label>
+              <input name="employer_name" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-slate-400">Employer tax number (optional)</label>
+              <input name="employer_tax_number" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs text-slate-400">Employer address (optional)</label>
+              <input name="employer_address" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_active" defaultChecked />
               Active
@@ -170,7 +193,10 @@ export default async function JobsPage({ searchParams }: PageProps) {
                 ))}
               </select>
             </div>
-            <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <div className="space-y-1 md:col-span-3">
+              <label className="block text-xs text-slate-400">Notes</label>
+              <textarea name="notes" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            </div>
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת משרה" : "Add job"}</button>
           </form>
         </section>
