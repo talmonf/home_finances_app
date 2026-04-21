@@ -9,6 +9,8 @@ import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mar
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { createBankAccount } from "./actions";
 import BankAccountMemberFields from "./BankAccountMemberFields";
 import SortCodeInput from "./SortCodeInput";
@@ -20,6 +22,7 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -41,6 +44,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const [accounts, familyMembers] = await Promise.all([
     prisma.bank_accounts.findMany({
@@ -107,11 +111,92 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createBankAccount}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/bank-accounts"
+              label={isHebrew ? "הוספת חשבון בנק" : "Add bank account"}
+            />
+          </div>
+          {accounts.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              No bank accounts yet. Add one above; you need at least one to add credit cards.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-4 py-3 font-medium text-slate-300">Account name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Bank</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Account</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Opened</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Members</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map((a) => (
+                    <tr key={a.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                      <td className="px-4 py-3 text-slate-100">{a.account_name}</td>
+                      <td className="px-4 py-3 text-slate-300">{a.bank_name}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {[a.branch_number, a.branch_name, formatSortCode(a.sort_code)]
+                          .filter(Boolean)
+                          .join(" ") || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{a.currency}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {a.date_opened ? formatHouseholdDate(a.date_opened, dateDisplayFormat) : "—"}
+                      </td>
+                      <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={a.website_url ?? undefined}>
+                        {a.website_url ? (
+                          <a
+                            href={a.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {a.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="max-w-[12rem] px-4 py-3 text-slate-400">
+                        {a.bank_account_members.length === 0
+                          ? "—"
+                          : a.bank_account_members.map((m) => m.family_member.full_name).join(", ")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/dashboard/bank-accounts/${a.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          {isHebrew ? "עריכה" : "Edit"}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            closeHref="/dashboard/bank-accounts"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
           >
+            <form
+              action={createBankAccount}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
             <div>
               <label htmlFor="account_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Account name
@@ -245,80 +330,9 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                 {isHebrew ? "הוספת חשבון בנק" : "Add bank account"}
               </button>
             </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
-          {accounts.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No bank accounts yet. Add one above; you need at least one to add credit cards.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Account name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Bank</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Branch</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Account</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Opened</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Members</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{a.account_name}</td>
-                      <td className="px-4 py-3 text-slate-300">{a.bank_name}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {[a.branch_number, a.branch_name, formatSortCode(a.sort_code)]
-                          .filter(Boolean)
-                          .join(" ") || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{a.currency}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {a.date_opened ? formatHouseholdDate(a.date_opened, dateDisplayFormat) : "—"}
-                      </td>
-                      <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={a.website_url ?? undefined}>
-                        {a.website_url ? (
-                          <a
-                            href={a.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {a.website_url}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="max-w-[12rem] px-4 py-3 text-slate-400">
-                        {a.bank_account_members.length === 0
-                          ? "—"
-                          : a.bank_account_members.map((m) => m.family_member.full_name).join(", ")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/dashboard/bank-accounts/${a.id}`}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                        >
-                          {isHebrew ? "עריכה" : "Edit"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+            </form>
+          </DashboardModal>
+        ) : null}
       </div>
     </div>
   );

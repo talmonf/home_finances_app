@@ -9,6 +9,8 @@ import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { createDigitalPaymentMethod, toggleDigitalPaymentMethodActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,7 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -39,6 +42,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const [methods, bankAccounts, familyMembers, creditCards] = await Promise.all([
     prisma.digital_payment_methods.findMany({
@@ -112,11 +116,116 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createDigitalPaymentMethod}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2"
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/digital-payment-methods"
+              label={isHebrew ? "הוספת אמצעי" : "Add method"}
+            />
+          </div>
+          {methods.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              No digital payment methods yet. Add one above.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-4 py-3 font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Primary card</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Secondary card</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Linked bank</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Date created</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {methods.map((m) => (
+                    <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                      <td className="px-4 py-3 text-slate-100">{m.name}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {METHOD_TYPE_LABELS[m.method_type] ?? m.method_type}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {m.family_member ? m.family_member.full_name : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {m.primary_credit_card
+                          ? `${m.primary_credit_card.card_name} · ****${m.primary_credit_card.card_last_four}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {m.secondary_credit_card
+                          ? `${m.secondary_credit_card.card_name} · ****${m.secondary_credit_card.card_last_four}`
+                          : "—"}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-4 py-3 text-slate-400" title={m.linked_bank_account?.account_name}>
+                        {m.linked_bank_account
+                          ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
+                          : "—"}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={m.website_url ?? undefined}>
+                        {m.website_url ? (
+                          <a
+                            href={m.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {m.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={m.notes ?? undefined}>
+                        {m.notes?.trim() ? m.notes : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(m.date_created ?? m.created_at, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{m.is_active ? "Active" : "Inactive"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/dashboard/digital-payment-methods/${m.id}`}
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {isHebrew ? "עריכה" : "Edit"}
+                          </Link>
+                          <form action={toggleDigitalPaymentMethodActive.bind(null, m.id, !m.is_active)}>
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-slate-400 hover:text-slate-200"
+                            >
+                              {m.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            closeHref="/dashboard/digital-payment-methods"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
           >
+            <form
+              action={createDigitalPaymentMethod}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2"
+            >
             <div>
               <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">
                 Name
@@ -256,112 +365,17 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 placeholder="Optional (e.g. linked phone, email fragment)"
               />
             </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת אמצעי" : "Add method"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
-          {methods.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No digital payment methods yet. Add one above.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Type</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Family member</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Primary card</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Secondary card</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Linked bank</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Date created</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {methods.map((m) => (
-                    <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{m.name}</td>
-                      <td className="px-4 py-3 text-slate-300">
-                        {METHOD_TYPE_LABELS[m.method_type] ?? m.method_type}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {m.family_member ? m.family_member.full_name : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {m.primary_credit_card
-                          ? `${m.primary_credit_card.card_name} · ****${m.primary_credit_card.card_last_four}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {m.secondary_credit_card
-                          ? `${m.secondary_credit_card.card_name} · ****${m.secondary_credit_card.card_last_four}`
-                          : "—"}
-                      </td>
-                      <td className="max-w-[10rem] truncate px-4 py-3 text-slate-400" title={m.linked_bank_account?.account_name}>
-                        {m.linked_bank_account
-                          ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
-                          : "—"}
-                      </td>
-                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={m.website_url ?? undefined}>
-                        {m.website_url ? (
-                          <a
-                            href={m.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {m.website_url}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={m.notes ?? undefined}>
-                        {m.notes?.trim() ? m.notes : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {formatHouseholdDate(m.date_created ?? m.created_at, dateDisplayFormat)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{m.is_active ? "Active" : "Inactive"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            href={`/dashboard/digital-payment-methods/${m.id}`}
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {isHebrew ? "עריכה" : "Edit"}
-                          </Link>
-                          <form action={toggleDigitalPaymentMethodActive.bind(null, m.id, !m.is_active)}>
-                            <button
-                              type="submit"
-                              className="text-xs font-medium text-slate-400 hover:text-slate-200"
-                            >
-                              {m.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
-                            </button>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  {isHebrew ? "הוספת אמצעי" : "Add method"}
+                </button>
+              </div>
+            </form>
+          </DashboardModal>
+        ) : null}
       </div>
     </div>
   );

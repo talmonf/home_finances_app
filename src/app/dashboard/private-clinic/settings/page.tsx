@@ -21,10 +21,11 @@ import {
 } from "../actions";
 import { privateClinicCommon, privateClinicSettings } from "@/lib/private-clinic-i18n";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { DashboardModal } from "@/components/dashboard-modal";
 
 export const dynamic = "force-dynamic";
 
-type Search = { saved?: string; error?: string };
+type Search = { saved?: string; error?: string; modal?: string };
 
 export default async function PrivateClinicSettingsPage({
   searchParams,
@@ -42,6 +43,7 @@ export default async function PrivateClinicSettingsPage({
   const st = privateClinicSettings(uiLanguage);
   const c = privateClinicCommon(uiLanguage);
   const sp = searchParams ? await searchParams : {};
+  const modalMode = sp.modal;
 
   const [settings, consultationTypes, expenseCategories] = await Promise.all([
     prisma.therapy_settings.findUnique({
@@ -215,25 +217,12 @@ export default async function PrivateClinicSettingsPage({
             </li>
           ))}
         </ul>
-        <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-          <input
-            name="name"
-            placeholder={st.newTypeName}
-            required
-            className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="name_he"
-            placeholder={st.fieldHebrew}
-            className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-          >
-            {st.addConsultationTypeBtn}
-          </button>
-        </form>
+        <a
+          href="/dashboard/private-clinic/settings?modal=consultation-type-new"
+          className="inline-flex rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+        >
+          {st.addConsultationTypeBtn}
+        </a>
       </section>
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:p-6">
@@ -285,26 +274,69 @@ export default async function PrivateClinicSettingsPage({
             </li>
           ))}
         </ul>
-        <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
-          <input
-            name="name"
-            placeholder={st.newCatName}
-            required
-            className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="name_he"
-            placeholder={st.fieldHebrew}
-            className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-          >
-            {st.addExpenseCategoryBtn}
-          </button>
-        </form>
+        <a
+          href="/dashboard/private-clinic/settings?modal=expense-category-new"
+          className="inline-flex rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+        >
+          {st.addExpenseCategoryBtn}
+        </a>
       </section>
+      {modalMode === "consultation-type-new" ? (
+        <DashboardModal
+          title={st.addConsultationTypeBtn}
+          closeHref="/dashboard/private-clinic/settings"
+          closeLabel={c.close}
+          maxWidthClassName="max-w-xl"
+        >
+            <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
+              <input
+                name="name"
+                placeholder={st.newTypeName}
+                required
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="name_he"
+                placeholder={st.fieldHebrew}
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              >
+                {st.addConsultationTypeBtn}
+              </button>
+            </form>
+        </DashboardModal>
+      ) : null}
+      {modalMode === "expense-category-new" ? (
+        <DashboardModal
+          title={st.addExpenseCategoryBtn}
+          closeHref="/dashboard/private-clinic/settings"
+          closeLabel={c.close}
+          maxWidthClassName="max-w-xl"
+        >
+            <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
+              <input
+                name="name"
+                placeholder={st.newCatName}
+                required
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="name_he"
+                placeholder={st.fieldHebrew}
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              >
+                {st.addExpenseCategoryBtn}
+              </button>
+            </form>
+        </DashboardModal>
+      ) : null}
     </div>
   );
 }

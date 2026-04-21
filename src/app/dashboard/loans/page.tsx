@@ -8,6 +8,8 @@ import {
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { createLoan } from "./actions";
 import { LoanForm } from "./LoanForm";
 
@@ -17,6 +19,7 @@ type PageProps = {
   searchParams?: Promise<{
     created?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -76,6 +79,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const rows = await prisma.loans.findMany({
     where: { household_id: householdId },
@@ -115,12 +119,13 @@ export default async function LoansPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת הלוואה" : "Add loan"}</h2>
-          <LoanForm action={createLoan} uiLanguage={uiLanguage} />
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "ההלוואות שלך" : "Your loans"}</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "ההלוואות שלך" : "Your loans"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/loans"
+              label={isHebrew ? "הוספת הלוואה" : "Add loan"}
+            />
+          </div>
           {rows.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               {isHebrew ? "אין הלוואות עדיין. ניתן להוסיף למעלה." : "No loans yet. Add one above."}
@@ -193,6 +198,15 @@ export default async function LoansPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספת הלוואה" : "Add loan"}
+            closeHref="/dashboard/loans"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
+          >
+            <LoanForm action={createLoan} uiLanguage={uiLanguage} />
+          </DashboardModal>
+        ) : null}
       </div>
     </div>
   );

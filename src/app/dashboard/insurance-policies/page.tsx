@@ -13,6 +13,8 @@ import {
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     urls?: string;
+    modal?: string;
   }>;
 };
 
@@ -42,6 +45,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const [policies, cars, familyMembers] = await Promise.all([
     prisma.insurance_policies.findMany({
@@ -111,12 +115,17 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
           )}
         </header>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createInsurancePolicy}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            closeHref="/dashboard/insurance-policies"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
+            maxWidthClassName="max-w-6xl"
           >
+            <form
+              action={createInsurancePolicy}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
             <input type="hidden" name="insurance_form_context" value="main" />
             <div>
               <label htmlFor="policy_type" className="mb-1 block text-xs font-medium text-slate-400">
@@ -343,16 +352,23 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 {isHebrew ? "הוספת פוליסה" : "Add policy"}
               </button>
             </div>
-          </form>
-          <p className="text-xs text-slate-500">
-            {isHebrew
-              ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
-              : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
-          </p>
-        </section>
+            </form>
+            <p className="text-xs text-slate-500">
+              {isHebrew
+                ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
+                : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
+            </p>
+          </DashboardModal>
+        ) : null}
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/insurance-policies"
+              label={isHebrew ? "הוספת פוליסה" : "Add policy"}
+            />
+          </div>
           {policies.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               {isHebrew ? "אין עדיין פוליסות. הוסיפו למעלה." : "No insurance policies yet. Add one above."}

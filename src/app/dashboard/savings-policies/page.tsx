@@ -7,6 +7,8 @@ import {
   getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -21,6 +23,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     urls?: string;
+    modal?: string;
   }>;
 };
 
@@ -45,6 +48,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
   const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const [policies, familyMembers, bankAccounts, digitalMethods, householdRow] = await Promise.all([
     prisma.savings_policies.findMany({
@@ -190,12 +194,17 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createSavingsPolicy}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            closeHref="/dashboard/savings-policies"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
+            maxWidthClassName="max-w-6xl"
           >
+            <form
+              action={createSavingsPolicy}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
             <div>
               <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "ספק / גוף מוסדי" : "Provider / institution"}{" "}
@@ -388,11 +397,18 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                 {isHebrew ? "הוספה" : "Add"}
               </button>
             </div>
-          </form>
-        </section>
+            </form>
+          </DashboardModal>
+        ) : null}
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/savings-policies"
+              label={isHebrew ? "הוספה" : "Add"}
+            />
+          </div>
           {policies.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               {isHebrew ? "אין עדיין רשומות." : "No savings policies yet."}
