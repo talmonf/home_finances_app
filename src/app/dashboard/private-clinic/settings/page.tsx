@@ -285,7 +285,7 @@ export default async function PrivateClinicSettingsPage({
         <DashboardModal
           title={st.addConsultationTypeBtn}
           closeHref="/dashboard/private-clinic/settings"
-          closeLabel={c.close}
+          closeLabel={c.cancel}
           maxWidthClassName="max-w-xl"
         >
             <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
@@ -313,7 +313,7 @@ export default async function PrivateClinicSettingsPage({
         <DashboardModal
           title={st.addExpenseCategoryBtn}
           closeHref="/dashboard/private-clinic/settings"
-          closeLabel={c.close}
+          closeLabel={c.cancel}
           maxWidthClassName="max-w-xl"
         >
             <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
