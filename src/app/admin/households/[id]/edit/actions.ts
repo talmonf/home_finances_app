@@ -47,10 +47,10 @@ export async function getHouseholdDeleteImpactRows(
     { key: "family_members", label: "Family members", count: familyMembersCount },
     { key: "jobs", label: "Jobs", count: jobsCount },
     { key: "transactions", label: "Transactions", count: transactionsCount },
-    { key: "therapy_clients", label: "Private clinic clients", count: therapyClientsCount },
-    { key: "therapy_treatments", label: "Private clinic treatments", count: therapyTreatmentsCount },
-    { key: "therapy_appointments", label: "Private clinic appointments", count: therapyAppointmentsCount },
-    { key: "private_clinic_reminders", label: "Private clinic reminders", count: privateClinicRemindersCount },
+    { key: "therapy_clients", label: "Clinic clients", count: therapyClientsCount },
+    { key: "therapy_treatments", label: "Clinic treatments", count: therapyTreatmentsCount },
+    { key: "therapy_appointments", label: "Clinic appointments", count: therapyAppointmentsCount },
+    { key: "private_clinic_reminders", label: "Clinic reminders", count: privateClinicRemindersCount },
   ];
 }
 

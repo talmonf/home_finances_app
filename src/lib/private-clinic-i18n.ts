@@ -24,7 +24,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   importExport: "יבוא / ייצוא",
 };
 
-/** Bilingual helper for Private clinic UI */
+/** Bilingual helper for Clinic UI */
 export function pc(lang: UiLanguage, en: string, he: string): string {
   return lang === "he" ? he : en;
 }
@@ -38,17 +38,17 @@ export function privateClinicLayoutStrings(lang: UiLanguage) {
   if (lang === "he") {
     return {
       backToDashboard: "חזרה ללוח הבקרה →",
-      title: "קליניקה פרטית",
+      title: "קליניקה",
       description:
         "ניהול לקוחות, מפגשים, קבלות והוצאות קליניקה לפי משרת עבודה.",
-      navAriaLabel: "אזורים בקליניקה הפרטית",
+      navAriaLabel: "אזורים בקליניקה",
     };
   }
   return {
     backToDashboard: "← Back to dashboard",
-    title: "Private clinic",
+    title: "Clinic",
     description: "Manage clients, sessions, receipts, and clinic expenses per employment job.",
-    navAriaLabel: "Private clinic sections",
+    navAriaLabel: "Clinic sections",
   };
 }
 
@@ -257,19 +257,19 @@ export function privateClinicJobs(lang: UiLanguage) {
       "Add at least one person under Family members before you can add a job.",
       "הוסיפו לפחות בן משפחה אחד לפני הוספת משרה.",
     ),
-    privateClinicRole: p("Private clinic role", "סיווג לקליניקה פרטית"),
+    privateClinicRole: p("Clinic role", "סיווג לקליניקה"),
     privateClinicRoleHelp: p(
-      "On: this job appears in the Private clinic module; receipts default to clients and bank matching is lenient. Off: hidden from clinic lists/forms; receipts default to organization and bank matching is strict.",
-      "פעיל: המשרה מופיעה במודול הקליניקה הפרטית; קבלות ברירת מחדל ללקוחות והתאמת חשבון בנק מקלה. כבוי: מוסתרת מרשימות/טפסים של הקליניקה; קבלות ארגוניות והתאמת בנק מחמירה.",
+      "On: this job appears in the Clinic module; receipts default to clients and bank matching is lenient. Off: hidden from clinic lists/forms; receipts default to organization and bank matching is strict.",
+      "פעיל: המשרה מופיעה במודול הקליניקה; קבלות ברירת מחדל ללקוחות והתאמת חשבון בנק מקלה. כבוי: מוסתרת מרשימות/טפסים של הקליניקה; קבלות ארגוניות והתאמת בנק מחמירה.",
     ),
     clinicUnlinkedHint: p(
-      "Your user is not linked to a family member — you can still use Private clinic for the whole household. When adding a job, choose which household member holds that employment.",
-      "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה הפרטית לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
+      "Your user is not linked to a family member — you can still use Clinic for the whole household. When adding a job, choose which household member holds that employment.",
+      "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
     ),
     noJobsInHousehold: p("No jobs in this household yet. Add one above.", "אין עדיין משרות במשקה. הוסיפו למעלה."),
     noPrivateClinicJobsFiltered: p(
-      "No jobs are marked for the Private clinic module. Turn on “Include in Private clinic module” on Dashboard → Jobs (or enable “Private clinic role” here when adding a job).",
-      "אין משרות שמסומנות למודול הקליניקה הפרטית. הפעילו ״כלול במודול הקליניקה הפרטית״ בלוח הבקרה ← משרות (או סמנו ״סיווג לקליניקה פרטית״ כאן בעת הוספת משרה).",
+      "No jobs are marked for the Clinic module. Turn on “Include in Clinic module” on Dashboard → Jobs (or enable “Clinic role” here when adding a job).",
+      "אין משרות שמסומנות למודול הקליניקה. הפעילו ״כלול במודול הקליניקה״ בלוח הבקרה ← משרות (או סמנו ״סיווג לקליניקה״ כאן בעת הוספת משרה).",
     ),
   };
 }
@@ -524,7 +524,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "העלו קובץ, בדקו את התצוגה המקדימה, ואז אשרו לייבוא. אפשר לבטל, לתקן קובץ ולנתח שוב.",
     ),
     importProfile: p("Import profile", "פרופיל ייבוא"),
-    importProfilePrivate: p("Private clinic (Tipulim)", "קליניקה פרטית (טיפולים)"),
+    importProfilePrivate: p("Clinic (Tipulim)", "קליניקה (טיפולים)"),
     importProfileOrg: p("Organization monthly", "ארגון חודשי"),
     importAutoProgramHint: p(
       "No programs for this job; treatments will be imported without a program.",
@@ -947,8 +947,8 @@ export function privateClinicSettings(lang: UiLanguage) {
   return {
     pageTitle: p("Settings", "הגדרות"),
     pageIntro: p(
-      "Configure treatment note titles, consultation / meeting types, and clinic expense categories. Which links appear in the Private clinic navigation bar is set by the platform super admin, not here.",
-      "הגדירו כותרות להערות טיפול, סוגי ייעוץ / פגישה וקטגוריות הוצאות לקליניקה. אילו קישורים מופיעים בשורת הניווט של הקליניקה הפרטית נקבעים על ידי מנהל העל של המערכת — לא כאן.",
+      "Configure treatment note titles, consultation / meeting types, and clinic expense categories. Which links appear in the Clinic navigation bar is set by the platform super admin, not here.",
+      "הגדירו כותרות להערות טיפול, סוגי ייעוץ / פגישה וקטגוריות הוצאות לקליניקה. אילו קישורים מופיעים בשורת הניווט של הקליניקה נקבעים על ידי מנהל העל של המערכת — לא כאן.",
     ),
     noteLabelsTitle: p("Treatment note labels", "כותרות להערות טיפול"),
     noteLabelsHelp: p(
@@ -1084,7 +1084,7 @@ export function privateClinicWorkSubscriptions(lang: UiLanguage) {
     currency: p("Currency", "מטבע"),
     website: p("Website (optional)", "אתר (אופציונלי)"),
     addBtn: p("Add subscription", "הוספת מנוי"),
-    errJob: p("Add a job under Private clinic → Jobs first.", "הוסיפו משרה תחת קליניקה פרטית → משרות תחילה."),
+    errJob: p("Add a job under Clinic → Jobs first.", "הוסיפו משרה תחת קליניקה → משרות תחילה."),
     createdMsg: p("Subscription added.", "המנוי נוסף."),
   };
 }

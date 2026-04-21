@@ -204,7 +204,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
   {
     id: "privateClinic",
     group: "ongoing",
-    title: "Private clinic",
+    title: "Clinic",
     href: "/dashboard/private-clinic",
     description: "Clients, treatments, receipts, appointments, and clinic expenses.",
   },
@@ -244,7 +244,7 @@ const HE_TRANSLATIONS: Record<SectionId, { title: string; description: string; c
   upcomingRenewals: { title: "חידושים ותוקפים קרובים", description: "צפייה בכל החידושים והפגות התוקף הקרובים." },
   significantPurchases: { title: "רכישות גדולות", description: "מעקב אחר רכישות משמעותיות ותוקף אחריות." },
   medicalAppointments: { title: "תורים רפואיים", description: "רישום ביקורים, החזרים ואמצעי תשלום." },
-  privateClinic: { title: "קליניקה פרטית", description: "לקוחות, טיפולים, קבלות, תורים והוצאות קליניקה." },
+  privateClinic: { title: "קליניקה", description: "לקוחות, טיפולים, קבלות, תורים והוצאות קליניקה." },
   reports: { title: "דוחות", description: "רווח והפסד ודוחות נוספים." },
 };
 

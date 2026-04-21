@@ -141,12 +141,12 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
               <span className="flex items-center gap-2">
                 <input type="checkbox" name="is_private_clinic" defaultChecked={job.is_private_clinic} />
-                {isHebrew ? "כלול במודול הקליניקה הפרטית" : "Include in Private clinic module"}
+                {isHebrew ? "כלול במודול הקליניקה" : "Include in Clinic module"}
               </span>
               <span className="text-xs font-normal text-slate-500">
                 {isHebrew
-                  ? "משפיע על הופעה ברשימות ובטפסים של הקליניקה הפרטית, ועל התנהגות ייבוא קבלות (לקוח מול ארגון)."
-                  : "Controls visibility in Private clinic lists/forms and receipt-import behavior (client vs organization)."}
+                  ? "משפיע על הופעה ברשימות ובטפסים של הקליניקה, ועל התנהגות ייבוא קבלות (לקוח מול ארגון)."
+                  : "Controls visibility in Clinic lists/forms and receipt-import behavior (client vs organization)."}
               </span>
             </label>
             <div className="space-y-1">

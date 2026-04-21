@@ -281,7 +281,7 @@ export default async function Home({ searchParams }: HomeProps) {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
-                  Private clinic backup
+                  Clinic backup
                 </h2>
                 <p className="mb-3 text-xs text-slate-400">
                   Create and restore full private-clinic snapshots for disaster recovery.

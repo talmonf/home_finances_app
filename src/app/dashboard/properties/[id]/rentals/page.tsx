@@ -174,7 +174,7 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
             <div className="flex items-center gap-2 sm:col-span-2">
               <input type="checkbox" name="is_clinic_lease" id="is_clinic_lease_new" className="h-4 w-4 rounded border-slate-600 bg-slate-800" />
               <label htmlFor="is_clinic_lease_new" className="text-xs text-slate-300">
-                Private clinic lease — include end date in Private clinic reminders
+                Clinic lease — include end date in Clinic reminders
               </label>
             </div>
             <div className="flex items-end">
@@ -261,7 +261,7 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
                         className="h-4 w-4 rounded border-slate-600 bg-slate-800"
                       />
                       <label htmlFor={`is_clinic_lease_${rental.id}`} className="text-xs text-slate-300">
-                        Private clinic lease (reminders)
+                        Clinic lease (reminders)
                       </label>
                     </div>
                     <div className="flex items-end gap-3">

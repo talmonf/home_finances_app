@@ -14,7 +14,7 @@ export type HomeFrequentLinkKey = (typeof HOME_FREQUENT_LINK_KEYS)[number];
 
 /** Labels for super-admin household settings (English). */
 export const HOME_FREQUENT_LINK_ADMIN_LABELS: Record<HomeFrequentLinkKey, string> = {
-  privateClinic: "Private clinic",
+  privateClinic: "Clinic",
   reportTreatment: "Report treatment",
   reportReceipt: "Report receipt",
   upcomingVisits: "Upcoming visits",
@@ -77,7 +77,7 @@ export type HomeFrequentLinkItem = {
 function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
   if (language === "he") {
     const he: Record<HomeFrequentLinkKey, string> = {
-      privateClinic: "קליניקה פרטית",
+      privateClinic: "קליניקה",
       reportTreatment: "דיווח טיפול",
       reportReceipt: "דיווח קבלה",
       upcomingVisits: "ביקורים קרובים",
@@ -88,7 +88,7 @@ function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
     return he[key];
   }
   const en: Record<HomeFrequentLinkKey, string> = {
-    privateClinic: "Private clinic",
+    privateClinic: "Clinic",
     reportTreatment: "Report treatment",
     reportReceipt: "Report receipt",
     upcomingVisits: "Upcoming visits",
@@ -101,7 +101,7 @@ function labelFor(key: HomeFrequentLinkKey, language: "en" | "he"): string {
 
 /**
  * Frequent links target mixed household workflows (clinic + renewals, etc.). When the only enabled
- * dashboard section is Private clinic, users use the clinic area as home (see `/` redirect); shortcuts
+ * dashboard section is Clinic, users use the clinic area as home (see `/` redirect); shortcuts
  * are not shown and household settings hide the toggles.
  */
 export function homeFrequentLinksApplyToVisibleDashboard(

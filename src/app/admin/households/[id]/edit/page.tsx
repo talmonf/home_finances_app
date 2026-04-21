@@ -149,7 +149,7 @@ export default async function EditHouseholdPage({
             <p className="text-sm text-slate-400">
               <span className="font-semibold text-slate-100">{household.name}</span>
               {" — "}
-              date format, home dashboard sections, and Private clinic tab bar.
+              date format, home dashboard sections, and Clinic tab bar.
             </p>
           </div>
           {resolvedSearchParams?.saved && (
@@ -159,7 +159,7 @@ export default async function EditHouseholdPage({
           )}
           {resolvedSearchParams?.deleteError === "privateClinicLegalBlock" ? (
             <div className="rounded-lg border border-amber-600 bg-amber-950/60 px-3 py-2 text-xs text-amber-100">
-              This household cannot be deleted due to legal requirements: it has Private clinic appointments.
+              This household cannot be deleted due to legal requirements: it has Clinic appointments.
               In the future, deletion will be supported after saving a therapist journal (יומן מטפל) for later access.
             </div>
           ) : null}
@@ -224,7 +224,7 @@ export default async function EditHouseholdPage({
               </h2>
               <p className="mb-4 text-xs text-slate-500">
                 Shortcuts at the top of the household home screen. Each can be hidden independently.
-                Links to Private clinic or Upcoming renewals only appear when that section is enabled
+                Links to Clinic or Upcoming renewals only appear when that section is enabled
                 for the household.
               </p>
               <input type="hidden" name="home_frequent_links_form" value="1" />
@@ -282,7 +282,7 @@ export default async function EditHouseholdPage({
               <span className="text-[11px] text-slate-500">Quick preset:</span>
               <HouseholdPrivateClinicOnlyButton />
               <span className="text-[11px] text-slate-600">
-                (only &quot;Private clinic&quot; on; save to apply)
+                (only &quot;Clinic&quot; on; save to apply)
               </span>
             </div>
 
@@ -366,10 +366,10 @@ export default async function EditHouseholdPage({
             className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           >
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Private clinic tabs
+              Clinic tabs
             </h2>
             <p className="mb-4 text-xs text-slate-500">
-              Controls which links appear in the Private clinic navigation for this household (household users cannot
+              Controls which links appear in the Clinic navigation for this household (household users cannot
               change this in the app).
             </p>
             <ul className="space-y-2">
@@ -402,10 +402,10 @@ export default async function EditHouseholdPage({
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Private clinic — family therapy
+              Clinic — family therapy
             </h2>
             <p className="mb-3 text-xs text-slate-500">
-              Enables family records and family filters/columns across private clinic pages.
+              Enables family records and family filters/columns across clinic pages.
             </p>
             <label className="flex items-start gap-3">
               <input
@@ -420,7 +420,7 @@ export default async function EditHouseholdPage({
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Private clinic — Hebrew audio transcription
+              Clinic — Hebrew audio transcription
             </h2>
             <p className="mb-3 text-xs text-slate-500">
               When users transcribe audio with the Hebrew option, choose whether to use OpenRouter (Whisper via your
@@ -441,7 +441,7 @@ export default async function EditHouseholdPage({
 
           <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Private clinic — treatment note labels
+              Clinic — treatment note labels
             </h2>
             <p className="mb-3 text-xs text-slate-500">
               English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
@@ -509,7 +509,7 @@ export default async function EditHouseholdPage({
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">
-            Private clinic — consultation / meeting types
+            Clinic — consultation / meeting types
           </h2>
           <p className="mb-3 text-xs text-slate-500">
             English label is the canonical identifier (exports, imports). Hebrew is shown when the household UI language
@@ -585,7 +585,7 @@ export default async function EditHouseholdPage({
         </section>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-200">Private clinic — expense categories</h2>
+          <h2 className="mb-2 text-sm font-semibold text-slate-200">Clinic — expense categories</h2>
           <p className="mb-3 text-xs text-slate-500">
             English label is canonical. Hebrew is shown when the household UI language is Hebrew.
           </p>
@@ -794,7 +794,7 @@ export default async function EditHouseholdPage({
             ))}
           </ul>
           <p className="mb-4 text-xs text-amber-100/90">
-            Legal guardrail: if this household has the Private clinic feature and any appointments, deletion is blocked.
+            Legal guardrail: if this household has the Clinic feature and any appointments, deletion is blocked.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -806,7 +806,7 @@ export default async function EditHouseholdPage({
             <ConfirmDeleteForm
               action={deleteHousehold}
               className="inline"
-              message={`Delete household "${household.name}" permanently?\n\nThis deletes all related data shown above and cannot be undone.\n\nDeletion is blocked if Private clinic appointments exist due to legal requirements.`}
+              message={`Delete household "${household.name}" permanently?\n\nThis deletes all related data shown above and cannot be undone.\n\nDeletion is blocked if Clinic appointments exist due to legal requirements.`}
             >
               <input type="hidden" name="household_id" value={householdId} />
               <button

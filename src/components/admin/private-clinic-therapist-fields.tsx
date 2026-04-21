@@ -23,9 +23,9 @@ export function PrivateClinicTherapistFields({ passwordPolicyHintText }: Props) 
             className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
           />
           <span className="text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Private clinic module only</span>
+            <span className="font-medium text-slate-200">Clinic module only</span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              Enable only the Private clinic dashboard section for this household (all other sections off). You can
+              Enable only the Clinic dashboard section for this household (all other sections off). You can
               change this later under Edit household. When checked, enter the therapist account below (family member and
               user are created automatically).
             </span>

@@ -54,7 +54,7 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
     if (privateClinicModuleOnly) {
       if (!therapistFullName || !therapistEmail || !therapistPassword) {
         redirect(
-          `/admin/households?error=${encodeURIComponent("Therapist name, email, and password are required for a private clinic household.")}`,
+          `/admin/households?error=${encodeURIComponent("Therapist name, email, and password are required for a clinic household.")}`,
         );
       }
       const pwCheck = validatePassword(therapistPassword);

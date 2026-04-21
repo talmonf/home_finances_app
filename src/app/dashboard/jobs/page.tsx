@@ -154,12 +154,12 @@ export default async function JobsPage({ searchParams }: PageProps) {
             <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
               <span className="flex items-center gap-2">
                 <input type="checkbox" name="is_private_clinic" />
-                {isHebrew ? "כלול במודול הקליניקה הפרטית" : "Include in Private clinic module"}
+                {isHebrew ? "כלול במודול הקליניקה" : "Include in Clinic module"}
               </span>
               <span className="text-xs font-normal text-slate-500">
                 {isHebrew
-                  ? "כבוי: המשרה לא תופיע ברשימות ובטפסים של הקליניקה הפרטית (טיפולים, קבלות וכו׳)."
-                  : "When off, this job is hidden from Private clinic lists and forms (treatments, receipts, etc.)."}
+                  ? "כבוי: המשרה לא תופיע ברשימות ובטפסים של הקליניקה (טיפולים, קבלות וכו׳)."
+                  : "When off, this job is hidden from Clinic lists and forms (treatments, receipts, etc.)."}
               </span>
             </label>
             <div className="space-y-1 md:col-span-3">

@@ -215,7 +215,7 @@ export default async function HouseholdUsersPage({
                   href={`/admin/households/${householdId}/edit#private-clinic-tabs`}
                   className="hover:text-slate-200"
                 >
-                  Private clinic tabs
+                  Clinic tabs
                 </Link>
               </div>
               <h1 className="text-2xl font-semibold text-slate-50">

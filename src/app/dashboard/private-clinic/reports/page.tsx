@@ -77,7 +77,7 @@ export default async function PrivateClinicReportsPage() {
           href="/dashboard/private-clinic"
           className="text-sm text-slate-400 hover:text-slate-200"
         >
-          ← Private clinic
+          ← Clinic
         </Link>
         <h2 className="mt-2 text-lg font-medium text-slate-200">{r.title}</h2>
         <p className="text-sm text-slate-400">{r.intro}</p>

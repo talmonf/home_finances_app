@@ -27,7 +27,7 @@ export default async function PrivateClinicBackupsAdminPage() {
               ← Back to Home
             </Link>
           </p>
-          <h1 className="text-2xl font-semibold text-slate-50">Private clinic backup and restore (super admin)</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">Clinic backup and restore (super admin)</h1>
           <p className="text-sm text-slate-400">
             Full-fidelity backup for private-clinic data. Excel import/export remains available for operational migration.
           </p>

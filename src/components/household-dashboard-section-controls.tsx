@@ -31,7 +31,7 @@ export function HouseholdSectionGroupActions({ containerId }: { containerId: str
 
 const PRIVATE_CLINIC_SECTION_NAME = "section_privateClinic";
 
-/** Sets every dashboard section checkbox: only Private clinic on, all others off. */
+/** Sets every dashboard section checkbox: only Clinic on, all others off. */
 export function HouseholdPrivateClinicOnlyButton() {
   return (
     <button
@@ -45,7 +45,7 @@ export function HouseholdPrivateClinicOnlyButton() {
       }}
       className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-sky-500 hover:text-sky-200"
     >
-      Private clinic module only
+      Clinic module only
     </button>
   );
 }
