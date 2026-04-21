@@ -1134,14 +1134,14 @@ export function privateClinicImportExport(lang: UiLanguage) {
   return {
     exportTitle: p("Export", "ייצוא"),
     exportHelp: p(
-      "Download one Excel workbook with multiple sheets (jobs, programs, clients, treatments, receipts, expenses, etc.).",
-      "הורדת חוברת Excel עם גליונות מרובים (משרות, תוכניות, לקוחות, טיפולים, קבלות, הוצאות וכו׳).",
+      "Download one Excel workbook with multiple sheets (jobs, programs, clients, treatments, receipts, expenses, etc.). This export is for analysis/migration and is not a full disaster-recovery backup.",
+      "הורדת חוברת Excel עם גליונות מרובים (משרות, תוכניות, לקוחות, טיפולים, קבלות, הוצאות וכו׳). הייצוא מיועד לניתוח/העברה ואינו גיבוי מלא לשחזור מאסון.",
     ),
     downloadXlsx: p("Download .xlsx", "הורדת .xlsx"),
     importTitle: p("Import", "יבוא"),
     importHelp: p(
-      "Upload an Excel file in the same shape as the export (sheet names include Programs, Clients, Treatments, Receipts, ConsultationTypes, Consultations, Travel, Expenses, etc.). Existing rows are upserted when id is present.",
-      "העלאת קובץ Excel באותו מבנה כמו הייצוא (שמות גליונות כוללים Programs, Clients, Treatments וכו׳). רשומות קיימות מתעדכנות כש־id קיים.",
+      "Upload an Excel file in the same shape as the export (sheet names include Programs, Clients, Treatments, Receipts, ConsultationTypes, Consultations, Travel, Expenses, etc.). Existing rows are upserted when id is present. This import is not a full-state restore.",
+      "העלאת קובץ Excel באותו מבנה כמו הייצוא (שמות גליונות כוללים Programs, Clients, Treatments וכו׳). רשומות קיימות מתעדכנות כש־id קיים. הייבוא אינו שחזור מלא של מצב המערכת.",
     ),
     importWorkbook: p("Import workbook", "ייבוא חוברת"),
     importFailed: p("Import failed", "הייבוא נכשל"),

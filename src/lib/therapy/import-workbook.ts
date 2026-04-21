@@ -72,6 +72,12 @@ export async function importTherapyWorkbook(params: {
             description: str(r.description) || null,
             sort_order: Number(r.sort_order) || 0,
             is_active: r.is_active !== false && str(r.is_active) !== "false",
+            visits_per_period_count: str(r.visits_per_period_count)
+              ? Math.trunc(Number(str(r.visits_per_period_count)))
+              : null,
+            visits_per_period_weeks: str(r.visits_per_period_weeks)
+              ? Math.trunc(Number(str(r.visits_per_period_weeks)))
+              : null,
           },
           update: {
             job_id,
@@ -79,6 +85,12 @@ export async function importTherapyWorkbook(params: {
             description: str(r.description) || null,
             sort_order: Number(r.sort_order) || 0,
             is_active: r.is_active !== false && str(r.is_active) !== "false",
+            visits_per_period_count: str(r.visits_per_period_count)
+              ? Math.trunc(Number(str(r.visits_per_period_count)))
+              : null,
+            visits_per_period_weeks: str(r.visits_per_period_weeks)
+              ? Math.trunc(Number(str(r.visits_per_period_weeks)))
+              : null,
           },
         });
       } else {
@@ -91,6 +103,12 @@ export async function importTherapyWorkbook(params: {
             description: str(r.description) || null,
             sort_order: Number(r.sort_order) || 0,
             is_active: true,
+            visits_per_period_count: str(r.visits_per_period_count)
+              ? Math.trunc(Number(str(r.visits_per_period_count)))
+              : null,
+            visits_per_period_weeks: str(r.visits_per_period_weeks)
+              ? Math.trunc(Number(str(r.visits_per_period_weeks)))
+              : null,
           },
         });
       }
@@ -127,6 +145,7 @@ export async function importTherapyWorkbook(params: {
         last_name: str(r.last_name) || null,
         id_number: str(r.id_number) || null,
         start_date: str(r.start_date) ? new Date(str(r.start_date)) : null,
+        end_date: str(r.end_date) ? new Date(str(r.end_date)) : null,
         notes: str(r.notes) || null,
         default_job_id,
         default_program_id,
@@ -141,6 +160,12 @@ export async function importTherapyWorkbook(params: {
           : null,
         disability_status: str(r.disability_status) || null,
         rehab_basket_status: str(r.rehab_basket_status) || null,
+        family_id: str(r.family_id) || null,
+        billing_basis: str(r.billing_basis) === "per_month" ? "per_month" : str(r.billing_basis) === "per_treatment" ? "per_treatment" : null,
+        billing_timing: str(r.billing_timing) === "in_advance" ? "in_advance" : str(r.billing_timing) === "in_arrears" ? "in_arrears" : null,
+        default_visit_type: parseVisit(str(r.default_visit_type))
+          ? (str(r.default_visit_type) as "clinic" | "home" | "phone" | "video")
+          : null,
         import_key: str(r.import_key) || null,
         is_active: str(r.is_active) !== "false",
       };
@@ -305,12 +330,17 @@ export async function importTherapyWorkbook(params: {
       const data = {
         household_id: householdId,
         job_id,
+        client_id: str(r.client_id) || null,
+        family_id: str(r.family_id) || null,
+        program_id: str(r.program_id) || null,
         receipt_number,
         issued_at: new Date(issued_at),
         total_amount,
         currency: str(r.currency) || "ILS",
         recipient_type: recipient_type as "organization" | "client",
         payment_method: payment_method as "cash" | "bank_transfer" | "digital_card" | "credit_card",
+        covered_period_start: str(r.covered_period_start) ? new Date(str(r.covered_period_start)) : null,
+        covered_period_end: str(r.covered_period_end) ? new Date(str(r.covered_period_end)) : null,
         notes: str(r.notes) || null,
         import_key: str(r.import_key) || null,
         linked_transaction_id: str(r.linked_transaction_id) || null,
@@ -376,6 +406,11 @@ export async function importTherapyWorkbook(params: {
         amount,
         currency: str(r.currency) || "ILS",
         notes: str(r.notes) || null,
+        image_file_name: str(r.image_file_name) || null,
+        image_mime_type: str(r.image_mime_type) || null,
+        image_storage_bucket: str(r.image_storage_bucket) || null,
+        image_storage_key: str(r.image_storage_key) || null,
+        image_storage_url: str(r.image_storage_url) || null,
         import_key: str(r.import_key) || null,
         linked_transaction_id: str(r.linked_transaction_id) || null,
       };
@@ -410,11 +445,13 @@ export async function importTherapyWorkbook(params: {
             id,
             household_id: householdId,
             name,
+            name_he: str(r.name_he) || null,
             sort_order: Number(r.sort_order) || 0,
             is_system: str(r.is_system) === "true",
           },
           update: {
             name,
+            name_he: str(r.name_he) || null,
             sort_order: Number(r.sort_order) || 0,
           },
         });
@@ -424,6 +461,7 @@ export async function importTherapyWorkbook(params: {
             id: crypto.randomUUID(),
             household_id: householdId,
             name,
+            name_he: str(r.name_he) || null,
             sort_order: Number(r.sort_order) || 0,
             is_system: false,
           },

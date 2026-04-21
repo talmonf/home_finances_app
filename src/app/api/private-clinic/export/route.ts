@@ -3,6 +3,7 @@ import {
   jobWherePrivateClinicScoped,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { logGeneralAuditEvent } from "@/lib/general-audit";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
@@ -20,12 +21,24 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.users.findFirst({
-    where: { id: session.user.id, household_id: householdId, is_active: true },
-    select: { family_member_id: true },
+  await logGeneralAuditEvent({
+    householdId,
+    actorUserId: session.user.id,
+    actorIsSuperAdmin: false,
+    actorEmail: session.user.email,
+    actorName: session.user.name,
+    feature: "private_clinic_excel",
+    action: "export",
+    status: "started",
+    summary: "Private clinic Excel export started",
   });
-  const familyMemberId = user?.family_member_id ?? null;
-  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
+  try {
+    const user = await prisma.users.findFirst({
+      where: { id: session.user.id, household_id: householdId, is_active: true },
+      select: { family_member_id: true },
+    });
+    const familyMemberId = user?.family_member_id ?? null;
+    const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const [
     jobs,
@@ -112,21 +125,21 @@ export async function GET() {
     }),
   ]);
 
-  const scopedClientIds = clients.map((c) => c.id);
-  const clientRelationships =
-    scopedClientIds.length === 0
-      ? []
-      : await prisma.therapy_client_relationships.findMany({
-          where: {
-            household_id: householdId,
-            from_client_id: { in: scopedClientIds },
-            to_client_id: { in: scopedClientIds },
-          },
-          orderBy: { created_at: "desc" },
-        });
+    const scopedClientIds = clients.map((c) => c.id);
+    const clientRelationships =
+      scopedClientIds.length === 0
+        ? []
+        : await prisma.therapy_client_relationships.findMany({
+            where: {
+              household_id: householdId,
+              from_client_id: { in: scopedClientIds },
+              to_client_id: { in: scopedClientIds },
+            },
+            orderBy: { created_at: "desc" },
+          });
 
-  const wb = XLSX.utils.book_new();
-  const sheets = [
+    const wb = XLSX.utils.book_new();
+    const sheets = [
     sheet(
       "Jobs",
       jobs.map((j) => ({
@@ -152,6 +165,8 @@ export async function GET() {
         description: p.description ?? "",
         sort_order: p.sort_order,
         is_active: p.is_active,
+        visits_per_period_count: p.visits_per_period_count ?? "",
+        visits_per_period_weeks: p.visits_per_period_weeks ?? "",
       })),
     ),
     sheet(
@@ -173,6 +188,10 @@ export async function GET() {
         visits_per_period_weeks: c.visits_per_period_weeks ?? "",
         disability_status: c.disability_status ?? "",
         rehab_basket_status: c.rehab_basket_status ?? "",
+        family_id: c.family_id ?? "",
+        billing_basis: c.billing_basis ?? "",
+        billing_timing: c.billing_timing ?? "",
+        default_visit_type: c.default_visit_type ?? "",
         import_key: c.import_key ?? "",
         is_active: c.is_active,
       })),
@@ -203,6 +222,7 @@ export async function GET() {
         client_id: t.client_id,
         job_id: t.job_id,
         program_id: t.program_id,
+        family_id: t.family_id ?? "",
         occurred_at: t.occurred_at.toISOString(),
         amount: t.amount.toString(),
         currency: t.currency,
@@ -215,6 +235,7 @@ export async function GET() {
         payment_method: t.payment_method ?? "",
         payment_bank_account_id: t.payment_bank_account_id ?? "",
         payment_digital_payment_method_id: t.payment_digital_payment_method_id ?? "",
+        reported_to_external_system: t.reported_to_external_system,
         import_key: t.import_key ?? "",
       })),
     ),
@@ -224,6 +245,7 @@ export async function GET() {
         id: r.id,
         job_id: r.job_id,
         client_id: r.client_id ?? "",
+        family_id: r.family_id ?? "",
         program_id: r.program_id ?? "",
         receipt_number: r.receipt_number,
         issued_at: String(r.issued_at),
@@ -231,6 +253,8 @@ export async function GET() {
         currency: r.currency,
         recipient_type: r.recipient_type,
         payment_method: r.payment_method,
+        covered_period_start: r.covered_period_start ? String(r.covered_period_start).slice(0, 10) : "",
+        covered_period_end: r.covered_period_end ? String(r.covered_period_end).slice(0, 10) : "",
         notes: r.notes ?? "",
         linked_transaction_id: r.linked_transaction_id ?? "",
         import_key: r.import_key ?? "",
@@ -250,6 +274,7 @@ export async function GET() {
       categories.map((c) => ({
         id: c.id,
         name: c.name,
+        name_he: c.name_he ?? "",
         sort_order: c.sort_order,
         is_system: c.is_system,
       })),
@@ -264,7 +289,11 @@ export async function GET() {
         amount: e.amount.toString(),
         currency: e.currency,
         notes: e.notes ?? "",
+        image_file_name: e.image_file_name ?? "",
+        image_mime_type: e.image_mime_type ?? "",
+        image_storage_bucket: e.image_storage_bucket ?? "",
         image_storage_key: e.image_storage_key ?? "",
+        image_storage_url: e.image_storage_url ?? "",
         linked_transaction_id: e.linked_transaction_id ?? "",
         import_key: e.import_key ?? "",
       })),
@@ -290,6 +319,7 @@ export async function GET() {
       appointments.map((a) => ({
         id: a.id,
         client_id: a.client_id,
+        family_id: a.family_id ?? "",
         job_id: a.job_id,
         program_id: a.program_id ?? "",
         series_id: a.series_id ?? "",
@@ -298,6 +328,8 @@ export async function GET() {
         end_at: a.end_at?.toISOString() ?? "",
         status: a.status,
         treatment_id: a.treatment_id ?? "",
+        reschedule_reason: a.reschedule_reason ?? "",
+        cancellation_reason: a.cancellation_reason ?? "",
       })),
     ),
     sheet(
@@ -305,6 +337,7 @@ export async function GET() {
       consultationTypes.map((c) => ({
         id: c.id,
         name: c.name,
+        name_he: c.name_he ?? "",
         sort_order: c.sort_order,
         is_system: c.is_system,
       })),
@@ -360,22 +393,52 @@ export async function GET() {
               note_1_label_he: settings.note_1_label_he ?? "",
               note_2_label_he: settings.note_2_label_he ?? "",
               note_3_label_he: settings.note_3_label_he ?? "",
+              family_therapy_enabled: settings.family_therapy_enabled,
+              nav_tabs_json: settings.nav_tabs_json ? JSON.stringify(settings.nav_tabs_json) : "",
+              hebrew_transcription_provider: settings.hebrew_transcription_provider,
+              usual_treatment_cost_for_import: settings.usual_treatment_cost_for_import?.toString() ?? "",
             },
           ]
         : [],
     ),
   ];
 
-  for (const { name, ws } of sheets) {
-    XLSX.utils.book_append_sheet(wb, ws, name);
-  }
+    for (const { name, ws } of sheets) {
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    }
 
-  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-  const filename = `private-clinic-export-${householdId.slice(0, 8)}.xlsx`;
-  return new NextResponse(buf, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  });
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const filename = `private-clinic-export-${householdId.slice(0, 8)}.xlsx`;
+    await logGeneralAuditEvent({
+      householdId,
+      actorUserId: session.user.id,
+      actorIsSuperAdmin: false,
+      actorEmail: session.user.email,
+      actorName: session.user.name,
+      feature: "private_clinic_excel",
+      action: "export",
+      status: "success",
+      summary: "Private clinic Excel export completed",
+      metadata: { sheetCount: sheets.length, filename },
+    });
+    return new NextResponse(buf, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    await logGeneralAuditEvent({
+      householdId,
+      actorUserId: session.user.id,
+      actorIsSuperAdmin: false,
+      actorEmail: session.user.email,
+      actorName: session.user.name,
+      feature: "private_clinic_excel",
+      action: "export",
+      status: "failed",
+      summary: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }

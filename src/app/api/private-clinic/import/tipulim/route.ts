@@ -1,5 +1,6 @@
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/auth";
+import { logGeneralAuditEvent } from "@/lib/general-audit";
 import { analyzeTipulimImport, commitTipulimImport } from "@/lib/therapy/import-tipulim";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
@@ -85,6 +86,18 @@ export async function POST(req: Request) {
   }
 
   if (mode === "commit") {
+    await logGeneralAuditEvent({
+      householdId,
+      actorUserId: session.user.id,
+      actorIsSuperAdmin: false,
+      actorEmail: session.user.email,
+      actorName: session.user.name,
+      feature: "private_clinic_excel",
+      action: "tipulim_commit_import",
+      status: "started",
+      summary: "Tipulim commit import started",
+      metadata: { profile, jobId, sheetName },
+    });
     const startedAtMs = Date.now();
     const audit = await prisma.therapy_import_audits.create({
       data: {
@@ -151,6 +164,24 @@ export async function POST(req: Request) {
           failure_message: failureMessage,
         },
       });
+      await logGeneralAuditEvent({
+        householdId,
+        actorUserId: session.user.id,
+        actorIsSuperAdmin: false,
+        actorEmail: session.user.email,
+        actorName: session.user.name,
+        feature: "private_clinic_excel",
+        action: "tipulim_commit_import",
+        status: success ? "success" : "failed",
+        summary: success ? "Tipulim commit import completed" : "Tipulim commit import completed with blocking errors",
+        metadata: {
+          profile,
+          jobId,
+          sheetName,
+          blockingErrors: result.blockingErrors.length,
+          warnings: result.warnings.length,
+        },
+      });
 
       return NextResponse.json({
         ok: success,
@@ -172,10 +203,34 @@ export async function POST(req: Request) {
           failure_message: failureMessage.slice(0, 2000),
         },
       });
+      await logGeneralAuditEvent({
+        householdId,
+        actorUserId: session.user.id,
+        actorIsSuperAdmin: false,
+        actorEmail: session.user.email,
+        actorName: session.user.name,
+        feature: "private_clinic_excel",
+        action: "tipulim_commit_import",
+        status: "failed",
+        summary: error instanceof Error ? error.message : String(error),
+        metadata: { profile, jobId, sheetName },
+      });
       throw error;
     }
   }
 
+  await logGeneralAuditEvent({
+    householdId,
+    actorUserId: session.user.id,
+    actorIsSuperAdmin: false,
+    actorEmail: session.user.email,
+    actorName: session.user.name,
+    feature: "private_clinic_excel",
+    action: "tipulim_preview_import",
+    status: "started",
+    summary: "Tipulim preview import started",
+    metadata: { profile, jobId, sheetName },
+  });
   const result = await analyzeTipulimImport({
     householdId,
     jobId,
@@ -186,6 +241,24 @@ export async function POST(req: Request) {
     missingVisitType,
     clientResolutions,
     usualTreatmentCost,
+  });
+  await logGeneralAuditEvent({
+    householdId,
+    actorUserId: session.user.id,
+    actorIsSuperAdmin: false,
+    actorEmail: session.user.email,
+    actorName: session.user.name,
+    feature: "private_clinic_excel",
+    action: "tipulim_preview_import",
+    status: "success",
+    summary: "Tipulim preview import completed",
+    metadata: {
+      profile,
+      jobId,
+      sheetName,
+      blockingErrors: result.blockingErrors.length,
+      warnings: result.warnings.length,
+    },
   });
   return NextResponse.json({ ok: true, ...result });
 }

@@ -100,6 +100,8 @@ model households {
   therapy_import_audits              therapy_import_audits[]
   therapy_appointment_audits         therapy_appointment_audits[]
   therapy_client_relationships       therapy_client_relationships[]
+  private_clinic_backup_snapshots    private_clinic_backup_snapshots[]
+  general_audit_events               general_audit_events[]
 }
 
 model loans {
@@ -1291,6 +1293,48 @@ model users {
   useful_links         useful_links[]
   therapy_import_audits therapy_import_audits[]
   therapy_appointment_audits therapy_appointment_audits[]
+  general_audit_events      general_audit_events[]
+}
+
+model private_clinic_backup_snapshots {
+  id             String   @id @default(uuid())
+  household_id   String
+  created_by_user_id String?
+  created_by_super_admin_email String?
+  snapshot_version Int
+  snapshot_checksum String
+  snapshot_bytes Int
+  snapshot_json Json
+  notes          String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  created_by_user users? @relation(fields: [created_by_user_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, created_at(sort: Desc)])
+}
+
+model general_audit_events {
+  id                  String   @id @default(uuid())
+  household_id        String?
+  actor_user_id       String?
+  actor_is_super_admin Boolean @default(false)
+  actor_email         String?
+  actor_name          String?
+  feature             String
+  action              String
+  status              String
+  summary             String?
+  metadata            Json     @default("{}")
+  created_at          DateTime @default(now())
+
+  household households? @relation(fields: [household_id], references: [id], onDelete: SetNull)
+  actor_user users?     @relation(fields: [actor_user_id], references: [id], onDelete: SetNull)
+
+  @@index([created_at(sort: Desc)])
+  @@index([feature, created_at(sort: Desc)])
+  @@index([household_id, created_at(sort: Desc)])
 }
 
 model user_enabled_sections {
