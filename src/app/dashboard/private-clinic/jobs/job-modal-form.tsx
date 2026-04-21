@@ -57,29 +57,51 @@ export function JobModalForm({
               <p className="text-xs text-slate-500">{j.employedPersonHelp}</p>
             </div>
           ) : null}
-          <select name="employment_type" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">{j.employmentType}</option>
-            <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
-            <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
-            <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
-            <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
-          </select>
-          <input
-            name="job_title"
-            placeholder={j.jobTitle}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="employer_name"
-            placeholder={j.employerOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="external_reporting_system"
-            placeholder={j.externalReportingSystemOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="space-y-1">
+            <div className="flex items-center gap-1">
+              <label className="block text-xs text-slate-300">{j.employmentType}</label>
+              <span
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-500 text-[10px] text-slate-300"
+                title={
+                  uiLanguage === "he"
+                    ? "פרילנסר: התקשרות ישירה מול אדם פרטי. קבלן דרך חברה: ההתקשרות והתשלום דרך חברה רשומה."
+                    : "Freelancer: direct contract as an individual. Contractor via company: contract/payment through a registered company."
+                }
+                aria-label={uiLanguage === "he" ? "עזרה לסוג העסקה" : "Employment type help"}
+              >
+                ?
+              </span>
+            </div>
+            <select name="employment_type" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+              <option value="">{j.employmentType}</option>
+              <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
+              <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
+              <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
+              <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.jobTitle}</label>
+            <input
+              name="job_title"
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.employerOptional}</label>
+            <input
+              name="employer_name"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.externalReportingSystemOptional}</label>
+            <input
+              name="external_reporting_system"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <input
@@ -97,16 +119,20 @@ export function JobModalForm({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <input
-            name="employer_tax_number"
-            placeholder={j.employerTaxOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="employer_address"
-            placeholder={j.employerAddressOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
-          />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.employerTaxOptional}</label>
+            <input
+              name="employer_tax_number"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-300">{j.employerAddressOptional}</label>
+            <input
+              name="employer_address"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="checkbox" name="is_active" defaultChecked />
             {c.active}
@@ -116,11 +142,13 @@ export function JobModalForm({
             {j.privateClinicRole}
           </label>
           <p className="text-xs text-slate-500 md:col-span-3">{j.privateClinicRoleHelp}</p>
-          <textarea
-            name="notes"
-            placeholder={c.notes}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-3"
-          />
+          <div className="space-y-1 md:col-span-3">
+            <label className="block text-xs text-slate-300">{c.notes}</label>
+            <textarea
+              name="notes"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-3 md:col-span-3">
             <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
               {j.addJobBtn}

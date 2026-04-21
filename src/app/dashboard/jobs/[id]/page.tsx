@@ -101,16 +101,20 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
               </select>
             </div>
             <div className="space-y-1">
-              <label
-                className="block text-xs text-slate-400"
-                title={
-                  isHebrew
-                    ? "פרילנסר: התקשרות ישירה מול אדם פרטי. קבלן דרך חברה: ההתקשרות והתשלום דרך חברה רשומה."
-                    : "Freelancer: direct contract as an individual. Contractor via company: contract/payment through a registered company."
-                }
-              >
-                {isHebrew ? "סוג העסקה" : "Employment type"}
-              </label>
+              <div className="flex items-center gap-1">
+                <label className="block text-xs text-slate-300">{isHebrew ? "סוג העסקה" : "Employment type"}</label>
+                <span
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-500 text-[10px] text-slate-300"
+                  title={
+                    isHebrew
+                      ? "פרילנסר: התקשרות ישירה מול אדם פרטי. קבלן דרך חברה: ההתקשרות והתשלום דרך חברה רשומה."
+                      : "Freelancer: direct contract as an individual. Contractor via company: contract/payment through a registered company."
+                  }
+                  aria-label={isHebrew ? "עזרה לסוג העסקה" : "Employment type help"}
+                >
+                  ?
+                </span>
+              </div>
               <select name="employment_type" defaultValue={job.employment_type} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="employee">{isHebrew ? "שכיר" : "Regular employee"}</option>
                 <option value="freelancer">{isHebrew ? "פרילנסר" : "Freelancer"}</option>
