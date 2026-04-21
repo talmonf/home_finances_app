@@ -95,30 +95,45 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
           <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
           <input type="hidden" name="redirect_on_error" value={editHref} />
           <input type="hidden" name="id" value={job.id} />
-          <select name="employment_type" defaultValue={job.employment_type} required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
-            <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
-            <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
-            <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
-          </select>
-          <input
-            name="job_title"
-            defaultValue={job.job_title}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="employer_name"
-            defaultValue={job.employer_name ?? ""}
-            placeholder={j.employerOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="external_reporting_system"
-            defaultValue={job.external_reporting_system ?? ""}
-            placeholder={j.externalReportingSystemOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.employmentType}</label>
+            <select
+              name="employment_type"
+              defaultValue={job.employment_type}
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="employee">{employmentTypeOptionLabel(uiLanguage, "employee")}</option>
+              <option value="freelancer">{employmentTypeOptionLabel(uiLanguage, "freelancer")}</option>
+              <option value="self_employed">{employmentTypeOptionLabel(uiLanguage, "self_employed")}</option>
+              <option value="contractor_via_company">{employmentTypeOptionLabel(uiLanguage, "contractor_via_company")}</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.jobTitle}</label>
+            <input
+              name="job_title"
+              defaultValue={job.job_title}
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.employerOptional}</label>
+            <input
+              name="employer_name"
+              defaultValue={job.employer_name ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.externalReportingSystemOptional}</label>
+            <input
+              name="external_reporting_system"
+              defaultValue={job.external_reporting_system ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <input
@@ -138,18 +153,22 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <input
-            name="employer_tax_number"
-            defaultValue={job.employer_tax_number ?? ""}
-            placeholder={j.employerTaxOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="employer_address"
-            defaultValue={job.employer_address ?? ""}
-            placeholder={j.employerAddressOptional}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
-          />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-300">{j.employerTaxOptional}</label>
+            <input
+              name="employer_tax_number"
+              defaultValue={job.employer_tax_number ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-300">{j.employerAddressOptional}</label>
+            <input
+              name="employer_address"
+              defaultValue={job.employer_address ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
             {c.active}
@@ -159,12 +178,14 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
             {j.privateClinicRole}
           </label>
           <p className="text-xs text-slate-500 md:col-span-3">{j.privateClinicRoleHelp}</p>
-          <textarea
-            name="notes"
-            defaultValue={job.notes ?? ""}
-            placeholder={c.notes}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-3"
-          />
+          <div className="space-y-1 md:col-span-3">
+            <label className="block text-xs text-slate-300">{c.notes}</label>
+            <textarea
+              name="notes"
+              defaultValue={job.notes ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-2 md:col-span-3">
             <p className="text-xs text-slate-400">
               {employmentTypeOptionLabel(uiLanguage, job.employment_type)} · {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}

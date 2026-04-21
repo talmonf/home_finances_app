@@ -14,7 +14,6 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
-- [x] 092_credit_cards_no_charge_policy_valid_until.sql (2026-04-21)
 - [x] 093_private_clinic_backups_and_general_audit.sql (2026-04-21)
 - [x] 092_credit_cards_no_charge_policy_valid_until.sql (2026-04-21)
 - [x] 091_private_clinic_disable_families_tab_default.sql (2026-04-21)
