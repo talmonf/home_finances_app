@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 function parseProfile(raw: string | null): TipulimImportProfile | null {
   const t = (raw ?? "").trim();
   if (t === "tipulim_org_monthly") return "tipulim_org_monthly";
+  if (t === "tipulim_receipts_only") return "tipulim_receipts_only";
   if (t === "tipulim_private" || t === "") return "tipulim_private";
   return null;
 }
@@ -24,7 +25,11 @@ export async function GET(req: Request) {
   }
   const body = tipulimImportExampleCsv(profile);
   const name =
-    profile === "tipulim_org_monthly" ? "tipulim-organization-monthly-example.csv" : "tipulim-private-clinic-example.csv";
+    profile === "tipulim_org_monthly"
+      ? "tipulim-organization-monthly-example.csv"
+      : profile === "tipulim_receipts_only"
+        ? "receipts-import-example.csv"
+        : "tipulim-private-clinic-example.csv";
   return new NextResponse(body, {
     status: 200,
     headers: {

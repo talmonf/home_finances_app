@@ -10,6 +10,7 @@ type Program = { id: string; jobId: string; name: string; jobLabel?: string };
 type PreviewData = {
   newClientsCount: number;
   treatmentsTotal: number;
+  receiptsNeedingManualTreatmentCount?: number;
   treatmentsPerClient: Array<{
     displayName: string;
     clientId: string | null;
@@ -104,9 +105,14 @@ export function TherapyTreatmentsImportForm({
   jobs,
   programs,
   labels,
+  variant = "treatments",
+  defaultUsualTreatmentCost,
 }: {
   jobs: Job[];
   programs: Program[];
+  variant?: "treatments" | "receipts";
+  /** Prefill usual session fee (receipt import). */
+  defaultUsualTreatmentCost?: string | null;
   labels: {
     title: string;
     instructions: string;
@@ -163,11 +169,17 @@ export function TherapyTreatmentsImportForm({
     importDebugCommitLinkTitle: string;
     importDebugMissingAllocationLinks: string;
     importDebugMissingMarkPaidLinks: string;
+    usualTreatmentCostLabel?: string;
+    usualTreatmentCostHint?: string;
+    saveUsualTreatmentCostDefault?: string;
+    importReceiptsNeedingManualTreatment?: string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState("");
-  const [profile, setProfile] = useState<TipulimImportProfile>("tipulim_private");
+  const [profile, setProfile] = useState<TipulimImportProfile>(
+    variant === "receipts" ? "tipulim_receipts_only" : "tipulim_private",
+  );
   const [programId, setProgramId] = useState("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [busy, setBusy] = useState(false);
@@ -179,6 +191,10 @@ export function TherapyTreatmentsImportForm({
   const [sheetName, setSheetName] = useState("");
   const [sheetOptions, setSheetOptions] = useState<string[]>([]);
   const [missingVisitType, setMissingVisitType] = useState("");
+  const [usualTreatmentCost, setUsualTreatmentCost] = useState(
+    () => defaultUsualTreatmentCost?.trim() ?? "",
+  );
+  const [saveUsualTreatmentCostDefault, setSaveUsualTreatmentCostDefault] = useState(false);
 
   function formatDuration(ms: number): string {
     if (!Number.isFinite(ms) || ms < 0) return "0s";
@@ -195,6 +211,18 @@ export function TherapyTreatmentsImportForm({
   );
 
   const exampleHref = `/api/private-clinic/import/tipulim/example?profile=${encodeURIComponent(profile)}`;
+
+  useEffect(() => {
+    if (variant === "receipts") {
+      setProfile("tipulim_receipts_only");
+    }
+  }, [variant]);
+
+  useEffect(() => {
+    if (defaultUsualTreatmentCost != null && defaultUsualTreatmentCost !== "") {
+      setUsualTreatmentCost(defaultUsualTreatmentCost.trim());
+    }
+  }, [defaultUsualTreatmentCost]);
 
   useEffect(() => {
     if (!busy || !busyStartedAtMs) {
@@ -225,8 +253,10 @@ export function TherapyTreatmentsImportForm({
     return Math.max(3, Math.min(95, Math.round((elapsedMs / expectedMs) * 100)));
   }, [busy, busyMode, elapsedMs]);
 
+  const receiptCostMissing = variant === "receipts" && !usualTreatmentCost.trim();
+
   async function post(mode: "preview" | "commit") {
-    if (!file || !jobId) return;
+    if (!file || !jobId || receiptCostMissing) return;
     setBusy(true);
     setBusyMode(mode);
     setBusyStartedAtMs(Date.now());
@@ -241,6 +271,12 @@ export function TherapyTreatmentsImportForm({
     if (missingVisitType) fd.append("missing_visit_type", missingVisitType);
     if (Object.keys(clientResolutions).length > 0) {
       fd.append("client_resolutions", JSON.stringify(clientResolutions));
+    }
+    if (variant === "receipts") {
+      fd.append("usual_treatment_cost", usualTreatmentCost.trim());
+      if (saveUsualTreatmentCostDefault) {
+        fd.append("save_usual_treatment_cost_default", "1");
+      }
     }
     try {
       const res = await fetch("/api/private-clinic/import/tipulim", {
@@ -315,24 +351,36 @@ export function TherapyTreatmentsImportForm({
       <h3 className="text-base font-semibold text-slate-100">{labels.title}</h3>
       <p className="text-sm text-slate-300">{labels.instructions}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-sm text-slate-200">
-          {labels.profile}
-          <select
-            className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
-            value={profile}
-            onChange={(e) => setProfile(e.target.value as TipulimImportProfile)}
-          >
-            <option value="tipulim_private">{labels.profilePrivate}</option>
-            <option value="tipulim_org_monthly">{labels.profileOrg}</option>
-          </select>
-          <a
-            href={exampleHref}
-            className="mt-2 inline-block text-sm text-sky-400 hover:underline"
-            download
-          >
-            {labels.downloadExample}
-          </a>
-        </label>
+        {variant === "treatments" ? (
+          <label className="text-sm text-slate-200">
+            {labels.profile}
+            <select
+              className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
+              value={profile}
+              onChange={(e) => setProfile(e.target.value as TipulimImportProfile)}
+            >
+              <option value="tipulim_private">{labels.profilePrivate}</option>
+              <option value="tipulim_org_monthly">{labels.profileOrg}</option>
+            </select>
+            <a
+              href={exampleHref}
+              className="mt-2 inline-block text-sm text-sky-400 hover:underline"
+              download
+            >
+              {labels.downloadExample}
+            </a>
+          </label>
+        ) : (
+          <div className="text-sm text-slate-200">
+            <a
+              href={exampleHref}
+              className="inline-block text-sky-400 hover:underline"
+              download
+            >
+              {labels.downloadExample}
+            </a>
+          </div>
+        )}
         <label className="text-sm text-slate-200">
           {labels.job}
           <select
@@ -411,12 +459,42 @@ export function TherapyTreatmentsImportForm({
             <option value="video">{labels.visitVideo}</option>
           </select>
         </label>
+        {variant === "receipts" && labels.usualTreatmentCostLabel ? (
+          <>
+            <label className="text-sm text-slate-200 md:col-span-2">
+              {labels.usualTreatmentCostLabel}
+              <input
+                type="text"
+                name="usual_treatment_cost"
+                inputMode="decimal"
+                autoComplete="off"
+                className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
+                value={usualTreatmentCost}
+                onChange={(e) => setUsualTreatmentCost(e.target.value)}
+                placeholder="400"
+              />
+              {labels.usualTreatmentCostHint ? (
+                <p className="mt-1 text-xs text-slate-400">{labels.usualTreatmentCostHint}</p>
+              ) : null}
+            </label>
+            {labels.saveUsualTreatmentCostDefault ? (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-200 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={saveUsualTreatmentCostDefault}
+                  onChange={(e) => setSaveUsualTreatmentCostDefault(e.target.checked)}
+                />
+                {labels.saveUsualTreatmentCostDefault}
+              </label>
+            ) : null}
+          </>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => post("preview")}
-          disabled={busy || !file || !jobId}
+          disabled={busy || !file || !jobId || receiptCostMissing}
           className="rounded bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
         >
           {labels.analyze}
@@ -430,7 +508,8 @@ export function TherapyTreatmentsImportForm({
             preview.blockingErrors.length > 0 ||
             preview.clientConflicts.length > 0 ||
             !file ||
-            !jobId
+            !jobId ||
+            receiptCostMissing
           }
           className="rounded bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
         >
@@ -484,6 +563,14 @@ export function TherapyTreatmentsImportForm({
             <li>
               {labels.receipts}: {preview.receiptsToCreateCount}
             </li>
+            {typeof preview.receiptsNeedingManualTreatmentCount === "number" &&
+            preview.receiptsNeedingManualTreatmentCount > 0 &&
+            labels.importReceiptsNeedingManualTreatment ? (
+              <li>
+                {labels.importReceiptsNeedingManualTreatment}:{" "}
+                {preview.receiptsNeedingManualTreatmentCount}
+              </li>
+            ) : null}
           </ul>
           {preview.treatmentsPerClient.length > 0 && (
             <div className="text-xs text-slate-400">

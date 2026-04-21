@@ -2,7 +2,16 @@ import { prisma } from "@/lib/auth";
 import type { PrismaClient } from "@/generated/prisma/client";
 import * as XLSX from "xlsx";
 
-export type TipulimImportProfile = "tipulim_private" | "tipulim_org_monthly";
+export type TipulimImportProfile = "tipulim_private" | "tipulim_org_monthly" | "tipulim_receipts_only";
+
+const RECEIPTS_IMPORT_HEADERS = [
+  "Payment Date",
+  "Client",
+  "Amount",
+  "Receipt #",
+  "Notes",
+  "Payment method",
+] as const;
 
 const TIPULIM_PRIVATE_HEADERS = [
   "קבלה",
@@ -31,7 +40,11 @@ const TIPULIM_ORG_MONTHLY_HEADERS = [
 /** UTF-8 CSV with BOM: header row only, matching the parser column names. */
 export function tipulimImportExampleCsv(profile: TipulimImportProfile): string {
   const headers =
-    profile === "tipulim_org_monthly" ? TIPULIM_ORG_MONTHLY_HEADERS : TIPULIM_PRIVATE_HEADERS;
+    profile === "tipulim_org_monthly"
+      ? TIPULIM_ORG_MONTHLY_HEADERS
+      : profile === "tipulim_receipts_only"
+        ? RECEIPTS_IMPORT_HEADERS
+        : TIPULIM_PRIVATE_HEADERS;
   return `\uFEFF${headers.join(",")}\n`;
 }
 
@@ -123,6 +136,8 @@ type PendingReceipt = {
   treatmentPaymentMethod?: "bank_transfer" | "digital_payment" | null;
   treatmentBankAccountId?: string | null;
   treatmentDigitalMethodId?: string | null;
+  /** Receipt-only import: when no auto-treatment, client comes from the row (not from allocations). */
+  explicitClientRefForReceipt?: ClientRef | null;
 };
 
 export type ImportConflict = {
@@ -157,6 +172,8 @@ export type TipulimAnalyzeResult = {
     travelEntriesCount: number;
     consultationEntriesCount: number;
   };
+  /** Receipt-only import: receipts where amount exceeded usual cost +10% (no auto-treatment). */
+  receiptsNeedingManualTreatmentCount?: number;
   importDebug?: {
     unlinkedReceiptsCount: number;
     unlinkedReceiptsSample: Array<{ rowNumber: number; receiptNumber: string }>;
@@ -205,6 +222,8 @@ export type TipulimAnalyzeParams = {
   sheetName?: string | null;
   missingVisitType?: "clinic" | "home" | "phone" | "video" | null;
   clientResolutions?: Record<string, string>;
+  /** Decimal string e.g. "400.00"; required for `tipulim_receipts_only`. */
+  usualTreatmentCost?: string | null;
 };
 
 function sheetRows(workbook: XLSX.WorkBook, sheetName?: string | null): Row[] {
@@ -462,8 +481,26 @@ function paymentMethodFromText(raw: string): {
   digitalHint: string | null;
 } {
   const text = norm(raw);
+  const lower = text.toLowerCase();
   if (!text) return { receiptMethod: null, treatmentMethod: null, accountDigits: null, digitalHint: null };
-  if (text.includes("העברה")) {
+
+  // English (receipt import) + common labels
+  if (lower === "cash" || text === "מזומן") {
+    return { receiptMethod: "cash", treatmentMethod: null, accountDigits: null, digitalHint: null };
+  }
+  if (
+    (lower.includes("credit") && lower.includes("card")) ||
+    lower.includes("אשראי") ||
+    lower === "cc"
+  ) {
+    return { receiptMethod: "credit_card", treatmentMethod: null, accountDigits: null, digitalHint: null };
+  }
+  if (
+    lower.includes("bank") ||
+    lower.includes("transfer") ||
+    lower.includes("wire") ||
+    text.includes("העברה")
+  ) {
     const digitRuns = text.match(/\d+/g) ?? [];
     const longest = digitRuns.sort((a, b) => b.length - a.length)[0] ?? null;
     return {
@@ -473,14 +510,31 @@ function paymentMethodFromText(raw: string): {
       digitalHint: null,
     };
   }
-  if (text.includes("ביט") || text.toLowerCase().includes("bit")) {
+  if (
+    text.includes("ביט") ||
+    lower.includes("bit") ||
+    lower.includes("digital") ||
+    lower.includes("paybox") ||
+    lower.includes("paypal") ||
+    lower.includes("apple pay") ||
+    lower.includes("google pay")
+  ) {
+    const hint =
+      text.includes("ביט") || lower.includes("bit")
+        ? "ביט"
+        : lower.includes("paybox")
+          ? "paybox"
+          : lower.includes("paypal")
+            ? "paypal"
+            : "digital";
     return {
       receiptMethod: "digital_card",
       treatmentMethod: "digital_payment",
       accountDigits: null,
-      digitalHint: "ביט",
+      digitalHint: hint,
     };
   }
+
   return { receiptMethod: null, treatmentMethod: null, accountDigits: null, digitalHint: null };
 }
 
@@ -633,6 +687,208 @@ function uniqueTreatmentKey(
 ): string {
   if (!pendingTreatments.has(baseKey)) return baseKey;
   return `${baseKey}|row:${rowNumber}`;
+}
+
+/** English receipt-import columns; tolerates minor header variations. */
+function receiptImportCell(row: Row, header: string): unknown {
+  if (Object.prototype.hasOwnProperty.call(row, header)) {
+    const v = row[header];
+    if (v !== undefined && String(v ?? "").trim() !== "") return v;
+  }
+  const target = norm(header).toLowerCase();
+  for (const k of Object.keys(row)) {
+    if (norm(String(k)).toLowerCase() === target) return row[k];
+  }
+  const compact = target.replace(/\s+/g, "");
+  const aliasMap: Record<string, string[]> = {
+    paymentdate: ["payment date"],
+    client: ["client"],
+    amount: ["amount"],
+    "receipt#": ["receipt #", "receiptno", "receiptnumber", "receipt no", "receipt no."],
+    notes: ["notes", "note"],
+    paymentmethod: ["payment method", "method"],
+  };
+  const keys = aliasMap[compact];
+  if (keys) {
+    for (const k of Object.keys(row)) {
+      const kn = norm(String(k)).toLowerCase().replace(/\s+/g, "");
+      if (keys.some((a) => a.replace(/\s+/g, "") === kn)) return row[k];
+    }
+  }
+  return null;
+}
+
+async function analyzeReceiptOnlyProfile(
+  params: TipulimAnalyzeParams,
+  ctx: {
+    isPrivateClinic: boolean;
+    clients: ClientCandidate[];
+    programsByJob: Array<{ id: string; name: string; job_id: string }>;
+    bankAccounts: Array<{ id: string; account_number: string | null }>;
+    digitalMethods: Array<{ id: string; name: string }>;
+  },
+): Promise<AnalyzeScratch> {
+  const rows = sheetRows(params.workbook, params.sheetName);
+  const scratch: AnalyzeScratch = {
+    rows,
+    warnings: [],
+    errors: [],
+    conflicts: [],
+    treatmentCountsByDisplay: new Map(),
+    pendingTreatments: new Map(),
+    pendingReceipts: [],
+    newClients: new Map(),
+    autoPrograms: new Map(),
+    routing: { travel: 0, consultations: 0 },
+    pendingTravel: [],
+    pendingConsultations: [],
+    orgPaymentDiagnostics: [],
+  };
+
+  const usualParsed = parseMoney(String(params.usualTreatmentCost ?? "").trim());
+  if (!usualParsed) {
+    scratch.errors.push("Missing usual treatment cost. Enter the typical session fee used for this import.");
+    return scratch;
+  }
+  const usualNum = Number(usualParsed);
+  const threshold = usualNum * 1.1;
+
+  for (let idx = 0; idx < rows.length; idx += 1) {
+    const row = rows[idx]!;
+    const rowNumber = idx + 2;
+    const paymentDateCell = receiptImportCell(row, "Payment Date");
+    const clientRaw = s(receiptImportCell(row, "Client"));
+    const amountRaw = s(receiptImportCell(row, "Amount"));
+    const receiptNum = s(receiptImportCell(row, "Receipt #"));
+    const noteRaw = s(receiptImportCell(row, "Notes")) || null;
+    const payRoute = s(receiptImportCell(row, "Payment method"));
+
+    if (!clientRaw || !amountRaw || !receiptNum) {
+      scratch.errors.push(
+        `Row ${rowNumber}: missing required column (Client, Amount, and Receipt # are required).`,
+      );
+      continue;
+    }
+
+    const amount = parseMoney(amountRaw);
+    if (!amount) {
+      scratch.errors.push(`Row ${rowNumber}: invalid Amount.`);
+      continue;
+    }
+
+    const issuedAt = parseDateFromCell(paymentDateCell);
+    if (!issuedAt) {
+      scratch.errors.push(`Row ${rowNumber}: invalid Payment Date.`);
+      continue;
+    }
+
+    const clientRef = await resolveClientRef(
+      clientRaw,
+      rowNumber,
+      ctx.clients,
+      scratch.newClients,
+      scratch.conflicts,
+      params.clientResolutions,
+    );
+    if (!clientRef) continue;
+
+    const payment = paymentMethodFromText(payRoute);
+    if (!payment.receiptMethod) {
+      scratch.errors.push(`Row ${rowNumber}: missing or unknown Payment method "${payRoute}".`);
+      continue;
+    }
+
+    let bankId: string | null = null;
+    let digitalId: string | null = null;
+    if (payment.treatmentMethod) {
+      const resolvedIds = resolveBankDigitalForParsedPayment(ctx, payment, rowNumber, scratch, payRoute);
+      if (!resolvedIds.ok) continue;
+      bankId = resolvedIds.bankId;
+      digitalId = resolvedIds.digitalId;
+    }
+
+    const amtNum = Number(amount);
+    const autoTreatment = amtNum <= threshold + 0.005;
+
+    if (autoTreatment) {
+      let vt = params.missingVisitType ?? null;
+      if (!vt) {
+        scratch.errors.push(
+          `Row ${rowNumber}: auto-creating a treatment requires a fallback visit type. Choose one above and analyze again.`,
+        );
+        continue;
+      }
+      addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+      const display = clientRef.displayName;
+      const baseKey = `${display}|${monthKey(issuedAt)}|${amount}|${vt}|receipt:${receiptNum}`;
+      const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
+      scratch.pendingTreatments.set(tKey, {
+        key: tKey,
+        rowNumber,
+        clientRef,
+        programName: null,
+        occurredAt: issuedAt,
+        amount,
+        visitType: vt,
+        note: noteRaw,
+        paymentDate: issuedAt,
+        paymentMethod: payment.treatmentMethod,
+        paymentBankAccountId: bankId,
+        paymentDigitalMethodId: digitalId,
+      });
+
+      scratch.pendingReceipts.push({
+        key: `receipt:${receiptNum}|row:${rowNumber}`,
+        rowNumber,
+        receiptNumber: receiptNum,
+        issuedAt,
+        totalAmount: amount,
+        notes: noteRaw,
+        paymentMethod: payment.receiptMethod,
+        recipientType: ctx.isPrivateClinic ? "client" : "organization",
+        coveredPeriodStart: null,
+        coveredPeriodEnd: null,
+        allocations: [{ amount, treatmentKey: tKey }],
+        consultationAllocations: [],
+        travelAllocations: [],
+      });
+    } else {
+      scratch.pendingReceipts.push({
+        key: `receipt:${receiptNum}|row:${rowNumber}`,
+        rowNumber,
+        receiptNumber: receiptNum,
+        issuedAt,
+        totalAmount: amount,
+        notes: noteRaw,
+        paymentMethod: payment.receiptMethod,
+        recipientType: ctx.isPrivateClinic ? "client" : "organization",
+        coveredPeriodStart: null,
+        coveredPeriodEnd: null,
+        allocations: [],
+        consultationAllocations: [],
+        travelAllocations: [],
+        explicitClientRefForReceipt: clientRef,
+      });
+      scratch.warnings.push(
+        `Row ${rowNumber}: receipt #${receiptNum} amount ${amount} is above ${(threshold + 0.005).toFixed(2)} (usual fee +10%). Import the receipt only — create treatments manually.`,
+      );
+    }
+  }
+
+  return scratch;
+}
+
+export async function analyzeReceiptOnlyProfileForTest(
+  params: TipulimAnalyzeParams,
+  ctx: {
+    isPrivateClinic: boolean;
+    clients: ClientCandidate[];
+    programsByJob: Array<{ id: string; name: string; job_id: string }>;
+    bankAccounts: Array<{ id: string; account_number: string | null }>;
+    digitalMethods: Array<{ id: string; name: string }>;
+  },
+) {
+  return analyzeReceiptOnlyProfile(params, ctx);
 }
 
 async function analyzePrivateProfile(
@@ -1251,11 +1507,16 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
     }
     return { displayName, clientId: null, count, majorityVisitType };
   });
+  const receiptsNeedingManualTreatmentCount = scratch.pendingReceipts.filter(
+    (r) => r.explicitClientRefForReceipt && r.allocations.length === 0,
+  ).length;
+
   return {
     newClientsCount: scratch.newClients.size,
     treatmentsTotal: Array.from(scratch.treatmentCountsByDisplay.values()).reduce((a, b) => a + b, 0),
     treatmentsPerClient,
     receiptsToCreateCount: scratch.pendingReceipts.length,
+    receiptsNeedingManualTreatmentCount,
     programsToAutoCreate: Array.from(scratch.autoPrograms.values()),
     warnings: scratch.warnings,
     blockingErrors: scratch.errors,
@@ -1269,14 +1530,16 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
         const treatment = r.allocations.length;
         const consultations = r.consultationAllocations?.length ?? 0;
         const travel = r.travelAllocations?.length ?? 0;
-        return treatment + consultations + travel === 0;
+        const manualReceiptOnly = Boolean(r.explicitClientRefForReceipt) && treatment === 0;
+        return treatment + consultations + travel === 0 && !manualReceiptOnly;
       }).length,
       unlinkedReceiptsSample: scratch.pendingReceipts
         .filter((r) => {
           const treatment = r.allocations.length;
           const consultations = r.consultationAllocations?.length ?? 0;
           const travel = r.travelAllocations?.length ?? 0;
-          return treatment + consultations + travel === 0;
+          const manualReceiptOnly = Boolean(r.explicitClientRefForReceipt) && treatment === 0;
+          return treatment + consultations + travel === 0 && !manualReceiptOnly;
         })
         .slice(0, 5)
         .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
@@ -1318,7 +1581,9 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
   const scratch =
     params.profile === "tipulim_org_monthly"
       ? await analyzeOrgProfile(params, ctx)
-      : await analyzePrivateProfile(params, ctx);
+      : params.profile === "tipulim_receipts_only"
+        ? await analyzeReceiptOnlyProfile(params, ctx)
+        : await analyzePrivateProfile(params, ctx);
   return makeSummary(scratch);
 }
 
@@ -1416,7 +1681,9 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   const scratch =
     params.profile === "tipulim_org_monthly"
       ? await analyzeOrgProfile(params, ctx)
-      : await analyzePrivateProfile(params, ctx);
+      : params.profile === "tipulim_receipts_only"
+        ? await analyzeReceiptOnlyProfile(params, ctx)
+        : await analyzePrivateProfile(params, ctx);
   const summary = makeSummary(scratch);
   if (summary.clientConflicts.length > 0 || summary.blockingErrors.length > 0) {
     return {
@@ -1651,11 +1918,22 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     for (const tr of treatmentRows) {
       clientIdByTreatmentId.set(tr.id, tr.client_id);
     }
+    const explicitReceiptClientIds: string[] = [];
+    for (const pr of scratch.pendingReceipts) {
+      const ref = pr.explicitClientRefForReceipt;
+      if (!ref) continue;
+      const cid =
+        ref.kind === "existing" ? ref.id : clientIdByKey.get(ref.tempKey) ?? null;
+      if (cid) explicitReceiptClientIds.push(cid);
+    }
     const distinctTreatmentClientIds = [...new Set(treatmentRows.map((t) => t.client_id))];
+    const allClientIdsForFamily = [
+      ...new Set([...distinctTreatmentClientIds, ...explicitReceiptClientIds]),
+    ];
     const familyByClientId = new Map<string, string | null>();
-    if (distinctTreatmentClientIds.length > 0) {
+    if (allClientIdsForFamily.length > 0) {
       const clientRows = await tx.therapy_clients.findMany({
-        where: { household_id: params.householdId, id: { in: distinctTreatmentClientIds } },
+        where: { household_id: params.householdId, id: { in: allClientIdsForFamily } },
         select: { id: true, family_id: true },
       });
       for (const cr of clientRows) {
@@ -1701,6 +1979,14 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       } else if (r.recipientType === "client" && uniqueClients.length > 1) {
         resolved_client_id = uniqueClients[0]!;
         resolved_family_id = familyByClientId.get(resolved_client_id) ?? null;
+      } else if (uniqueClients.length === 0 && r.explicitClientRefForReceipt) {
+        const ref = r.explicitClientRefForReceipt;
+        const cid =
+          ref.kind === "existing" ? ref.id : clientIdByKey.get(ref.tempKey) ?? null;
+        if (cid) {
+          resolved_client_id = cid;
+          resolved_family_id = familyByClientId.get(cid) ?? null;
+        }
       }
       receiptRows.push({
         id: receiptId,

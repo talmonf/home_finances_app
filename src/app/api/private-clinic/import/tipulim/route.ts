@@ -39,7 +39,16 @@ export async function POST(req: Request) {
   const selectedProgramId = String(form.get("program_id") ?? "").trim() || null;
   const profileRaw = String(form.get("profile") ?? "tipulim_private").trim();
   const profile =
-    profileRaw === "tipulim_org_monthly" ? "tipulim_org_monthly" : "tipulim_private";
+    profileRaw === "tipulim_org_monthly"
+      ? "tipulim_org_monthly"
+      : profileRaw === "tipulim_receipts_only"
+        ? "tipulim_receipts_only"
+        : "tipulim_private";
+  const usualTreatmentCostRaw = String(form.get("usual_treatment_cost") ?? "").trim();
+  const usualTreatmentCost = usualTreatmentCostRaw || null;
+  const saveUsualTreatmentCostDefault =
+    String(form.get("save_usual_treatment_cost_default") ?? "").toLowerCase() === "1" ||
+    String(form.get("save_usual_treatment_cost_default") ?? "").toLowerCase() === "true";
   const mode = String(form.get("mode") ?? "preview").trim();
   const sheetName = String(form.get("sheet_name") ?? "").trim() || null;
   const missingVisitTypeRaw = String(form.get("missing_visit_type") ?? "").trim();
@@ -101,10 +110,23 @@ export async function POST(req: Request) {
         sheetName,
         missingVisitType,
         clientResolutions,
+        usualTreatmentCost,
       });
       const completedAtMs = Date.now();
       const durationMs = completedAtMs - startedAtMs;
       const success = result.blockingErrors.length === 0;
+      if (success && saveUsualTreatmentCostDefault && usualTreatmentCost && profile === "tipulim_receipts_only") {
+        await prisma.therapy_settings.upsert({
+          where: { household_id: householdId },
+          create: {
+            household_id: householdId,
+            usual_treatment_cost_for_import: usualTreatmentCost,
+          },
+          update: {
+            usual_treatment_cost_for_import: usualTreatmentCost,
+          },
+        });
+      }
       const failureMessage = success
         ? null
         : summarizeBlockingErrorsForAudit(result.blockingErrors).slice(0, 2000);
@@ -163,6 +185,7 @@ export async function POST(req: Request) {
     sheetName,
     missingVisitType,
     clientResolutions,
+    usualTreatmentCost,
   });
   return NextResponse.json({ ok: true, ...result });
 }

@@ -680,6 +680,23 @@ export function privateClinicReceipts(lang: UiLanguage) {
     noMoreRows: p("No more receipts.", "אין עוד קבלות."),
     formError: p("Could not save receipt. Please review the fields and try again.", "לא ניתן לשמור קבלה. בדקו את השדות ונסו שוב."),
     open: p("Open", "פתיחה"),
+    importBtn: p("Import receipts", "ייבוא קבלות"),
+    importBackToReceipts: p("Back to receipts", "חזרה לקבלות"),
+    importTitleReceipts: p("Import receipts", "ייבוא קבלות"),
+    importInstructionsReceipts: p(
+      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Enter your usual session fee; if a row amount is at most 10% above that fee (or lower), one treatment is created on the payment date and linked. Larger amounts import the receipt only — create treatments manually afterward.",
+      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. הזינו את דמי הסשן המקובלים; אם סכום השורה לכל היותר 10% מעל העלות (או נמוך יותר), ייווצר טיפול אחד בתאריך התשלום ויקושר. סכומים גבוהים יותר יייבאו קבלה בלבד — יש ליצור טיפולים ידנית.",
+    ),
+    usualTreatmentCostLabel: p("Usual treatment cost (per session)", "עלות טיפול מקובלת (למפגש)"),
+    usualTreatmentCostHint: p(
+      "Compared to each receipt amount: auto-create one treatment when amount ≤ this × 110%.",
+      "מושווה לסכום כל קבלה: ייווצר טיפול אוטומטית כאשר הסכום ≤ ערך זה × 110%.",
+    ),
+    saveUsualTreatmentCostDefault: p("Save as household default for next time", "שמירה כברירת מחדל לבית"),
+    importReceiptsNeedingManualTreatment: p(
+      "Receipts without auto-treatment (add treatments manually)",
+      "קבלות ללא טיפול אוטומטי (הוסיפו טיפולים ידנית)",
+    ),
   };
 }
 

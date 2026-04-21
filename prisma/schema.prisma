@@ -1504,6 +1504,8 @@ model therapy_settings {
   nav_tabs_json    Json?
   family_therapy_enabled Boolean @default(false)
   hebrew_transcription_provider TherapyHebrewTranscriptionProvider @default(openrouter)
+  /// Optional default for private-clinic receipt import (user can override each run).
+  usual_treatment_cost_for_import Decimal? @db.Decimal(15, 2)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

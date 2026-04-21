@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
 import {
   prisma,
   requireHouseholdMember,
@@ -386,12 +387,18 @@ export default async function ReceiptsPage({
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium text-slate-200">{r.receiptsHeading}</h2>
-          <Link
-            href={`${baseListHref}&modal=new`}
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {r.newReceipt}
-          </Link>
+          <div className="flex items-center gap-2">
+            <OpenPrivateClinicTreatmentsImportButton
+              label={r.importBtn}
+              importPath="/dashboard/private-clinic/receipts/import"
+            />
+            <Link
+              href={`${baseListHref}&modal=new`}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            >
+              {r.newReceipt}
+            </Link>
+          </div>
         </div>
         {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.receiptsEmpty}</p>
