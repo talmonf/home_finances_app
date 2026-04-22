@@ -69,6 +69,8 @@ export async function saveHouseholdSettings(formData: FormData) {
   }
 
   const householdId = (formData.get("household_id") as string | null)?.trim();
+  const tab = (formData.get("tab") as string | null)?.trim() || "settings";
+  const tabParam = encodeURIComponent(tab);
   if (!householdId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household."));
   }
@@ -147,7 +149,7 @@ export async function saveHouseholdSettings(formData: FormData) {
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/private-clinic", "layout");
 
-  redirect(`/admin/households/${householdId}/edit?saved=1`);
+  redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&saved=1`);
 }
 
 export async function deleteHousehold(formData: FormData) {
@@ -157,6 +159,8 @@ export async function deleteHousehold(formData: FormData) {
   }
 
   const householdId = (formData.get("household_id") as string | null)?.trim();
+  const tab = (formData.get("tab") as string | null)?.trim() || "danger";
+  const tabParam = encodeURIComponent(tab);
   if (!householdId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household."));
   }
@@ -181,7 +185,7 @@ export async function deleteHousehold(formData: FormData) {
 
   if (hasPrivateClinicFeature > 0 && therapyAppointmentsCount > 0) {
     redirect(
-      `/admin/households/${householdId}/edit?deleteError=privateClinicLegalBlock`,
+      `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=privateClinicLegalBlock`,
     );
   }
 
@@ -196,9 +200,9 @@ export async function deleteHousehold(formData: FormData) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
     ) {
-      redirect(`/admin/households/${householdId}/edit?deleteError=foreignKey`);
+      redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=foreignKey`);
     }
-    redirect(`/admin/households/${householdId}/edit?deleteError=unknown`);
+    redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=unknown`);
   }
 
   revalidatePath("/admin/households");

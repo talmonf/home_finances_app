@@ -79,18 +79,20 @@ export async function createHouseholdUsefulLink(formData: FormData) {
   await requireSuperAdminSession();
 
   const householdId = (formData.get("household_id") as string | null)?.trim();
+  const tab = (formData.get("tab") as string | null)?.trim() || "links";
+  const tabParam = encodeURIComponent(tab);
   if (!householdId) {
     redirect("/admin/households?error=household");
   }
 
   const sectionId = parseDashboardSectionId(formData.get("section_id") as string | null);
   if (!sectionId) {
-    redirect(`/admin/households/${householdId}/edit?usefulError=section`);
+    redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&usefulError=section`);
   }
 
   const url = normalizeAndValidateUrl(formData.get("url") as string | null);
   if (!url) {
-    redirect(`/admin/households/${householdId}/edit?usefulError=url`);
+    redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&usefulError=url`);
   }
 
   const title = trimOptionalField(formData.get("title") as string | null, MAX_TITLE_LEN);
@@ -122,7 +124,7 @@ export async function createHouseholdUsefulLink(formData: FormData) {
 
   revalidatePath(`/admin/households/${householdId}/edit`);
   revalidatePath("/dashboard", "layout");
-  redirect(`/admin/households/${householdId}/edit?usefulSaved=1`);
+  redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&usefulSaved=1`);
 }
 
 export async function deleteHouseholdUsefulLink(formData: FormData) {
@@ -130,6 +132,8 @@ export async function deleteHouseholdUsefulLink(formData: FormData) {
 
   const id = (formData.get("id") as string | null)?.trim();
   const householdId = (formData.get("household_id") as string | null)?.trim();
+  const tab = (formData.get("tab") as string | null)?.trim() || "links";
+  const tabParam = encodeURIComponent(tab);
   if (!id || !householdId) {
     redirect("/admin/households?error=id");
   }
@@ -140,5 +144,5 @@ export async function deleteHouseholdUsefulLink(formData: FormData) {
 
   revalidatePath(`/admin/households/${householdId}/edit`);
   revalidatePath("/dashboard", "layout");
-  redirect(`/admin/households/${householdId}/edit?usefulSaved=1`);
+  redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&usefulSaved=1`);
 }

@@ -46,6 +46,7 @@ type PageProps = {
     usefulSaved?: string;
     usefulError?: string;
     deleteError?: string;
+    tab?: string;
   }>;
 };
 
@@ -122,6 +123,14 @@ export default async function EditHouseholdPage({
   const householdVisibleDashboardSections = DASHBOARD_SECTIONS.filter((s) => isSectionEnabled(s.id));
   const showHomeFrequentLinksSettings =
     homeFrequentLinksApplyToVisibleDashboard(householdVisibleDashboardSections);
+  const rawTab = resolvedSearchParams?.tab;
+  const activeTab =
+    rawTab === "diagnostics" ||
+    rawTab === "clinic" ||
+    rawTab === "links" ||
+    rawTab === "danger"
+      ? rawTab
+      : "settings";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -176,38 +185,59 @@ export default async function EditHouseholdPage({
         </header>
 
         <nav className="flex flex-wrap gap-2" aria-label="Edit household sections">
-          <a
-            href="#household-settings"
-            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          <Link
+            href={`/admin/households/${householdId}/edit?tab=settings`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              activeTab === "settings"
+                ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-sky-500 hover:text-sky-300"
+            }`}
           >
             Settings
-          </a>
-          <a
-            href="#household-diagnostics"
-            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          </Link>
+          <Link
+            href={`/admin/households/${householdId}/edit?tab=diagnostics`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              activeTab === "diagnostics"
+                ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-sky-500 hover:text-sky-300"
+            }`}
           >
             Diagnostics
-          </a>
-          <a
-            href="#clinic-taxonomies"
-            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          </Link>
+          <Link
+            href={`/admin/households/${householdId}/edit?tab=clinic`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              activeTab === "clinic"
+                ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-sky-500 hover:text-sky-300"
+            }`}
           >
             Clinic types
-          </a>
-          <a
-            href="#household-useful-links"
-            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          </Link>
+          <Link
+            href={`/admin/households/${householdId}/edit?tab=links`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              activeTab === "links"
+                ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-sky-500 hover:text-sky-300"
+            }`}
           >
             Useful links
-          </a>
-          <a
-            href="#danger-zone"
-            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-rose-500 hover:text-rose-300"
+          </Link>
+          <Link
+            href={`/admin/households/${householdId}/edit?tab=danger`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              activeTab === "danger"
+                ? "border-rose-500 bg-rose-500/10 text-rose-300"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-rose-500 hover:text-rose-300"
+            }`}
           >
             Danger zone
-          </a>
+          </Link>
         </nav>
 
+        {activeTab === "diagnostics" ? (
         <section id="household-diagnostics" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-1 text-sm font-semibold text-slate-200">Diagnostics</h2>
           <p className="mb-3 text-xs text-slate-400">
@@ -232,9 +262,12 @@ export default async function EditHouseholdPage({
             </Link>
           </div>
         </section>
+        ) : null}
 
+        {activeTab === "settings" ? (
         <form id="household-settings" action={saveHouseholdSettings} className="space-y-4">
           <input type="hidden" name="household_id" value={household.id} />
+          <input type="hidden" name="tab" value="settings" />
 
           <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <summary className="cursor-pointer text-sm font-semibold text-slate-200">Interface language</summary>
@@ -574,7 +607,9 @@ export default async function EditHouseholdPage({
             </button>
           </div>
         </form>
+        ) : null}
 
+        {activeTab === "clinic" ? (
         <section id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">
             Clinic — consultation / meeting types
@@ -725,7 +760,9 @@ export default async function EditHouseholdPage({
             </button>
           </form>
         </section>
+        ) : null}
 
+        {activeTab === "links" ? (
         <section id="household-useful-links" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">Household useful links</h2>
           <p className="mb-3 text-xs text-slate-500">
@@ -777,6 +814,7 @@ export default async function EditHouseholdPage({
                   <form action={deleteHouseholdUsefulLink}>
                     <input type="hidden" name="id" value={l.id} />
                     <input type="hidden" name="household_id" value={householdId} />
+                    <input type="hidden" name="tab" value="links" />
                     <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                       Remove
                     </button>
@@ -787,6 +825,7 @@ export default async function EditHouseholdPage({
           )}
           <form action={createHouseholdUsefulLink} className="grid gap-2 border-t border-slate-800 pt-3 sm:grid-cols-2">
             <input type="hidden" name="household_id" value={householdId} />
+            <input type="hidden" name="tab" value="links" />
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs text-slate-400">Dashboard section</label>
               <select
@@ -845,7 +884,9 @@ export default async function EditHouseholdPage({
             </div>
           </form>
         </section>
+        ) : null}
 
+        {activeTab === "danger" ? (
         <section id="danger-zone" className="rounded-xl border border-rose-700/70 bg-rose-950/20 p-4">
           <h2 className="mb-2 text-sm font-semibold text-rose-200">Danger zone — delete household</h2>
           <p className="mb-3 text-xs text-rose-100/80">
@@ -877,6 +918,7 @@ export default async function EditHouseholdPage({
               message={`Delete household "${household.name}" permanently?\n\nThis deletes all related data shown above and cannot be undone.\n\nDeletion is blocked if Clinic appointments exist due to legal requirements.`}
             >
               <input type="hidden" name="household_id" value={householdId} />
+              <input type="hidden" name="tab" value="danger" />
               <button
                 type="submit"
                 className="inline-flex items-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
@@ -886,6 +928,7 @@ export default async function EditHouseholdPage({
             </ConfirmDeleteForm>
           </div>
         </section>
+        ) : null}
       </div>
     </div>
   );
