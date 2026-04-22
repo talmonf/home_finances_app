@@ -87,6 +87,7 @@ export function TherapyTreatmentAttachments({
         storageBucket: string;
         storageKey: string;
       };
+      let uploadHadNetworkError = false;
       try {
         const uploadRes = await fetch(initData.uploadUrl, {
           method: "PUT",
@@ -98,25 +99,40 @@ export function TherapyTreatmentAttachments({
           return;
         }
       } catch {
-        // Some mobile browsers can report network/CORS errors even when PUT succeeded.
+        // Some browsers can report a network/CORS error even when the object upload eventually succeeds.
+        uploadHadNetworkError = true;
       }
-      const completeRes = await fetch(
-        `/api/private-clinic/treatments/${treatmentId}/attachments/direct/complete`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            attachmentId: initData.attachmentId,
-            fileName: initData.fileName,
-            mimeType: initData.mimeType,
-            byteSize: initData.byteSize,
-            storageBucket: initData.storageBucket,
-            storageKey: initData.storageKey,
-          }),
-        },
-      );
-      if (!completeRes.ok) {
-        setError(await readErrorMessage(completeRes, s.uploadFailed));
+
+      const completeBody = JSON.stringify({
+        attachmentId: initData.attachmentId,
+        fileName: initData.fileName,
+        mimeType: initData.mimeType,
+        byteSize: initData.byteSize,
+        storageBucket: initData.storageBucket,
+        storageKey: initData.storageKey,
+      });
+      const completeRetryDelaysMs = [300, 700, 1200, 2000];
+      let completeRes: Response | null = null;
+      for (let i = 0; i <= completeRetryDelaysMs.length; i += 1) {
+        completeRes = await fetch(
+          `/api/private-clinic/treatments/${treatmentId}/attachments/direct/complete`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: completeBody,
+          },
+        );
+        if (completeRes.ok) break;
+        if (completeRes.status !== 409 || i === completeRetryDelaysMs.length) break;
+        await new Promise((resolve) => setTimeout(resolve, completeRetryDelaysMs[i]));
+      }
+
+      if (!completeRes?.ok) {
+        if (uploadHadNetworkError && completeRes?.status === 409) {
+          setError("Upload to storage did not complete. Please try again.");
+          return;
+        }
+        setError(await readErrorMessage(completeRes as Response, s.uploadFailed));
         return;
       }
       router.refresh();
