@@ -38,7 +38,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
   const showObfuscateToggle = pathname.startsWith("/dashboard/private-clinic");
+  const showPetrolTitle = pathname.startsWith("/dashboard/petrol-fillups");
   const privateClinicCopy = showObfuscateToggle ? privateClinicLayoutStrings(uiLanguage) : null;
+  const toolbarContextTitle = showObfuscateToggle
+    ? privateClinicCopy?.title
+    : showPetrolTitle
+      ? uiLanguage === "he"
+        ? "תדלוק"
+        : "Petrol fill-up"
+      : undefined;
   const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin
       ? await getCurrentShowUsefulLinks()
@@ -63,7 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Suspense fallback={null}>
                 <DashboardUserToolbar
                   showObfuscate={showObfuscateToggle}
-                  contextTitle={showObfuscateToggle ? privateClinicCopy?.title : undefined}
+                  contextTitle={toolbarContextTitle}
                 />
               </Suspense>
               {showUsefulLinks ? (
