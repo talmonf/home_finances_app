@@ -540,9 +540,19 @@ function paymentMethodFromText(raw: string): {
 
 type BankDigitalImportCtx = {
   isPrivateClinic: boolean;
+  jobFamilyMemberId: string | null;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
-  digitalMethods: Array<{ id: string; name: string }>;
+  digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
 };
+
+function expectedDigitalMethodTypeFromHint(hintRaw: string | null): string | null {
+  const hint = (hintRaw ?? "").toLowerCase().trim();
+  if (!hint) return null;
+  if (hint.includes("ביט") || hint.includes("bit")) return "bit";
+  if (hint.includes("paybox")) return "paybox";
+  if (hint.includes("paypal")) return "paypal";
+  return null;
+}
 
 /** Resolves bank / digital payment method IDs for import rows (receipt anchors and direct treatment payment). */
 function resolveBankDigitalForParsedPayment(
@@ -580,9 +590,27 @@ function resolveBankDigitalForParsedPayment(
   }
   if (payment.treatmentMethod === "digital_payment") {
     const hint = payment.digitalHint?.toLowerCase() ?? "";
-    const matches = ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
-    if (matches.length === 1) digitalId = matches[0]!.id;
-    else {
+    const expectedType = expectedDigitalMethodTypeFromHint(payment.digitalHint);
+    const byType = expectedType ? ctx.digitalMethods.filter((m) => m.method_type === expectedType) : [];
+    const matches =
+      byType.length > 0
+        ? byType
+        : ctx.digitalMethods.filter((m) => m.name.toLowerCase().includes(hint));
+    const ownerScopedMatches = ctx.jobFamilyMemberId
+      ? matches.filter((m) => m.family_member_id === ctx.jobFamilyMemberId)
+      : [];
+    const householdFallbackMatches =
+      ownerScopedMatches.length > 0
+        ? ownerScopedMatches
+        : matches.filter((m) => m.family_member_id == null);
+    const preferredMatches = ownerScopedMatches.length > 0 ? ownerScopedMatches : householdFallbackMatches;
+    if (preferredMatches.length === 1) {
+      digitalId = preferredMatches[0]!.id;
+    } else if (ctx.isPrivateClinic) {
+      scratch.warnings.push(
+        `Row ${rowNumber}: could not uniquely match digital payment method ${paymentRouteLabel || "(digital)"}; saved without linking a digital method.`,
+      );
+    } else {
       scratch.errors.push(
         `Row ${rowNumber}: could not uniquely match digital payment method ${paymentRouteLabel || "(digital)"}.`,
       );
@@ -723,7 +751,7 @@ async function analyzeReceiptOnlyProfile(
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
-    digitalMethods: Array<{ id: string; name: string }>;
+    digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
   },
 ): Promise<AnalyzeScratch> {
   const rows = sheetRows(params.workbook, params.sheetName);
@@ -883,7 +911,7 @@ export async function analyzeReceiptOnlyProfileForTest(
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
-    digitalMethods: Array<{ id: string; name: string }>;
+    digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
   },
 ) {
   return analyzeReceiptOnlyProfile(params, ctx);
@@ -896,7 +924,7 @@ async function analyzePrivateProfile(
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
-    digitalMethods: Array<{ id: string; name: string }>;
+    digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
   },
 ): Promise<AnalyzeScratch> {
   const rows = sheetRows(params.workbook, params.sheetName);
@@ -1138,7 +1166,7 @@ export async function analyzePrivateProfileForTest(
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
-    digitalMethods: Array<{ id: string; name: string }>;
+    digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
   },
 ) {
   return analyzePrivateProfile(params, ctx);
@@ -1149,7 +1177,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
-  digitalMethods: Array<{ id: string; name: string }>;
+  digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
 }): Promise<AnalyzeScratch> {
   const rows = sheetRows(params.workbook, params.sheetName);
   const scratch: AnalyzeScratch = {
@@ -1478,7 +1506,7 @@ export async function analyzeOrgProfileForTest(params: TipulimAnalyzeParams, ctx
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
-  digitalMethods: Array<{ id: string; name: string }>;
+  digitalMethods: Array<{ id: string; name: string; method_type: string; family_member_id: string | null }>;
 }) {
   return analyzeOrgProfile(params, ctx);
 }
@@ -1550,7 +1578,7 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
   const [job, clients, programsByJob, bankAccounts, digitalMethods] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id: params.jobId, household_id: params.householdId },
-      select: { is_private_clinic: true },
+      select: { is_private_clinic: true, family_member_id: true },
     }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
@@ -1566,11 +1594,12 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
     }),
     prisma.digital_payment_methods.findMany({
       where: { household_id: params.householdId, is_active: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, method_type: true, family_member_id: true },
     }),
   ]);
   const ctx = {
     isPrivateClinic: job?.is_private_clinic ?? true,
+    jobFamilyMemberId: job?.family_member_id ?? null,
     clients,
     programsByJob,
     bankAccounts,
@@ -1646,7 +1675,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   const [job, clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id: params.jobId, household_id: params.householdId },
-      select: { is_private_clinic: true },
+      select: { is_private_clinic: true, family_member_id: true },
     }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
@@ -1662,7 +1691,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }),
     prisma.digital_payment_methods.findMany({
       where: { household_id: params.householdId, is_active: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, method_type: true, family_member_id: true },
     }),
     prisma.therapy_consultation_types.findMany({
       where: { household_id: params.householdId },
@@ -1671,6 +1700,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   ]);
   const ctx = {
     isPrivateClinic: job?.is_private_clinic ?? true,
+    jobFamilyMemberId: job?.family_member_id ?? null,
     clients,
     programsByJob,
     bankAccounts,
