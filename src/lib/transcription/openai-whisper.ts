@@ -37,11 +37,14 @@ function getOpenAIConfig(): {
   };
 }
 
-function normalizeErrorText(text: string): string {
+function normalizeErrorText(status: number, text: string): string {
   const trimmed = text.trim();
-  if (!trimmed) return "Transcription request failed";
+  if (!trimmed) return `Transcription request failed (${status}).`;
   if (trimmed.includes("FUNCTION_PAYLOAD_TOO_LARGE")) {
     return "Audio payload too large for transcription provider.";
+  }
+  if (trimmed.startsWith("<!DOCTYPE html") || trimmed.startsWith("<html")) {
+    return `Transcription provider returned an unexpected server error (${status}).`;
   }
   return trimmed;
 }
@@ -75,7 +78,7 @@ async function transcribeOnce(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(normalizeErrorText(text) || `${res.status} ${res.statusText}`);
+    throw new Error(normalizeErrorText(res.status, text) || `${res.status} ${res.statusText}`);
   }
 
   const data = (await res.json()) as { text?: string };

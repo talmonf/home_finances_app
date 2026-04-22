@@ -303,7 +303,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
           </p>
         )}
       </div>
-      {showFillupForm ? (
+      {showFillupForm && selectedCarId ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/75 p-3 sm:p-6">
           <Link href={cancelEditHref} aria-label="Close fill-up form" className="absolute inset-0" />
           <section className="relative w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-lg shadow-slate-950/60 ring-1 ring-slate-700/80 sm:max-h-[calc(100dvh-3rem)]">
