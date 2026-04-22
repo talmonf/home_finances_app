@@ -87,6 +87,20 @@ export function TherapyTreatmentAttachments({
         storageBucket: string;
         storageKey: string;
       };
+      const uploadViaServer = async () => {
+        const formData = new FormData();
+        formData.set("file", uploadFile);
+        const fallbackRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!fallbackRes.ok) {
+          setError(await readErrorMessage(fallbackRes, s.uploadFailed));
+          return false;
+        }
+        return true;
+      };
+
       let uploadHadNetworkError = false;
       try {
         const uploadRes = await fetch(initData.uploadUrl, {
@@ -128,8 +142,11 @@ export function TherapyTreatmentAttachments({
       }
 
       if (!completeRes?.ok) {
-        if (uploadHadNetworkError && completeRes?.status === 409) {
-          setError("Upload to storage did not complete. Please try again.");
+        if (uploadHadNetworkError || completeRes?.status === 409) {
+          const fallbackOk = await uploadViaServer();
+          if (!fallbackOk) return;
+          router.refresh();
+          setUploadFile(null);
           return;
         }
         setError(await readErrorMessage(completeRes as Response, s.uploadFailed));
