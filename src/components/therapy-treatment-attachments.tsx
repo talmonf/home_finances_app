@@ -87,21 +87,6 @@ export function TherapyTreatmentAttachments({
         storageBucket: string;
         storageKey: string;
       };
-      const uploadViaServer = async () => {
-        const formData = new FormData();
-        formData.set("file", uploadFile);
-        const fallbackRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!fallbackRes.ok) {
-          setError(await readErrorMessage(fallbackRes, s.uploadFailed));
-          return false;
-        }
-        return true;
-      };
-
-      let uploadHadNetworkError = false;
       try {
         const uploadRes = await fetch(initData.uploadUrl, {
           method: "PUT",
@@ -113,8 +98,10 @@ export function TherapyTreatmentAttachments({
           return;
         }
       } catch {
-        // Some browsers can report a network/CORS error even when the object upload eventually succeeds.
-        uploadHadNetworkError = true;
+        // Surface an explicit message instead of trying server fallback,
+        // which can exceed serverless request limits for larger files.
+        setError("Direct upload failed before reaching storage. Please retry.");
+        return;
       }
 
       const completeBody = JSON.stringify({
@@ -142,13 +129,6 @@ export function TherapyTreatmentAttachments({
       }
 
       if (!completeRes?.ok) {
-        if (uploadHadNetworkError || completeRes?.status === 409) {
-          const fallbackOk = await uploadViaServer();
-          if (!fallbackOk) return;
-          router.refresh();
-          setUploadFile(null);
-          return;
-        }
         setError(await readErrorMessage(completeRes as Response, s.uploadFailed));
         return;
       }
