@@ -11,13 +11,6 @@ function sanitizeFileName(fileName: string): string {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-function putObjectEncryptionFields():
-  | { ServerSideEncryption: "AES256" }
-  | Record<string, never> {
-  if (process.env.DISABLE_S3_SSE === "true") return {};
-  return { ServerSideEncryption: "AES256" };
-}
-
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ treatmentId: string }> },
@@ -90,10 +83,22 @@ export async function POST(
         Bucket: cfg.bucket,
         Key: key,
         ContentType: mimeType,
-        ...putObjectEncryptionFields(),
       }),
       { expiresIn: 600 },
     );
+
+    await prisma.therapy_treatment_attachments.create({
+      data: {
+        id: attachmentId,
+        household_id: householdId,
+        treatment_id: treatment.id,
+        file_name: fileName,
+        mime_type: mimeType,
+        byte_size: byteSize,
+        storage_bucket: cfg.bucket,
+        storage_key: key,
+      },
+    });
 
     return NextResponse.json({
       attachmentId,

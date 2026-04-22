@@ -62,9 +62,6 @@ export default async function PrivateClinicLayout({
     <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-4 sm:py-4">
       <div className="w-full min-w-0 max-w-6xl space-y-3 sm:space-y-4">
         <header className="space-y-2">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-50 sm:text-xl">
-            {layoutCopy.title}
-          </h1>
           <PrivateClinicNavClient
             navAriaLabel={layoutCopy.navAriaLabel}
             items={navItems.map((item) => ({

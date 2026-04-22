@@ -16,6 +16,7 @@ import {
 } from "@/lib/household-date-format";
 import { sectionIdFromDashboardPathname } from "@/lib/useful-links/pathname-to-section";
 import { uiLanguageDirection } from "@/lib/ui-language";
+import { privateClinicLayoutStrings } from "@/lib/private-clinic-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
   const showObfuscateToggle = pathname.startsWith("/dashboard/private-clinic");
+  const privateClinicCopy = showObfuscateToggle ? privateClinicLayoutStrings(uiLanguage) : null;
   const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin
       ? await getCurrentShowUsefulLinks()
@@ -59,7 +61,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           >
             <div className="w-full max-w-6xl space-y-2">
               <Suspense fallback={null}>
-                <DashboardUserToolbar showObfuscate={showObfuscateToggle} />
+                <DashboardUserToolbar
+                  showObfuscate={showObfuscateToggle}
+                  contextTitle={showObfuscateToggle ? privateClinicCopy?.title : undefined}
+                />
               </Suspense>
               {showUsefulLinks ? (
                 <>
