@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import {
   privateClinicLayoutStrings,
   privateClinicNavLabel,
 } from "@/lib/private-clinic-i18n";
-import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
 import {
   ensureDefaultConsultationTypes,
@@ -42,12 +40,6 @@ export default async function PrivateClinicLayout({
     }
   }
 
-  const onlyPrivateClinic =
-    householdId &&
-    userId &&
-    !session?.user?.isSuperAdmin &&
-    (await householdUserOnlyPrivateClinicSection(householdId, userId, uiLanguage));
-
   let reminderBadgeCount: number | null = null;
   if (
     householdId &&
@@ -67,23 +59,12 @@ export default async function PrivateClinicLayout({
   }
 
   return (
-    <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-6 sm:px-4 sm:py-10">
-      <div className="w-full min-w-0 max-w-6xl space-y-4 sm:space-y-6">
-        <header className="space-y-2 sm:space-y-3">
-          {!onlyPrivateClinic ? (
-            <Link
-              href="/"
-              className="inline-block text-sm text-slate-400 hover:text-slate-200"
-            >
-              {layoutCopy.backToDashboard}
-            </Link>
-          ) : null}
-          <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
+    <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-4 sm:py-4">
+      <div className="w-full min-w-0 max-w-6xl space-y-3 sm:space-y-4">
+        <header className="space-y-2">
+          <h1 className="text-lg font-semibold tracking-tight text-slate-50 sm:text-xl">
             {layoutCopy.title}
           </h1>
-          <p className="text-sm text-slate-400">
-            {layoutCopy.description}
-          </p>
           <PrivateClinicNavClient
             navAriaLabel={layoutCopy.navAriaLabel}
             items={navItems.map((item) => ({

@@ -308,8 +308,7 @@ export default async function TreatmentsPage({
         </p>
       )}
 
-      <section className="space-y-1.5">
-        <h2 className="text-base font-medium text-slate-200 sm:text-lg">{tr.filters}</h2>
+      <section className="space-y-1">
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
