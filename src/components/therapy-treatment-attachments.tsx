@@ -34,6 +34,7 @@ export function TherapyTreatmentAttachments({
   attachments,
   showHebrewAwsFallbackHint = false,
 }: Props) {
+  const SERVER_FALLBACK_MAX_BYTES = 4 * 1024 * 1024;
   const router = useRouter();
   const s = privateClinicTreatmentAttachments(uiLanguage);
   const [busyUpload, setBusyUpload] = useState(false);
@@ -82,6 +83,24 @@ export function TherapyTreatmentAttachments({
         uploadUrl: string;
         uploadHeaders?: Record<string, string>;
       };
+
+      const tryServerFallback = async (): Promise<boolean> => {
+        if (uploadFile.size > SERVER_FALLBACK_MAX_BYTES) return false;
+        const formData = new FormData();
+        formData.set("file", uploadFile);
+        const fallbackRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!fallbackRes.ok) {
+          setError(await readErrorMessage(fallbackRes, s.uploadFailed));
+          return false;
+        }
+        router.refresh();
+        setUploadFile(null);
+        return true;
+      };
+
       try {
         const uploadRes = await fetch(initData.uploadUrl, {
           method: "PUT",
@@ -92,11 +111,17 @@ export function TherapyTreatmentAttachments({
           await fetch(`/api/private-clinic/treatment-attachments/${initData.attachmentId}`, {
             method: "DELETE",
           });
-          setError(await readErrorMessage(uploadRes, s.uploadFailed));
+          const responseMessage = await readErrorMessage(uploadRes, s.uploadFailed);
+          const fallbackDone = await tryServerFallback();
+          if (fallbackDone) return;
+          setError(`Direct upload failed (${uploadRes.status}): ${responseMessage}`);
           return;
         }
-      } catch {
-        setError(s.uploadFailed);
+      } catch (error) {
+        const fallbackDone = await tryServerFallback();
+        if (fallbackDone) return;
+        const errMsg = error instanceof Error ? error.message : "Network/CORS error";
+        setError(`Direct upload request failed: ${errMsg}`);
         return;
       }
       router.refresh();
