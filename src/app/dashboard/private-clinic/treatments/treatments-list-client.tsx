@@ -46,6 +46,7 @@ export function TreatmentsListClient({
   obfuscate,
   labels,
   showExternalReporting,
+  showFamily,
 }: {
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
@@ -56,6 +57,7 @@ export function TreatmentsListClient({
   obfuscate: boolean;
   labels: Labels;
   showExternalReporting: boolean;
+  showFamily: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -195,7 +197,7 @@ export function TreatmentsListClient({
                 </button>
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
-              <th className="px-3 py-2 text-slate-300">{labels.family}</th>
+              {showFamily ? <th className="px-3 py-2 text-slate-300">{labels.family}</th> : null}
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
@@ -264,7 +266,7 @@ export function TreatmentsListClient({
                   </td>
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
                   <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
-                  <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td>
+                  {showFamily ? <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td> : null}
                   <td className="px-3 py-2 text-slate-200">
                     {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)}
                   </td>

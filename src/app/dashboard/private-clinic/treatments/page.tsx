@@ -66,6 +66,7 @@ export default async function TreatmentsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
+  const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const sp = searchParams ? await searchParams : {};
   const filters: TreatmentsListFilters = {
     paid: parseTreatmentsPaidFilter(sp.paid),
@@ -356,7 +357,7 @@ export default async function TreatmentsPage({
             any: c.any,
             anyF: c.anyF,
             inactive: c.inactive,
-            family: "Family",
+            family: familyLabel,
           }}
         />
       </section>
@@ -393,7 +394,7 @@ export default async function TreatmentsPage({
               client: c.client,
               job: c.job,
               program: c.program,
-              family: "Family",
+              family: familyLabel,
               amount: c.amount,
               paid: c.paid,
               receiptCol: tr.receiptCol,
@@ -407,6 +408,7 @@ export default async function TreatmentsPage({
               loadMore: tr.loadMore,
             }}
             showExternalReporting={showExternalReporting}
+            showFamily={Boolean(settings?.family_therapy_enabled)}
           />
         )}
       </section>
