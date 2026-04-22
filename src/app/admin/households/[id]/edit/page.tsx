@@ -175,118 +175,181 @@ export default async function EditHouseholdPage({
           ) : null}
         </header>
 
-        <form action={saveHouseholdSettings} className="space-y-8">
+        <nav className="flex flex-wrap gap-2" aria-label="Edit household sections">
+          <a
+            href="#household-settings"
+            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          >
+            Settings
+          </a>
+          <a
+            href="#household-diagnostics"
+            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          >
+            Diagnostics
+          </a>
+          <a
+            href="#clinic-taxonomies"
+            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          >
+            Clinic types
+          </a>
+          <a
+            href="#household-useful-links"
+            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          >
+            Useful links
+          </a>
+          <a
+            href="#danger-zone"
+            className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-rose-500 hover:text-rose-300"
+          >
+            Danger zone
+          </a>
+        </nav>
+
+        <section id="household-diagnostics" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-200">Diagnostics</h2>
+          <p className="mb-3 text-xs text-slate-400">
+            Run household-specific diagnostics without copying URLs.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/api/admin/storage/cors-diagnostic"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              Storage diagnostics
+            </Link>
+            <Link
+              href={`/api/admin/transcription/diagnostic?household_id=${householdId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              Transcription diagnostics (this household)
+            </Link>
+          </div>
+        </section>
+
+        <form id="household-settings" action={saveHouseholdSettings} className="space-y-4">
           <input type="hidden" name="household_id" value={household.id} />
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-200">
-              Interface language
-            </h2>
-            <select
-              name="ui_language"
-              defaultValue={household.ui_language ?? "en"}
-              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {UI_LANGUAGES.map((value) => (
-                <option key={value} value={value}>
-                  {UI_LANGUAGE_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </section>
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">Interface language</summary>
+            <div className="mt-3">
+              <select
+                name="ui_language"
+                defaultValue={household.ui_language ?? "en"}
+                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                {UI_LANGUAGES.map((value) => (
+                  <option key={value} value={value}>
+                    {UI_LANGUAGE_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </details>
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-200">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Links (URL) panels on entity pages
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              When enabled, pages such as insurance policies, savings policies, and
-              clinic insurance show a &quot;Links&quot; section for attaching URLs to
-              each record. Disable this to hide those panels for this household.
-            </p>
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                name="show_entity_url_panels"
-                defaultChecked={household.show_entity_url_panels ?? true}
-                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-              />
-              <span className="text-sm text-slate-300">
-                Show per-record Links (URL) panels
-              </span>
-            </label>
-          </section>
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                When enabled, pages such as insurance policies, savings policies, and
+                clinic insurance show a &quot;Links&quot; section for attaching URLs to
+                each record. Disable this to hide those panels for this household.
+              </p>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="show_entity_url_panels"
+                  defaultChecked={household.show_entity_url_panels ?? true}
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                />
+                <span className="text-sm text-slate-300">
+                  Show per-record Links (URL) panels
+                </span>
+              </label>
+            </div>
+          </details>
 
           {showHomeFrequentLinksSettings ? (
-            <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-              <h2 className="mb-3 text-sm font-semibold text-slate-200">
+            <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-200">
                 Home dashboard — frequent links
-              </h2>
-              <p className="mb-4 text-xs text-slate-500">
-                Shortcuts at the top of the household home screen. Each can be hidden independently.
-                Links to Clinic or Upcoming renewals only appear when that section is enabled
-                for the household.
-              </p>
-              <input type="hidden" name="home_frequent_links_form" value="1" />
-              <ul className="space-y-2">
-                {HOME_FREQUENT_LINK_KEYS.map((key) => (
-                  <li
-                    key={key}
-                    className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`hf_${key}`}
-                      name={`hf_${key}`}
-                      defaultChecked={frequentLinkToggles[key]}
-                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                    />
-                    <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
-                      {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </section>
+              </summary>
+              <div className="mt-3">
+                <p className="mb-4 text-xs text-slate-500">
+                  Shortcuts at the top of the household home screen. Each can be hidden independently.
+                  Links to Clinic or Upcoming renewals only appear when that section is enabled
+                  for the household.
+                </p>
+                <input type="hidden" name="home_frequent_links_form" value="1" />
+                <ul className="space-y-2">
+                  {HOME_FREQUENT_LINK_KEYS.map((key) => (
+                    <li
+                      key={key}
+                      className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                    >
+                      <input
+                        type="checkbox"
+                        id={`hf_${key}`}
+                        name={`hf_${key}`}
+                        defaultChecked={frequentLinkToggles[key]}
+                        className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                      />
+                      <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
+                        {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
           ) : null}
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-200">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Date display format
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              Used for dates in lists and tables for this household&apos;s users.
-            </p>
-            <select
-              name="date_display_format"
-              defaultValue={household.date_display_format}
-              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {(["YMD", "DMY", "MDY"] as const).map((value) => (
-                <option key={value} value={value}>
-                  {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </section>
-
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-200">
-              Enabled sections
-            </h2>
-            <p className="mb-4 text-xs text-slate-500">
-              Uncheck to hide a section from the household&apos;s home dashboard. Users
-              won&apos;t see disabled areas in the nav.
-            </p>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-slate-500">Quick preset:</span>
-              <HouseholdPrivateClinicOnlyButton />
-              <span className="text-[11px] text-slate-600">
-                (only &quot;Clinic&quot; on; save to apply)
-              </span>
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                Used for dates in lists and tables for this household&apos;s users.
+              </p>
+              <select
+                name="date_display_format"
+                defaultValue={household.date_display_format}
+                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                {(["YMD", "DMY", "MDY"] as const).map((value) => (
+                  <option key={value} value={value}>
+                    {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                  </option>
+                ))}
+              </select>
             </div>
+          </details>
 
-            <div id="household-enabled-dashboard-sections" className="space-y-6">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">Enabled sections</summary>
+            <div className="mt-3">
+              <p className="mb-4 text-xs text-slate-500">
+                Uncheck to hide a section from the household&apos;s home dashboard. Users
+                won&apos;t see disabled areas in the nav.
+              </p>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-slate-500">Quick preset:</span>
+                <HouseholdPrivateClinicOnlyButton />
+                <span className="text-[11px] text-slate-600">
+                  (only &quot;Clinic&quot; on; save to apply)
+                </span>
+              </div>
+
+              <div id="household-enabled-dashboard-sections" className="space-y-6">
               <div>
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -359,20 +422,20 @@ export default async function EditHouseholdPage({
                 </div>
               </div>
             </div>
-          </section>
+            </div>
+          </details>
 
-          <section
+          <details
             id="private-clinic-tabs"
             className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
           >
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              Clinic tabs
-            </h2>
-            <p className="mb-4 text-xs text-slate-500">
-              Controls which links appear in the Clinic navigation for this household (household users cannot
-              change this in the app).
-            </p>
-            <ul className="space-y-2">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">Clinic tabs</summary>
+            <div className="mt-3">
+              <p className="mb-4 text-xs text-slate-500">
+                Controls which links appear in the Clinic navigation for this household (household users cannot
+                change this in the app).
+              </p>
+              <ul className="space-y-2">
               {PRIVATE_CLINIC_NAV_ITEMS.map((item) => (
                 <li
                   key={item.key}
@@ -397,56 +460,61 @@ export default async function EditHouseholdPage({
                   </label>
                 </li>
               ))}
-            </ul>
-          </section>
+              </ul>
+            </div>
+          </details>
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Clinic — family therapy
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              Enables family records and family filters/columns across clinic pages.
-            </p>
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                name="family_therapy_enabled"
-                defaultChecked={therapySettings?.family_therapy_enabled ?? false}
-                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-              />
-              <span className="text-sm text-slate-300">Enable family therapy mode</span>
-            </label>
-          </section>
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                Enables family records and family filters/columns across clinic pages.
+              </p>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="family_therapy_enabled"
+                  defaultChecked={therapySettings?.family_therapy_enabled ?? false}
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                />
+                <span className="text-sm text-slate-300">Enable family therapy mode</span>
+              </label>
+            </div>
+          </details>
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Clinic — Hebrew audio transcription
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              When users transcribe audio with the Hebrew option, choose whether to use OpenRouter (Whisper via your
-              OpenRouter key) or Amazon Transcribe (requires{" "}
-              <code className="rounded bg-slate-800 px-1 text-slate-300">TRANSCRIBE_DATA_ACCESS_ROLE_ARN</code> in
-              deployment env). English transcription is unchanged.
-            </p>
-            <label className="mb-1 block text-xs text-slate-500">Hebrew transcription backend</label>
-            <select
-              name="hebrew_transcription_provider"
-              defaultValue={therapySettings?.hebrew_transcription_provider ?? "openrouter"}
-              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="openrouter">OpenRouter (Whisper)</option>
-              <option value="aws">Amazon Transcribe (batch, S3)</option>
-            </select>
-          </section>
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                When users transcribe audio with the Hebrew option, choose whether to use OpenRouter (Whisper via your
+                OpenRouter key) or Amazon Transcribe (requires{" "}
+                <code className="rounded bg-slate-800 px-1 text-slate-300">TRANSCRIBE_DATA_ACCESS_ROLE_ARN</code> in
+                deployment env). English transcription is unchanged.
+              </p>
+              <label className="mb-1 block text-xs text-slate-500">Hebrew transcription backend</label>
+              <select
+                name="hebrew_transcription_provider"
+                defaultValue={therapySettings?.hebrew_transcription_provider ?? "openrouter"}
+                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="openrouter">OpenRouter (Whisper)</option>
+                <option value="aws">Amazon Transcribe (batch, S3)</option>
+              </select>
+            </div>
+          </details>
 
-          <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Clinic — treatment note labels
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
-            </p>
-            <div className="grid max-w-2xl gap-4">
+            </summary>
+            <div className="mt-3 grid max-w-2xl gap-4">
+              <p className="text-xs text-slate-500">
+                English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
+              </p>
               {(
                 [
                   {
@@ -495,19 +563,19 @@ export default async function EditHouseholdPage({
                 </div>
               ))}
             </div>
-          </section>
+          </details>
 
           <div className="flex justify-end">
             <button
               type="submit"
               className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
             >
-              Save settings
+              Save settings (all expanded/collapsed sections above)
             </button>
           </div>
         </form>
 
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <section id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">
             Clinic — consultation / meeting types
           </h2>
@@ -658,7 +726,7 @@ export default async function EditHouseholdPage({
           </form>
         </section>
 
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <section id="household-useful-links" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">Household useful links</h2>
           <p className="mb-3 text-xs text-slate-500">
             Shown to members of this household on matching dashboard sections (when the section is enabled for them).
@@ -778,7 +846,7 @@ export default async function EditHouseholdPage({
           </form>
         </section>
 
-        <section className="rounded-xl border border-rose-700/70 bg-rose-950/20 p-4">
+        <section id="danger-zone" className="rounded-xl border border-rose-700/70 bg-rose-950/20 p-4">
           <h2 className="mb-2 text-sm font-semibold text-rose-200">Danger zone — delete household</h2>
           <p className="mb-3 text-xs text-rose-100/80">
             Deleting a household is permanent and cannot be undone. All related records listed below will be deleted.

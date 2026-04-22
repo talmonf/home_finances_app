@@ -486,7 +486,6 @@ export function TherapyTreatmentsImportForm({
                   className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
                   value={usualTreatmentCost}
                   onChange={(e) => setUsualTreatmentCost(e.target.value)}
-                  placeholder="400"
                 />
                 <input
                   type="text"
