@@ -107,12 +107,15 @@ export function TherapyTreatmentsImportForm({
   labels,
   variant = "treatments",
   defaultUsualTreatmentCost,
+  defaultUsualTreatmentCostCurrency,
 }: {
   jobs: Job[];
   programs: Program[];
   variant?: "treatments" | "receipts";
   /** Prefill usual session fee (receipt import). */
   defaultUsualTreatmentCost?: string | null;
+  /** Prefill usual session fee currency (receipt import). */
+  defaultUsualTreatmentCostCurrency?: string | null;
   labels: {
     title: string;
     instructions: string;
@@ -170,6 +173,7 @@ export function TherapyTreatmentsImportForm({
     importDebugMissingAllocationLinks: string;
     importDebugMissingMarkPaidLinks: string;
     usualTreatmentCostLabel?: string;
+    usualTreatmentCostCurrencyLabel?: string;
     usualTreatmentCostHint?: string;
     saveUsualTreatmentCostDefault?: string;
     importReceiptsNeedingManualTreatment?: string;
@@ -193,6 +197,9 @@ export function TherapyTreatmentsImportForm({
   const [missingVisitType, setMissingVisitType] = useState("");
   const [usualTreatmentCost, setUsualTreatmentCost] = useState(
     () => defaultUsualTreatmentCost?.trim() ?? "",
+  );
+  const [usualTreatmentCostCurrency, setUsualTreatmentCostCurrency] = useState(
+    () => defaultUsualTreatmentCostCurrency?.trim().toUpperCase() ?? "ILS",
   );
   const [saveUsualTreatmentCostDefault, setSaveUsualTreatmentCostDefault] = useState(false);
 
@@ -223,6 +230,12 @@ export function TherapyTreatmentsImportForm({
       setUsualTreatmentCost(defaultUsualTreatmentCost.trim());
     }
   }, [defaultUsualTreatmentCost]);
+
+  useEffect(() => {
+    if (defaultUsualTreatmentCostCurrency && defaultUsualTreatmentCostCurrency.trim()) {
+      setUsualTreatmentCostCurrency(defaultUsualTreatmentCostCurrency.trim().toUpperCase());
+    }
+  }, [defaultUsualTreatmentCostCurrency]);
 
   useEffect(() => {
     if (!busy || !busyStartedAtMs) {
@@ -274,6 +287,7 @@ export function TherapyTreatmentsImportForm({
     }
     if (variant === "receipts") {
       fd.append("usual_treatment_cost", usualTreatmentCost.trim());
+      fd.append("usual_treatment_cost_currency", usualTreatmentCostCurrency.trim().toUpperCase());
       if (saveUsualTreatmentCostDefault) {
         fd.append("save_usual_treatment_cost_default", "1");
       }
@@ -463,16 +477,29 @@ export function TherapyTreatmentsImportForm({
           <>
             <label className="text-sm text-slate-200 md:col-span-2">
               {labels.usualTreatmentCostLabel}
-              <input
-                type="text"
-                name="usual_treatment_cost"
-                inputMode="decimal"
-                autoComplete="off"
-                className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
-                value={usualTreatmentCost}
-                onChange={(e) => setUsualTreatmentCost(e.target.value)}
-                placeholder="400"
-              />
+              <div className="mt-1 flex max-w-md gap-2">
+                <input
+                  type="text"
+                  name="usual_treatment_cost"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
+                  value={usualTreatmentCost}
+                  onChange={(e) => setUsualTreatmentCost(e.target.value)}
+                  placeholder="400"
+                />
+                <input
+                  type="text"
+                  name="usual_treatment_cost_currency"
+                  autoComplete="off"
+                  maxLength={8}
+                  className="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm uppercase"
+                  value={usualTreatmentCostCurrency}
+                  onChange={(e) => setUsualTreatmentCostCurrency(e.target.value.toUpperCase())}
+                  placeholder={labels.usualTreatmentCostCurrencyLabel ?? "Currency"}
+                  aria-label={labels.usualTreatmentCostCurrencyLabel ?? "Currency"}
+                />
+              </div>
               {labels.usualTreatmentCostHint ? (
                 <p className="mt-1 text-xs text-slate-400">{labels.usualTreatmentCostHint}</p>
               ) : null}
@@ -520,11 +547,10 @@ export function TherapyTreatmentsImportForm({
           onClick={() => {
             setPreview(null);
             setMsg(null);
-            setSheetOptions([]);
-            setSheetName("");
             setClientResolutions({});
           }}
-          className="rounded border border-slate-600 px-3 py-1.5 text-sm text-slate-200"
+          disabled={busy}
+          className="rounded bg-violet-700 px-3 py-1.5 text-sm text-violet-100 hover:bg-violet-600 disabled:opacity-50"
         >
           {labels.clearPreview}
         </button>

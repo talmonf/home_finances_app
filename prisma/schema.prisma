@@ -1277,6 +1277,7 @@ model users {
   role                 UserRole
   user_type            UserType
   user_type_description String?
+  default_currency     String?
   date_display_format  HouseholdDateDisplayFormat?
   ui_language          String?
   family_member_id     String?
@@ -1554,6 +1555,8 @@ model therapy_settings {
   hebrew_transcription_provider TherapyHebrewTranscriptionProvider @default(openrouter)
   /// Optional default for private-clinic receipt import (user can override each run).
   usual_treatment_cost_for_import Decimal? @db.Decimal(15, 2)
+  /// Optional currency for private-clinic receipt import default amount.
+  usual_treatment_cost_currency_for_import String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

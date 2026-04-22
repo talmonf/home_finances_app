@@ -27,11 +27,11 @@ export default async function ReceiptsImportPage() {
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
-    select: { family_member_id: true },
+    select: { family_member_id: true, default_currency: true },
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [linkedJobRows, linkedProgramRows, settings] = await Promise.all([
+  const [linkedJobRows, linkedProgramRows, household] = await Promise.all([
     prisma.therapy_treatments.findMany({
       where: { household_id: householdId },
       distinct: ["job_id"],
@@ -42,9 +42,9 @@ export default async function ReceiptsImportPage() {
       distinct: ["program_id"],
       select: { program_id: true },
     }),
-    prisma.therapy_settings.findUnique({
-      where: { household_id: householdId },
-      select: { usual_treatment_cost_for_import: true },
+    prisma.households.findUnique({
+      where: { id: householdId },
+      select: { primary_currency: true },
     }),
   ]);
   const linkedJobIds = linkedJobRows.map((row) => row.job_id);
@@ -79,10 +79,8 @@ export default async function ReceiptsImportPage() {
     }),
   ]);
 
-  const defaultUsualTreatmentCost =
-    settings?.usual_treatment_cost_for_import != null
-      ? String(settings.usual_treatment_cost_for_import)
-      : "";
+  const defaultUsualTreatmentCost = "";
+  const defaultUsualTreatmentCostCurrency = (user?.default_currency || household?.primary_currency || "ILS").toUpperCase();
 
   return (
     <div className="space-y-4">
@@ -97,6 +95,7 @@ export default async function ReceiptsImportPage() {
       <TherapyTreatmentsImportForm
         variant="receipts"
         defaultUsualTreatmentCost={defaultUsualTreatmentCost}
+        defaultUsualTreatmentCostCurrency={defaultUsualTreatmentCostCurrency}
         jobs={jobs.map((j) => ({ id: j.id, title: formatPrivateClinicJobLabel(j) }))}
         programs={programs.map((p) => ({
           id: p.id,
@@ -161,6 +160,7 @@ export default async function ReceiptsImportPage() {
           importDebugMissingAllocationLinks: tr.importDebugMissingAllocationLinks,
           importDebugMissingMarkPaidLinks: tr.importDebugMissingMarkPaidLinks,
           usualTreatmentCostLabel: r.usualTreatmentCostLabel,
+          usualTreatmentCostCurrencyLabel: c.currency,
           usualTreatmentCostHint: r.usualTreatmentCostHint,
           saveUsualTreatmentCostDefault: r.saveUsualTreatmentCostDefault,
           importReceiptsNeedingManualTreatment: r.importReceiptsNeedingManualTreatment,

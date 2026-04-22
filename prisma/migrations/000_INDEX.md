@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 095_private_clinic_receipts_import_currency_defaults.sql (2026-04-22)
 - [x] 094_credit_cards_issue_date_bank_accounts_date_opened.sql (2026-04-21)
 - [x] 093_private_clinic_backups_and_general_audit.sql (2026-04-21)
 - [x] 092_credit_cards_no_charge_policy_valid_until.sql (2026-04-21)
@@ -117,6 +118,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 095 | `095_private_clinic_receipts_import_currency_defaults.sql` (2026-04-22) | ALTER/UPDATE | `users`: add optional `default_currency` (backfilled from `households.primary_currency`); `therapy_settings`: add optional `usual_treatment_cost_currency_for_import` (backfilled from household currency) for receipt-import amount/currency defaults. |
 | 094 | `094_credit_cards_issue_date_bank_accounts_date_opened.sql` (2026-04-21) | ALTER | `credit_cards`: add optional `issue_date`; `bank_accounts`: add optional `date_opened` to track lifecycle dates separately from expiry/closure. |
 | 093 | `093_private_clinic_backups_and_general_audit.sql` (2026-04-21) | CREATE | Add `private_clinic_backup_snapshots` for versioned JSON backup payloads (checksum + metadata) and `general_audit_events` for unified operational auditing (feature/action/status/metadata). |
 | 092 | `092_credit_cards_no_charge_policy_valid_until.sql` (2026-04-21) | ALTER | `credit_cards`: add optional `no_charge_policy_valid_until` (`DATE`) to track annual no-charge-policy validity separately from card expiry. |

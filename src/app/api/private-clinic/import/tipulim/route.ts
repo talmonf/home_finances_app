@@ -47,6 +47,8 @@ export async function POST(req: Request) {
         : "tipulim_private";
   const usualTreatmentCostRaw = String(form.get("usual_treatment_cost") ?? "").trim();
   const usualTreatmentCost = usualTreatmentCostRaw || null;
+  const usualTreatmentCostCurrencyRaw = String(form.get("usual_treatment_cost_currency") ?? "").trim().toUpperCase();
+  const usualTreatmentCostCurrency = usualTreatmentCostCurrencyRaw || null;
   const saveUsualTreatmentCostDefault =
     String(form.get("save_usual_treatment_cost_default") ?? "").toLowerCase() === "1" ||
     String(form.get("save_usual_treatment_cost_default") ?? "").toLowerCase() === "true";
@@ -128,15 +130,23 @@ export async function POST(req: Request) {
       const completedAtMs = Date.now();
       const durationMs = completedAtMs - startedAtMs;
       const success = result.blockingErrors.length === 0;
+      if (success && usualTreatmentCostCurrency && profile === "tipulim_receipts_only") {
+        await prisma.users.updateMany({
+          where: { id: session.user.id, household_id: householdId },
+          data: { default_currency: usualTreatmentCostCurrency },
+        });
+      }
       if (success && saveUsualTreatmentCostDefault && usualTreatmentCost && profile === "tipulim_receipts_only") {
         await prisma.therapy_settings.upsert({
           where: { household_id: householdId },
           create: {
             household_id: householdId,
             usual_treatment_cost_for_import: usualTreatmentCost,
+            usual_treatment_cost_currency_for_import: usualTreatmentCostCurrency,
           },
           update: {
             usual_treatment_cost_for_import: usualTreatmentCost,
+            usual_treatment_cost_currency_for_import: usualTreatmentCostCurrency,
           },
         });
       }
