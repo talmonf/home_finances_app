@@ -610,6 +610,7 @@ export default async function EditHouseholdPage({
         ) : null}
 
         {activeTab === "clinic" ? (
+        <>
         <section id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-2 text-sm font-semibold text-slate-200">
             Clinic — consultation / meeting types
@@ -760,6 +761,7 @@ export default async function EditHouseholdPage({
             </button>
           </form>
         </section>
+        </>
         ) : null}
 
         {activeTab === "links" ? (
