@@ -236,7 +236,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 </p>
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-7">
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   Households (Super Admin)
@@ -305,6 +305,18 @@ export default async function Home({ searchParams }: HomeProps) {
                   className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
                 >
                   Open general audits
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">Transcriptions</h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  Review transcription status, language, and provider across households.
+                </p>
+                <Link
+                  href="/admin/transcriptions"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open transcription log
                 </Link>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">

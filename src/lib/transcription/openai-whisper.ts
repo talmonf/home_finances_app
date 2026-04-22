@@ -106,7 +106,12 @@ export async function transcribeWithOpenAIWhisper(
     try {
       return await transcribeOnce(openRouterCfg, audio, fileName, mimeType, language);
     } catch (error) {
-      if (!openAiCfg) throw error;
+      if (!openAiCfg) {
+        throw new Error(
+          "OpenRouter transcription failed and OPENAI_API_KEY is not configured for fallback. " +
+            "Configure OPENAI_API_KEY or retry later.",
+        );
+      }
       console.warn("OpenRouter transcription failed; retrying with OpenAI:", error);
     }
   }

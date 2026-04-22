@@ -216,93 +216,6 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
             </div>
           ) : null}
 
-          {showFillupForm ? (
-            <section className="mx-auto w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/50 ring-1 ring-slate-700/80">
-              <h2 className="mb-4 text-lg font-medium text-slate-200">
-                {editingFillup ? pp.editFillUp : pp.newFillUp}
-              </h2>
-              <form
-                key={editingFillup?.id ?? "new-fillup"}
-                action={editingFillup ? updatePrivateClinicPetrolFillup : createPrivateClinicPetrolFillup}
-                className="flex flex-col gap-4"
-              >
-                <PetrolFillupDateTankerFields
-                  members={familyMembers}
-                  defaultFilledAt={editingFillup ? dateInputValue(editingFillup.filled_at) : today}
-                  defaultTankerId={editingFillup?.tanked_up_by_family_member_id ?? null}
-                  labels={{
-                    date: c.date,
-                    tankedUpBy: c.tankedBy,
-                    select: pp.selectEllipsis,
-                    tankerAgeHint: pp.tankerAgeHint,
-                    tankerNoEligible: pp.tankerNoEligible,
-                    tankerNoDob: pp.tankerNoDob,
-                  }}
-                />
-                <PetrolFillupFormFields
-                  carId={selectedCarId}
-                  fillupId={editingFillup?.id}
-                  currency={editingFillup?.currency ?? "ILS"}
-                  defaults={
-                    editingFillup
-                      ? {
-                          amount_paid: editingFillup.amount_paid.toString(),
-                          litres: editingFillup.litres.toString(),
-                          odometer_km: String(editingFillup.odometer_km),
-                        }
-                      : {
-                          amount_paid: "",
-                          litres: "",
-                          odometer_km: "",
-                        }
-                  }
-                  labels={{
-                    amountPaid: pp.amountPaid,
-                    litres: pp.litres,
-                    costPerLitrePreview: pp.costPerLitrePreview,
-                    odometerKm: pp.odometerKm,
-                  }}
-                />
-                <div className="[&_select]:min-h-[52px] [&_select]:text-base [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3">
-                  <TherapyTransactionLinkSelect
-                    name="linked_transaction_id"
-                    householdId={householdId}
-                    currentId={editingFillup?.transaction_id ?? null}
-                    label={pp.linkTxOptional}
-                    hint={pp.linkTxHint}
-                    noneOptionLabel={c.txNoneLinked}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass} htmlFor="notes">
-                    {pp.notesOptional}
-                  </label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    rows={2}
-                    defaultValue={editingFillup?.notes ?? ""}
-                    className={`${inputClass} min-h-[88px] resize-y py-3`}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <button
-                    type="submit"
-                    className="min-h-[56px] rounded-xl bg-sky-500 px-5 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500 sm:flex-1"
-                  >
-                    {editingFillup ? pp.saveChanges : pp.saveFillUp}
-                  </button>
-                  <Link
-                    href={cancelEditHref}
-                    className="inline-flex min-h-[56px] items-center justify-center rounded-xl border border-slate-600 px-5 text-base font-medium text-slate-200 hover:bg-slate-800"
-                  >
-                    {c.cancel}
-                  </Link>
-                </div>
-              </form>
-            </section>
-          ) : null}
-
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-medium text-slate-200">{c.recentFillUps}</h2>
@@ -508,6 +421,103 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
           {c.selectVehiclePrompt}
         </p>
       )}
+      {showFillupForm && selectedCarId ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/75 p-3 sm:p-6">
+          <Link href={cancelEditHref} aria-label="Close fill-up form" className="absolute inset-0" />
+          <section className="relative w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-lg shadow-slate-950/60 ring-1 ring-slate-700/80 sm:max-h-[calc(100dvh-3rem)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-medium text-slate-200">
+                {editingFillup ? pp.editFillUp : pp.newFillUp}
+              </h2>
+              <Link
+                href={cancelEditHref}
+                className="inline-flex min-h-[36px] items-center justify-center rounded-md border border-slate-600 px-2 text-sm text-slate-300 hover:bg-slate-800"
+              >
+                {c.cancel}
+              </Link>
+            </div>
+            <form
+              key={editingFillup?.id ?? "new-fillup"}
+              action={editingFillup ? updatePrivateClinicPetrolFillup : createPrivateClinicPetrolFillup}
+              className="flex flex-col gap-4"
+            >
+              <PetrolFillupDateTankerFields
+                members={familyMembers}
+                defaultFilledAt={editingFillup ? dateInputValue(editingFillup.filled_at) : today}
+                defaultTankerId={editingFillup?.tanked_up_by_family_member_id ?? null}
+                labels={{
+                  date: c.date,
+                  tankedUpBy: c.tankedBy,
+                  select: pp.selectEllipsis,
+                  tankerAgeHint: pp.tankerAgeHint,
+                  tankerNoEligible: pp.tankerNoEligible,
+                  tankerNoDob: pp.tankerNoDob,
+                }}
+              />
+              <PetrolFillupFormFields
+                carId={selectedCarId}
+                fillupId={editingFillup?.id}
+                currency={editingFillup?.currency ?? "ILS"}
+                defaults={
+                  editingFillup
+                    ? {
+                        amount_paid: editingFillup.amount_paid.toString(),
+                        litres: editingFillup.litres.toString(),
+                        odometer_km: String(editingFillup.odometer_km),
+                      }
+                    : {
+                        amount_paid: "",
+                        litres: "",
+                        odometer_km: "",
+                      }
+                }
+                labels={{
+                  amountPaid: pp.amountPaid,
+                  litres: pp.litres,
+                  costPerLitrePreview: pp.costPerLitrePreview,
+                  odometerKm: pp.odometerKm,
+                }}
+              />
+              <div className="[&_select]:min-h-[52px] [&_select]:text-base [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3">
+                <TherapyTransactionLinkSelect
+                  name="linked_transaction_id"
+                  householdId={householdId}
+                  currentId={editingFillup?.transaction_id ?? null}
+                  label={pp.linkTxOptional}
+                  hint={pp.linkTxHint}
+                  noneOptionLabel={c.txNoneLinked}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className={labelClass} htmlFor="notes">
+                  {pp.notesOptional}
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={2}
+                  defaultValue={editingFillup?.notes ?? ""}
+                  className={`${inputClass} min-h-[88px] resize-y py-3`}
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="submit"
+                  className="min-h-[56px] rounded-xl bg-sky-500 px-5 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500 sm:flex-1"
+                >
+                  {editingFillup ? pp.saveChanges : pp.saveFillUp}
+                </button>
+                <Link
+                  href={cancelEditHref}
+                  className="inline-flex min-h-[56px] items-center justify-center rounded-xl border border-slate-600 px-5 text-base font-medium text-slate-200 hover:bg-slate-800"
+                >
+                  {c.cancel}
+                </Link>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
