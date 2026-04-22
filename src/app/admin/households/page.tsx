@@ -222,6 +222,23 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
         </header>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-200">Diagnostics</h2>
+          <p className="mb-3 text-xs text-slate-400">
+            Tools for troubleshooting platform-level issues.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/api/admin/storage/cors-diagnostic"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              Storage CORS diagnostic
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">
             Existing households
           </h2>

@@ -34,7 +34,7 @@ export function TherapyTreatmentAttachments({
   attachments,
   showHebrewAwsFallbackHint = false,
 }: Props) {
-  const SERVER_FALLBACK_MAX_BYTES = 4 * 1024 * 1024;
+  const SERVER_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
   const router = useRouter();
   const s = privateClinicTreatmentAttachments(uiLanguage);
   const [busyUpload, setBusyUpload] = useState(false);
@@ -65,6 +65,20 @@ export function TherapyTreatmentAttachments({
     setBusyUpload(true);
     setError(null);
     try {
+      if (uploadFile.size <= SERVER_UPLOAD_MAX_BYTES) {
+        const formData = new FormData();
+        formData.set("file", uploadFile);
+        const serverRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+        if (serverRes.ok) {
+          router.refresh();
+          setUploadFile(null);
+          return;
+        }
+      }
+
       const initRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments/direct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,23 +98,6 @@ export function TherapyTreatmentAttachments({
         uploadMethod?: "PUT" | "POST";
         uploadHeaders?: Record<string, string>;
         uploadFields?: Record<string, string>;
-      };
-
-      const tryServerFallback = async (): Promise<boolean> => {
-        if (uploadFile.size > SERVER_FALLBACK_MAX_BYTES) return false;
-        const formData = new FormData();
-        formData.set("file", uploadFile);
-        const fallbackRes = await fetch(`/api/private-clinic/treatments/${treatmentId}/attachments`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!fallbackRes.ok) {
-          setError(await readErrorMessage(fallbackRes, s.uploadFailed));
-          return false;
-        }
-        router.refresh();
-        setUploadFile(null);
-        return true;
       };
 
       try {
@@ -127,16 +124,14 @@ export function TherapyTreatmentAttachments({
             method: "DELETE",
           });
           const responseMessage = await readErrorMessage(uploadRes, s.uploadFailed);
-          const fallbackDone = await tryServerFallback();
-          if (fallbackDone) return;
           setError(`Direct upload failed (${uploadRes.status}): ${responseMessage}`);
           return;
         }
       } catch (error) {
-        const fallbackDone = await tryServerFallback();
-        if (fallbackDone) return;
         const errMsg = error instanceof Error ? error.message : "Network/CORS error";
-        setError(`Direct upload request failed: ${errMsg}`);
+        setError(
+          `Direct upload request failed: ${errMsg}. Storage browser upload is blocked (CORS/network).`,
+        );
         return;
       }
       router.refresh();
@@ -231,6 +226,9 @@ export function TherapyTreatmentAttachments({
         </button>
       </form>
       <p className="text-[11px] text-slate-500">{s.uploadConstraintsHint}</p>
+      <p className="text-[11px] text-slate-500">
+        Files up to 4 MB use same-origin upload; larger files use direct storage upload.
+      </p>
       {error ? <p className="text-[11px] text-rose-400">{error}</p> : null}
       {attachments.length === 0 ? (
         <p className="text-[11px] text-slate-500">{s.noAttachments}</p>
