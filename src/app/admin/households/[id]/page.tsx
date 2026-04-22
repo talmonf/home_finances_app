@@ -256,6 +256,31 @@ export default async function HouseholdUsersPage({
         </header>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-200">Diagnostics</h2>
+          <p className="mb-3 text-xs text-slate-400">
+            Household-scoped troubleshooting tools for storage and transcription.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/api/admin/storage/cors-diagnostic"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              Storage diagnostics
+            </Link>
+            <Link
+              href={`/api/admin/transcription/diagnostic?household_id=${householdId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              Transcription diagnostics (this household)
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">Family members</h2>
           <p className="mb-3 text-xs text-slate-500">
             People in this household (for jobs, clinic, petrol tanker, etc.). You can link users to a member when
