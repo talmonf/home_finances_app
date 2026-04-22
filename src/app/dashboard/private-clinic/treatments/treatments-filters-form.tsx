@@ -59,18 +59,18 @@ export function TreatmentsFiltersForm(props: Props) {
 
   return (
     <form
-      className="grid gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:grid-cols-2 xl:grid-cols-5"
+      className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-700 bg-slate-900/60 p-2"
       method={props.method ?? "get"}
       action={props.action}
     >
       {props.receipt ? <input type="hidden" name="receipt" value={props.receipt} /> : null}
 
-      <div>
+      <div className="min-w-[8.5rem] flex-1 lg:min-w-[7rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.payment}</label>
         <select
           name="paid"
           defaultValue={props.paid}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         >
           <option value="all">{props.labels.all}</option>
           <option value="paid">{props.labels.filterPaid}</option>
@@ -80,12 +80,12 @@ export function TreatmentsFiltersForm(props: Props) {
       </div>
 
       {props.showExternalReporting ? (
-        <div>
+        <div className="min-w-[9rem] flex-1 lg:min-w-[8rem] lg:flex-none">
           <label className="block text-xs text-slate-400">{props.labels.externalReporting}</label>
           <select
             name="reported"
             defaultValue={props.reported}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
           >
             <option value="all">{props.labels.all}</option>
             <option value="reported">{props.labels.filterReported}</option>
@@ -94,13 +94,13 @@ export function TreatmentsFiltersForm(props: Props) {
         </div>
       ) : null}
 
-      <div>
+      <div className="min-w-[11rem] flex-1 lg:min-w-[10rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.job}</label>
         <select
           name="job"
           value={jobId}
           onChange={(e) => setJobId(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         >
           <option value="">{props.labels.any}</option>
           {props.jobs.map((j) => (
@@ -111,13 +111,13 @@ export function TreatmentsFiltersForm(props: Props) {
         </select>
       </div>
 
-      <div>
+      <div className="min-w-[10rem] flex-1 lg:min-w-[9rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.program}</label>
         <select
           name="program"
           value={selectedProgramId}
           onChange={(e) => setProgramId(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         >
           <option value="">{props.labels.anyF}</option>
           {programsForJob.map((p) => (
@@ -128,12 +128,12 @@ export function TreatmentsFiltersForm(props: Props) {
         </select>
       </div>
 
-      <div>
+      <div className="min-w-[11rem] flex-1 lg:min-w-[10rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.client}</label>
         <select
           name="client"
           defaultValue={props.client}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         >
           <option value="">{props.labels.any}</option>
           {props.clients.map((cl) => (
@@ -146,12 +146,12 @@ export function TreatmentsFiltersForm(props: Props) {
       </div>
 
       {props.familyEnabled ? (
-        <div>
+        <div className="min-w-[10rem] flex-1 lg:min-w-[9rem] lg:flex-none">
           <label className="block text-xs text-slate-400">{props.labels.family}</label>
           <select
             name="family"
             defaultValue={props.family}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
           >
             <option value="">{props.labels.any}</option>
             {props.families.map((family) => (
@@ -163,30 +163,30 @@ export function TreatmentsFiltersForm(props: Props) {
         </div>
       ) : null}
 
-      <div>
+      <div className="min-w-[8.5rem] flex-1 lg:min-w-[8rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.from}</label>
         <input
           name="from"
           type="date"
           defaultValue={props.from}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         />
       </div>
 
-      <div>
+      <div className="min-w-[8.5rem] flex-1 lg:min-w-[8rem] lg:flex-none">
         <label className="block text-xs text-slate-400">{props.labels.to}</label>
         <input
           name="to"
           type="date"
           defaultValue={props.to}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
         />
       </div>
 
-      <div className="sm:col-span-2 xl:col-span-1 xl:self-end">
+      <div className="min-w-[6.5rem] flex-1 lg:min-w-0 lg:flex-none">
         <button
           type="submit"
-          className="mt-1 w-full rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          className="w-full rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600 lg:w-auto"
         >
           {props.labels.apply}
         </button>
