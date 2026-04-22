@@ -2,14 +2,14 @@ import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage } fr
 import { setMyUiLanguage } from "@/app/dashboard/user-preferences-actions";
 import { ObfuscateSessionToggle } from "@/components/obfuscate-session-toggle";
 
-export async function DashboardUserToolbar() {
+export async function DashboardUserToolbar({ showObfuscate }: { showObfuscate: boolean }) {
   const session = await getAuthSession();
   if (!session?.user?.householdId || session.user.isSuperAdmin) {
     return null;
   }
 
   const uiLanguage = await getCurrentUiLanguage();
-  const obfuscate = await getCurrentObfuscateSensitive();
+  const obfuscate = showObfuscate ? await getCurrentObfuscateSensitive() : false;
   const isHebrew = uiLanguage === "he";
 
   return (
@@ -47,8 +47,12 @@ export async function DashboardUserToolbar() {
           </button>
         </form>
       </div>
-      <div className="h-4 w-px bg-slate-700" aria-hidden />
-      <ObfuscateSessionToggle initialOn={obfuscate} isHebrew={isHebrew} />
+      {showObfuscate ? (
+        <>
+          <div className="h-4 w-px bg-slate-700" aria-hidden />
+          <ObfuscateSessionToggle initialOn={obfuscate} isHebrew={isHebrew} />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -36,6 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
+  const showObfuscateToggle = pathname.startsWith("/dashboard/private-clinic");
   const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin
       ? await getCurrentShowUsefulLinks()
@@ -58,7 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           >
             <div className="w-full max-w-6xl space-y-2">
               <Suspense fallback={null}>
-                <DashboardUserToolbar />
+                <DashboardUserToolbar showObfuscate={showObfuscateToggle} />
               </Suspense>
               {showUsefulLinks ? (
                 <>
