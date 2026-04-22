@@ -1,5 +1,5 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { S3Client } from "@aws-sdk/client-s3";
+import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
@@ -77,15 +77,18 @@ export async function POST(
       },
     });
 
-    const uploadUrl = await getSignedUrl(
-      client,
-      new PutObjectCommand({
-        Bucket: cfg.bucket,
-        Key: key,
-        ContentType: mimeType,
-      }),
-      { expiresIn: 600 },
-    );
+    const uploadPost = await createPresignedPost(client, {
+      Bucket: cfg.bucket,
+      Key: key,
+      Expires: 600,
+      Conditions: [
+        ["content-length-range", 1, MAX_FILE_SIZE],
+        ["eq", "$Content-Type", mimeType],
+      ],
+      Fields: {
+        "Content-Type": mimeType,
+      },
+    });
 
     await prisma.therapy_treatment_attachments.create({
       data: {
@@ -102,9 +105,9 @@ export async function POST(
 
     return NextResponse.json({
       attachmentId,
-      uploadUrl,
-      uploadMethod: "PUT",
-      uploadHeaders: { "Content-Type": mimeType },
+      uploadUrl: uploadPost.url,
+      uploadMethod: "POST",
+      uploadFields: uploadPost.fields,
       fileName,
       mimeType,
       byteSize,

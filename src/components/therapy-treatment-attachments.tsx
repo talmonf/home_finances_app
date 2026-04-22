@@ -81,7 +81,9 @@ export function TherapyTreatmentAttachments({
       const initData = (await initRes.json()) as {
         attachmentId: string;
         uploadUrl: string;
+        uploadMethod?: "PUT" | "POST";
         uploadHeaders?: Record<string, string>;
+        uploadFields?: Record<string, string>;
       };
 
       const tryServerFallback = async (): Promise<boolean> => {
@@ -102,11 +104,24 @@ export function TherapyTreatmentAttachments({
       };
 
       try {
-        const uploadRes = await fetch(initData.uploadUrl, {
-          method: "PUT",
-          headers: initData.uploadHeaders,
-          body: uploadFile,
-        });
+        const isPresignedPost = initData.uploadMethod === "POST" && initData.uploadFields;
+        const uploadRes = isPresignedPost
+          ? await (async () => {
+              const formData = new FormData();
+              for (const [k, v] of Object.entries(initData.uploadFields!)) {
+                formData.set(k, v);
+              }
+              formData.set("file", uploadFile);
+              return fetch(initData.uploadUrl, {
+                method: "POST",
+                body: formData,
+              });
+            })()
+          : await fetch(initData.uploadUrl, {
+              method: "PUT",
+              headers: initData.uploadHeaders,
+              body: uploadFile,
+            });
         if (!uploadRes.ok) {
           await fetch(`/api/private-clinic/treatment-attachments/${initData.attachmentId}`, {
             method: "DELETE",
