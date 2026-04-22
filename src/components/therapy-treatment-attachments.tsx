@@ -226,9 +226,6 @@ export function TherapyTreatmentAttachments({
         </button>
       </form>
       <p className="text-[11px] text-slate-500">{s.uploadConstraintsHint}</p>
-      <p className="text-[11px] text-slate-500">
-        Files up to 4 MB use same-origin upload; larger files use direct storage upload.
-      </p>
       {error ? <p className="text-[11px] text-rose-400">{error}</p> : null}
       {attachments.length === 0 ? (
         <p className="text-[11px] text-slate-500">{s.noAttachments}</p>

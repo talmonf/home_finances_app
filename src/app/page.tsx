@@ -314,14 +314,24 @@ export default async function Home({ searchParams }: HomeProps) {
                 <p className="mb-3 text-xs text-slate-400">
                   Storage and infrastructure diagnostics for upload/network troubleshooting.
                 </p>
-                <Link
-                  href="/api/admin/storage/cors-diagnostic"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-                >
-                  Open storage diagnostics
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/api/admin/storage/cors-diagnostic"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                  >
+                    Storage diagnostics
+                  </Link>
+                  <Link
+                    href="/api/admin/transcription/diagnostic"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                  >
+                    Transcription diagnostics
+                  </Link>
+                </div>
               </div>
             </div>
           </>
