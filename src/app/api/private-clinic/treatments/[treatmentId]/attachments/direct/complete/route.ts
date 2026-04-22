@@ -4,6 +4,12 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
 import { getJobDocumentStorageConfig, getStorageDebugMeta } from "@/lib/object-storage";
 
+const HEAD_RETRY_DELAYS_MS = [200, 400, 800, 1200] as const;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ treatmentId: string }> },
@@ -88,9 +94,21 @@ export async function POST(
       },
     });
 
-    try {
-      await client.send(new HeadObjectCommand({ Bucket: storageBucket, Key: storageKey }));
-    } catch {
+    let objectFound = false;
+    for (let attempt = 0; attempt <= HEAD_RETRY_DELAYS_MS.length; attempt += 1) {
+      try {
+        await client.send(new HeadObjectCommand({ Bucket: storageBucket, Key: storageKey }));
+        objectFound = true;
+        break;
+      } catch {
+        if (attempt < HEAD_RETRY_DELAYS_MS.length) {
+          await sleep(HEAD_RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
+      }
+    }
+
+    if (!objectFound) {
       console.warn(
         "Storage debug: head object failed",
         getStorageDebugMeta({
