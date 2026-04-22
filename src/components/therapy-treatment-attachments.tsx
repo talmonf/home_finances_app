@@ -81,11 +81,6 @@ export function TherapyTreatmentAttachments({
         attachmentId: string;
         uploadUrl: string;
         uploadHeaders?: Record<string, string>;
-        fileName: string;
-        mimeType: string;
-        byteSize: number;
-        storageBucket: string;
-        storageKey: string;
       };
       try {
         const uploadRes = await fetch(initData.uploadUrl, {
@@ -94,42 +89,14 @@ export function TherapyTreatmentAttachments({
           body: uploadFile,
         });
         if (!uploadRes.ok) {
+          await fetch(`/api/private-clinic/treatment-attachments/${initData.attachmentId}`, {
+            method: "DELETE",
+          });
           setError(await readErrorMessage(uploadRes, s.uploadFailed));
           return;
         }
       } catch {
-        // Surface an explicit message instead of trying server fallback,
-        // which can exceed serverless request limits for larger files.
-        setError("Direct upload failed before reaching storage. Please retry.");
-        return;
-      }
-
-      const completeBody = JSON.stringify({
-        attachmentId: initData.attachmentId,
-        fileName: initData.fileName,
-        mimeType: initData.mimeType,
-        byteSize: initData.byteSize,
-        storageBucket: initData.storageBucket,
-        storageKey: initData.storageKey,
-      });
-      const completeRetryDelaysMs = [300, 700, 1200, 2000];
-      let completeRes: Response | null = null;
-      for (let i = 0; i <= completeRetryDelaysMs.length; i += 1) {
-        completeRes = await fetch(
-          `/api/private-clinic/treatments/${treatmentId}/attachments/direct/complete`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: completeBody,
-          },
-        );
-        if (completeRes.ok) break;
-        if (completeRes.status !== 409 || i === completeRetryDelaysMs.length) break;
-        await new Promise((resolve) => setTimeout(resolve, completeRetryDelaysMs[i]));
-      }
-
-      if (!completeRes?.ok) {
-        setError(await readErrorMessage(completeRes as Response, s.uploadFailed));
+        setError(s.uploadFailed);
         return;
       }
       router.refresh();

@@ -18,15 +18,6 @@ function putObjectEncryptionFields():
   return { ServerSideEncryption: "AES256" };
 }
 
-function buildDirectUploadHeaders(mimeType: string): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": mimeType };
-  if (process.env.DISABLE_S3_SSE !== "true") {
-    // Must match the signed PutObject request when SSE is enabled.
-    headers["x-amz-server-side-encryption"] = "AES256";
-  }
-  return headers;
-}
-
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ treatmentId: string }> },
@@ -108,7 +99,7 @@ export async function POST(
       attachmentId,
       uploadUrl,
       uploadMethod: "PUT",
-      uploadHeaders: buildDirectUploadHeaders(mimeType),
+      uploadHeaders: { "Content-Type": mimeType },
       fileName,
       mimeType,
       byteSize,
