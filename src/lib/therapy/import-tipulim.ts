@@ -573,9 +573,7 @@ function resolveBankDigitalForParsedPayment(
         scratch.errors.push(`Row ${rowNumber}: bank transfer account ${payment.accountDigits} not matched.`);
         return { ok: false, bankId, digitalId };
       }
-    } else if (ctx.isPrivateClinic) {
-      scratch.warnings.push(`Row ${rowNumber}: bank transfer has no account digits.`);
-    } else {
+    } else if (!ctx.isPrivateClinic) {
       scratch.errors.push(`Row ${rowNumber}: bank transfer must include account digits.`);
       return { ok: false, bankId, digitalId };
     }

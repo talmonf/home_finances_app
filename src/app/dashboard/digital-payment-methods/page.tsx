@@ -2,16 +2,14 @@ import {
   prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
-  getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
-import { createDigitalPaymentMethod, toggleDigitalPaymentMethodActive } from "./actions";
+import { createDigitalPaymentMethod } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +36,6 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
     redirect("/");
   }
 
-  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -140,7 +137,6 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                     <th className="px-4 py-3 font-medium text-slate-300">Linked bank</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Website</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Notes</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Date created</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Status</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Actions</th>
                   </tr>
@@ -187,9 +183,6 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                       <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={m.notes ?? undefined}>
                         {m.notes?.trim() ? m.notes : "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {formatHouseholdDate(m.date_created ?? m.created_at, dateDisplayFormat)}
-                      </td>
                       <td className="px-4 py-3 text-slate-400">{m.is_active ? "Active" : "Inactive"}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
@@ -199,14 +192,6 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                           >
                             {isHebrew ? "עריכה" : "Edit"}
                           </Link>
-                          <form action={toggleDigitalPaymentMethodActive.bind(null, m.id, !m.is_active)}>
-                            <button
-                              type="submit"
-                              className="text-xs font-medium text-slate-400 hover:text-slate-200"
-                            >
-                              {m.is_active ? (isHebrew ? "השבתה" : "Deactivate") : isHebrew ? "הפעלה" : "Activate"}
-                            </button>
-                          </form>
                         </div>
                       </td>
                     </tr>

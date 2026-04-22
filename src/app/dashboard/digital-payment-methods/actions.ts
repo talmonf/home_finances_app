@@ -143,22 +143,6 @@ export async function createDigitalPaymentMethod(formData: FormData) {
   redirect("/dashboard/digital-payment-methods?created=1");
 }
 
-export async function toggleDigitalPaymentMethodActive(id: string, nextActive: boolean) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) {
-    redirect("/dashboard/digital-payment-methods?error=No+household");
-  }
-
-  await prisma.digital_payment_methods.updateMany({
-    where: { id, household_id: householdId },
-    data: { is_active: nextActive },
-  });
-
-  revalidatePath("/dashboard/digital-payment-methods");
-  redirect("/dashboard/digital-payment-methods?updated=1");
-}
-
 export async function updateDigitalPaymentMethod(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
