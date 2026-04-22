@@ -441,7 +441,7 @@ export default async function ReceiptsPage({
           programs={receiptPrograms.map((p) => ({
             id: p.id,
             jobId: p.job_id,
-            label: `${formatJobDisplayLabel(p.job)} — ${p.name}`,
+            label: p.name,
           }))}
           clients={receiptModalClients.map((cl) => ({
             id: cl.id,
@@ -495,7 +495,7 @@ export default async function ReceiptsPage({
           programs={receiptPrograms.map((p) => ({
             id: p.id,
             jobId: p.job_id,
-            label: `${formatJobDisplayLabel(p.job)} — ${p.name}`,
+            label: p.name,
           }))}
           clients={receiptModalClients.map((cl) => ({
             id: cl.id,

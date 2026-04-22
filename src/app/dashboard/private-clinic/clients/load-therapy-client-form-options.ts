@@ -90,7 +90,7 @@ export async function loadTherapyClientFormOptions(params: {
     programs: programs.map((p) => ({
       id: p.id,
       jobId: p.job_id,
-      label: `${p.name}${p.job.employer_name ? ` (${p.job.employer_name})` : ""}`,
+      label: p.name,
       visits_per_period_count: p.visits_per_period_count,
       visits_per_period_weeks: p.visits_per_period_weeks,
     })),

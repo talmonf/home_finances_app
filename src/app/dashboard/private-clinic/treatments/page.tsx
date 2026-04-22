@@ -24,6 +24,7 @@ import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
 import { TreatmentsListClient } from "./treatments-list-client";
+import { TreatmentsFiltersForm } from "./treatments-filters-form";
 import {
   loadTreatmentsCursorPage,
   parseTreatmentsPaidFilter,
@@ -295,7 +296,7 @@ export default async function TreatmentsPage({
     : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-6">
       {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {sp.error}
@@ -307,8 +308,8 @@ export default async function TreatmentsPage({
         </p>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-slate-200">{tr.filters}</h2>
+      <section className="space-y-2">
+        <h2 className="text-base font-medium text-slate-200 sm:text-lg">{tr.filters}</h2>
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
@@ -317,130 +318,52 @@ export default async function TreatmentsPage({
             </Link>
           </p>
         ) : null}
-        <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
-          method="get"
-        >
-          {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
-          <div>
-            <label className="block text-xs text-slate-400">{tr.payment}</label>
-            <select
-              name="paid"
-              defaultValue={filters.paid}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="all">{c.all}</option>
-              <option value="paid">{tr.filterPaid}</option>
-              <option value="partial">{tr.filterPartial}</option>
-              <option value="unpaid">{tr.filterUnpaid}</option>
-            </select>
-          </div>
-          {showExternalReporting ? (
-            <div>
-              <label className="block text-xs text-slate-400">{tr.externalReporting}</label>
-              <select
-                name="reported"
-                defaultValue={filters.reported}
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="all">{c.all}</option>
-                <option value="reported">{tr.filterReported}</option>
-                <option value="not_reported">{tr.filterNotReported}</option>
-              </select>
-            </div>
-          ) : null}
-          <div>
-            <label className="block text-xs text-slate-400">{c.job}</label>
-            <select
-              name="job"
-              defaultValue={filters.job}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{c.any}</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {formatPrivateClinicJobLabel(j)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.program}</label>
-            <select
-              name="program"
-              defaultValue={filters.program}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{c.anyF}</option>
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {formatPrivateClinicJobLabel(p.job)} — {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.client}</label>
-            <select
-              name="client"
-              defaultValue={filters.client}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{c.any}</option>
-              {clients.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.first_name} {cl.last_name ?? ""}
-                  {!cl.is_active ? ` (${c.inactive})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          {settings?.family_therapy_enabled ? (
-            <div>
-              <label className="block text-xs text-slate-400">Family</label>
-              <select
-                name="family"
-                defaultValue={filters.family}
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">Any</option>
-                {families.map((family) => (
-                  <option key={family.id} value={family.id}>
-                    {family.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-          <div>
-            <label className="block text-xs text-slate-400">{c.from}</label>
-            <input
-              name="from"
-              type="date"
-              defaultValue={filters.from}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400">{c.to}</label>
-            <input
-              name="to"
-              type="date"
-              defaultValue={filters.to}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-          >
-            {c.apply}
-          </button>
-        </form>
+        <TreatmentsFiltersForm
+          paid={filters.paid}
+          reported={filters.reported}
+          job={filters.job}
+          program={filters.program}
+          client={filters.client}
+          family={filters.family}
+          from={filters.from}
+          to={filters.to}
+          receipt={filters.receipt}
+          showExternalReporting={showExternalReporting}
+          familyEnabled={Boolean(settings?.family_therapy_enabled)}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
+          programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
+          clients={clients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`.trim(),
+            inactive: !cl.is_active,
+          }))}
+          families={families.map((family) => ({ id: family.id, label: family.name }))}
+          labels={{
+            filters: tr.filters,
+            payment: tr.payment,
+            externalReporting: tr.externalReporting,
+            filterPaid: tr.filterPaid,
+            filterPartial: tr.filterPartial,
+            filterUnpaid: tr.filterUnpaid,
+            filterReported: tr.filterReported,
+            filterNotReported: tr.filterNotReported,
+            job: c.job,
+            program: c.program,
+            client: c.client,
+            from: c.from,
+            to: c.to,
+            apply: c.apply,
+            all: c.all,
+            any: c.any,
+            anyF: c.anyF,
+            inactive: c.inactive,
+            family: "Family",
+          }}
+        />
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
           <div className="flex items-center gap-2">
             <OpenPrivateClinicTreatmentsImportButton

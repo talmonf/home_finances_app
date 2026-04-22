@@ -73,7 +73,8 @@ export default async function NewAppointmentPage() {
   const jobOpts = jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }));
   const programOpts = programs.map((p) => ({
     id: p.id,
-    label: `${formatJobDisplayLabel(p.job)} — ${p.name}`,
+    jobId: p.job_id,
+    label: p.name,
   }));
   const clientOpts = clients.map((cl) => ({
     id: cl.id,

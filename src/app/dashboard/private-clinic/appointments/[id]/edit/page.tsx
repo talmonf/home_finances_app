@@ -27,6 +27,7 @@ import {
 } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { dateToDatetimeLocalValue, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { AppointmentEditFormClient } from "./appointment-edit-form-client";
 
 export const dynamic = "force-dynamic";
 
@@ -145,108 +146,38 @@ export default async function EditAppointmentPage({ params }: PageProps) {
         </div>
       ) : null}
 
-      <form
+      <AppointmentEditFormClient
         action={updateTherapyAppointment}
-        className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
-      >
-        <input type="hidden" name="id" value={apt.id} />
-        <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
-        <select
-          name="client_id"
-          required
-          defaultValue={apt.client_id}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="">{c.client}</option>
-          {clients.map((cl) => (
-            <option key={cl.id} value={cl.id}>
-              {cl.first_name} {cl.last_name ?? ""}
-            </option>
-          ))}
-        </select>
-        <select
-          name="additional_client_ids"
-          multiple
-          defaultValue={apt.participants.map((p) => p.client_id)}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
-        >
-          {clients.map((cl) => (
-            <option key={cl.id} value={cl.id}>
-              {cl.first_name} {cl.last_name ?? ""}
-            </option>
-          ))}
-        </select>
-        <select
-          name="job_id"
-          required
-          defaultValue={apt.job_id}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          {jobs.map((j) => (
-            <option key={j.id} value={j.id}>
-              {formatJobDisplayLabel(j)}
-            </option>
-          ))}
-        </select>
-        <select
-          name="program_id"
-          defaultValue={apt.program_id ?? ""}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="">{ap.programOptional}</option>
-          {programs.map((p) => (
-            <option key={p.id} value={p.id}>
-              {formatJobDisplayLabel(p.job)} — {p.name}
-            </option>
-          ))}
-        </select>
-        <select
-          name="visit_type"
-          required
-          defaultValue={apt.visit_type}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          {visitOptions.map((v) => (
-            <option key={v.value} value={v.value}>
-              {v.label}
-            </option>
-          ))}
-        </select>
-        <select
-          name="status"
-          required
-          defaultValue={apt.status}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="scheduled">{ap.statusScheduled}</option>
-          <option value="completed">{ap.statusCompleted}</option>
-          <option value="cancelled">{ap.statusCancelled}</option>
-        </select>
-        <input
-          name="cancellation_reason"
-          placeholder={ap.cancel}
-          defaultValue={apt.cancellation_reason ?? ""}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-        <input
-          name="end_at"
-          type="datetime-local"
-          defaultValue={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-        <p className="text-xs text-slate-500 md:col-span-2">
-          {ap.startCol}: {formatHouseholdDateUtcWithTime(apt.start_at, dateDisplayFormat)} —{" "}
-          <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
-            {ap.reschedule}
-          </Link>
-        </p>
-        <button
-          type="submit"
-          className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-        >
-          {ap.save}
-        </button>
-      </form>
+        id={apt.id}
+        redirectOnSuccess={redirectOnSuccess}
+        initialJobId={apt.job_id}
+        initialProgramId={apt.program_id ?? ""}
+        initialClientId={apt.client_id}
+        initialAdditionalClientIds={apt.participants.map((p) => p.client_id)}
+        initialVisitType={apt.visit_type}
+        initialStatus={apt.status}
+        initialCancellationReason={apt.cancellation_reason ?? ""}
+        initialEndAt={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
+        labels={{
+          client: c.client,
+          programOptional: ap.programOptional,
+          statusScheduled: ap.statusScheduled,
+          statusCompleted: ap.statusCompleted,
+          statusCancelled: ap.statusCancelled,
+          cancel: ap.cancel,
+          save: ap.save,
+        }}
+        jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+        programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
+        clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}
+        visitOptions={visitOptions}
+      />
+      <p className="text-xs text-slate-500">
+        {ap.startCol}: {formatHouseholdDateUtcWithTime(apt.start_at, dateDisplayFormat)} —{" "}
+        <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
+          {ap.reschedule}
+        </Link>
+      </p>
 
       <form
         action={reportTreatmentFromAppointment}

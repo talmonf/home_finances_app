@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createTherapyAppointment,
   createTherapyAppointmentSeries,
 } from "../actions";
 type JobOption = { id: string; label: string };
-type ProgramOption = { id: string; label: string };
+type ProgramOption = { id: string; jobId: string; label: string };
 type ClientOption = { id: string; label: string };
 type DowOption = { v: number; label: string };
 type VisitOption = { value: string; label: string };
@@ -40,6 +40,19 @@ export function AppointmentAddForm({
   redirectOnSuccess,
 }: Props) {
   const [recurring, setRecurring] = useState(false);
+  const [singleJobId, setSingleJobId] = useState("");
+  const [singleProgramId, setSingleProgramId] = useState("");
+  const [seriesJobId, setSeriesJobId] = useState("");
+  const [seriesProgramId, setSeriesProgramId] = useState("");
+
+  const singlePrograms = useMemo(
+    () => (singleJobId ? programs.filter((p) => p.jobId === singleJobId) : []),
+    [programs, singleJobId],
+  );
+  const seriesPrograms = useMemo(
+    () => (seriesJobId ? programs.filter((p) => p.jobId === seriesJobId) : []),
+    [programs, seriesJobId],
+  );
 
   return (
     <div className="space-y-4">
@@ -85,6 +98,11 @@ export function AppointmentAddForm({
           <select
             name="job_id"
             required
+            value={singleJobId}
+            onChange={(e) => {
+              setSingleJobId(e.target.value);
+              setSingleProgramId("");
+            }}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
             <option value="">—</option>
@@ -96,10 +114,12 @@ export function AppointmentAddForm({
           </select>
           <select
             name="program_id"
+            value={singleProgramId}
+            onChange={(e) => setSingleProgramId(e.target.value)}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
             <option value="">{copy.programOptional}</option>
-            {programs.map((p) => (
+            {singlePrograms.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>
@@ -155,6 +175,11 @@ export function AppointmentAddForm({
           <select
             name="job_id"
             required
+            value={seriesJobId}
+            onChange={(e) => {
+              setSeriesJobId(e.target.value);
+              setSeriesProgramId("");
+            }}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
             <option value="">—</option>
@@ -166,10 +191,12 @@ export function AppointmentAddForm({
           </select>
           <select
             name="program_id"
+            value={seriesProgramId}
+            onChange={(e) => setSeriesProgramId(e.target.value)}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
             <option value="">{copy.programOptional}</option>
-            {programs.map((p) => (
+            {seriesPrograms.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>
