@@ -477,8 +477,6 @@ export default async function TreatmentsPage({
               receiptCol: tr.receiptCol,
               paymentDetailsCol: tr.paymentDetailsCol,
               reportedCol: tr.reportedCol,
-              markAsReported: tr.markAsReported,
-              markAsNotReported: tr.markAsNotReported,
               edit: c.edit,
               createReceiptLabel: tr.createReceiptForSelected,
               unlinkLabel: tr.unlinkFromReceipt,

@@ -1726,6 +1726,41 @@ export async function updateTherapyTreatment(formData: FormData) {
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
 }
 
+export async function setTherapyTreatmentExternalReportingStatus(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackPath = `${BASE}/treatments`;
+  const treatmentId = (formData.get("treatment_id") as string)?.trim() || "";
+  if (!treatmentId) redirectPrivateClinicScoped(formData, "error", fallbackPath, "id");
+
+  const row = await prisma.therapy_treatments.findFirst({
+    where: { id: treatmentId, household_id: householdId },
+    select: { id: true, job_id: true },
+  });
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  }
+
+  const job = await prisma.jobs.findFirst({
+    where: { id: row.job_id, household_id: householdId },
+    select: { external_reporting_system: true },
+  });
+  if (!job?.external_reporting_system) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
+
+  await prisma.therapy_treatments.update({
+    where: { id: row.id },
+    data: {
+      reported_to_external_system: formData.get("reported_to_external_system") === "1",
+    },
+  });
+
+  revalidatePath(`${BASE}/treatments`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
+}
+
 export async function deleteTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);

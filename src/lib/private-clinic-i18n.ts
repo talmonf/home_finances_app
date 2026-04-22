@@ -485,8 +485,8 @@ export function privateClinicTreatments(lang: UiLanguage) {
     markAsReported: p("Marked as reported", "סומן כדווח"),
     markAsNotReported: p("Not reported yet", "טרם דווח"),
     markReportedInExternalSystem: p(
-      "Mark as reported in external company system",
-      "סימון כדווח במערכת החברה החיצונית",
+      "Reported in external company system",
+      "דווח במערכת החברה החיצונית",
     ),
     sortHintAsc: p("Ascending", "סדר עולה"),
     sortHintDesc: p("Descending", "סדר יורד"),

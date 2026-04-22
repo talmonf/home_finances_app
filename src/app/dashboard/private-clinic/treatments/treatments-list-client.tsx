@@ -8,7 +8,11 @@ import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { TreatmentListRowDto } from "./treatments-list-data";
 import { treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
-import { createTherapyReceiptForSelectedTreatments, deleteReceiptAllocation } from "../actions";
+import {
+  createTherapyReceiptForSelectedTreatments,
+  deleteReceiptAllocation,
+  setTherapyTreatmentExternalReportingStatus,
+} from "../actions";
 
 type Labels = {
   when: string;
@@ -21,8 +25,6 @@ type Labels = {
   receiptCol: string;
   paymentDetailsCol: string;
   reportedCol: string;
-  markAsReported: string;
-  markAsNotReported: string;
   edit: string;
   createReceiptLabel: string;
   unlinkLabel: string;
@@ -292,11 +294,22 @@ export function TreatmentsListClient({
                   <td className="max-w-[14rem] px-3 py-2 text-slate-400">{paymentDate}</td>
                   {showExternalReporting ? (
                     <td className="px-3 py-2 text-slate-400">
-                      {t.has_external_reporting_system
-                        ? t.reported_to_external_system
-                          ? labels.markAsReported
-                          : labels.markAsNotReported
-                        : "—"}
+                      {t.has_external_reporting_system ? (
+                        <form action={setTherapyTreatmentExternalReportingStatus} className="m-0">
+                          <input type="hidden" name="treatment_id" value={t.id} />
+                          <input type="hidden" name="redirect_on_success" value={listBaseHref} />
+                          <input
+                            type="checkbox"
+                            name="reported_to_external_system"
+                            value="1"
+                            defaultChecked={t.reported_to_external_system}
+                            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                            aria-label={labels.reportedCol}
+                          />
+                        </form>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   ) : null}
                   <td className="px-3 py-2">
