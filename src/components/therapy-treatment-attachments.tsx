@@ -45,6 +45,7 @@ export function TherapyTreatmentAttachments({
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<string | null>(null);
 
   async function readErrorMessage(res: Response, fallback: string): Promise<string> {
     const text = await res.text();
@@ -298,15 +299,33 @@ export function TherapyTreatmentAttachments({
                     ) : null}
                     {a.transcription_status === "completed" && a.transcription_text ? (
                       <div className="mt-1 space-y-1">
-                        <div className="text-slate-400">{s.transcript}</div>
-                        <p className="whitespace-pre-wrap text-slate-200">{a.transcription_text}</p>
-                        <button
-                          type="button"
-                          onClick={() => copyText(a.transcription_text!, a.id)}
-                          className="text-sky-400 hover:underline"
-                        >
-                          {copiedId === a.id ? s.copied : s.copyTranscript}
-                        </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="text-slate-400">{s.transcript}</div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedTranscriptId((prev) => (prev === a.id ? null : a.id))
+                            }
+                            className="text-sky-400 hover:underline"
+                          >
+                            {expandedTranscriptId === a.id ? "Hide transcript" : "View transcript"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyText(a.transcription_text!, a.id)}
+                            className="text-sky-400 hover:underline"
+                          >
+                            {copiedId === a.id ? s.copied : s.copyTranscript}
+                          </button>
+                        </div>
+                        {expandedTranscriptId === a.id ? (
+                          <textarea
+                            readOnly
+                            value={a.transcription_text}
+                            rows={6}
+                            className="w-full resize-y overflow-y-auto rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-200"
+                          />
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
