@@ -225,7 +225,14 @@ export async function POST(req: Request) {
         summary: error instanceof Error ? error.message : String(error),
         metadata: { profile, jobId, sheetName },
       });
-      throw error;
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Import commit failed",
+          message: failureMessage,
+        },
+        { status: 500 },
+      );
     }
   }
 

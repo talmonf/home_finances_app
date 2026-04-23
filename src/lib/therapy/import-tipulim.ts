@@ -1718,7 +1718,55 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       : params.profile === "tipulim_receipts_only"
         ? await analyzeReceiptOnlyProfile(params, ctx)
         : await analyzePrivateProfile(params, ctx);
+  const duplicateReceiptBlockingErrors: string[] = [];
+  if (scratch.pendingReceipts.length > 0) {
+    const receiptKeyByImportRow = new Map<string, number[]>();
+    for (const r of scratch.pendingReceipts) {
+      const key = `${norm(r.receiptNumber).toLowerCase()}|${r.issuedAt.getUTCFullYear()}`;
+      const rows = receiptKeyByImportRow.get(key) ?? [];
+      rows.push(r.rowNumber);
+      receiptKeyByImportRow.set(key, rows);
+    }
+    for (const [key, rows] of receiptKeyByImportRow.entries()) {
+      if (rows.length > 1) {
+        const [receiptNumber, year] = key.split("|");
+        duplicateReceiptBlockingErrors.push(
+          `Import duplicate: receipt #${receiptNumber} for year ${year} appears multiple times (rows ${rows.join(", ")}).`,
+        );
+      }
+    }
+
+    const uniqueReceiptNumbers = Array.from(
+      new Set(scratch.pendingReceipts.map((r) => norm(r.receiptNumber)).filter(Boolean)),
+    );
+    if (uniqueReceiptNumbers.length > 0) {
+      const existingReceipts = await prisma.therapy_receipts.findMany({
+        where: {
+          household_id: params.householdId,
+          receipt_number: { in: uniqueReceiptNumbers },
+        },
+        select: { receipt_number: true, issued_at: true },
+      });
+      const existingKeySet = new Set(
+        existingReceipts.map(
+          (r) => `${norm(r.receipt_number).toLowerCase()}|${new Date(r.issued_at).getUTCFullYear()}`,
+        ),
+      );
+      for (const r of scratch.pendingReceipts) {
+        const key = `${norm(r.receiptNumber).toLowerCase()}|${r.issuedAt.getUTCFullYear()}`;
+        if (existingKeySet.has(key)) {
+          duplicateReceiptBlockingErrors.push(
+            `Row ${r.rowNumber}: receipt #${r.receiptNumber} for year ${r.issuedAt.getUTCFullYear()} already exists.`,
+          );
+        }
+      }
+    }
+  }
+
   const summary = makeSummary(scratch);
+  if (duplicateReceiptBlockingErrors.length > 0) {
+    summary.blockingErrors = [...summary.blockingErrors, ...duplicateReceiptBlockingErrors];
+  }
   if (summary.clientConflicts.length > 0 || summary.blockingErrors.length > 0) {
     return {
       ...summary,
