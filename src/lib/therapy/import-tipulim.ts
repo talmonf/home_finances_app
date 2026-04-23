@@ -3,7 +3,9 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import * as XLSX from "xlsx";
 
 export type TipulimImportProfile = "tipulim_private" | "tipulim_org_monthly" | "tipulim_receipts_only";
+export type TipulimDateFormatPreference = "auto" | "dmy" | "mdy";
 
+// Optional columns treatmentDate01, treatmentDate02, … are also supported (see collectReceiptTreatmentDateColumnEntries).
 const RECEIPTS_IMPORT_HEADERS = [
   "Payment Date",
   "Client",
@@ -11,6 +13,7 @@ const RECEIPTS_IMPORT_HEADERS = [
   "Receipt #",
   "Notes",
   "Payment method",
+  "treatmentDate01",
 ] as const;
 
 const TIPULIM_PRIVATE_HEADERS = [
@@ -224,6 +227,8 @@ export type TipulimAnalyzeParams = {
   clientResolutions?: Record<string, string>;
   /** Decimal string e.g. "400.00"; required for `tipulim_receipts_only`. */
   usualTreatmentCost?: string | null;
+  /** Date parsing preference for ambiguous numeric text dates (receipt import). */
+  dateFormatPreference?: TipulimDateFormatPreference | null;
 };
 
 function sheetRows(workbook: XLSX.WorkBook, sheetName?: string | null): Row[] {
@@ -278,6 +283,44 @@ function parseMoney(raw: string): string | null {
   return n.toFixed(2);
 }
 
+/** Split a decimal money string into `parts` equal shares (last shares absorb cent remainder). */
+function splitMoneyEqualParts(totalAmount: string, parts: number): string[] | null {
+  if (parts < 1) return null;
+  const totalCents = Math.round(Number(totalAmount) * 100);
+  if (!Number.isFinite(totalCents)) return null;
+  const base = Math.floor(totalCents / parts);
+  const rem = totalCents % parts;
+  const out: string[] = [];
+  for (let i = 0; i < parts; i += 1) {
+    const cents = base + (i < rem ? 1 : 0);
+    out.push((cents / 100).toFixed(2));
+  }
+  return out;
+}
+
+/** Ordered treatment-date columns: `treatmentDate01`, `Treatment Date 02`, `treatment_date_3`, etc. */
+function collectReceiptTreatmentDateColumnEntries(
+  row: Row,
+): Array<{ order: number; label: string; cell: unknown }> {
+  const entries: Array<{ order: number; label: string; cell: unknown }> = [];
+  for (const k of Object.keys(row)) {
+    const compact = norm(String(k))
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/_/g, "");
+    const m = compact.match(/^treatmentdate(\d+)$/);
+    if (!m) continue;
+    const order = parseInt(m[1]!, 10);
+    if (!Number.isFinite(order) || order < 1) continue;
+    const cell = row[k];
+    if (cell === undefined || cell === null || String(cell).trim() === "") continue;
+    const label = `treatmentDate${String(order).padStart(2, "0")}`;
+    entries.push({ order, label, cell });
+  }
+  entries.sort((a, b) => a.order - b.order);
+  return entries;
+}
+
 /** Excel 1900 date system (SheetJS / Excel): whole days since 1899-12-30 → UTC midnight for that calendar day. */
 function excelSerialToUtcDate(serial: number): Date | null {
   if (!Number.isFinite(serial)) return null;
@@ -314,6 +357,66 @@ function parseDate(raw: string): Date | null {
     }
   }
   return null;
+}
+
+function parseDateWithPreference(
+  raw: string,
+  preference: TipulimDateFormatPreference,
+): { date: Date | null; ambiguous: boolean } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { date: null, ambiguous: false };
+  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
+  if (m) {
+    const a = parseInt(m[1]!, 10);
+    const b = parseInt(m[2]!, 10);
+    let year = parseInt(m[3]!, 10);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const ambiguous = a >= 1 && a <= 12 && b >= 1 && b <= 12;
+    if (preference === "auto" && ambiguous) return { date: null, ambiguous: true };
+    const useDmy = preference === "dmy" || (preference === "auto" && a > 12);
+    const useMdy = preference === "mdy" || (preference === "auto" && b > 12);
+    if (useDmy || useMdy) {
+      const day = useDmy ? a : b;
+      const month = (useDmy ? b : a) - 1;
+      const dt = new Date(Date.UTC(year, month, day));
+      if (!Number.isNaN(dt.getTime())) return { date: dt, ambiguous: false };
+      return { date: null, ambiguous: false };
+    }
+  }
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const year = parseInt(iso[1]!, 10);
+    const month = parseInt(iso[2]!, 10) - 1;
+    const day = parseInt(iso[3]!, 10);
+    const dt = new Date(Date.UTC(year, month, day));
+    return { date: Number.isNaN(dt.getTime()) ? null : dt, ambiguous: false };
+  }
+  return { date: parseDate(trimmed), ambiguous: false };
+}
+
+function parseReceiptDateCell(
+  cell: unknown,
+  preference: TipulimDateFormatPreference,
+): { date: Date | null; ambiguous: boolean } {
+  if (cell == null || cell === "") return { date: null, ambiguous: false };
+  if (cell instanceof Date) {
+    return { date: Number.isNaN(cell.getTime()) ? null : cell, ambiguous: false };
+  }
+  if (typeof cell === "number" && Number.isFinite(cell)) {
+    const whole = Math.floor(cell);
+    if (whole >= 20000 && whole < 1000000) {
+      return { date: excelSerialToUtcDate(whole), ambiguous: false };
+    }
+    return { date: null, ambiguous: false };
+  }
+  const txt = String(cell);
+  if (/^\d{5,7}(\.\d+)?$/.test(txt.trim().replace(/,/g, ""))) {
+    const n = Number(txt.trim().replace(/,/g, ""));
+    if (Number.isFinite(n)) {
+      return { date: excelSerialToUtcDate(Math.floor(n)), ambiguous: false };
+    }
+  }
+  return parseDateWithPreference(txt, preference);
 }
 
 /** Use for date columns: Excel serial numbers, Date cells, and locale date strings. */
@@ -779,6 +882,7 @@ async function analyzeReceiptOnlyProfile(
   }
   const usualNum = Number(usualParsed);
   const threshold = usualNum * 1.1;
+  const datePreference = params.dateFormatPreference ?? "auto";
 
   for (let idx = 0; idx < rows.length; idx += 1) {
     const row = rows[idx]!;
@@ -803,7 +907,14 @@ async function analyzeReceiptOnlyProfile(
       continue;
     }
 
-    const issuedAt = parseDateFromCell(paymentDateCell);
+    const parsedPaymentDate = parseReceiptDateCell(paymentDateCell, datePreference);
+    if (parsedPaymentDate.ambiguous) {
+      scratch.errors.push(
+        `Row ${rowNumber}: ambiguous Payment Date "${String(paymentDateCell)}". Use YYYY-MM-DD or choose a date format.`,
+      );
+      continue;
+    }
+    const issuedAt = parsedPaymentDate.date;
     if (!issuedAt) {
       scratch.errors.push(`Row ${rowNumber}: invalid Payment Date.`);
       continue;
@@ -847,22 +958,59 @@ async function analyzeReceiptOnlyProfile(
       }
       addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
       const display = clientRef.displayName;
-      const baseKey = `${display}|${monthKey(issuedAt)}|${amount}|${vt}|receipt:${receiptNum}`;
-      const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
-      scratch.pendingTreatments.set(tKey, {
-        key: tKey,
-        rowNumber,
-        clientRef,
-        programName: null,
-        occurredAt: issuedAt,
-        amount,
-        visitType: vt,
-        note: noteRaw,
-        paymentDate: issuedAt,
-        paymentMethod: payment.treatmentMethod,
-        paymentBankAccountId: bankId,
-        paymentDigitalMethodId: digitalId,
-      });
+
+      const treatmentDateEntries = collectReceiptTreatmentDateColumnEntries(row);
+      const treatmentOccurredAt: Date[] = [];
+      let treatmentDatesInvalid = false;
+      for (const { label, cell } of treatmentDateEntries) {
+        const parsedTreatmentDate = parseReceiptDateCell(cell, datePreference);
+        if (parsedTreatmentDate.ambiguous) {
+          scratch.errors.push(
+            `Row ${rowNumber}: ambiguous ${label} "${String(cell)}". Use YYYY-MM-DD or choose a date format.`,
+          );
+          treatmentDatesInvalid = true;
+          break;
+        }
+        const od = parsedTreatmentDate.date;
+        if (!od) {
+          scratch.errors.push(`Row ${rowNumber}: invalid ${label}.`);
+          treatmentDatesInvalid = true;
+          break;
+        }
+        treatmentOccurredAt.push(od);
+      }
+      if (treatmentDatesInvalid) continue;
+
+      const sessionCount = treatmentOccurredAt.length > 0 ? treatmentOccurredAt.length : 1;
+      const amountParts =
+        sessionCount === 1 ? [amount] : splitMoneyEqualParts(amount, sessionCount);
+      if (!amountParts || amountParts.length !== sessionCount) {
+        scratch.errors.push(`Row ${rowNumber}: could not split Amount across treatment dates.`);
+        continue;
+      }
+
+      const allocations: PendingAllocation[] = [];
+      for (let i = 0; i < sessionCount; i += 1) {
+        const occurredAt = treatmentOccurredAt[i] ?? issuedAt;
+        const partAmount = amountParts[i]!;
+        const baseKey = `${display}|${monthKey(occurredAt)}|${partAmount}|${vt}|receipt:${receiptNum}|n:${i}`;
+        const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
+        scratch.pendingTreatments.set(tKey, {
+          key: tKey,
+          rowNumber,
+          clientRef,
+          programName: null,
+          occurredAt,
+          amount: partAmount,
+          visitType: vt,
+          note: noteRaw,
+          paymentDate: issuedAt,
+          paymentMethod: payment.treatmentMethod,
+          paymentBankAccountId: bankId,
+          paymentDigitalMethodId: digitalId,
+        });
+        allocations.push({ amount: partAmount, treatmentKey: tKey });
+      }
 
       scratch.pendingReceipts.push({
         key: `receipt:${receiptNum}|row:${rowNumber}`,
@@ -875,7 +1023,7 @@ async function analyzeReceiptOnlyProfile(
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
         coveredPeriodStart: null,
         coveredPeriodEnd: null,
-        allocations: [{ amount, treatmentKey: tKey }],
+        allocations,
         consultationAllocations: [],
         travelAllocations: [],
       });

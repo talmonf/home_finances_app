@@ -697,8 +697,8 @@ export function privateClinicReceipts(lang: UiLanguage) {
     importBackToReceipts: p("Back to receipts", "חזרה לקבלות"),
     importTitleReceipts: p("Import receipts", "ייבוא קבלות"),
     importInstructionsReceipts: p(
-      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Enter your usual session fee; if a row amount is at most 10% above that fee (or lower), one treatment is created on the payment date and linked. Larger amounts import the receipt only — create treatments manually afterward.",
-      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. הזינו את דמי הסשן המקובלים; אם סכום השורה לכל היותר 10% מעל העלות (או נמוך יותר), ייווצר טיפול אחד בתאריך התשלום ויקושר. סכומים גבוהים יותר יייבאו קבלה בלבד — יש ליצור טיפולים ידנית.",
+      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Optional columns treatmentDate01, treatmentDate02, … set each session’s treatment date (otherwise the payment date is used). If several treatment dates are filled on one row, the amount is split evenly across those sessions. Enter your usual session fee; if a row amount is at most 10% above that fee (or lower), treatments are created and linked. Larger amounts import the receipt only — create treatments manually afterward.",
+      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. עמודות אופציונליות treatmentDate01, treatmentDate02, … מגדירות את תאריך כל טיפול (אחרת משתמשים בתאריך התשלום). אם ממלאים כמה תאריכי טיפול באותה שורה, הסכום מתחלק שווה בין המפגשים. הזינו את דמי הסשן המקובלים; אם סכום השורה לכל היותר 10% מעל העלות (או נמוך יותר), ייווצרו טיפולים ויקושרו. סכומים גבוהים יותר יייבאו קבלה בלבד — יש ליצור טיפולים ידנית.",
     ),
     usualTreatmentCostLabel: p("Usual treatment cost (per session)", "עלות טיפול מקובלת (למפגש)"),
     usualTreatmentCostHint: p(

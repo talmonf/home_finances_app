@@ -63,6 +63,9 @@ export async function POST(req: Request) {
       ? missingVisitTypeRaw
       : null;
   const clientResolutionsRaw = String(form.get("client_resolutions") ?? "").trim();
+  const dateFormatPreferenceRaw = String(form.get("date_format_preference") ?? "auto").trim().toLowerCase();
+  const dateFormatPreference =
+    dateFormatPreferenceRaw === "dmy" || dateFormatPreferenceRaw === "mdy" ? dateFormatPreferenceRaw : "auto";
   let clientResolutions: Record<string, string> | undefined = undefined;
   if (clientResolutionsRaw) {
     try {
@@ -126,6 +129,7 @@ export async function POST(req: Request) {
         missingVisitType,
         clientResolutions,
         usualTreatmentCost,
+        dateFormatPreference,
       });
       const completedAtMs = Date.now();
       const durationMs = completedAtMs - startedAtMs;
@@ -258,6 +262,7 @@ export async function POST(req: Request) {
     missingVisitType,
     clientResolutions,
     usualTreatmentCost,
+    dateFormatPreference,
   });
   await logGeneralAuditEvent({
     householdId,

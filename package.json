@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:tipulim-import": "tsx --test src/lib/therapy/import-tipulim.private-profile.regression.test.ts",
+    "test:tipulim-import": "tsx --test src/lib/therapy/import-tipulim.private-profile.regression.test.ts src/lib/therapy/import-tipulim.receipts-only.test.ts",
     "db:check": "npx tsx prisma/check-db.ts"
   },
   "dependencies": {

@@ -195,6 +195,7 @@ export function TherapyTreatmentsImportForm({
   const [sheetName, setSheetName] = useState("");
   const [sheetOptions, setSheetOptions] = useState<string[]>([]);
   const [missingVisitType, setMissingVisitType] = useState("");
+  const [dateFormatPreference, setDateFormatPreference] = useState<"auto" | "dmy" | "mdy">("auto");
   const [usualTreatmentCost, setUsualTreatmentCost] = useState(
     () => defaultUsualTreatmentCost?.trim() ?? "",
   );
@@ -282,6 +283,9 @@ export function TherapyTreatmentsImportForm({
     if (programId) fd.append("program_id", programId);
     if (sheetName) fd.append("sheet_name", sheetName);
     if (missingVisitType) fd.append("missing_visit_type", missingVisitType);
+    if (variant === "receipts") {
+      fd.append("date_format_preference", dateFormatPreference);
+    }
     if (Object.keys(clientResolutions).length > 0) {
       fd.append("client_resolutions", JSON.stringify(clientResolutions));
     }
@@ -475,6 +479,21 @@ export function TherapyTreatmentsImportForm({
         </label>
         {variant === "receipts" && labels.usualTreatmentCostLabel ? (
           <>
+            <label className="text-sm text-slate-200 md:col-span-2">
+              Date format for text dates
+              <select
+                className="mt-1 w-full max-w-md rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm"
+                value={dateFormatPreference}
+                onChange={(e) => setDateFormatPreference(e.target.value as "auto" | "dmy" | "mdy")}
+              >
+                <option value="auto">Auto (block ambiguous dates like 01-03-2026)</option>
+                <option value="dmy">DD-MM-YYYY</option>
+                <option value="mdy">MM-DD-YYYY</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-400">
+                Applies to text dates only. Excel date cells remain unambiguous.
+              </p>
+            </label>
             <label className="text-sm text-slate-200 md:col-span-2">
               {labels.usualTreatmentCostLabel}
               <div className="mt-1 flex max-w-md gap-2">
