@@ -1,8 +1,16 @@
 import { getAuthSession, prisma } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+const TRANSCRIPTION_STATUSES = ["none", "pending", "completed", "failed"] as const;
+type TranscriptionStatus = (typeof TRANSCRIPTION_STATUSES)[number];
+
+function parseTranscriptionStatus(raw: string): TranscriptionStatus | null {
+  return (TRANSCRIPTION_STATUSES as readonly string[]).includes(raw) ? (raw as TranscriptionStatus) : null;
+}
 
 type PageProps = {
   searchParams?: Promise<{
@@ -22,12 +30,12 @@ export default async function TranscriptionsAdminPage({ searchParams }: PageProp
 
   const sp = searchParams ? await searchParams : undefined;
   const q = (sp?.q ?? "").trim();
-  const status = (sp?.status ?? "").trim();
+  const status = parseTranscriptionStatus((sp?.status ?? "").trim());
   const language = (sp?.language ?? "").trim();
   const provider = (sp?.provider ?? "").trim();
   const household = (sp?.household ?? "").trim();
 
-  const where = {
+  const where: Prisma.therapy_treatment_attachmentsWhereInput = {
     ...(household ? { household_id: household } : {}),
     ...(status ? { transcription_status: status } : {}),
     ...(language ? { transcription_language: language } : {}),
@@ -101,7 +109,7 @@ export default async function TranscriptionsAdminPage({ searchParams }: PageProp
               <label className="mb-1 block text-xs text-slate-400">Status</label>
               <select
                 name="status"
-                defaultValue={status}
+                defaultValue={status ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-100"
               >
                 <option value="">All</option>

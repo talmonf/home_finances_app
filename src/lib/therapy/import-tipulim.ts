@@ -748,6 +748,7 @@ async function analyzeReceiptOnlyProfile(
   params: TipulimAnalyzeParams,
   ctx: {
     isPrivateClinic: boolean;
+    jobFamilyMemberId: string | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -908,6 +909,7 @@ export async function analyzeReceiptOnlyProfileForTest(
   params: TipulimAnalyzeParams,
   ctx: {
     isPrivateClinic: boolean;
+    jobFamilyMemberId: string | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -921,6 +923,7 @@ async function analyzePrivateProfile(
   params: TipulimAnalyzeParams,
   ctx: {
     isPrivateClinic: boolean;
+    jobFamilyMemberId: string | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1163,6 +1166,7 @@ export async function analyzePrivateProfileForTest(
   params: TipulimAnalyzeParams,
   ctx: {
     isPrivateClinic: boolean;
+    jobFamilyMemberId: string | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1174,6 +1178,7 @@ export async function analyzePrivateProfileForTest(
 
 async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   isPrivateClinic: boolean;
+  jobFamilyMemberId: string | null;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1503,6 +1508,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
 
 export async function analyzeOrgProfileForTest(params: TipulimAnalyzeParams, ctx: {
   isPrivateClinic: boolean;
+  jobFamilyMemberId: string | null;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
