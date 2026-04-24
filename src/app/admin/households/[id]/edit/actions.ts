@@ -114,6 +114,9 @@ export async function saveHouseholdSettings(formData: FormData) {
   const note_1_label = (formData.get("note_1_label") as string | null)?.trim() ?? "";
   const note_2_label = (formData.get("note_2_label") as string | null)?.trim() ?? "";
   const note_3_label = (formData.get("note_3_label") as string | null)?.trim() ?? "";
+  const note_1_visible = formData.get("note_1_visible") === "on";
+  const note_2_visible = formData.get("note_2_visible") === "on";
+  const note_3_visible = formData.get("note_3_visible") === "on";
   const trimHe = (k: string) => {
     const t = (formData.get(k) as string | null)?.trim();
     return t ? t : null;
@@ -135,6 +138,9 @@ export async function saveHouseholdSettings(formData: FormData) {
       note_1_label,
       note_2_label,
       note_3_label,
+      note_1_visible,
+      note_2_visible,
+      note_3_visible,
       note_1_label_he,
       note_2_label_he,
       note_3_label_he,

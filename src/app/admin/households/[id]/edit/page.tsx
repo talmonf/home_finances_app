@@ -88,6 +88,9 @@ export default async function EditHouseholdPage({
         note_1_label_he: true,
         note_2_label_he: true,
         note_3_label_he: true,
+        note_1_visible: true,
+        note_2_visible: true,
+        note_3_visible: true,
         hebrew_transcription_provider: true,
         family_therapy_enabled: true,
       },
@@ -546,8 +549,7 @@ export default async function EditHouseholdPage({
             </summary>
             <div className="mt-3 grid max-w-2xl gap-4">
               <p className="text-xs text-slate-500">
-                English label is the canonical title; Hebrew is shown when the household UI language is Hebrew. Leave an
-                English label empty to hide that note field on the treatment form.
+                English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
               </p>
               {(
                 [
@@ -555,22 +557,28 @@ export default async function EditHouseholdPage({
                     n: 1,
                     en: "note_1_label",
                     he: "note_1_label_he",
+                    visible: "note_1_visible",
                     enDef: therapySettings?.note_1_label ?? "Note 1",
                     heDef: therapySettings?.note_1_label_he ?? "",
+                    visibleDef: therapySettings?.note_1_visible ?? true,
                   },
                   {
                     n: 2,
                     en: "note_2_label",
                     he: "note_2_label_he",
+                    visible: "note_2_visible",
                     enDef: therapySettings?.note_2_label ?? "Note 2",
                     heDef: therapySettings?.note_2_label_he ?? "",
+                    visibleDef: therapySettings?.note_2_visible ?? true,
                   },
                   {
                     n: 3,
                     en: "note_3_label",
                     he: "note_3_label_he",
+                    visible: "note_3_visible",
                     enDef: therapySettings?.note_3_label ?? "Note 3",
                     heDef: therapySettings?.note_3_label_he ?? "",
+                    visibleDef: therapySettings?.note_3_visible ?? true,
                   },
                 ] as const
               ).map((row) => (
@@ -579,6 +587,15 @@ export default async function EditHouseholdPage({
                   className="grid gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2"
                 >
                   <div>
+                    <label className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                      <input
+                        type="checkbox"
+                        name={row.visible}
+                        defaultChecked={row.visibleDef}
+                        className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-sky-500"
+                      />
+                      Show Note {row.n} on treatment form
+                    </label>
                     <label className="mb-1 block text-xs text-slate-500">Note {row.n} — English</label>
                     <input
                       name={row.en}

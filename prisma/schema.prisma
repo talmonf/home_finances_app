@@ -1557,6 +1557,9 @@ model therapy_settings {
   note_1_label_he  String?
   note_2_label_he  String?
   note_3_label_he  String?
+  note_1_visible   Boolean  @default(true)
+  note_2_visible   Boolean  @default(true)
+  note_3_visible   Boolean  @default(true)
   nav_tabs_json    Json?
   family_therapy_enabled Boolean @default(false)
   hebrew_transcription_provider TherapyHebrewTranscriptionProvider @default(openrouter)

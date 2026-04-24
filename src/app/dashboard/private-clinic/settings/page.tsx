@@ -55,6 +55,9 @@ export default async function PrivateClinicSettingsPage({
         note_1_label_he: true,
         note_2_label_he: true,
         note_3_label_he: true,
+        note_1_visible: true,
+        note_2_visible: true,
+        note_3_visible: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -112,22 +115,28 @@ export default async function PrivateClinicSettingsPage({
                 n: 1 as const,
                 enKey: "note_1_label",
                 heKey: "note_1_label_he",
+                visibleKey: "note_1_visible",
                 enDefault: settings?.note_1_label ?? "Note 1",
                 heDefault: settings?.note_1_label_he ?? "",
+                visibleDefault: settings?.note_1_visible ?? true,
               },
               {
                 n: 2 as const,
                 enKey: "note_2_label",
                 heKey: "note_2_label_he",
+                visibleKey: "note_2_visible",
                 enDefault: settings?.note_2_label ?? "Note 2",
                 heDefault: settings?.note_2_label_he ?? "",
+                visibleDefault: settings?.note_2_visible ?? true,
               },
               {
                 n: 3 as const,
                 enKey: "note_3_label",
                 heKey: "note_3_label_he",
+                visibleKey: "note_3_visible",
                 enDefault: settings?.note_3_label ?? "Note 3",
                 heDefault: settings?.note_3_label_he ?? "",
+                visibleDefault: settings?.note_3_visible ?? true,
               },
             ] as const
           ).map((row) => (
@@ -136,6 +145,15 @@ export default async function PrivateClinicSettingsPage({
               className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2"
             >
               <div>
+                <label className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+                  <input
+                    type="checkbox"
+                    name={row.visibleKey}
+                    defaultChecked={row.visibleDefault}
+                    className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-sky-500"
+                  />
+                  {st.noteFieldVisible(row.n)}
+                </label>
                 <label className="mb-1 block text-xs font-medium text-slate-400">
                   {st.noteFieldEnglish(row.n)}
                 </label>

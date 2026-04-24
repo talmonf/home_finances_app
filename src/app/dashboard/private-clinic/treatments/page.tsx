@@ -167,7 +167,22 @@ export default async function TreatmentsPage({
       },
       orderBy: { first_name: "asc" },
     }),
-      prisma.therapy_settings.findUnique({ where: { household_id: householdId } }),
+      prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: {
+        family_therapy_enabled: true,
+        hebrew_transcription_provider: true,
+        note_1_label: true,
+        note_2_label: true,
+        note_3_label: true,
+        note_1_label_he: true,
+        note_2_label_he: true,
+        note_3_label_he: true,
+        note_1_visible: true,
+        note_2_visible: true,
+        note_3_visible: true,
+      },
+    }),
       prisma.therapy_families.findMany({
       where: {
         household_id: householdId,
@@ -222,9 +237,9 @@ export default async function TreatmentsPage({
     settings?.note_3_label_he,
     uiLanguage,
   );
-  const showNote1 = (settings?.note_1_label ?? "Note 1").trim().length > 0;
-  const showNote2 = (settings?.note_2_label ?? "Note 2").trim().length > 0;
-  const showNote3 = (settings?.note_3_label ?? "Note 3").trim().length > 0;
+  const showNote1 = settings?.note_1_visible ?? true;
+  const showNote2 = settings?.note_2_visible ?? true;
+  const showNote3 = settings?.note_3_visible ?? true;
   const storageCfg = getJobDocumentStorageConfig();
   const showHebrewAwsFallbackHint =
     settings?.hebrew_transcription_provider === "aws" &&

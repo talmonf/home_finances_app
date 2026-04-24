@@ -963,8 +963,8 @@ export function privateClinicSettings(lang: UiLanguage) {
     ),
     noteLabelsTitle: p("Treatment note labels", "כותרות להערות טיפול"),
     noteLabelsHelp: p(
-      "These titles appear on the three note fields when logging treatments. Leave an English label empty to hide that note field.",
-      "כותרות אלה מופיעות על שלושת שדות ההערות ברישום טיפולים. השאירו כותרת באנגלית ריקה כדי להסתיר את שדה ההערה הזה.",
+      "Configure each note field title and whether it is shown on the treatment form.",
+      "הגדירו לכל שדה הערה את הכותרת והאם הוא מוצג בטופס הטיפול.",
     ),
     saveLabels: p("Save labels", "שמירת כותרות"),
     note1Default: p("Note 1", "הערה 1"),
@@ -974,8 +974,10 @@ export function privateClinicSettings(lang: UiLanguage) {
       p(`Note ${n} — English`, `הערה ${n} — אנגלית`),
     noteFieldHebrew: (n: 1 | 2 | 3) =>
       p(`Note ${n} — Hebrew (optional)`, `הערה ${n} — עברית (אופציונלי)`),
+    noteFieldVisible: (n: 1 | 2 | 3) =>
+      p(`Show Note ${n} on treatment form`, `הצגת הערה ${n} בטופס הטיפול`),
     noteFieldPlaceholder: (n: 1 | 2 | 3) =>
-      p(`Leave blank to hide Note ${n}`, `השאירו ריק כדי להסתיר הערה ${n}`),
+      p(`Note ${n} label`, `כותרת להערה ${n}`),
     consultTypesTitle: p("Consultation / meeting types", "סוגי ייעוץ / פגישה"),
     consultTypesHelp: p(
       "Used when logging meetings on the Consultations page (separate from visit types on sessions).",

@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 097_therapy_settings_note_visibility.sql (2026-04-24)
 - [x] 096_therapy_receipts_kind_and_net_amount.sql (2026-04-24)
 - [x] 095_private_clinic_receipts_import_currency_defaults.sql (2026-04-22)
 - [x] 094_credit_cards_issue_date_bank_accounts_date_opened.sql (2026-04-21)
@@ -119,6 +120,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 097 | `097_therapy_settings_note_visibility.sql` (2026-04-24) | ALTER | `therapy_settings`: add `note_1_visible`, `note_2_visible`, `note_3_visible` booleans (default `true`) for explicit per-note field visibility on treatment forms. |
 | 096 | `096_therapy_receipts_kind_and_net_amount.sql` (2026-04-24) | ALTER | Add enum `therapy_receipt_kind` (`regular`, `salary_fictitious`) and columns `therapy_receipts.receipt_kind` + `net_amount` (`DECIMAL(15,2)`); backfill net from `total_amount`. |
 | 095 | `095_private_clinic_receipts_import_currency_defaults.sql` (2026-04-22) | ALTER/UPDATE | `users`: add optional `default_currency` (backfilled from `households.primary_currency`); `therapy_settings`: add optional `usual_treatment_cost_currency_for_import` (backfilled from household currency) for receipt-import amount/currency defaults. |
 | 094 | `094_credit_cards_issue_date_bank_accounts_date_opened.sql` (2026-04-21) | ALTER | `credit_cards`: add optional `issue_date`; `bank_accounts`: add optional `date_opened` to track lifecycle dates separately from expiry/closure. |
