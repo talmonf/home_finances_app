@@ -101,14 +101,14 @@ export default async function PrivateClinicSettingsPage({
         </p>
       ) : null}
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:p-6">
+      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.pageTitle}</h2>
         <p className="mt-2 text-sm text-slate-400">{st.pageIntro}</p>
 
         <h3 className="mt-6 text-sm font-semibold text-slate-200">{st.noteLabelsTitle}</h3>
         <p className="mt-1 text-xs text-slate-500">{st.noteLabelsHelp}</p>
 
-        <form action={updateTherapyNoteLabelsFromDashboard} className="mt-4 space-y-6">
+        <form action={updateTherapyNoteLabelsFromDashboard} className="mt-3 space-y-3 sm:mt-4 sm:space-y-5">
           {(
             [
               {
@@ -140,12 +140,15 @@ export default async function PrivateClinicSettingsPage({
               },
             ] as const
           ).map((row) => (
-            <div
+            <fieldset
               key={row.enKey}
-              className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2"
+              className="space-y-2.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:space-y-3 sm:p-4"
             >
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {st.noteFieldPlaceholder(row.n)}
+                </p>
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-300">
                   <input
                     type="checkbox"
                     name={row.visibleKey}
@@ -154,49 +157,57 @@ export default async function PrivateClinicSettingsPage({
                   />
                   {st.noteFieldVisible(row.n)}
                 </label>
-                <label className="mb-1 block text-xs font-medium text-slate-400">
-                  {st.noteFieldEnglish(row.n)}
-                </label>
-                <input
-                  name={row.enKey}
-                  defaultValue={row.enDefault}
-                  placeholder={st.noteFieldPlaceholder(row.n)}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-400">
-                  {st.noteFieldHebrew(row.n)}
-                </label>
-                <input
-                  name={row.heKey}
-                  defaultValue={row.heDefault}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
+
+              <div className="grid gap-2.5 md:grid-cols-2 md:gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-400">
+                    {st.noteFieldEnglish(row.n)}
+                  </label>
+                  <input
+                    name={row.enKey}
+                    defaultValue={row.enDefault}
+                    placeholder={st.noteFieldPlaceholder(row.n)}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-2 text-sm text-slate-100 sm:px-3"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-400">
+                    {st.noteFieldHebrew(row.n)}
+                  </label>
+                  <input
+                    name={row.heKey}
+                    defaultValue={row.heDefault}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-2 text-sm text-slate-100 sm:px-3"
+                  />
+                </div>
               </div>
-            </div>
+            </fieldset>
           ))}
 
           <button
             type="submit"
-            className="inline-flex rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 sm:w-auto"
           >
             {st.saveLabels}
           </button>
         </form>
       </section>
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:p-6">
+      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.consultTypesTitle}</h2>
         <p className="mt-2 text-sm text-slate-400">{st.consultTypesHelp}</p>
 
-        <ul className="mb-4 mt-4 space-y-2 text-sm">
+        <ul className="mb-3 mt-3 space-y-2 text-sm sm:mb-4 sm:mt-4">
           {consultationTypes.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+              className="rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:p-3"
             >
-              <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
+              <form
+                action={updateTherapyConsultationType}
+                className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              >
                 <input type="hidden" name="id" value={row.id} />
                 <div>
                   <label className="mb-1 block text-xs text-slate-500">{st.fieldEnglish}</label>
@@ -204,7 +215,7 @@ export default async function PrivateClinicSettingsPage({
                     name="name"
                     defaultValue={row.name}
                     required
-                    className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
                   />
                 </div>
                 <div>
@@ -212,48 +223,53 @@ export default async function PrivateClinicSettingsPage({
                   <input
                     name="name_he"
                     defaultValue={row.name_he ?? ""}
-                    className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                  className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-slate-600 sm:mt-auto"
                 >
                   {c.save}
                 </button>
               </form>
-              {row.is_system ? (
-                <span className="text-xs text-slate-600">{st.defaultTag}</span>
-              ) : (
-                <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
-                  <input type="hidden" name="id" value={row.id} />
-                  <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                    {st.remove}
-                  </button>
-                </ConfirmDeleteForm>
-              )}
+              <div className="mt-1.5 flex items-center justify-between sm:mt-2">
+                {row.is_system ? (
+                  <span className="text-xs text-slate-600">{st.defaultTag}</span>
+                ) : (
+                  <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+                    <input type="hidden" name="id" value={row.id} />
+                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                      {st.remove}
+                    </button>
+                  </ConfirmDeleteForm>
+                )}
+              </div>
             </li>
           ))}
         </ul>
         <a
           href="/dashboard/private-clinic/settings?modal=consultation-type-new"
-          className="inline-flex rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:w-auto"
         >
           {st.addConsultationTypeBtn}
         </a>
       </section>
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:p-6">
+      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.expenseCatsTitle}</h2>
         <p className="mt-2 text-sm text-slate-400">{st.expenseCatsHelp}</p>
 
-        <ul className="mb-4 mt-4 space-y-2 text-sm">
+        <ul className="mb-3 mt-3 space-y-2 text-sm sm:mb-4 sm:mt-4">
           {expenseCategories.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+              className="rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:p-3"
             >
-              <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
+              <form
+                action={updateTherapyExpenseCategory}
+                className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              >
                 <input type="hidden" name="id" value={row.id} />
                 <div>
                   <label className="mb-1 block text-xs text-slate-500">{st.fieldEnglish}</label>
@@ -261,7 +277,7 @@ export default async function PrivateClinicSettingsPage({
                     name="name"
                     defaultValue={row.name}
                     required
-                    className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
                   />
                 </div>
                 <div>
@@ -269,32 +285,34 @@ export default async function PrivateClinicSettingsPage({
                   <input
                     name="name_he"
                     defaultValue={row.name_he ?? ""}
-                    className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                  className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-slate-600 sm:mt-auto"
                 >
                   {c.save}
                 </button>
               </form>
-              {row.is_system ? (
-                <span className="text-xs text-slate-600">{st.defaultTag}</span>
-              ) : (
-                <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
-                  <input type="hidden" name="id" value={row.id} />
-                  <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                    {st.remove}
-                  </button>
-                </ConfirmDeleteForm>
-              )}
+              <div className="mt-1.5 flex items-center justify-between sm:mt-2">
+                {row.is_system ? (
+                  <span className="text-xs text-slate-600">{st.defaultTag}</span>
+                ) : (
+                  <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+                    <input type="hidden" name="id" value={row.id} />
+                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                      {st.remove}
+                    </button>
+                  </ConfirmDeleteForm>
+                )}
+              </div>
             </li>
           ))}
         </ul>
         <a
           href="/dashboard/private-clinic/settings?modal=expense-category-new"
-          className="inline-flex rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:w-auto"
         >
           {st.addExpenseCategoryBtn}
         </a>
@@ -306,21 +324,21 @@ export default async function PrivateClinicSettingsPage({
           closeLabel={c.cancel}
           maxWidthClassName="max-w-xl"
         >
-            <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
+            <form action={createTherapyConsultationType} className="grid gap-2 sm:grid-cols-2">
               <input
                 name="name"
                 placeholder={st.newTypeName}
                 required
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <input
                 name="name_he"
                 placeholder={st.fieldHebrew}
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <button
                 type="submit"
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:col-span-2"
               >
                 {st.addConsultationTypeBtn}
               </button>
@@ -334,21 +352,21 @@ export default async function PrivateClinicSettingsPage({
           closeLabel={c.cancel}
           maxWidthClassName="max-w-xl"
         >
-            <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
+            <form action={createTherapyExpenseCategory} className="grid gap-2 sm:grid-cols-2">
               <input
                 name="name"
                 placeholder={st.newCatName}
                 required
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <input
                 name="name_he"
                 placeholder={st.fieldHebrew}
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <button
                 type="submit"
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:col-span-2"
               >
                 {st.addExpenseCategoryBtn}
               </button>

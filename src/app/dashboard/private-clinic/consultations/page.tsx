@@ -117,7 +117,7 @@ export default async function ConsultationsPage({
     : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <p className="text-sm text-slate-500">{co.intro}</p>
       {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
@@ -141,7 +141,7 @@ export default async function ConsultationsPage({
           </p>
         ) : null}
         <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
           method="get"
         >
           {receiptFilter ? <input type="hidden" name="receipt" value={receiptFilter} /> : null}
@@ -192,7 +192,7 @@ export default async function ConsultationsPage({
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:mt-auto"
           >
             {c.apply}
           </button>
@@ -204,7 +204,7 @@ export default async function ConsultationsPage({
           <h2 className="text-lg font-medium text-slate-200">{co.consultationsCount(rows.length)}</h2>
           <Link
             href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`}
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
           >
             {co.addTitle}
           </Link>
@@ -212,23 +212,23 @@ export default async function ConsultationsPage({
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {rows.map((r) => (
               <details
                 key={r.id}
-                className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+                className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-4"
               >
                 <summary className="cursor-pointer text-sm text-slate-200">
                   {formatHouseholdDateUtcWithTime(r.occurred_at, dateDisplayFormat)} —{" "}
                   {therapyLocalizedCategoryName(r.consultation_type, uiLanguage)} — {formatJobDisplayLabel(r.job)}
                 </summary>
-                <form action={updateTherapyConsultation} className="mt-3 grid gap-2 md:grid-cols-2">
+                <form action={updateTherapyConsultation} className="mt-2.5 grid gap-2 md:mt-3 md:grid-cols-2">
                   <input type="hidden" name="id" value={r.id} />
                   <select
                     name="job_id"
                     defaultValue={r.job_id}
                     required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                   >
                     {jobs.map((j) => (
                       <option key={j.id} value={j.id}>
@@ -240,7 +240,7 @@ export default async function ConsultationsPage({
                     name="consultation_type_id"
                     defaultValue={r.consultation_type_id}
                     required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                   >
                     {types.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -253,30 +253,30 @@ export default async function ConsultationsPage({
                     type="datetime-local"
                     defaultValue={r.occurred_at.toISOString().slice(0, 16)}
                     required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                   />
                   <div className="flex gap-1">
                     <input
                       name="income_amount"
                       defaultValue={r.income_amount?.toString() ?? ""}
-                      className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                     <input
                       name="income_currency"
                       defaultValue={r.income_currency}
-                      className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                   </div>
                   <div className="flex gap-1">
                     <input
                       name="cost_amount"
                       defaultValue={r.cost_amount?.toString() ?? ""}
-                      className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                     <input
                       name="cost_currency"
                       defaultValue={r.cost_currency}
-                      className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -300,9 +300,9 @@ export default async function ConsultationsPage({
                   <textarea
                     name="notes"
                     defaultValue={r.notes ?? ""}
-                    className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                    className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                   />
-                  <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
+                  <button type="submit" className="rounded bg-sky-600 px-2 py-1.5 text-xs text-white">
                     {c.save}
                   </button>
                 </form>
@@ -319,8 +319,8 @@ export default async function ConsultationsPage({
       </section>
 
       {modalMode === "new" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
-          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
+          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-slate-100">{co.addTitle}</h3>
               <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
@@ -421,7 +421,7 @@ export default async function ConsultationsPage({
               <div className="md:col-span-2 flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-fit"
                 >
                   {c.save}
                 </button>

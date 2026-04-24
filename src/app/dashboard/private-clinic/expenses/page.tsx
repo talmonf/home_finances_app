@@ -61,7 +61,7 @@ export default async function ExpensesPage({
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {resolved?.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
           {resolved.error}
@@ -78,7 +78,7 @@ export default async function ExpensesPage({
           <h2 className="text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
           <Link
             href={`${EXPENSES_BASE}?modal=new`}
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
           >
             {ex.addExpense}
           </Link>
@@ -86,11 +86,11 @@ export default async function ExpensesPage({
         {expenses.length === 0 ? (
           <p className="text-sm text-slate-500">{c.expensesEmpty}</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {expenses.map((e) => (
               <div
                 key={e.id}
-                className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-3"
+                className="space-y-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:space-y-3 sm:p-4"
               >
                 <div className="flex flex-wrap justify-between gap-2 text-sm text-slate-300">
                   <span>
@@ -117,7 +117,7 @@ export default async function ExpensesPage({
                       name="job_id"
                       defaultValue={e.job_id}
                       required
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     >
                       {jobs.map((j) => (
                         <option key={j.id} value={j.id}>
@@ -129,7 +129,7 @@ export default async function ExpensesPage({
                       name="category_id"
                       defaultValue={e.category_id}
                       required
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     >
                       {categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
@@ -142,18 +142,18 @@ export default async function ExpensesPage({
                       type="date"
                       defaultValue={e.expense_date.toISOString().slice(0, 10)}
                       required
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                     <input
                       name="amount"
                       defaultValue={e.amount.toString()}
                       required
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                     <input
                       name="currency"
                       defaultValue={e.currency}
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
                     <div className="md:col-span-2">
                       <TherapyTransactionLinkSelect
@@ -167,9 +167,9 @@ export default async function ExpensesPage({
                     <textarea
                       name="notes"
                       defaultValue={e.notes ?? ""}
-                      className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
-                    <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
+                    <button type="submit" className="rounded bg-sky-600 px-2 py-1.5 text-xs text-white">
                       {c.save}
                     </button>
                   </form>
@@ -187,8 +187,8 @@ export default async function ExpensesPage({
       </section>
 
       {modalMode === "new" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
-          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
+          <div className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-slate-100">{ex.addExpense}</h3>
               <Link href={EXPENSES_BASE} className="text-sm text-slate-400 hover:text-slate-200">
@@ -257,7 +257,7 @@ export default async function ExpensesPage({
               <div className="md:col-span-2 flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-fit"
                 >
                   {c.saveExpense}
                 </button>

@@ -1,5 +1,6 @@
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
+import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -49,6 +50,19 @@ export default async function HouseholdUsersPage({
     where: { household_id: householdId },
     orderBy: { created_at: "asc" },
   });
+  const householdSectionRows = await prisma.household_enabled_sections.findMany({
+    where: { household_id: householdId },
+    select: { section_id: true, enabled: true },
+  });
+  const householdSectionEnabledById = new Map(
+    householdSectionRows.map((row) => [row.section_id, row.enabled] as const),
+  );
+  const householdVisibleSections = DASHBOARD_SECTIONS.filter(
+    (section) => householdSectionEnabledById.get(section.id) ?? true,
+  );
+  const isClinicOnlyHousehold =
+    householdVisibleSections.length === 1 &&
+    householdVisibleSections[0]?.id === "privateClinic";
   const familyMembers = await prisma.family_members.findMany({
     where: { household_id: householdId, is_active: true },
     orderBy: { full_name: "asc" },
@@ -280,154 +294,158 @@ export default async function HouseholdUsersPage({
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-200">Family members</h2>
-          <p className="mb-3 text-xs text-slate-500">
-            People in this household (for jobs, clinic, petrol tanker, etc.). You can link users to a member when
-            creating or editing a user.
-          </p>
-          {familyMembers.length > 0 ? (
-            <ul className="mb-4 space-y-1 text-sm text-slate-300">
-              {familyMembers.map((m) => (
-                <li key={m.id}>
-                  {m.full_name?.trim() || "(Unnamed)"}{" "}
-                  <span className="text-xs text-slate-600">{m.id}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mb-4 text-sm text-slate-500">No family members yet.</p>
-          )}
-          <form action={createHouseholdFamilyMember} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <input type="hidden" name="household_id" value={household.id} />
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">Full name</label>
-              <input
-                name="full_name"
-                required
-                placeholder="e.g. Clinic holder"
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">Date of birth (optional)</label>
-              <input
-                name="date_of_birth"
-                type="date"
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600 sm:w-auto"
-              >
-                Add family member
-              </button>
-            </div>
-          </form>
-        </section>
+        {!isClinicOnlyHousehold ? (
+          <>
+            <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-slate-200">Family members</h2>
+              <p className="mb-3 text-xs text-slate-500">
+                People in this household (for jobs, clinic, petrol tanker, etc.). You can link users to a member when
+                creating or editing a user.
+              </p>
+              {familyMembers.length > 0 ? (
+                <ul className="mb-4 space-y-1 text-sm text-slate-300">
+                  {familyMembers.map((m) => (
+                    <li key={m.id}>
+                      {m.full_name?.trim() || "(Unnamed)"}{" "}
+                      <span className="text-xs text-slate-600">{m.id}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mb-4 text-sm text-slate-500">No family members yet.</p>
+              )}
+              <form action={createHouseholdFamilyMember} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <input type="hidden" name="household_id" value={household.id} />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">Full name</label>
+                  <input
+                    name="full_name"
+                    required
+                    placeholder="e.g. Clinic holder"
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">Date of birth (optional)</label>
+                  <input
+                    name="date_of_birth"
+                    type="date"
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600 sm:w-auto"
+                  >
+                    Add family member
+                  </button>
+                </div>
+              </form>
+            </section>
 
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-200">
-            Add user
-          </h2>
-          <form
-            action={createUser}
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
-          >
-            <input type="hidden" name="household_id" value={household.id} />
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                Email
-              </label>
-              <input
-                name="email"
-                type="email"
-                required
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                Full name
-              </label>
-              <input
-                name="full_name"
-                required
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                Role
-              </label>
-              <select
-                name="role"
-                required
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-                defaultValue=""
+            <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-slate-200">
+                Add user
+              </h2>
+              <form
+                action={createUser}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
               >
-                <option value="">Select role</option>
-                <option value="admin">Admin</option>
-                <option value="member">Member</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                User type
-              </label>
-              <select
-                name="user_type"
-                required
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-                defaultValue=""
-              >
-                <option value="">Select user type</option>
-                <option value="family_member">Family member</option>
-                <option value="financial_advisor">Financial advisor</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                Password
-              </label>
-              <PasswordInputWithToggle
-                name="password"
-                required
-                autoComplete="new-password"
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              />
-              <p className="mt-1 text-xs text-slate-500">{passwordPolicyHint()} User must change it on first sign-in.</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300">
-                Linked family member (optional)
-              </label>
-              <select
-                name="family_member_id"
-                defaultValue=""
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              >
-                <option value="">None</option>
-                {familyMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name?.trim() || "(Unnamed)"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end justify-end md:col-span-2 lg:col-span-3">
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                Create user
-              </button>
-            </div>
-          </form>
-        </section>
+                <input type="hidden" name="household_id" value={household.id} />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    Email
+                  </label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    Full name
+                  </label>
+                  <input
+                    name="full_name"
+                    required
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    Role
+                  </label>
+                  <select
+                    name="role"
+                    required
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    defaultValue=""
+                  >
+                    <option value="">Select role</option>
+                    <option value="admin">Admin</option>
+                    <option value="member">Member</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    User type
+                  </label>
+                  <select
+                    name="user_type"
+                    required
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    defaultValue=""
+                  >
+                    <option value="">Select user type</option>
+                    <option value="family_member">Family member</option>
+                    <option value="financial_advisor">Financial advisor</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    Password
+                  </label>
+                  <PasswordInputWithToggle
+                    name="password"
+                    required
+                    autoComplete="new-password"
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">{passwordPolicyHint()} User must change it on first sign-in.</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                    Linked family member (optional)
+                  </label>
+                  <select
+                    name="family_member_id"
+                    defaultValue=""
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="">None</option>
+                    {familyMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name?.trim() || "(Unnamed)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end justify-end md:col-span-2 lg:col-span-3">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                  >
+                    Create user
+                  </button>
+                </div>
+              </form>
+            </section>
+          </>
+        ) : null}
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">

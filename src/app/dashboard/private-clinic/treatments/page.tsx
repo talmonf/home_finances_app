@@ -383,14 +383,14 @@ export default async function TreatmentsPage({
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
-          <div className="flex items-center gap-2">
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:items-center">
             <OpenPrivateClinicTreatmentsImportButton
               label={tr.importBtn}
               importPath="/dashboard/private-clinic/treatments/import"
             />
             <Link
               href={`${baseListHref}&modal=new`}
-              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+              className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
             >
               {tr.addTreatmentBtn}
             </Link>
