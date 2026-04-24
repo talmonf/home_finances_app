@@ -267,6 +267,20 @@ export default async function HouseholdUsersPage({
               </span>
             </div>
           )}
+
+          {isClinicOnlyHousehold ? (
+            <div className="rounded-lg border border-sky-700/70 bg-sky-950/30 px-3 py-2 text-xs text-sky-100">
+              This is a clinic-only household. Household-level defaults and Clinic configuration are managed in{" "}
+              <Link
+                href={`/admin/households/${householdId}/edit`}
+                className="font-medium underline underline-offset-2 hover:text-sky-200"
+              >
+                Edit household
+              </Link>
+              . Use Edit on the existing user below for account-specific changes (email, password, role, and per-user
+              overrides).
+            </div>
+          ) : null}
         </header>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
