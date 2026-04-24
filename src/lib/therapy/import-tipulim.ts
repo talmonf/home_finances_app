@@ -127,6 +127,8 @@ type PendingReceipt = {
   receiptNumber: string;
   issuedAt: Date;
   totalAmount: string;
+  netAmount?: string;
+  receiptKind?: "regular" | "salary_fictitious";
   notes: string | null;
   paymentMethod: "cash" | "bank_transfer" | "digital_card" | "credit_card";
   recipientType: "client" | "organization";
@@ -142,6 +144,12 @@ type PendingReceipt = {
   /** Receipt-only import: when no auto-treatment, client comes from the row (not from allocations). */
   explicitClientRefForReceipt?: ClientRef | null;
 };
+
+function defaultReceiptKindForJobEmploymentType(
+  employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null | undefined,
+): "regular" | "salary_fictitious" {
+  return employmentType === "employee" ? "salary_fictitious" : "regular";
+}
 
 export type ImportConflict = {
   key: string;
@@ -852,6 +860,7 @@ async function analyzeReceiptOnlyProfile(
   ctx: {
     isPrivateClinic: boolean;
     jobFamilyMemberId: string | null;
+    jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -874,6 +883,7 @@ async function analyzeReceiptOnlyProfile(
     pendingConsultations: [],
     orgPaymentDiagnostics: [],
   };
+  const defaultReceiptKind = defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType);
 
   const usualParsed = parseMoney(String(params.usualTreatmentCost ?? "").trim());
   if (!usualParsed) {
@@ -1018,6 +1028,8 @@ async function analyzeReceiptOnlyProfile(
         receiptNumber: receiptNum,
         issuedAt,
         totalAmount: amount,
+        netAmount: amount,
+        receiptKind: defaultReceiptKind,
         notes: noteRaw,
         paymentMethod: payment.receiptMethod,
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
@@ -1034,6 +1046,8 @@ async function analyzeReceiptOnlyProfile(
         receiptNumber: receiptNum,
         issuedAt,
         totalAmount: amount,
+        netAmount: amount,
+        receiptKind: defaultReceiptKind,
         notes: noteRaw,
         paymentMethod: payment.receiptMethod,
         recipientType: ctx.isPrivateClinic ? "client" : "organization",
@@ -1058,6 +1072,7 @@ export async function analyzeReceiptOnlyProfileForTest(
   ctx: {
     isPrivateClinic: boolean;
     jobFamilyMemberId: string | null;
+    jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1072,6 +1087,7 @@ async function analyzePrivateProfile(
   ctx: {
     isPrivateClinic: boolean;
     jobFamilyMemberId: string | null;
+    jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1095,6 +1111,7 @@ async function analyzePrivateProfile(
     orgPaymentDiagnostics: [],
   };
   const pendingAllocByReceipt = new Map<string, PendingAllocation[]>();
+  const defaultReceiptKind = defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType);
   const existingPrograms = ctx.programsByJob.filter((p) => p.job_id === params.jobId);
   let selectedProgramId = params.selectedProgramId ?? null;
   if (!selectedProgramId && existingPrograms.length > 0) {
@@ -1285,6 +1302,8 @@ async function analyzePrivateProfile(
       receiptNumber: receiptNum,
       issuedAt,
       totalAmount,
+      netAmount: totalAmount,
+      receiptKind: defaultReceiptKind,
       notes: noteRaw,
       paymentMethod: payment.receiptMethod,
       recipientType: ctx.isPrivateClinic ? "client" : "organization",
@@ -1315,6 +1334,7 @@ export async function analyzePrivateProfileForTest(
   ctx: {
     isPrivateClinic: boolean;
     jobFamilyMemberId: string | null;
+    jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
     clients: ClientCandidate[];
     programsByJob: Array<{ id: string; name: string; job_id: string }>;
     bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1327,6 +1347,7 @@ export async function analyzePrivateProfileForTest(
 async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   isPrivateClinic: boolean;
   jobFamilyMemberId: string | null;
+  jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1359,6 +1380,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
   const consultationKeysByMonth = new Map<string, string[]>();
   const travelKeysByMonth = new Map<string, string[]>();
   const pendingOrgPaymentRows: PendingOrgPaymentRow[] = [];
+  const defaultReceiptKind = defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType);
   for (let idx = 0; idx < rows.length; idx += 1) {
     const row = rows[idx]!;
     const rowNumber = idx + 2;
@@ -1633,6 +1655,8 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       receiptNumber: payRow.receiptNum,
       issuedAt: payRow.issuedAt,
       totalAmount: payRow.total,
+      netAmount: payRow.total,
+      receiptKind: defaultReceiptKind,
       notes: payRow.note,
       paymentMethod: payment.receiptMethod,
       recipientType: "organization",
@@ -1657,6 +1681,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
 export async function analyzeOrgProfileForTest(params: TipulimAnalyzeParams, ctx: {
   isPrivateClinic: boolean;
   jobFamilyMemberId: string | null;
+  jobEmploymentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company" | null;
   clients: ClientCandidate[];
   programsByJob: Array<{ id: string; name: string; job_id: string }>;
   bankAccounts: Array<{ id: string; account_number: string | null }>;
@@ -1732,7 +1757,7 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
   const [job, clients, programsByJob, bankAccounts, digitalMethods] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id: params.jobId, household_id: params.householdId },
-      select: { is_private_clinic: true, family_member_id: true },
+      select: { is_private_clinic: true, family_member_id: true, employment_type: true },
     }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
@@ -1754,6 +1779,7 @@ export async function analyzeTipulimImport(params: TipulimAnalyzeParams): Promis
   const ctx = {
     isPrivateClinic: job?.is_private_clinic ?? true,
     jobFamilyMemberId: job?.family_member_id ?? null,
+    jobEmploymentType: job?.employment_type ?? null,
     clients,
     programsByJob,
     bankAccounts,
@@ -1829,7 +1855,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   const [job, clients, programsByJob, bankAccounts, digitalMethods, consultationTypes] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id: params.jobId, household_id: params.householdId },
-      select: { is_private_clinic: true, family_member_id: true },
+      select: { is_private_clinic: true, family_member_id: true, employment_type: true },
     }),
     prisma.therapy_clients.findMany({
       where: { household_id: params.householdId },
@@ -1855,6 +1881,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
   const ctx = {
     isPrivateClinic: job?.is_private_clinic ?? true,
     jobFamilyMemberId: job?.family_member_id ?? null,
+    jobEmploymentType: job?.employment_type ?? null,
     clients,
     programsByJob,
     bankAccounts,
@@ -2230,6 +2257,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           receipt_number: r.receiptNumber,
           issued_at: r.issuedAt,
           total_amount: r.totalAmount,
+          net_amount: r.netAmount ?? r.totalAmount,
+          receipt_kind: r.receiptKind ?? defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType),
           currency: "ILS",
           recipient_type: r.recipientType,
           payment_method: r.paymentMethod,

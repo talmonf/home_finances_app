@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 const receiptCtx = {
   isPrivateClinic: true,
   jobFamilyMemberId: null as string | null,
+  jobEmploymentType: "employee" as const,
   clients: [{ id: "c-1", first_name: "Dana", last_name: "Cohen" }],
   programsByJob: [] as Array<{ id: string; name: string; job_id: string }>,
   bankAccounts: [] as Array<{ id: string; account_number: string | null }>,
@@ -131,4 +132,79 @@ test("receipts-only import blocks ambiguous text date when date format preferenc
   );
 
   assert.ok(scratch.errors.some((e) => e.includes("ambiguous Payment Date")));
+});
+
+test("receipts-only import defaults salary employees to salary_fictitious kind", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        "Payment Date": "2026-04-10",
+        Client: "Dana C",
+        Amount: "400.00",
+        "Receipt #": "SAL-04/26",
+        "Payment method": "cash",
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingReceipts[0]?.receiptKind, "salary_fictitious");
+  assert.equal(scratch.pendingReceipts[0]?.netAmount, scratch.pendingReceipts[0]?.totalAmount);
+});
+
+test("receipts-only import defaults non-employee jobs to regular kind", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        "Payment Date": "2026-04-10",
+        Client: "Dana C",
+        Amount: "400.00",
+        "Receipt #": "R-regular",
+        "Payment method": "cash",
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    { ...receiptCtx, jobEmploymentType: "freelancer" },
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingReceipts[0]?.receiptKind, "regular");
 });

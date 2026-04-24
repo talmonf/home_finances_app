@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-type JobOption = { id: string; label: string };
+type JobOption = { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" };
 
 type ClientOption = { id: string; first_name: string; last_name: string | null; jobIds: string[] };
 
@@ -20,7 +20,12 @@ export type ReceiptModalLabels = {
   selectClient: string;
   receiptNumber: string;
   date: string;
-  totalAmount: string;
+  grossAmount: string;
+  netAmount: string;
+  netAmountHint: string;
+  receiptKind: string;
+  receiptKindRegular: string;
+  receiptKindSalaryFictitious: string;
   currency: string;
   coveredStart: string;
   coveredEnd: string;
@@ -46,6 +51,8 @@ export type ReceiptModalInitial = {
   receipt_number?: string;
   issued_at?: string;
   total_amount?: string;
+  net_amount?: string;
+  receipt_kind?: "regular" | "salary_fictitious" | "";
   currency?: string;
   covered_period_start?: string;
   covered_period_end?: string;
@@ -83,11 +90,13 @@ export function ReceiptModalFormClient({
   /** Server-rendered transaction picker (passed from parent Server Component). */
   children: ReactNode;
 }) {
+  const jobsById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
   const [jobId, setJobId] = useState(initial?.job_id ?? "");
   const [programId, setProgramId] = useState(initial?.program_id ?? "");
   const [recipientType, setRecipientType] = useState<string>(initial?.recipient_type ?? "");
   const [paymentMethod, setPaymentMethod] = useState<string>(initial?.payment_method ?? "");
   const [clientId, setClientId] = useState(initial?.client_id ?? "");
+  const [receiptKind, setReceiptKind] = useState<string>(initial?.receipt_kind ?? "");
 
   useEffect(() => {
     setJobId(initial?.job_id ?? "");
@@ -95,7 +104,14 @@ export function ReceiptModalFormClient({
     setRecipientType(initial?.recipient_type ?? "");
     setPaymentMethod(initial?.payment_method ?? "");
     setClientId(initial?.client_id ?? "");
+    setReceiptKind(initial?.receipt_kind ?? "");
   }, [initial]);
+  useEffect(() => {
+    if (!jobId || receiptKind) return;
+    const defaults = jobsById.get(jobId);
+    if (defaults) setReceiptKind(defaults.defaultReceiptKind);
+  }, [jobId, jobsById, receiptKind]);
+
 
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
@@ -156,6 +172,8 @@ export function ReceiptModalFormClient({
                 const v = e.target.value;
                 setJobId(v);
                 setProgramId("");
+                const defaults = jobsById.get(v);
+                if (defaults) setReceiptKind(defaults.defaultReceiptKind);
               }}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
@@ -207,13 +225,38 @@ export function ReceiptModalFormClient({
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400">{labels.totalAmount}</label>
+            <label className="block text-xs text-slate-400">{labels.grossAmount}</label>
             <input
               name="total_amount"
               required
               defaultValue={initial?.total_amount ?? ""}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400">{labels.netAmount}</label>
+            <input
+              name="net_amount"
+              required
+              defaultValue={initial?.net_amount ?? initial?.total_amount ?? ""}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <p className="mt-1 text-xs text-slate-500">{labels.netAmountHint}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400">{labels.receiptKind}</label>
+            <select
+              name="receipt_kind"
+              required
+              value={receiptKind}
+              onChange={(e) => setReceiptKind(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="regular">{labels.receiptKindRegular}</option>
+              <option value="salary_fictitious">{labels.receiptKindSalaryFictitious}</option>
+            </select>
           </div>
 
           <div>

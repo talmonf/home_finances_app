@@ -25,6 +25,7 @@ import type {
   TherapyBillingBasis,
   TherapyBillingTiming,
   TherapyClientRelationshipType,
+  TherapyReceiptKind,
   TherapyReceiptPaymentMethod,
   TherapyReceiptRecipientType,
   TherapyTreatmentPaymentMethod,
@@ -214,6 +215,30 @@ function parseReceiptPaymentMethod(raw: string | null | undefined): TherapyRecei
     return raw;
   }
   return null;
+}
+
+function parseReceiptKind(raw: string | null | undefined): TherapyReceiptKind | null {
+  if (raw === "regular" || raw === "salary_fictitious") return raw;
+  return null;
+}
+
+function defaultReceiptKindFromEmploymentType(employmentType: string | null | undefined): TherapyReceiptKind {
+  return employmentType === "employee" ? "salary_fictitious" : "regular";
+}
+
+async function resolveReceiptKindForJob(
+  householdId: string,
+  jobId: string,
+  requestedKindRaw: string | null | undefined,
+): Promise<TherapyReceiptKind | null> {
+  const requestedKind = parseReceiptKind(requestedKindRaw);
+  if (requestedKind) return requestedKind;
+  const job = await prisma.jobs.findFirst({
+    where: { id: jobId, household_id: householdId },
+    select: { employment_type: true },
+  });
+  if (!job) return null;
+  return defaultReceiptKindFromEmploymentType(job.employment_type);
 }
 
 function parseTreatmentPaymentMethod(raw: string | null | undefined): TherapyTreatmentPaymentMethod | null {
@@ -1595,6 +1620,10 @@ export async function createTherapyTreatment(formData: FormData) {
   const inlineReceiptIssuedAt = parseDateRequired((formData.get("receipt_issued_at") as string)?.trim() || null);
   if (inlineReceiptNumber && inlineReceiptIssuedAt) {
     const receiptId = crypto.randomUUID();
+    const inlineReceiptKind = await resolveReceiptKindForJob(householdId, job_id, null);
+    if (!inlineReceiptKind) {
+      redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+    }
     await prisma.therapy_receipts.create({
       data: {
         id: receiptId,
@@ -1606,6 +1635,8 @@ export async function createTherapyTreatment(formData: FormData) {
         receipt_number: inlineReceiptNumber,
         issued_at: inlineReceiptIssuedAt,
         total_amount: amountStr,
+        net_amount: amountStr,
+        receipt_kind: inlineReceiptKind,
         currency: (formData.get("currency") as string)?.trim() || "ILS",
         recipient_type: "client",
         payment_method: "cash",
@@ -1790,6 +1821,12 @@ export async function createTherapyReceipt(formData: FormData) {
   const receipt_number = (formData.get("receipt_number") as string)?.trim() || "";
   const issued_at = parseDateRequired((formData.get("issued_at") as string) || null);
   const totalStr = parseMoney(formData.get("total_amount") as string);
+  const netStr = parseMoney(formData.get("net_amount") as string) ?? totalStr;
+  const receipt_kind = await resolveReceiptKindForJob(
+    householdId,
+    job_id,
+    (formData.get("receipt_kind") as string | null) ?? null,
+  );
   const recipient_type = parseRecipientType((formData.get("recipient_type") as string)?.trim() || null);
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
@@ -1797,7 +1834,7 @@ export async function createTherapyReceipt(formData: FormData) {
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
 
-  if (!job_id || !receipt_number || !issued_at || !totalStr || !recipient_type || !payment_method) {
+  if (!job_id || !receipt_number || !issued_at || !totalStr || !netStr || !receipt_kind || !recipient_type || !payment_method) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
@@ -1848,6 +1885,8 @@ export async function createTherapyReceipt(formData: FormData) {
       receipt_number,
       issued_at,
       total_amount: totalStr,
+      net_amount: netStr,
+      receipt_kind,
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       recipient_type,
       payment_method,
@@ -1878,7 +1917,11 @@ export async function updateTherapyReceipt(formData: FormData) {
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const issued_at = parseDateRequired((formData.get("issued_at") as string) || null);
   const totalStr = parseMoney(formData.get("total_amount") as string);
-  if (!job_id || !issued_at || !totalStr) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  const netStr = parseMoney(formData.get("net_amount") as string) ?? totalStr;
+  const receipt_kind =
+    (await resolveReceiptKindForJob(householdId, job_id, (formData.get("receipt_kind") as string | null) ?? row.receipt_kind)) ??
+    row.receipt_kind;
+  if (!job_id || !issued_at || !totalStr || !netStr || !receipt_kind) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
@@ -1933,6 +1976,8 @@ export async function updateTherapyReceipt(formData: FormData) {
       receipt_number: (formData.get("receipt_number") as string)?.trim() || row.receipt_number,
       issued_at,
       total_amount: totalStr,
+      net_amount: netStr,
+      receipt_kind,
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       recipient_type,
       payment_method,
@@ -2015,7 +2060,8 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
   const receiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
   const issuedAt = parseDateRequired((formData.get("issued_at") as string)?.trim() || null);
   const totalStr = parseMoney(formData.get("total_amount") as string);
-  if (!treatmentIds.length || !receiptNumber || !issuedAt || !totalStr) {
+  const netStr = totalStr;
+  if (!treatmentIds.length || !receiptNumber || !issuedAt || !totalStr || !netStr) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   }
   const treatments = await prisma.therapy_treatments.findMany({
@@ -2026,10 +2072,11 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
   }
   const jobId = treatments[0]!.job_id;
+  const receiptKind = await resolveReceiptKindForJob(householdId, jobId, null);
   if (treatments.some((t) => t.job_id !== jobId)) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, jobId))) {
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, jobId)) || !receiptKind) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
   const receiptId = crypto.randomUUID();
@@ -2045,6 +2092,8 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
         receipt_number: receiptNumber,
         issued_at: issuedAt,
         total_amount: totalStr,
+        net_amount: netStr,
+        receipt_kind: receiptKind,
         currency: treatments[0]!.currency,
         recipient_type: "client",
         payment_method: "cash",

@@ -24,9 +24,11 @@ export type ReceiptListRowDto = {
   id: string;
   receipt_number: string;
   issued_at_iso: string;
+  receipt_kind: "regular" | "salary_fictitious";
   recipient_type: "client" | "organization";
   job_label: string;
   total_amount: string;
+  net_amount: string;
   currency: string;
   covered_period_start_iso: string | null;
   covered_period_end_iso: string | null;
@@ -176,9 +178,11 @@ export async function loadReceiptsCursorPage(params: {
         id: rec.id,
         receipt_number: rec.receipt_number,
         issued_at_iso: rec.issued_at.toISOString(),
+        receipt_kind: rec.receipt_kind,
         recipient_type: rec.recipient_type,
         job_label: formatJobDisplayLabel(rec.job),
         total_amount: rec.total_amount.toString(),
+        net_amount: rec.net_amount.toString(),
         currency: rec.currency,
         covered_period_start_iso: rec.covered_period_start ? rec.covered_period_start.toISOString() : null,
         covered_period_end_iso: rec.covered_period_end ? rec.covered_period_end.toISOString() : null,

@@ -50,6 +50,12 @@ type ReceiptModalClientOption = {
   jobIds: string[];
 };
 
+function receiptKindDefaultByEmploymentType(
+  employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company",
+): "regular" | "salary_fictitious" {
+  return employmentType === "employee" ? "salary_fictitious" : "regular";
+}
+
 function clientOptionJobIds(row: {
   default_job_id: string;
   client_jobs: { job_id: string }[];
@@ -425,6 +431,7 @@ export default async function ReceiptsPage({
               noMoreRows: r.noMoreRows,
               loadMore: r.loadMore,
               recipientOrg: r.recipientOrg,
+              salaryFictitiousBadge: r.receiptKindSalaryFictitious,
             }}
           />
         )}
@@ -437,7 +444,11 @@ export default async function ReceiptsPage({
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
-          jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          jobs={jobs.map((j) => ({
+            id: j.id,
+            label: formatJobDisplayLabel(j),
+            defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+          }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
             jobId: p.job_id,
@@ -461,7 +472,12 @@ export default async function ReceiptsPage({
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
             date: c.date,
-            totalAmount: r.totalAmount,
+            grossAmount: r.grossAmount,
+            netAmount: r.netAmount,
+            netAmountHint: r.netAmountHint,
+            receiptKind: r.receiptKind,
+            receiptKindRegular: r.receiptKindRegular,
+            receiptKindSalaryFictitious: r.receiptKindSalaryFictitious,
             currency: c.currency,
             coveredStart: r.coveredStart,
             coveredEnd: r.coveredEnd,
@@ -491,7 +507,11 @@ export default async function ReceiptsPage({
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
           redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editReceipt.id)}`}
           householdId={householdId}
-          jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          jobs={jobs.map((j) => ({
+            id: j.id,
+            label: formatJobDisplayLabel(j),
+            defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+          }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
             jobId: p.job_id,
@@ -515,7 +535,12 @@ export default async function ReceiptsPage({
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
             date: c.date,
-            totalAmount: r.totalAmount,
+            grossAmount: r.grossAmount,
+            netAmount: r.netAmount,
+            netAmountHint: r.netAmountHint,
+            receiptKind: r.receiptKind,
+            receiptKindRegular: r.receiptKindRegular,
+            receiptKindSalaryFictitious: r.receiptKindSalaryFictitious,
             currency: c.currency,
             coveredStart: r.coveredStart,
             coveredEnd: r.coveredEnd,
@@ -543,6 +568,8 @@ export default async function ReceiptsPage({
             receipt_number: editReceipt.receipt_number,
             issued_at: editReceipt.issued_at.toISOString().slice(0, 10),
             total_amount: editReceipt.total_amount.toString(),
+            net_amount: editReceipt.net_amount.toString(),
+            receipt_kind: editReceipt.receipt_kind,
             currency: editReceipt.currency,
             covered_period_start: editReceipt.covered_period_start?.toISOString().slice(0, 10) ?? "",
             covered_period_end: editReceipt.covered_period_end?.toISOString().slice(0, 10) ?? "",
@@ -553,6 +580,20 @@ export default async function ReceiptsPage({
           }}
           extraContent={
             <div className="space-y-3 rounded border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+              <div className="grid gap-2 rounded border border-slate-700/80 bg-slate-900/40 p-2 sm:grid-cols-2">
+                <div>
+                  <p className="font-medium text-slate-200">{r.grossAmountSummary}</p>
+                  <p>
+                    {editReceipt.total_amount.toString()} {editReceipt.currency}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-slate-200">{r.netAmountSummary}</p>
+                  <p>
+                    {editReceipt.net_amount.toString()} {editReceipt.currency}
+                  </p>
+                </div>
+              </div>
               <div>
                 <p className="font-medium text-slate-200">{r.tableTreatmentsCount}</p>
                 <p>

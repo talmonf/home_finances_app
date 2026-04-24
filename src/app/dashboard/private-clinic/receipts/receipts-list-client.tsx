@@ -22,6 +22,7 @@ type Labels = {
   noMoreRows: string;
   loadMore: string;
   recipientOrg: string;
+  salaryFictitiousBadge: string;
 };
 
 type ColumnSortKey = "number" | "date" | "client" | "job" | "amount" | "coverage" | "treatments" | "edit";
@@ -199,7 +200,16 @@ export function ReceiptsListClient({
           <tbody>
             {sortedRows.map((rec) => (
               <tr key={rec.id} className="border-b border-slate-700/80">
-                <td className="px-3 py-2 text-slate-100">{rec.receipt_number}</td>
+                <td className="px-3 py-2 text-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span>{rec.receipt_number}</span>
+                    {rec.receipt_kind === "salary_fictitious" ? (
+                      <span className="rounded border border-amber-500/50 bg-amber-900/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
+                        {labels.salaryFictitiousBadge}
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-3 py-2 text-slate-400">{formatHouseholdDate(new Date(rec.issued_at_iso), dateDisplayFormat)}</td>
                 <td className="px-3 py-2 text-slate-300">
                   {rec.recipient_type === "client" && rec.client_id && rec.client_first_name ? (

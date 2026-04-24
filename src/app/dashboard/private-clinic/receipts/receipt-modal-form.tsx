@@ -34,7 +34,7 @@ export async function ReceiptModalForm({
   redirectOnSuccess: string;
   redirectOnError: string;
   householdId: string;
-  jobs: { id: string; label: string }[];
+  jobs: { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" }[];
   programs: { id: string; jobId: string; label: string }[];
   clients: { id: string; first_name: string; last_name: string | null; jobIds: string[] }[];
   labels: ReceiptModalFormLabels;
@@ -53,7 +53,12 @@ export async function ReceiptModalForm({
     selectClient: labels.selectClient,
     receiptNumber: labels.receiptNumber,
     date: labels.date,
-    totalAmount: labels.totalAmount,
+    grossAmount: labels.grossAmount,
+    netAmount: labels.netAmount,
+    netAmountHint: labels.netAmountHint,
+    receiptKind: labels.receiptKind,
+    receiptKindRegular: labels.receiptKindRegular,
+    receiptKindSalaryFictitious: labels.receiptKindSalaryFictitious,
     currency: labels.currency,
     coveredStart: labels.coveredStart,
     coveredEnd: labels.coveredEnd,

@@ -1444,6 +1444,13 @@ enum TherapyReceiptPaymentMethod {
   @@map("therapy_receipt_payment_method")
 }
 
+enum TherapyReceiptKind {
+  regular
+  salary_fictitious
+
+  @@map("therapy_receipt_kind")
+}
+
 enum TherapyTreatmentPaymentMethod {
   bank_transfer
   digital_payment
@@ -1865,6 +1872,8 @@ model therapy_receipts {
   receipt_number        String
   issued_at             DateTime @db.Date
   total_amount          Decimal  @db.Decimal(15, 2)
+  net_amount            Decimal  @db.Decimal(15, 2)
+  receipt_kind          TherapyReceiptKind @default(regular)
   currency              String   @default("ILS")
   recipient_type        TherapyReceiptRecipientType
   payment_method        TherapyReceiptPaymentMethod
