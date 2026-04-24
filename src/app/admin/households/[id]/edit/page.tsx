@@ -615,14 +615,6 @@ export default async function EditHouseholdPage({
             </div>
           </details>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-            >
-              Save settings (all expanded/collapsed sections above)
-            </button>
-          </div>
         </form>
         <details id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-slate-200">
@@ -780,6 +772,15 @@ export default async function EditHouseholdPage({
             </form>
           </div>
         </details>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            form="household-settings"
+            className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+          >
+            Save settings (all expanded/collapsed sections above)
+          </button>
+        </div>
         </>
         ) : null}
 
