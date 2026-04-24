@@ -5,11 +5,11 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createJob } from "./actions";
+import { JobsListClient } from "./jobs-list-client";
 
 export const dynamic = "force-dynamic";
 
@@ -24,21 +24,6 @@ type PageProps = {
     tenure?: string;
   }>;
 };
-
-function employmentTypeLabel(t: string) {
-  switch (t) {
-    case "employee":
-      return "Employee";
-    case "freelancer":
-      return "Freelancer";
-    case "self_employed":
-      return "Self-employed";
-    case "contractor_via_company":
-      return "Contractor via company";
-    default:
-      return t;
-  }
-}
 
 export default async function JobsPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -62,23 +47,10 @@ export default async function JobsPage({ searchParams }: PageProps) {
       ? resolved.tenure
       : "current";
   const showAddForm = resolved?.add === "1";
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   const [jobs, familyMembers, bankAccounts, creditCards] = await Promise.all([
     prisma.jobs.findMany({
-      where: {
-        household_id: householdId,
-        ...(selectedFamilyMemberId ? { family_member_id: selectedFamilyMemberId } : {}),
-        ...(selectedEmploymentType ? { employment_type: selectedEmploymentType } : {}),
-        ...(selectedTenure === "current"
-          ? {
-              OR: [{ end_date: null }, { end_date: { gte: today } }],
-            }
-          : selectedTenure === "past"
-            ? { end_date: { lt: today } }
-            : {}),
-      },
+      where: { household_id: householdId },
       include: { family_member: true },
       orderBy: [{ start_date: "desc" }, { created_at: "desc" }],
     }),
@@ -97,20 +69,19 @@ export default async function JobsPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <header className="space-y-3">
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-4">
+      <div className="w-full max-w-6xl space-y-4 rounded-2xl bg-slate-900 p-5 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <header className="space-y-2">
           <SetupSectionMarkNotDoneBanner
             sectionId="jobs"
             redirectPath="/dashboard/jobs"
           />
-          <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-          </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "משרות" : "Jobs"}</h1>
-          <p className="text-sm text-slate-400">
-            Record jobs, payroll history, benefits, and employment documents per family member.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h1 className="text-xl font-semibold text-slate-50">{isHebrew ? "משרות" : "Jobs"}</h1>
+            <Link href="/" className="text-sm text-slate-400 hover:text-slate-200">
+              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
+            </Link>
+          </div>
           {(resolved?.created || resolved?.updated || resolved?.error) && (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${
@@ -128,114 +99,25 @@ export default async function JobsPage({ searchParams }: PageProps) {
           )}
         </header>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימת משרות" : "Jobs list"}</h2>
-            <Link
-              href="/dashboard/jobs?add=1"
-              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-            >
-              {isHebrew ? "הוספת משרה" : "Add job"}
-            </Link>
-          </div>
-          <form method="get" className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-4">
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-300">{isHebrew ? "בן משפחה" : "Family member"}</label>
-              <select
-                name="family_member_id"
-                defaultValue={selectedFamilyMemberId}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">{isHebrew ? "כולם" : "All"}</option>
-                {familyMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-300">{isHebrew ? "סוג העסקה" : "Employment type"}</label>
-              <select
-                name="employment_type"
-                defaultValue={selectedEmploymentType}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">{isHebrew ? "כולם" : "All"}</option>
-                <option value="employee">{isHebrew ? "שכיר" : "Regular employee"}</option>
-                <option value="freelancer">{isHebrew ? "פרילנסר" : "Freelancer"}</option>
-                <option value="self_employed">{isHebrew ? "עצמאי" : "Self-employed"}</option>
-                <option value="contractor_via_company">{isHebrew ? "קבלן דרך חברה" : "Contractor via company"}</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-300">{isHebrew ? "סטטוס" : "Status"}</label>
-              <select
-                name="tenure"
-                defaultValue={selectedTenure}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="current">{isHebrew ? "נוכחיות" : "Current jobs"}</option>
-                <option value="past">{isHebrew ? "עבר" : "Past jobs"}</option>
-                <option value="all">{isHebrew ? "הכול" : "All jobs"}</option>
-              </select>
-            </div>
-            <div className="flex items-end gap-2">
-              <button
-                type="submit"
-                className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
-              >
-                {isHebrew ? "סינון" : "Apply filters"}
-              </button>
-              <Link href="/dashboard/jobs" className="text-sm text-slate-300 hover:text-slate-100">
-                {isHebrew ? "ניקוי" : "Clear"}
-              </Link>
-            </div>
-          </form>
-          {jobs.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-sm text-slate-400">
-              {isHebrew ? "לא נמצאו משרות בהתאם לסינון." : "No jobs found for the selected filters."}
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-3 py-2 text-slate-300">Title</th>
-                    <th className="px-3 py-2 text-slate-300">Family member</th>
-                    <th className="px-3 py-2 text-slate-300">Type</th>
-                    <th className="px-3 py-2 text-slate-300">Employer</th>
-                    <th className="px-3 py-2 text-slate-300">Dates</th>
-                    <th className="px-3 py-2 text-slate-300">{isHebrew ? "קליניקה" : "Clinic"}</th>
-                    <th className="px-3 py-2 text-slate-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr key={job.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-3 py-2 text-slate-100">{job.job_title}</td>
-                      <td className="px-3 py-2 text-slate-300">{job.family_member.full_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{employmentTypeLabel(job.employment_type)}</td>
-                      <td className="px-3 py-2 text-slate-300">{job.employer_name ?? "Self-employed / not set"}</td>
-                      <td className="px-3 py-2 text-slate-300">
-                        {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}
-                        {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : "Present"}
-                      </td>
-                      <td className="px-3 py-2 text-slate-400">
-                        {job.is_private_clinic ? (isHebrew ? "כן" : "Yes") : (isHebrew ? "לא" : "No")}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Link href={`/dashboard/jobs/${job.id}`} className="text-xs text-sky-400 hover:text-sky-300">
-                          {isHebrew ? "עריכה" : "Edit"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <JobsListClient
+          rows={jobs.map((job) => ({
+            id: job.id,
+            family_member_id: job.family_member_id,
+            family_member_name: job.family_member.full_name,
+            employment_type: job.employment_type,
+            job_title: job.job_title,
+            employer_name: job.employer_name,
+            start_date_iso: job.start_date.toISOString(),
+            end_date_iso: job.end_date ? job.end_date.toISOString() : null,
+            is_private_clinic: job.is_private_clinic,
+          }))}
+          familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
+          dateDisplayFormat={dateDisplayFormat}
+          isHebrew={isHebrew}
+          initialFamilyMemberId={selectedFamilyMemberId}
+          initialEmploymentType={selectedEmploymentType}
+          initialTenure={selectedTenure}
+        />
         {showAddForm ? (
           <section className="space-y-3" id="add-job">
             <div className="flex flex-wrap items-center justify-between gap-3">
