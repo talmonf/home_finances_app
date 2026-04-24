@@ -350,6 +350,8 @@ export async function importTherapyWorkbook(params: {
         receipt_number,
         issued_at: new Date(issued_at),
         total_amount,
+        net_amount: str(r.net_amount) || total_amount,
+        receipt_kind: (str(r.receipt_kind) || "regular") as "regular" | "salary_fictitious",
         currency: str(r.currency) || "ILS",
         recipient_type: recipient_type as "organization" | "client",
         payment_method: payment_method as "cash" | "bank_transfer" | "digital_card" | "credit_card",

@@ -2210,6 +2210,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         receipt_number: string;
         issued_at: Date;
         total_amount: string | number;
+        net_amount: string | number;
+        receipt_kind: "regular" | "salary_fictitious";
         currency: string;
         recipient_type: "client" | "organization";
         payment_method: "cash" | "bank_transfer" | "digital_card" | "credit_card";
