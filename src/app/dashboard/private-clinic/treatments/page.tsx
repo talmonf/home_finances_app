@@ -222,6 +222,9 @@ export default async function TreatmentsPage({
     settings?.note_3_label_he,
     uiLanguage,
   );
+  const showNote1 = (settings?.note_1_label ?? "Note 1").trim().length > 0;
+  const showNote2 = (settings?.note_2_label ?? "Note 2").trim().length > 0;
+  const showNote3 = (settings?.note_3_label ?? "Note 3").trim().length > 0;
   const storageCfg = getJobDocumentStorageConfig();
   const showHebrewAwsFallbackHint =
     settings?.hebrew_transcription_provider === "aws" &&
@@ -440,7 +443,7 @@ export default async function TreatmentsPage({
           visitDefaults={visitDefaults}
           bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
           digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
-          labels={{ c, tr, note1, note2, note3 }}
+          labels={{ c, tr, note1, note2, note3, showNote1, showNote2, showNote3 }}
         />
       ) : null}
       {modalMode === "edit" && editTreatment ? (
@@ -470,7 +473,7 @@ export default async function TreatmentsPage({
           visitDefaults={visitDefaults}
           bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
           digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
-          labels={{ c, tr, note1, note2, note3 }}
+          labels={{ c, tr, note1, note2, note3, showNote1, showNote2, showNote3 }}
           initial={{
             id: editTreatment.id,
             client_id: editTreatment.client_id,

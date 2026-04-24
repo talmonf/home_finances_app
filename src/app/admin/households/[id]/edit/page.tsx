@@ -546,7 +546,8 @@ export default async function EditHouseholdPage({
             </summary>
             <div className="mt-3 grid max-w-2xl gap-4">
               <p className="text-xs text-slate-500">
-                English label is the canonical title; Hebrew is shown when the household UI language is Hebrew.
+                English label is the canonical title; Hebrew is shown when the household UI language is Hebrew. Leave an
+                English label empty to hide that note field on the treatment form.
               </p>
               {(
                 [

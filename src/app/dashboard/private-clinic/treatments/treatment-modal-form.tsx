@@ -61,6 +61,9 @@ type Labels = {
   note1: string;
   note2: string;
   note3: string;
+  showNote1: boolean;
+  showNote2: boolean;
+  showNote3: boolean;
 };
 
 export type TreatmentModalInitial = {
@@ -211,24 +214,30 @@ export function TreatmentModalForm({
               </div>
             </div>
           ) : null}
-          <textarea
-            name="note_1"
-            defaultValue={initial?.note_1 ?? ""}
-            placeholder={labels.note1}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <textarea
-            name="note_2"
-            defaultValue={initial?.note_2 ?? ""}
-            placeholder={labels.note2}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <textarea
-            name="note_3"
-            defaultValue={initial?.note_3 ?? ""}
-            placeholder={labels.note3}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          {labels.showNote1 ? (
+            <textarea
+              name="note_1"
+              defaultValue={initial?.note_1 ?? ""}
+              placeholder={labels.note1}
+              className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          ) : null}
+          {labels.showNote2 ? (
+            <textarea
+              name="note_2"
+              defaultValue={initial?.note_2 ?? ""}
+              placeholder={labels.note2}
+              className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          ) : null}
+          {labels.showNote3 ? (
+            <textarea
+              name="note_3"
+              defaultValue={initial?.note_3 ?? ""}
+              placeholder={labels.note3}
+              className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          ) : null}
           <div className="md:col-span-2 flex items-center gap-2">
             <button
               type="submit"

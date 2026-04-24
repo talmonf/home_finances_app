@@ -499,9 +499,9 @@ export async function updateTherapyNoteLabelsFromDashboard(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   await ensureTherapySettings(householdId);
 
-  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() || "Note 1";
-  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() || "Note 2";
-  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() || "Note 3";
+  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() ?? "";
+  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() ?? "";
+  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() ?? "";
   const note_1_label_he = trimOptionalNoteHe(formData.get("note_1_label_he") as string | null);
   const note_2_label_he = trimOptionalNoteHe(formData.get("note_2_label_he") as string | null);
   const note_3_label_he = trimOptionalNoteHe(formData.get("note_3_label_he") as string | null);
@@ -528,9 +528,9 @@ export async function updateTherapySettings(formData: FormData) {
   const householdId = await requireSuperAdminHouseholdFromForm(formData);
   await ensureTherapySettings(householdId);
 
-  const note_1_label = (formData.get("note_1_label") as string)?.trim() || "Note 1";
-  const note_2_label = (formData.get("note_2_label") as string)?.trim() || "Note 2";
-  const note_3_label = (formData.get("note_3_label") as string)?.trim() || "Note 3";
+  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() ?? "";
+  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() ?? "";
+  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() ?? "";
   const note_1_label_he = trimOptionalNoteHe(formData.get("note_1_label_he") as string | null);
   const note_2_label_he = trimOptionalNoteHe(formData.get("note_2_label_he") as string | null);
   const note_3_label_he = trimOptionalNoteHe(formData.get("note_3_label_he") as string | null);

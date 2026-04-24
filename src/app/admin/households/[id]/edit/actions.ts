@@ -111,9 +111,9 @@ export async function saveHouseholdSettings(formData: FormData) {
   for (const item of PRIVATE_CLINIC_NAV_ITEMS) {
     navTabs[item.key] = formData.get(`pc_nav_${item.key}`) === "on";
   }
-  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() || "Note 1";
-  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() || "Note 2";
-  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() || "Note 3";
+  const note_1_label = (formData.get("note_1_label") as string | null)?.trim() ?? "";
+  const note_2_label = (formData.get("note_2_label") as string | null)?.trim() ?? "";
+  const note_3_label = (formData.get("note_3_label") as string | null)?.trim() ?? "";
   const trimHe = (k: string) => {
     const t = (formData.get(k) as string | null)?.trim();
     return t ? t : null;

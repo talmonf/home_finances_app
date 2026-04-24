@@ -141,8 +141,8 @@ export default async function PrivateClinicSettingsPage({
                 </label>
                 <input
                   name={row.enKey}
-                  required
                   defaultValue={row.enDefault}
+                  placeholder={st.noteFieldPlaceholder(row.n)}
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 />
               </div>
