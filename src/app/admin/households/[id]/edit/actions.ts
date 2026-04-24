@@ -79,7 +79,9 @@ export async function saveHouseholdSettings(formData: FormData) {
   const date_display_format = normalizeHouseholdDateDisplayFormat(raw);
   const ui_language = normalizeUiLanguage((formData.get("ui_language") as string | null)?.trim());
   const show_entity_url_panels = formData.get("show_entity_url_panels") === "on";
-  const includesGeneralSettings = formData.get("household_general_settings_present") === "1";
+  const includesDateDisplayFormat = formData.has("date_display_format");
+  const includesUiLanguage = formData.has("ui_language");
+  const includesShowEntityUrlPanels = formData.has("show_entity_url_panels");
   const includesSectionOverrides = formData.get("household_section_overrides_present") === "1";
 
   const updateHomeFrequentLinks = formData.get("home_frequent_links_form") === "1";
@@ -98,9 +100,13 @@ export async function saveHouseholdSettings(formData: FormData) {
   } = {
     ...(updateHomeFrequentLinks ? { home_frequent_links_json } : {}),
   };
-  if (includesGeneralSettings) {
+  if (includesDateDisplayFormat) {
     householdUpdateData.date_display_format = date_display_format;
+  }
+  if (includesUiLanguage) {
     householdUpdateData.ui_language = ui_language;
+  }
+  if (includesShowEntityUrlPanels) {
     householdUpdateData.show_entity_url_panels = show_entity_url_panels;
   }
   if (Object.keys(householdUpdateData).length > 0) {

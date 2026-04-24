@@ -132,7 +132,6 @@ export default async function EditHouseholdPage({
   const rawTab = resolvedSearchParams?.tab;
   const activeTab =
     rawTab === "diagnostics" ||
-    rawTab === "clinic" ||
     rawTab === "links" ||
     rawTab === "danger"
       ? rawTab
@@ -212,16 +211,6 @@ export default async function EditHouseholdPage({
             Diagnostics
           </Link>
           <Link
-            href={`/admin/households/${householdId}/edit?tab=clinic`}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              activeTab === "clinic"
-                ? "border-sky-500 bg-sky-500/10 text-sky-300"
-                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-sky-500 hover:text-sky-300"
-            }`}
-          >
-            Clinic types
-          </Link>
-          <Link
             href={`/admin/households/${householdId}/edit?tab=links`}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
               activeTab === "links"
@@ -271,54 +260,69 @@ export default async function EditHouseholdPage({
         ) : null}
 
         {activeTab === "settings" ? (
+        <>
         <form id="household-settings" action={saveHouseholdSettings} className="space-y-4">
           <input type="hidden" name="household_id" value={household.id} />
           <input type="hidden" name="tab" value="settings" />
 
+          <input type="hidden" name="household_general_settings_present" value="1" />
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+              General
+            </summary>
+            <div className="mt-3 grid max-w-2xl gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Interface language</label>
+                <select
+                  name="ui_language"
+                  defaultValue={household.ui_language ?? "en"}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  {UI_LANGUAGES.map((value) => (
+                    <option key={value} value={value}>
+                      {UI_LANGUAGE_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Date display format</label>
+                <select
+                  name="date_display_format"
+                  defaultValue={household.date_display_format}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  {(["YMD", "DMY", "MDY"] as const).map((value) => (
+                    <option key={value} value={value}>
+                      {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!isClinicOnlyHousehold ? (
+              <div className="mt-4 border-t border-slate-800 pt-4">
+                <p className="mb-3 text-xs text-slate-500">
+                  When enabled, pages such as insurance policies and savings policies show a
+                  &quot;Links&quot; section for attaching URLs to each record.
+                </p>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="show_entity_url_panels"
+                    defaultChecked={household.show_entity_url_panels ?? true}
+                    className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                  />
+                  <span className="text-sm text-slate-300">
+                    Show Links (URL) panels on entity pages
+                  </span>
+                </label>
+              </div>
+            ) : null}
+          </details>
+
           {!isClinicOnlyHousehold ? (
             <>
-              <input type="hidden" name="household_general_settings_present" value="1" />
-              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-200">Interface language</summary>
-                <div className="mt-3">
-                  <select
-                    name="ui_language"
-                    defaultValue={household.ui_language ?? "en"}
-                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  >
-                    {UI_LANGUAGES.map((value) => (
-                      <option key={value} value={value}>
-                        {UI_LANGUAGE_LABELS[value]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </details>
-
-              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-                  Links (URL) panels on entity pages
-                </summary>
-                <div className="mt-3">
-                  <p className="mb-3 text-xs text-slate-500">
-                    When enabled, pages such as insurance policies, savings policies, and
-                    clinic insurance show a &quot;Links&quot; section for attaching URLs to
-                    each record. Disable this to hide those panels for this household.
-                  </p>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      name="show_entity_url_panels"
-                      defaultChecked={household.show_entity_url_panels ?? true}
-                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                    />
-                    <span className="text-sm text-slate-300">
-                      Show per-record Links (URL) panels
-                    </span>
-                  </label>
-                </div>
-              </details>
-
               {showHomeFrequentLinksSettings ? (
                 <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                   <summary className="cursor-pointer text-sm font-semibold text-slate-200">
@@ -353,28 +357,6 @@ export default async function EditHouseholdPage({
                   </div>
                 </details>
               ) : null}
-
-              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-                  Date display format
-                </summary>
-                <div className="mt-3">
-                  <p className="mb-3 text-xs text-slate-500">
-                    Used for dates in lists and tables for this household&apos;s users.
-                  </p>
-                  <select
-                    name="date_display_format"
-                    defaultValue={household.date_display_format}
-                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  >
-                    {(["YMD", "DMY", "MDY"] as const).map((value) => (
-                      <option key={value} value={value}>
-                        {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </details>
 
               <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <input type="hidden" name="household_section_overrides_present" value="1" />
@@ -642,160 +624,162 @@ export default async function EditHouseholdPage({
             </button>
           </div>
         </form>
-        ) : null}
-
-        {activeTab === "clinic" ? (
-        <>
-        <section id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-200">
+        <details id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-200">
             Clinic — consultation / meeting types
-          </h2>
-          <p className="mb-3 text-xs text-slate-500">
-            English label is the canonical identifier (exports, imports). Hebrew is shown when the household UI language
-            is Hebrew.
-          </p>
-          <ul className="mb-4 space-y-2 text-sm">
-            {consultationTypes.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-              >
-                <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="household_id" value={householdId} />
-                  <input type="hidden" name="id" value={row.id} />
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">English</label>
-                    <input
-                      name="name"
-                      defaultValue={row.name}
-                      required
-                      className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
-                    <input
-                      name="name_he"
-                      defaultValue={row.name_he ?? ""}
-                      className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
-                  >
-                    Save
-                  </button>
-                </form>
-                {row.is_system ? (
-                  <span className="text-xs text-slate-600">(default)</span>
-                ) : (
-                  <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+          </summary>
+          <div className="mt-3">
+            <p className="mb-3 text-xs text-slate-500">
+              English label is the canonical identifier (exports, imports). Hebrew is shown when the household UI language
+              is Hebrew.
+            </p>
+            <ul className="mb-4 space-y-2 text-sm">
+              {consultationTypes.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                >
+                  <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="household_id" value={householdId} />
                     <input type="hidden" name="id" value={row.id} />
-                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                      Remove
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">English</label>
+                      <input
+                        name="name"
+                        defaultValue={row.name}
+                        required
+                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
+                      <input
+                        name="name_he"
+                        defaultValue={row.name_he ?? ""}
+                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                    >
+                      Save
                     </button>
-                  </ConfirmDeleteForm>
-                )}
-              </li>
-            ))}
-          </ul>
-          <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="household_id" value={householdId} />
-            <input
-              name="name"
-              placeholder="New type (English)"
-              required
-              className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="name_he"
-              placeholder="Hebrew (optional)"
-              className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-            >
-              Add type
-            </button>
-          </form>
-        </section>
+                  </form>
+                  {row.is_system ? (
+                    <span className="text-xs text-slate-600">(default)</span>
+                  ) : (
+                    <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+                      <input type="hidden" name="household_id" value={householdId} />
+                      <input type="hidden" name="id" value={row.id} />
+                      <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                        Remove
+                      </button>
+                    </ConfirmDeleteForm>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="household_id" value={householdId} />
+              <input
+                name="name"
+                placeholder="New type (English)"
+                required
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="name_he"
+                placeholder="Hebrew (optional)"
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              >
+                Add type
+              </button>
+            </form>
+          </div>
+        </details>
 
-        <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-200">Clinic — expense categories</h2>
-          <p className="mb-3 text-xs text-slate-500">
-            English label is canonical. Hebrew is shown when the household UI language is Hebrew.
-          </p>
-          <ul className="mb-4 space-y-2 text-sm">
-            {expenseCategories.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-              >
-                <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="household_id" value={householdId} />
-                  <input type="hidden" name="id" value={row.id} />
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">English</label>
-                    <input
-                      name="name"
-                      defaultValue={row.name}
-                      required
-                      className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
-                    <input
-                      name="name_he"
-                      defaultValue={row.name_he ?? ""}
-                      className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
-                  >
-                    Save
-                  </button>
-                </form>
-                {row.is_system ? (
-                  <span className="text-xs text-slate-600">(default)</span>
-                ) : (
-                  <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+        <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+            Clinic — expense categories
+          </summary>
+          <div className="mt-3">
+            <p className="mb-3 text-xs text-slate-500">
+              English label is canonical. Hebrew is shown when the household UI language is Hebrew.
+            </p>
+            <ul className="mb-4 space-y-2 text-sm">
+              {expenseCategories.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                >
+                  <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="household_id" value={householdId} />
                     <input type="hidden" name="id" value={row.id} />
-                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                      Remove
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">English</label>
+                      <input
+                        name="name"
+                        defaultValue={row.name}
+                        required
+                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
+                      <input
+                        name="name_he"
+                        defaultValue={row.name_he ?? ""}
+                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                    >
+                      Save
                     </button>
-                  </ConfirmDeleteForm>
-                )}
-              </li>
-            ))}
-          </ul>
-          <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="household_id" value={householdId} />
-            <input
-              name="name"
-              placeholder="New category (English)"
-              required
-              className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="name_he"
-              placeholder="Hebrew (optional)"
-              className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-            >
-              Add category
-            </button>
-          </form>
-        </section>
+                  </form>
+                  {row.is_system ? (
+                    <span className="text-xs text-slate-600">(default)</span>
+                  ) : (
+                    <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+                      <input type="hidden" name="household_id" value={householdId} />
+                      <input type="hidden" name="id" value={row.id} />
+                      <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                        Remove
+                      </button>
+                    </ConfirmDeleteForm>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="household_id" value={householdId} />
+              <input
+                name="name"
+                placeholder="New category (English)"
+                required
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                name="name_he"
+                placeholder="Hebrew (optional)"
+                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              >
+                Add category
+              </button>
+            </form>
+          </div>
+        </details>
         </>
         ) : null}
 
