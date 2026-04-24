@@ -86,6 +86,7 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
           name,
           country,
           primary_currency: currency,
+          date_display_format: "DMY",
         },
       });
 

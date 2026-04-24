@@ -92,35 +92,59 @@ export async function updateHouseholdUser(formData: FormData) {
 
   const password_hash = newPassword ? await bcrypt.hash(newPassword, 12) : undefined;
   const now = new Date();
+  const includesDateDisplayFormatOverride = formData.has("date_display_format");
+  const includesUiLanguageOverride = formData.has("ui_language");
+  const includesSectionOverrides = formData.get("user_section_overrides_present") === "1";
+
+  const userUpdateData: {
+    email: string;
+    full_name: string;
+    role: "admin" | "member";
+    user_type: (typeof ALLOWED_USER_TYPES)[number];
+    family_member_id: string | null;
+    show_useful_links: boolean;
+    date_display_format?: ReturnType<typeof normalizeHouseholdDateDisplayFormat> | null;
+    ui_language?: ReturnType<typeof normalizeUiLanguage> | null;
+    password_hash?: string;
+    must_change_password: boolean;
+    password_changed_at?: Date;
+  } = {
+    email,
+    full_name: fullName,
+    role,
+    user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
+    family_member_id: familyMemberId,
+    show_useful_links: showUsefulLinks,
+    ...(password_hash
+      ? {
+          password_hash,
+          must_change_password: true,
+          password_changed_at: now,
+        }
+      : { must_change_password: mustChangePasswordRequested }),
+  };
+
+  if (includesDateDisplayFormatOverride) {
+    userUpdateData.date_display_format = rawDateDisplayFormat
+      ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
+      : null;
+  }
+  if (includesUiLanguageOverride) {
+    userUpdateData.ui_language = rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null;
+  }
 
   await prisma.users.update({
     where: { id: userId },
-    data: {
-      email,
-      full_name: fullName,
-      role,
-      user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
-      family_member_id: familyMemberId,
-      date_display_format: rawDateDisplayFormat
-        ? normalizeHouseholdDateDisplayFormat(rawDateDisplayFormat)
-        : null,
-      ui_language: rawUiLanguage ? normalizeUiLanguage(rawUiLanguage) : null,
-      show_useful_links: showUsefulLinks,
-      ...(password_hash
-        ? {
-            password_hash,
-            must_change_password: true,
-            password_changed_at: now,
-          }
-        : { must_change_password: mustChangePasswordRequested }),
-    },
+    data: userUpdateData,
   });
 
-  const enabledBySectionId: Record<string, boolean> = {};
-  for (const section of DASHBOARD_SECTIONS) {
-    enabledBySectionId[section.id] = formData.get(`section_${section.id}`) === "on";
+  if (includesSectionOverrides) {
+    const enabledBySectionId: Record<string, boolean> = {};
+    for (const section of DASHBOARD_SECTIONS) {
+      enabledBySectionId[section.id] = formData.get(`section_${section.id}`) === "on";
+    }
+    await upsertUserEnabledSections({ householdId, userId, enabledBySectionId });
   }
-  await upsertUserEnabledSections({ householdId, userId, enabledBySectionId });
 
   revalidatePath("/");
   revalidatePath("/dashboard", "layout");

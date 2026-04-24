@@ -79,6 +79,8 @@ export async function saveHouseholdSettings(formData: FormData) {
   const date_display_format = normalizeHouseholdDateDisplayFormat(raw);
   const ui_language = normalizeUiLanguage((formData.get("ui_language") as string | null)?.trim());
   const show_entity_url_panels = formData.get("show_entity_url_panels") === "on";
+  const includesGeneralSettings = formData.get("household_general_settings_present") === "1";
+  const includesSectionOverrides = formData.get("household_section_overrides_present") === "1";
 
   const updateHomeFrequentLinks = formData.get("home_frequent_links_form") === "1";
   const home_frequent_links_json = {} as Record<HomeFrequentLinkKey, boolean>;
@@ -88,23 +90,34 @@ export async function saveHouseholdSettings(formData: FormData) {
     }
   }
 
-  await prisma.households.update({
-    where: { id: householdId },
-    data: {
-      date_display_format,
-      ui_language,
-      show_entity_url_panels,
-      ...(updateHomeFrequentLinks ? { home_frequent_links_json } : {}),
-    },
-  });
-
-  const enabledBySectionId: Record<string, boolean> = {};
-  for (const section of DASHBOARD_SECTIONS) {
-    enabledBySectionId[section.id] =
-      formData.get(`section_${section.id}`) === "on";
+  const householdUpdateData: {
+    date_display_format?: ReturnType<typeof normalizeHouseholdDateDisplayFormat>;
+    ui_language?: ReturnType<typeof normalizeUiLanguage>;
+    show_entity_url_panels?: boolean;
+    home_frequent_links_json?: Record<HomeFrequentLinkKey, boolean>;
+  } = {
+    ...(updateHomeFrequentLinks ? { home_frequent_links_json } : {}),
+  };
+  if (includesGeneralSettings) {
+    householdUpdateData.date_display_format = date_display_format;
+    householdUpdateData.ui_language = ui_language;
+    householdUpdateData.show_entity_url_panels = show_entity_url_panels;
+  }
+  if (Object.keys(householdUpdateData).length > 0) {
+    await prisma.households.update({
+      where: { id: householdId },
+      data: householdUpdateData,
+    });
   }
 
-  await upsertHouseholdEnabledSections({ householdId, enabledBySectionId });
+  if (includesSectionOverrides) {
+    const enabledBySectionId: Record<string, boolean> = {};
+    for (const section of DASHBOARD_SECTIONS) {
+      enabledBySectionId[section.id] =
+        formData.get(`section_${section.id}`) === "on";
+    }
+    await upsertHouseholdEnabledSections({ householdId, enabledBySectionId });
+  }
 
   await ensureTherapySettings(householdId);
   const navTabs: Record<string, boolean> = {};

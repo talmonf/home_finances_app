@@ -26,7 +26,7 @@ model households {
   name                  String
   country               String                     @default("IL")
   primary_currency      String                     @default("ILS")
-  date_display_format   HouseholdDateDisplayFormat @default(YMD)
+  date_display_format   HouseholdDateDisplayFormat @default(DMY)
   ui_language           String                     @default("en")
   /// When false, super-admin can hide per-entity "Links" (URL) panels on insurance, savings, etc.
   show_entity_url_panels Boolean                  @default(true)

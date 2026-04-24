@@ -118,6 +118,9 @@ export default async function EditHouseholdPage({
   );
 
   const isSectionEnabled = (id: string) => enabledBySectionId.get(id) ?? true;
+  const visibleSections = DASHBOARD_SECTIONS.filter((s) => isSectionEnabled(s.id));
+  const isClinicOnlyHousehold =
+    visibleSections.length === 1 && visibleSections[0]?.id === "privateClinic";
   const householdDeleteImpactRows = await getHouseholdDeleteImpactRows(householdId);
 
   const setupSections = DASHBOARD_SECTIONS.filter((s) => s.group === "setup");
@@ -272,194 +275,200 @@ export default async function EditHouseholdPage({
           <input type="hidden" name="household_id" value={household.id} />
           <input type="hidden" name="tab" value="settings" />
 
-          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-200">Interface language</summary>
-            <div className="mt-3">
-              <select
-                name="ui_language"
-                defaultValue={household.ui_language ?? "en"}
-                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                {UI_LANGUAGES.map((value) => (
-                  <option key={value} value={value}>
-                    {UI_LANGUAGE_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </details>
+          {!isClinicOnlyHousehold ? (
+            <>
+              <input type="hidden" name="household_general_settings_present" value="1" />
+              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-200">Interface language</summary>
+                <div className="mt-3">
+                  <select
+                    name="ui_language"
+                    defaultValue={household.ui_language ?? "en"}
+                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  >
+                    {UI_LANGUAGES.map((value) => (
+                      <option key={value} value={value}>
+                        {UI_LANGUAGE_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </details>
 
-          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-              Links (URL) panels on entity pages
-            </summary>
-            <div className="mt-3">
-              <p className="mb-3 text-xs text-slate-500">
-                When enabled, pages such as insurance policies, savings policies, and
-                clinic insurance show a &quot;Links&quot; section for attaching URLs to
-                each record. Disable this to hide those panels for this household.
-              </p>
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="show_entity_url_panels"
-                  defaultChecked={household.show_entity_url_panels ?? true}
-                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                />
-                <span className="text-sm text-slate-300">
-                  Show per-record Links (URL) panels
-                </span>
-              </label>
-            </div>
-          </details>
+              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+                  Links (URL) panels on entity pages
+                </summary>
+                <div className="mt-3">
+                  <p className="mb-3 text-xs text-slate-500">
+                    When enabled, pages such as insurance policies, savings policies, and
+                    clinic insurance show a &quot;Links&quot; section for attaching URLs to
+                    each record. Disable this to hide those panels for this household.
+                  </p>
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      name="show_entity_url_panels"
+                      defaultChecked={household.show_entity_url_panels ?? true}
+                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                    />
+                    <span className="text-sm text-slate-300">
+                      Show per-record Links (URL) panels
+                    </span>
+                  </label>
+                </div>
+              </details>
 
-          {showHomeFrequentLinksSettings ? (
-            <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-                Home dashboard — frequent links
-              </summary>
-              <div className="mt-3">
-                <p className="mb-4 text-xs text-slate-500">
-                  Shortcuts at the top of the household home screen. Each can be hidden independently.
-                  Links to Clinic or Upcoming renewals only appear when that section is enabled
-                  for the household.
-                </p>
-                <input type="hidden" name="home_frequent_links_form" value="1" />
-                <ul className="space-y-2">
-                  {HOME_FREQUENT_LINK_KEYS.map((key) => (
-                    <li
-                      key={key}
-                      className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`hf_${key}`}
-                        name={`hf_${key}`}
-                        defaultChecked={frequentLinkToggles[key]}
-                        className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                      />
-                      <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
-                        {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </details>
+              {showHomeFrequentLinksSettings ? (
+                <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+                    Home dashboard — frequent links
+                  </summary>
+                  <div className="mt-3">
+                    <p className="mb-4 text-xs text-slate-500">
+                      Shortcuts at the top of the household home screen. Each can be hidden independently.
+                      Links to Clinic or Upcoming renewals only appear when that section is enabled
+                      for the household.
+                    </p>
+                    <input type="hidden" name="home_frequent_links_form" value="1" />
+                    <ul className="space-y-2">
+                      {HOME_FREQUENT_LINK_KEYS.map((key) => (
+                        <li
+                          key={key}
+                          className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`hf_${key}`}
+                            name={`hf_${key}`}
+                            defaultChecked={frequentLinkToggles[key]}
+                            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                          />
+                          <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
+                            {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </details>
+              ) : null}
+
+              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+                  Date display format
+                </summary>
+                <div className="mt-3">
+                  <p className="mb-3 text-xs text-slate-500">
+                    Used for dates in lists and tables for this household&apos;s users.
+                  </p>
+                  <select
+                    name="date_display_format"
+                    defaultValue={household.date_display_format}
+                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  >
+                    {(["YMD", "DMY", "MDY"] as const).map((value) => (
+                      <option key={value} value={value}>
+                        {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </details>
+
+              <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <input type="hidden" name="household_section_overrides_present" value="1" />
+                <summary className="cursor-pointer text-sm font-semibold text-slate-200">Enabled sections</summary>
+                <div className="mt-3">
+                  <p className="mb-4 text-xs text-slate-500">
+                    Uncheck to hide a section from the household&apos;s home dashboard. Users
+                    won&apos;t see disabled areas in the nav.
+                  </p>
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-slate-500">Quick preset:</span>
+                    <HouseholdPrivateClinicOnlyButton />
+                    <span className="text-[11px] text-slate-600">
+                      (only &quot;Clinic&quot; on; save to apply)
+                    </span>
+                  </div>
+
+                  <div id="household-enabled-dashboard-sections" className="space-y-6">
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Setup
+                      </h3>
+                      <HouseholdSectionGroupActions containerId="household-enabled-setup" />
+                    </div>
+                    <div id="household-enabled-setup">
+                    <ul className="space-y-2">
+                      {setupSections.map((section) => (
+                        <li
+                          key={section.id}
+                          className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`section_${section.id}`}
+                            name={`section_${section.id}`}
+                            defaultChecked={isSectionEnabled(section.id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                          />
+                          <label
+                            htmlFor={`section_${section.id}`}
+                            className="flex-1 cursor-pointer text-sm text-slate-200"
+                          >
+                            <span className="font-medium">{section.title}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">
+                              {section.description}
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Ongoing & tools
+                      </h3>
+                      <HouseholdSectionGroupActions containerId="household-enabled-ongoing" />
+                    </div>
+                    <div id="household-enabled-ongoing">
+                    <ul className="space-y-2">
+                      {ongoingSections.map((section) => (
+                        <li
+                          key={section.id}
+                          className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`section_${section.id}`}
+                            name={`section_${section.id}`}
+                            defaultChecked={isSectionEnabled(section.id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                          />
+                          <label
+                            htmlFor={`section_${section.id}`}
+                            className="flex-1 cursor-pointer text-sm text-slate-200"
+                          >
+                            <span className="font-medium">{section.title}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">
+                              {section.description}
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              </details>
+            </>
           ) : null}
-
-          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-              Date display format
-            </summary>
-            <div className="mt-3">
-              <p className="mb-3 text-xs text-slate-500">
-                Used for dates in lists and tables for this household&apos;s users.
-              </p>
-              <select
-                name="date_display_format"
-                defaultValue={household.date_display_format}
-                className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                {(["YMD", "DMY", "MDY"] as const).map((value) => (
-                  <option key={value} value={value}>
-                    {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </details>
-
-          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-200">Enabled sections</summary>
-            <div className="mt-3">
-              <p className="mb-4 text-xs text-slate-500">
-                Uncheck to hide a section from the household&apos;s home dashboard. Users
-                won&apos;t see disabled areas in the nav.
-              </p>
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-slate-500">Quick preset:</span>
-                <HouseholdPrivateClinicOnlyButton />
-                <span className="text-[11px] text-slate-600">
-                  (only &quot;Clinic&quot; on; save to apply)
-                </span>
-              </div>
-
-              <div id="household-enabled-dashboard-sections" className="space-y-6">
-              <div>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Setup
-                  </h3>
-                  <HouseholdSectionGroupActions containerId="household-enabled-setup" />
-                </div>
-                <div id="household-enabled-setup">
-                <ul className="space-y-2">
-                  {setupSections.map((section) => (
-                    <li
-                      key={section.id}
-                      className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`section_${section.id}`}
-                        name={`section_${section.id}`}
-                        defaultChecked={isSectionEnabled(section.id)}
-                        className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                      />
-                      <label
-                        htmlFor={`section_${section.id}`}
-                        className="flex-1 cursor-pointer text-sm text-slate-200"
-                      >
-                        <span className="font-medium">{section.title}</span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
-                          {section.description}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Ongoing & tools
-                  </h3>
-                  <HouseholdSectionGroupActions containerId="household-enabled-ongoing" />
-                </div>
-                <div id="household-enabled-ongoing">
-                <ul className="space-y-2">
-                  {ongoingSections.map((section) => (
-                    <li
-                      key={section.id}
-                      className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`section_${section.id}`}
-                        name={`section_${section.id}`}
-                        defaultChecked={isSectionEnabled(section.id)}
-                        className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                      />
-                      <label
-                        htmlFor={`section_${section.id}`}
-                        className="flex-1 cursor-pointer text-sm text-slate-200"
-                      >
-                        <span className="font-medium">{section.title}</span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
-                          {section.description}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                </div>
-              </div>
-            </div>
-            </div>
-          </details>
 
           <details
             id="private-clinic-tabs"
@@ -582,12 +591,15 @@ export default async function EditHouseholdPage({
                   },
                 ] as const
               ).map((row) => (
-                <div
+                <fieldset
                   key={row.en}
-                  className="grid gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2"
+                  className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-4"
                 >
-                  <div>
-                    <label className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Note {row.n}
+                    </p>
+                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-300">
                       <input
                         type="checkbox"
                         name={row.visible}
@@ -596,22 +608,27 @@ export default async function EditHouseholdPage({
                       />
                       Show Note {row.n} on treatment form
                     </label>
-                    <label className="mb-1 block text-xs text-slate-500">Note {row.n} — English</label>
-                    <input
-                      name={row.en}
-                      defaultValue={row.enDef}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Note {row.n} — Hebrew (optional)</label>
-                    <input
-                      name={row.he}
-                      defaultValue={row.heDef}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-400">Note {row.n} — English</label>
+                      <input
+                        name={row.en}
+                        defaultValue={row.enDef}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-400">Note {row.n} — Hebrew (optional)</label>
+                      <input
+                        name={row.he}
+                        defaultValue={row.heDef}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
                   </div>
-                </div>
+                </fieldset>
               ))}
             </div>
           </details>

@@ -87,6 +87,12 @@ export default async function EditHouseholdUserPage({
 
   const setupSections = DASHBOARD_SECTIONS.filter((s) => s.group === "setup");
   const ongoingSections = DASHBOARD_SECTIONS.filter((s) => s.group === "ongoing");
+  const visibleHouseholdSections = DASHBOARD_SECTIONS.filter(
+    (section) => householdEnabledBySectionId.get(section.id) ?? true,
+  );
+  const isClinicOnlyHousehold =
+    visibleHouseholdSections.length === 1 &&
+    visibleHouseholdSections[0]?.id === "privateClinic";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -212,48 +218,52 @@ export default async function EditHouseholdUserPage({
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
-              <label
-                htmlFor="date_display_format"
-                className="mb-1 block text-xs font-medium text-slate-300"
-              >
-                Date display format override
-              </label>
-              <select
-                id="date_display_format"
-                name="date_display_format"
-                defaultValue={user.date_display_format ?? ""}
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              >
-                <option value="">Inherit household default ({HOUSEHOLD_DATE_FORMAT_LABELS[household.date_display_format]})</option>
-                {(["YMD", "DMY", "MDY"] as const).map((value) => (
-                  <option key={value} value={value}>
-                    {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="ui_language"
-                className="mb-1 block text-xs font-medium text-slate-300"
-              >
-                Interface language override
-              </label>
-              <select
-                id="ui_language"
-                name="ui_language"
-                defaultValue={user.ui_language ?? ""}
-                className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              >
-                <option value="">Inherit household default ({UI_LANGUAGE_LABELS[(household.ui_language as "en" | "he") ?? "en"]})</option>
-                {UI_LANGUAGES.map((value) => (
-                  <option key={value} value={value}>
-                    {UI_LANGUAGE_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isClinicOnlyHousehold ? (
+              <>
+                <div>
+                  <label
+                    htmlFor="date_display_format"
+                    className="mb-1 block text-xs font-medium text-slate-300"
+                  >
+                    Date display format override
+                  </label>
+                  <select
+                    id="date_display_format"
+                    name="date_display_format"
+                    defaultValue={user.date_display_format ?? ""}
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="">Inherit household default ({HOUSEHOLD_DATE_FORMAT_LABELS[household.date_display_format]})</option>
+                    {(["YMD", "DMY", "MDY"] as const).map((value) => (
+                      <option key={value} value={value}>
+                        {HOUSEHOLD_DATE_FORMAT_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="ui_language"
+                    className="mb-1 block text-xs font-medium text-slate-300"
+                  >
+                    Interface language override
+                  </label>
+                  <select
+                    id="ui_language"
+                    name="ui_language"
+                    defaultValue={user.ui_language ?? ""}
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="">Inherit household default ({UI_LANGUAGE_LABELS[(household.ui_language as "en" | "he") ?? "en"]})</option>
+                    {UI_LANGUAGES.map((value) => (
+                      <option key={value} value={value}>
+                        {UI_LANGUAGE_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : null}
             <div className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
               <input
                 type="checkbox"
@@ -329,61 +339,64 @@ export default async function EditHouseholdUserPage({
               </label>
             </div>
 
-            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-              <h3 className="mb-2 text-sm font-semibold text-slate-200">
-                Enabled sections override
-              </h3>
-              <p className="mb-4 text-xs text-slate-500">
-                Checked values follow the household unless you change and save — then they become user-specific
-                overrides. A new user inherits the household until you save this form.
-              </p>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Setup
-                  </h4>
-                  <ul className="space-y-2">
-                    {setupSections.map((section) => (
-                      <li key={section.id} className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          id={`section_${section.id}`}
-                          name={`section_${section.id}`}
-                          defaultChecked={defaultSectionChecked(section.id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                        />
-                        <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">
-                          <span className="font-medium">{section.title}</span>
-                          <span className="mt-0.5 block text-xs text-slate-500">{section.description}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Ongoing & tools
-                  </h4>
-                  <ul className="space-y-2">
-                    {ongoingSections.map((section) => (
-                      <li key={section.id} className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          id={`section_${section.id}`}
-                          name={`section_${section.id}`}
-                          defaultChecked={defaultSectionChecked(section.id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
-                        />
-                        <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">
-                          <span className="font-medium">{section.title}</span>
-                          <span className="mt-0.5 block text-xs text-slate-500">{section.description}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
+            {!isClinicOnlyHousehold ? (
+              <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+                <input type="hidden" name="user_section_overrides_present" value="1" />
+                <h3 className="mb-2 text-sm font-semibold text-slate-200">
+                  Enabled sections override
+                </h3>
+                <p className="mb-4 text-xs text-slate-500">
+                  Checked values follow the household unless you change and save — then they become user-specific
+                  overrides. A new user inherits the household until you save this form.
+                </p>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Setup
+                    </h4>
+                    <ul className="space-y-2">
+                      {setupSections.map((section) => (
+                        <li key={section.id} className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
+                          <input
+                            type="checkbox"
+                            id={`section_${section.id}`}
+                            name={`section_${section.id}`}
+                            defaultChecked={defaultSectionChecked(section.id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                          />
+                          <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">
+                            <span className="font-medium">{section.title}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">{section.description}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Ongoing & tools
+                    </h4>
+                    <ul className="space-y-2">
+                      {ongoingSections.map((section) => (
+                        <li key={section.id} className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
+                          <input
+                            type="checkbox"
+                            id={`section_${section.id}`}
+                            name={`section_${section.id}`}
+                            defaultChecked={defaultSectionChecked(section.id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                          />
+                          <label htmlFor={`section_${section.id}`} className="flex-1 cursor-pointer text-sm text-slate-200">
+                            <span className="font-medium">{section.title}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">{section.description}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
             <div className="flex justify-end gap-3 pt-2">
               <Link
                 href={`/admin/households/${householdId}`}
