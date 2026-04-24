@@ -68,6 +68,14 @@ export function TreatmentsListClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setRows(initialRows);
+    setCursor(initialCursor);
+    setHasMore(Boolean(initialCursor));
+    setLoadingMore(false);
+    setSelectedIds(new Set());
+  }, [initialCursor, initialRows]);
+
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !cursor) return;
     setLoadingMore(true);
