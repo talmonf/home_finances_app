@@ -616,170 +616,172 @@ export default async function EditHouseholdPage({
           </details>
 
         </form>
-        <details id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-            Clinic — consultation / meeting types
-          </summary>
-          <div className="mt-3">
-            <p className="mb-3 text-xs text-slate-500">
-              English label is the canonical identifier (exports, imports). Hebrew is shown when the household UI language
-              is Hebrew.
-            </p>
-            <ul className="mb-4 space-y-2 text-sm">
-              {consultationTypes.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                >
-                  <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="household_id" value={householdId} />
-                    <input type="hidden" name="id" value={row.id} />
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-500">English</label>
-                      <input
-                        name="name"
-                        defaultValue={row.name}
-                        required
-                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
-                      <input
-                        name="name_he"
-                        defaultValue={row.name_he ?? ""}
-                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
-                    >
-                      Save
-                    </button>
-                  </form>
-                  {row.is_system ? (
-                    <span className="text-xs text-slate-600">(default)</span>
-                  ) : (
-                    <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+        <div className="space-y-4">
+          <details id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+              Clinic — consultation / meeting types
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                English label is the canonical identifier (exports, imports). Hebrew is shown when the household UI language
+                is Hebrew.
+              </p>
+              <ul className="mb-4 space-y-2 text-sm">
+                {consultationTypes.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                  >
+                    <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="household_id" value={householdId} />
                       <input type="hidden" name="id" value={row.id} />
-                      <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                        Remove
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">English</label>
+                        <input
+                          name="name"
+                          defaultValue={row.name}
+                          required
+                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
+                        <input
+                          name="name_he"
+                          defaultValue={row.name_he ?? ""}
+                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                      >
+                        Save
                       </button>
-                    </ConfirmDeleteForm>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-              <input type="hidden" name="household_id" value={householdId} />
-              <input
-                name="name"
-                placeholder="New type (English)"
-                required
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <input
-                name="name_he"
-                placeholder="Hebrew (optional)"
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-              >
-                Add type
-              </button>
-            </form>
-          </div>
-        </details>
+                    </form>
+                    {row.is_system ? (
+                      <span className="text-xs text-slate-600">(default)</span>
+                    ) : (
+                      <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+                        <input type="hidden" name="household_id" value={householdId} />
+                        <input type="hidden" name="id" value={row.id} />
+                        <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                          Remove
+                        </button>
+                      </ConfirmDeleteForm>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="household_id" value={householdId} />
+                <input
+                  name="name"
+                  placeholder="New type (English)"
+                  required
+                  className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+                <input
+                  name="name_he"
+                  placeholder="Hebrew (optional)"
+                  className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+                >
+                  Add type
+                </button>
+              </form>
+            </div>
+          </details>
 
-        <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-slate-200">
-            Clinic — expense categories
-          </summary>
-          <div className="mt-3">
-            <p className="mb-3 text-xs text-slate-500">
-              English label is canonical. Hebrew is shown when the household UI language is Hebrew.
-            </p>
-            <ul className="mb-4 space-y-2 text-sm">
-              {expenseCategories.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
-                >
-                  <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="household_id" value={householdId} />
-                    <input type="hidden" name="id" value={row.id} />
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-500">English</label>
-                      <input
-                        name="name"
-                        defaultValue={row.name}
-                        required
-                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
-                      <input
-                        name="name_he"
-                        defaultValue={row.name_he ?? ""}
-                        className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
-                    >
-                      Save
-                    </button>
-                  </form>
-                  {row.is_system ? (
-                    <span className="text-xs text-slate-600">(default)</span>
-                  ) : (
-                    <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+          <details className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+              Clinic — expense categories
+            </summary>
+            <div className="mt-3">
+              <p className="mb-3 text-xs text-slate-500">
+                English label is canonical. Hebrew is shown when the household UI language is Hebrew.
+              </p>
+              <ul className="mb-4 space-y-2 text-sm">
+                {expenseCategories.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                  >
+                    <form action={updateTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="household_id" value={householdId} />
                       <input type="hidden" name="id" value={row.id} />
-                      <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                        Remove
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">English</label>
+                        <input
+                          name="name"
+                          defaultValue={row.name}
+                          required
+                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
+                        <input
+                          name="name_he"
+                          defaultValue={row.name_he ?? ""}
+                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
+                      >
+                        Save
                       </button>
-                    </ConfirmDeleteForm>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
-              <input type="hidden" name="household_id" value={householdId} />
-              <input
-                name="name"
-                placeholder="New category (English)"
-                required
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <input
-                name="name_he"
-                placeholder="Hebrew (optional)"
-                className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-              >
-                Add category
-              </button>
-            </form>
+                    </form>
+                    {row.is_system ? (
+                      <span className="text-xs text-slate-600">(default)</span>
+                    ) : (
+                      <ConfirmDeleteForm action={deleteTherapyExpenseCategory} className="inline">
+                        <input type="hidden" name="household_id" value={householdId} />
+                        <input type="hidden" name="id" value={row.id} />
+                        <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                          Remove
+                        </button>
+                      </ConfirmDeleteForm>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <form action={createTherapyExpenseCategory} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="household_id" value={householdId} />
+                <input
+                  name="name"
+                  placeholder="New category (English)"
+                  required
+                  className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+                <input
+                  name="name_he"
+                  placeholder="Hebrew (optional)"
+                  className="w-48 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+                >
+                  Add category
+                </button>
+              </form>
+            </div>
+          </details>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              form="household-settings"
+              className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+            >
+              Save settings (all expanded/collapsed sections above)
+            </button>
           </div>
-        </details>
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            form="household-settings"
-            className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-          >
-            Save settings (all expanded/collapsed sections above)
-          </button>
         </div>
         </>
         ) : null}
