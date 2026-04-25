@@ -32,6 +32,8 @@ export default async function UpcomingVisitsPage({
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const uv = privateClinicUpcomingVisits(uiLanguage);
+  const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
+  const anyFamilyLabel = uiLanguage === "he" ? "כל משפחה" : "Any family";
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -144,13 +146,13 @@ export default async function UpcomingVisitsPage({
       </div>
       {settings?.family_therapy_enabled ? (
         <form method="get" className="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
-          <label className="mb-1 block text-xs text-slate-400">Family</label>
+          <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
           <select
             name="family"
             defaultValue={familyFilter}
             className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">Any family</option>
+            <option value="">{anyFamilyLabel}</option>
             {families.map((family) => (
               <option key={family.id} value={family.id}>
                 {family.name}

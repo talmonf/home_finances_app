@@ -80,7 +80,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
       <div className="w-full max-w-6xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-2">
           <Link href="/dashboard/jobs" className="inline-block text-sm text-slate-400 hover:text-slate-200">
-            {isHebrew ? "חזרה לעבודות →" : "← Back to jobs"}
+            {isHebrew ? "חזרה למשרות →" : "← Back to jobs"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{formatJobDisplayLabel(job)}</h1>
           {resolved?.error && (
@@ -91,7 +91,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "פרטי עבודה" : "Job details"}</h2>
+          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "פרטי משרה" : "Job details"}</h2>
           <form action={updateJob} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="id" value={job.id} />
             <div className="space-y-1">
@@ -201,7 +201,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
               </select>
             </div>
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-              {isHebrew ? "שמירת עבודה" : "Save job"}
+              {isHebrew ? "שמירת משרה" : "Save job"}
             </button>
           </form>
         </section>

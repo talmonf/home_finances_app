@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { deleteTherapyFamily, updateTherapyFamily } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
@@ -17,6 +17,9 @@ export default async function EditFamilyPage({ params }: Props) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
+  const t = (en: string, he: string) => (isHebrew ? he : en);
   const { id } = await params;
 
   const [settings, user] = await Promise.all([
@@ -57,14 +60,14 @@ export default async function EditFamilyPage({ params }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link href={LIST} className="text-sm text-slate-400 hover:text-slate-200">
-            Back to Families
+            {t("Back to Families", "חזרה לרשימת משפחות")}
           </Link>
-          <h2 className="mt-2 text-lg font-medium text-slate-200">Edit Family</h2>
+          <h2 className="mt-2 text-lg font-medium text-slate-200">{t("Edit Family", "עריכת משפחה")}</h2>
         </div>
-        <ConfirmDeleteForm action={deleteTherapyFamily} message="Delete family? This cannot be undone." className="inline">
+        <ConfirmDeleteForm action={deleteTherapyFamily} message={t("Delete family? This cannot be undone.", "למחוק את המשפחה? לא ניתן לבטל פעולה זו.")} className="inline">
           <input type="hidden" name="id" value={family.id} />
           <button type="submit" className="rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50">
-            Delete Family
+            {t("Delete Family", "מחיקת משפחה")}
           </button>
         </ConfirmDeleteForm>
       </div>
@@ -72,11 +75,11 @@ export default async function EditFamilyPage({ params }: Props) {
         <input type="hidden" name="id" value={family.id} />
         <input type="hidden" name="redirect_on_error" value={`${LIST}/${family.id}/edit`} />
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">Family name</label>
+          <label className="block text-xs text-slate-400">{t("Family name", "שם משפחה")}</label>
           <input name="name" required defaultValue={family.name} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
         </div>
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">Existing clients (multi-select)</label>
+          <label className="block text-xs text-slate-400">{t("Existing clients (multi-select)", "לקוחות קיימים (בחירה מרובה)")}</label>
           <select multiple name="member_client_ids" defaultValue={[...selectedMemberIds]} className="h-48 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
@@ -86,16 +89,16 @@ export default async function EditFamilyPage({ params }: Props) {
           </select>
         </div>
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">New family members (first names, one per line)</label>
+          <label className="block text-xs text-slate-400">{t("New family members (first names, one per line)", "חברי משפחה חדשים (שמות פרטיים, אחד בכל שורה)")}</label>
           <textarea
             name="new_member_first_names"
             className="min-h-[6rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </div>
         <div className="space-y-1">
-          <label className="block text-xs text-slate-400">Main family member</label>
+          <label className="block text-xs text-slate-400">{t("Main family member", "חבר/ה מרכזי/ת")}</label>
           <select name="main_family_member_id" required defaultValue={family.main_family_member_id} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Select member</option>
+            <option value="">{t("Select member", "בחירת חבר/ה")}</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
                 {[client.first_name, client.last_name ?? ""].join(" ").trim()}
@@ -104,27 +107,27 @@ export default async function EditFamilyPage({ params }: Props) {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="block text-xs text-slate-400">Billing basis</label>
+          <label className="block text-xs text-slate-400">{t("Billing basis", "בסיס חיוב")}</label>
           <select name="billing_basis" defaultValue={family.billing_basis ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Use client/default</option>
-            <option value="per_treatment">Per treatment</option>
-            <option value="per_month">Per month</option>
+            <option value="">{t("Use client/default", "לפי לקוח/ברירת מחדל")}</option>
+            <option value="per_treatment">{t("Per treatment", "לפי טיפול")}</option>
+            <option value="per_month">{t("Per month", "לפי חודש")}</option>
           </select>
         </div>
         <div className="space-y-1">
-          <label className="block text-xs text-slate-400">Billing timing</label>
+          <label className="block text-xs text-slate-400">{t("Billing timing", "עיתוי חיוב")}</label>
           <select name="billing_timing" defaultValue={family.billing_timing ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            <option value="">Use client/default</option>
-            <option value="in_advance">In advance</option>
-            <option value="in_arrears">In arrears</option>
+            <option value="">{t("Use client/default", "לפי לקוח/ברירת מחדל")}</option>
+            <option value="in_advance">{t("In advance", "מראש")}</option>
+            <option value="in_arrears">{t("In arrears", "בדיעבד")}</option>
           </select>
         </div>
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">Notes</label>
+          <label className="block text-xs text-slate-400">{t("Notes", "הערות")}</label>
           <textarea name="notes" defaultValue={family.notes ?? ""} className="min-h-[4rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
         </div>
         <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-          Save Family
+          {t("Save Family", "שמירת משפחה")}
         </button>
       </form>
     </div>

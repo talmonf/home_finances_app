@@ -378,7 +378,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         initialSubscriptionId={tx.subscription_id ?? ""}
                         initialJobId={tx.job_id ?? ""}
                         subscriptionPlaceholder={isHebrew ? "— מנוי —" : "— Subscription —"}
-                        jobPlaceholder={isHebrew ? "— עבודה —" : "— Job —"}
+                        jobPlaceholder={isHebrew ? "— משרה —" : "— Job —"}
                       />
 
                       <button

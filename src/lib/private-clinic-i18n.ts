@@ -40,7 +40,7 @@ export function privateClinicLayoutStrings(lang: UiLanguage) {
       backToDashboard: "חזרה ללוח הבקרה →",
       title: "קליניקה",
       description:
-        "ניהול לקוחות, מפגשים, קבלות והוצאות קליניקה לפי משרת עבודה.",
+        "ניהול לקוחות, מפגשים, קבלות והוצאות קליניקה לפי משרה.",
       navAriaLabel: "אזורים בקליניקה",
     };
   }
@@ -93,18 +93,18 @@ export function privateClinicCommon(lang: UiLanguage) {
     deleted: p("Record removed.", "הרשומה הוסרה."),
     fillUpSaved: p("Fill-up saved.", "תדלוק נשמר."),
     noFamilyMemberBanner: p(
-      "Your user is not linked to a family member. Link the user to a family member to manage clients.",
-      "המשתמש שלך לא משויך לבן משפחה. יש לשייך משתמש לבן משפחה כדי לנהל לקוחות.",
+      "Your account setup is incomplete. Complete setup to manage clients.",
+      "הגדרת החשבון אינה מלאה. השלימו את ההגדרה כדי לנהל לקוחות.",
     ),
     noFamilyMemberJobs: p(
-      "Your user is not linked to a family member yet. Link the user to a family member to manage clinic jobs.",
-      "המשתמש שלך עדיין לא משויך לבן משפחה. יש לשייך משתמש לבן משפחה כדי לנהל משרות קליניקה.",
+      "Your account setup is incomplete. Complete setup to manage clinic jobs.",
+      "הגדרת החשבון אינה מלאה. השלימו את ההגדרה כדי לנהל משרות קליניקה.",
     ),
     saveFailedGeneric: p(
       "Could not save job. Please review the fields and try again.",
       "לא ניתן לשמור את המשרה. בדקו את השדות ונסו שוב.",
     ),
-    noJobsForMember: p("No jobs yet for your linked family member.", "אין עדיין משרות לבן המשפחה המשויך."),
+    noJobsYet: p("No jobs yet.", "אין עדיין משרות."),
     active: p("Active", "פעיל"),
     inactive: p("Inactive", "לא פעיל"),
     present: p("Present", "נוכחי"),
@@ -158,8 +158,8 @@ export function privateClinicCommon(lang: UiLanguage) {
       "אין עדיין תוכניות. הוסיפו משרה תחת משרות, ואז הגדירו תוכניות כאן.",
     ),
     programsNoFm: p(
-      "Your user is not linked to a family member, so jobs cannot be loaded.",
-      "המשתמש לא משויך לבן משפחה ולכן לא ניתן לטעון משרות.",
+      "Your account setup is incomplete, so jobs cannot be loaded.",
+      "הגדרת החשבון אינה מלאה, ולכן לא ניתן לטעון משרות.",
     ),
     tableSort: p("Sort", "סדר"),
     tableDelete: p("Delete", "מחיקה"),
@@ -226,11 +226,11 @@ export function privateClinicJobs(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   const c = privateClinicCommon(lang);
   return {
-    addJobTitle: p("Add job", "הוספת עבודה"),
-    addJobBtn: p("Add job", "הוספת עבודה"),
+    addJobTitle: p("Add job", "הוספת משרה"),
+    addJobBtn: p("Add job", "הוספת משרה"),
     jobsHeading: p("Jobs", "משרות"),
-    editJobPageTitle: p("Edit job", "עריכת עבודה"),
-    backToJobs: p("Back to jobs", "חזרה לרשימת עבודות"),
+    editJobPageTitle: p("Edit job", "עריכת משרה"),
+    backToJobs: p("Back to jobs", "חזרה לרשימת משרות"),
     colActions: p("Actions", "פעולות"),
     tableJob: c.job,
     tableEmploymentType: p("Employment type", "סוג העסקה"),
@@ -249,13 +249,13 @@ export function privateClinicJobs(lang: UiLanguage) {
     saveJob: c.save,
     employedPerson: p("Employed person", "עובד/ת"),
     employedPersonHelp: p(
-      "Each job must be tied to someone in your household list (Family members).",
-      "כל משרה חייבת להיות משויכת למישהו מרשימת בני המשפחה.",
+      "Each job must be tied to someone in your account list.",
+      "כל משרה חייבת להיות משויכת לאדם מרשימת החשבון.",
     ),
     invalidEmployedPerson: p("Choose a valid employed person.", "בחרו עובד/ת תקין/ה."),
     needMemberBeforeJob: p(
-      "Add at least one person under Family members before you can add a job.",
-      "הוסיפו לפחות בן משפחה אחד לפני הוספת משרה.",
+      "Add at least one person before you can add a job.",
+      "הוסיפו לפחות אדם אחד לפני הוספת משרה.",
     ),
     privateClinicRole: p("Clinic role", "סיווג לקליניקה"),
     privateClinicRoleHelp: p(
@@ -263,8 +263,8 @@ export function privateClinicJobs(lang: UiLanguage) {
       "פעיל: המשרה מופיעה במודול הקליניקה; קבלות ברירת מחדל ללקוחות והתאמת חשבון בנק מקלה. כבוי: מוסתרת מרשימות/טפסים של הקליניקה; קבלות ארגוניות והתאמת בנק מחמירה.",
     ),
     clinicUnlinkedHint: p(
-      "Your user is not linked to a family member — you can still use Clinic for the whole household. When adding a job, choose which household member holds that employment.",
-      "המשתמש לא משויך לבן משפחה — עדיין אפשר להשתמש בקליניקה לכל המשקה. בעת הוספת משרה, בחרו לאיזה בן משפחה המשרה שייכת.",
+      "Clinic can still be used for this account. When adding a job, choose who this role belongs to.",
+      "עדיין אפשר להשתמש בקליניקה בחשבון זה. בעת הוספת משרה, בחרו למי התפקיד שייך.",
     ),
     noJobsInHousehold: p("No jobs in this household yet. Add one above.", "אין עדיין משרות במשקה. הוסיפו למעלה."),
     noPrivateClinicJobsFiltered: p(
@@ -364,6 +364,8 @@ export function privateClinicClients(lang: UiLanguage) {
     filterStatusInactiveOnly: p("Inactive only", "לא פעילים בלבד"),
     filterJobLabel: p("Job (default or linked)", "משרה (ברירת מחדל או מקושרת)"),
     filterJobAny: p("Any job", "כל משרה"),
+    filterFamilyLabel: p("Family", "משפחה"),
+    filterFamilyAny: p("Any family", "כל משפחה"),
     filterDateRangeHelp: p(
       "When both dates are set, only clients whose start–end span overlaps that range are shown (open dates count as unbounded).",
       "כששני התאריכים מלאים, יוצגו לקוחות שטווח התחלה–סיום שלהם חופף לטווח (תאריך ריק נחשב ללא גבול).",
@@ -377,6 +379,7 @@ export function privateClinicClients(lang: UiLanguage) {
     colLastName: p("Last name", "שם משפחה"),
     colJob: p("Default job", "משרת ברירת מחדל"),
     colProgram: p("Default program", "תכנית ברירת מחדל"),
+    colFamily: p("Family", "משפחה"),
     colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
     colNextVisitDue: p("Next visit due", "ביקור הבא (משוער)"),
     nextVisitNoTreatments: p("No treatments logged", "אין טיפולים רשומים"),
@@ -868,7 +871,7 @@ export function privateClinicReports(lang: UiLanguage) {
       "All create, update, reschedule, cancel, and delete actions on appointments (audit trail).",
       "כל פעולות היצירה, העדכון, דחייה, ביטול ומחיקה על תורים (יומן ביקורת).",
     ),
-    download: p("Download spreadsheet", "הורדת גיליון"),
+    download: p("Download spreadsheet", "הורדת יומן"),
     empty: p("No audit entries yet.", "אין רשומות ביקורת עדיין."),
     tableWhen: p("When", "מתי"),
     tableUser: p("User", "משתמש"),
@@ -939,16 +942,16 @@ export function privateClinicPetrol(lang: UiLanguage) {
     odometerKm: p("Odometer (km)", "מדד (ק״מ)"),
     selectEllipsis: p("Select…", "בחרו…"),
     tankerAgeHint: p(
-      "Family members aged 16 or older on the fill date (requires date of birth). Change the date above to update who appears here.",
-      "בני משפחה בני 16 ומעלה בתאריך התדלוק (נדרש תאריך לידה). שינוי התאריך למעלה מעדכן את הרשימה.",
+      "People aged 16 or older on the fill date (requires date of birth). Change the date above to update who appears here.",
+      "אנשים בני 16 ומעלה בתאריך התדלוק (נדרש תאריך לידה). שינוי התאריך למעלה מעדכן את הרשימה.",
     ),
     tankerNoEligible: p(
-      "No one is aged 16+ on this fill date. Pick a different date or add/update dates of birth for family members.",
+      "No one is aged 16+ on this fill date. Pick a different date or add/update dates of birth.",
       "אין מועמד בן 16 ומעלה בתאריך זה. בחרו תאריך אחר או עדכנו תאריכי לידה.",
     ),
     tankerNoDob: p(
-      "Add a date of birth for each family member who should appear here. You need at least one person aged 16+ on the fill date to record who tanked up.",
-      "הוסיפו תאריך לידה לכל בן משפחה שאמור להופיע. נדרש לפחות אדם אחד בן 16+ בתאריך התדלוק.",
+      "Add a date of birth for each person who should appear here. You need at least one person aged 16+ on the fill date to record who tanked up.",
+      "הוסיפו תאריך לידה לכל אדם שאמור להופיע. נדרש לפחות אדם אחד בן 16+ בתאריך התדלוק.",
     ),
   };
 }
@@ -1109,8 +1112,8 @@ export function privateClinicReminders(lang: UiLanguage) {
   return {
     title: p("Reminders", "תזכורות"),
     blurb: p(
-      "Manual reminders are per family member (your linked profile, or one you choose if your account is not linked). Also shown: upcoming renewals from work subscriptions, active clients with an end date, clinic insurance, and clinic lease end.",
-      "תזכורות ידניות שייכות לבן/בת משפחה (לפרופיל המקושר, או לבחירה אם החשבון לא מקושר). בנוסף: תאריכי חידוש ממנויים מקצועיים, לקוחות פעילים עם תאריך סיום, ביטוח קליניקה וסיום חוזה שכירות הקליניקה.",
+      "Manual reminders are per person profile (your linked profile, or one you choose if your account is not linked). Also shown: upcoming renewals from work subscriptions, active clients with an end date, clinic insurance, and clinic lease end.",
+      "תזכורות ידניות שייכות לפרופיל אדם (לפרופיל המקושר, או לבחירה אם החשבון לא מקושר). בנוסף: תאריכי חידוש ממנויים מקצועיים, לקוחות פעילים עם תאריך סיום, ביטוח קליניקה וסיום חוזה שכירות הקליניקה.",
     ),
     addManual: p("Add reminder", "הוספת תזכורת"),
     category: p("Category", "קטגוריה"),
@@ -1135,11 +1138,11 @@ export function privateClinicReminders(lang: UiLanguage) {
     upcomingTitle: p("Upcoming (next 60 days, including overdue)", "קרוב (60 יום, כולל באיחור)"),
     deletedMsg: p("Reminder deleted.", "התזכורת נמחקה."),
     cancelEdit: p("Cancel", "ביטול"),
-    familyMember: p("Family member", "בן/בת משפחה"),
+    familyMember: p("Person", "אדם"),
     familyMemberPlaceholder: p("Select…", "בחרו…"),
     addManualNeedMember: p(
-      "Add at least one family member in the household before creating manual reminders.",
-      "יש להוסיף לפחות בן/בת משפחה בבית לפני יצירת תזכורות ידניות.",
+      "Add at least one person in the household before creating manual reminders.",
+      "יש להוסיף לפחות אדם אחד בבית לפני יצירת תזכורות ידניות.",
     ),
   };
 }

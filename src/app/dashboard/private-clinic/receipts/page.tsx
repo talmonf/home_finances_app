@@ -96,6 +96,7 @@ export default async function ReceiptsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
+  const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const sp = searchParams ? await searchParams : {};
   const filters: ReceiptsListFilters = {
     job: sp.job?.trim() || "",
@@ -336,7 +337,7 @@ export default async function ReceiptsPage({
           </div>
           {settings?.family_therapy_enabled ? (
             <div>
-              <label className="block text-xs text-slate-400">Family</label>
+              <label className="block text-xs text-slate-400">{familyLabel}</label>
               <select
                 name="family"
                 defaultValue={filters.family}
@@ -421,7 +422,7 @@ export default async function ReceiptsPage({
               number: r.tableNumber,
               date: r.tableDate,
               client: c.client,
-              family: "Family",
+              family: familyLabel,
               job: r.tableJob,
               amount: r.tableAmount,
               coverage: r.receivablesRangeLabel,

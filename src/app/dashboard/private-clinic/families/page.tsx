@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 
@@ -12,6 +12,8 @@ export default async function FamiliesPage() {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const uiLanguage = await getCurrentUiLanguage();
+  const isHebrew = uiLanguage === "he";
 
   const [settings, user] = await Promise.all([
     prisma.therapy_settings.findUnique({
@@ -46,26 +48,26 @@ export default async function FamiliesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-medium text-slate-200">Families</h2>
+        <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "משפחות" : "Families"}</h2>
         <Link
           href={`${BASE}/new`}
           className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
         >
-          Add Family
+          {isHebrew ? "הוספת משפחה" : "Add Family"}
         </Link>
       </div>
       {families.length === 0 ? (
-        <p className="text-sm text-slate-500">No families yet.</p>
+        <p className="text-sm text-slate-500">{isHebrew ? "אין עדיין משפחות." : "No families yet."}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-700">
           <table className="min-w-full divide-y divide-slate-700 text-sm">
             <thead className="bg-slate-900/80">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">Family</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">Main member</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">Members</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">Main job</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">Actions</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "משפחה" : "Family"}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "חבר/ה מרכזי/ת" : "Main member"}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "חברים" : "Members"}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "משרה ראשית" : "Main job"}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "פעולות" : "Actions"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 bg-slate-900/40">
@@ -81,7 +83,7 @@ export default async function FamiliesPage() {
                   </td>
                   <td className="px-3 py-2">
                     <Link className="text-sky-400 hover:text-sky-300" href={`${BASE}/${family.id}/edit`}>
-                      Edit
+                      {isHebrew ? "עריכה" : "Edit"}
                     </Link>
                   </td>
                 </tr>

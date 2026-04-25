@@ -100,7 +100,7 @@ export default async function PrivateClinicJobsPage({
           <p className="text-sm text-slate-500">
             {jobCountAnyFlag === 0
               ? familyMemberId
-                ? c.noJobsForMember
+                ? c.noJobsYet
                 : j.noJobsInHousehold
               : j.noPrivateClinicJobsFiltered}
           </p>

@@ -369,7 +369,7 @@ export default async function ClientsPage({
               {familyTherapyEnabled ? (
                 <>
                   <label htmlFor="clients_filter_family" className="block text-xs text-slate-400">
-                    Family
+                    {cl.filterFamilyLabel}
                   </label>
                   <select
                     id="clients_filter_family"
@@ -377,7 +377,7 @@ export default async function ClientsPage({
                     defaultValue={familyId}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   >
-                    <option value="">Any family</option>
+                    <option value="">{cl.filterFamilyAny}</option>
                     {families.map((family) => (
                       <option key={family.id} value={family.id}>
                         {family.name}
@@ -491,7 +491,7 @@ export default async function ClientsPage({
                 {familyTherapyEnabled ? (
                   <SortHeader
                     column="family"
-                    label="Family"
+                    label={cl.colFamily}
                     sort={sort}
                     dir={dir}
                     filters={listFilters}
