@@ -261,7 +261,8 @@ export default async function EditHouseholdPage({
 
         {activeTab === "settings" ? (
         <>
-        <form id="household-settings" action={saveHouseholdSettings} className="space-y-4">
+        <div className="flex flex-col gap-4">
+        <form id="household-settings" action={saveHouseholdSettings} className="flex flex-col gap-4">
           <input type="hidden" name="household_id" value={household.id} />
           <input type="hidden" name="tab" value="settings" />
 
@@ -616,7 +617,6 @@ export default async function EditHouseholdPage({
           </details>
 
         </form>
-        <div className="space-y-4">
           <details id="clinic-taxonomies" className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <summary className="cursor-pointer text-sm font-semibold text-slate-200">
               Clinic — consultation / meeting types
