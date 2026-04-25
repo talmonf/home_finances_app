@@ -8,7 +8,7 @@ import {
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
-import { privateClinicClinicInsurance } from "@/lib/private-clinic-i18n";
+import { privateClinicClinicInsurance, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -28,6 +28,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     urls?: string;
+    modal?: string;
   }>;
 };
 
@@ -41,7 +42,9 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const t = privateClinicClinicInsurance(uiLanguage);
+  const c = privateClinicCommon(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const [policies, familyMembers] = await Promise.all([
     prisma.insurance_policies.findMany({
@@ -89,205 +92,15 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
       )}
 
       <section className="space-y-4">
-        <h3 className="text-md font-medium text-slate-200">{t.addTitle}</h3>
-        <form
-          action={createInsurancePolicy}
-          className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          <input type="hidden" name="insurance_form_context" value="clinic" />
-          <div>
-            <label htmlFor="policy_type" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.policyType} <span className="text-rose-400">*</span>
-            </label>
-            <select
-              id="policy_type"
-              name="policy_type"
-              required
-              defaultValue="professional_liability"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {CLINIC_INSURANCE_POLICY_TYPES.map((pt) => (
-                <option key={pt} value={pt}>
-                  {getInsurancePolicyTypeLabel(pt, lang)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.policyHolderOptional}
-            </label>
-            <select
-              id="family_member_id"
-              name="family_member_id"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{t.notSet}</option>
-              {familyMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.provider} <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="provider_name"
-              name="provider_name"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="insurance_company" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.insuranceCompany}
-            </label>
-            <input
-              id="insurance_company"
-              name="insurance_company"
-              maxLength={200}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="policy_name" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.policyName} <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="policy_name"
-              name="policy_name"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="policy_number" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.policyNumber}
-            </label>
-            <input
-              id="policy_number"
-              name="policy_number"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.contactPhone}
-            </label>
-            <input
-              id="contact_phone"
-              name="contact_phone"
-              type="tel"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.contactEmail}
-            </label>
-            <input
-              id="contact_email"
-              name="contact_email"
-              type="email"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.website}
-            </label>
-            <input
-              id="website_url"
-              name="website_url"
-              type="url"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              placeholder="https://"
-            />
-          </div>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.notes}
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={3}
-              maxLength={16000}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="policy_start_date" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.startDate} <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="policy_start_date"
-              name="policy_start_date"
-              type="date"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="expiration_date" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.renewalDate} <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="expiration_date"
-              name="expiration_date"
-              type="date"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="premium_paid" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.annualPremium} <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="premium_paid"
-              name="premium_paid"
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="premium_currency" className="mb-1 block text-xs font-medium text-slate-400">
-              {t.currency} <span className="text-rose-400">*</span>
-            </label>
-            <select
-              id="premium_currency"
-              name="premium_currency"
-              required
-              defaultValue="ILS"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="ILS">ILS</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-            >
-              {t.addPolicy}
-            </button>
-          </div>
-        </form>
-        <p className="text-xs text-slate-500">{t.listEditHint}</p>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-md font-medium text-slate-200">{t.listTitle}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-md font-medium text-slate-200">{t.listTitle}</h3>
+          <Link
+            href="/dashboard/private-clinic/clinic-insurance?modal=new"
+            className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
+          >
+            {t.addPolicy}
+          </Link>
+        </div>
         {policies.length === 0 ? (
           <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
             {t.empty}
@@ -358,6 +171,216 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
           </div>
         )}
       </section>
+
+      {modalMode === "new" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
+          <div className="w-full max-w-5xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium text-slate-100">{t.addTitle}</h3>
+              <Link href="/dashboard/private-clinic/clinic-insurance" className="text-sm text-slate-400 hover:text-slate-200">
+                {c.cancel}
+              </Link>
+            </div>
+            <form
+              action={createInsurancePolicy}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <input type="hidden" name="insurance_form_context" value="clinic" />
+              <div>
+                <label htmlFor="policy_type" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.policyType} <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  id="policy_type"
+                  name="policy_type"
+                  required
+                  defaultValue="professional_liability"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  {CLINIC_INSURANCE_POLICY_TYPES.map((pt) => (
+                    <option key={pt} value={pt}>
+                      {getInsurancePolicyTypeLabel(pt, lang)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.policyHolderOptional}
+                </label>
+                <select
+                  id="family_member_id"
+                  name="family_member_id"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">{t.notSet}</option>
+                  {familyMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.provider} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="provider_name"
+                  name="provider_name"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="insurance_company" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.insuranceCompany}
+                </label>
+                <input
+                  id="insurance_company"
+                  name="insurance_company"
+                  maxLength={200}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="policy_name" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.policyName} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="policy_name"
+                  name="policy_name"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="policy_number" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.policyNumber}
+                </label>
+                <input
+                  id="policy_number"
+                  name="policy_number"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.contactPhone}
+                </label>
+                <input
+                  id="contact_phone"
+                  name="contact_phone"
+                  type="tel"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.contactEmail}
+                </label>
+                <input
+                  id="contact_email"
+                  name="contact_email"
+                  type="email"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.website}
+                </label>
+                <input
+                  id="website_url"
+                  name="website_url"
+                  type="url"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="https://"
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.notes}
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={3}
+                  maxLength={16000}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="policy_start_date" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.startDate} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="policy_start_date"
+                  name="policy_start_date"
+                  type="date"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="expiration_date" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.renewalDate} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="expiration_date"
+                  name="expiration_date"
+                  type="date"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="premium_paid" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.annualPremium} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="premium_paid"
+                  name="premium_paid"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="premium_currency" className="mb-1 block text-xs font-medium text-slate-400">
+                  {t.currency} <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  id="premium_currency"
+                  name="premium_currency"
+                  required
+                  defaultValue="ILS"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="ILS">ILS</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </select>
+              </div>
+              <div className="flex flex-wrap items-end gap-3 lg:col-span-3">
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-fit"
+                >
+                  {t.addPolicy}
+                </button>
+                <Link href="/dashboard/private-clinic/clinic-insurance" className="text-sm text-slate-400 hover:text-slate-200">
+                  {c.cancel}
+                </Link>
+              </div>
+            </form>
+            <p className="mt-3 text-xs text-slate-500">{t.listEditHint}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

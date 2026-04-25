@@ -24,6 +24,7 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -92,6 +93,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
   const today = startOfToday();
 
   const [subscriptions, creditCards, digitalPaymentMethods, familyMembers, jobs] = await Promise.all([
@@ -164,11 +166,147 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createSubscription}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <Link
+              href="/dashboard/subscriptions?modal=new"
+              className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
+            >
+              {isHebrew ? "הוספת מנוי" : "Add subscription"}
+            </Link>
+          </div>
+          {subscriptions.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              {isHebrew ? "אין מנויים עדיין." : "No subscriptions yet."}
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-800/80">
+                    <th className="px-4 py-3 font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Start / Renewal
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Fee</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Interval
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Family member
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Job</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Payment method
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subscriptions.map((s) => (
+                    <tr
+                      key={s.id}
+                      id={`subscription-${s.id}`}
+                      className="border-b border-slate-700/80 hover:bg-slate-800/40"
+                    >
+                      <td className="px-4 py-3 text-slate-100">{s.name}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatHouseholdDate(s.start_date, dateDisplayFormat)} /{" "}
+                        {formatHouseholdDate(s.renewal_date, dateDisplayFormat)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {formatMoneyWithCurrency(s.fee_amount, s.currency)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300 capitalize">
+                        {s.billing_interval}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {s.family_member ? (
+                          <Link
+                            href={`/dashboard/family-members/${s.family_member.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {s.family_member.full_name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {s.job ? (
+                          <Link
+                            href={`/dashboard/jobs/${s.job.id}`}
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {formatJobDisplayLabel(s.job)}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatSubscriptionPaymentSummary(s)}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={s.website_url ?? undefined}>
+                        {s.website_url ? (
+                          <a
+                            href={s.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300"
+                          >
+                            {s.website_url}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={
+                            s.is_active
+                              ? "text-emerald-400"
+                              : "text-rose-400"
+                          }
+                        >
+                          {s.is_active ? "Active" : "Cancelled"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/dashboard/subscriptions/${s.id}`}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          {isHebrew ? "עריכה" : "Edit"}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {modalMode === "new" ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
+            <div className="w-full max-w-5xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-medium text-slate-100">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
+                <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
+                  {isHebrew ? "ביטול" : "Cancel"}
+                </Link>
+              </div>
+              <form
+                action={createSubscription}
+                className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
+              >
             <div>
               <label
                 htmlFor="name"
@@ -388,137 +526,21 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 placeholder="Optional notes"
               />
             </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת מנוי" : "Add subscription"}
-              </button>
+                <div className="flex flex-wrap items-end gap-3 lg:col-span-3">
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400 sm:w-fit"
+                  >
+                    {isHebrew ? "הוספת מנוי" : "Add subscription"}
+                  </button>
+                  <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
+                    {isHebrew ? "ביטול" : "Cancel"}
+                  </Link>
+                </div>
+              </form>
             </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
-          {subscriptions.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין מנויים עדיין. ניתן להוסיף למעלה." : "No subscriptions yet. Add one above."}
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-4 py-3 font-medium text-slate-300">Name</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Start / Renewal
-                    </th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Fee</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Interval
-                    </th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Family member
-                    </th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Job</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Payment method
-                    </th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Website</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 font-medium text-slate-300">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subscriptions.map((s) => (
-                    <tr
-                      key={s.id}
-                      id={`subscription-${s.id}`}
-                      className="border-b border-slate-700/80 hover:bg-slate-800/40"
-                    >
-                      <td className="px-4 py-3 text-slate-100">{s.name}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {formatHouseholdDate(s.start_date, dateDisplayFormat)} /{" "}
-                        {formatHouseholdDate(s.renewal_date, dateDisplayFormat)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-300">
-                        {formatMoneyWithCurrency(s.fee_amount, s.currency)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-300 capitalize">
-                        {s.billing_interval}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {s.family_member ? (
-                          <Link
-                            href={`/dashboard/family-members/${s.family_member.id}`}
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {s.family_member.full_name}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {s.job ? (
-                          <Link
-                            href={`/dashboard/jobs/${s.job.id}`}
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {formatJobDisplayLabel(s.job)}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {formatSubscriptionPaymentSummary(s)}
-                      </td>
-                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={s.website_url ?? undefined}>
-                        {s.website_url ? (
-                          <a
-                            href={s.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {s.website_url}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={
-                            s.is_active
-                              ? "text-emerald-400"
-                              : "text-rose-400"
-                          }
-                        >
-                          {s.is_active ? "Active" : "Cancelled"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/dashboard/subscriptions/${s.id}`}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                        >
-                          {isHebrew ? "עריכה" : "Edit"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+          </div>
+        ) : null}
       </div>
     </div>
   );

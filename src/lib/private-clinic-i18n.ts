@@ -1079,7 +1079,7 @@ export function privateClinicWorkSubscriptions(lang: UiLanguage) {
       "Subscriptions linked to a job (e.g. Zoom, annual memberships). Annual fee and renewal apply.",
       "מנויים המקושרים למשרה (למשל זום, חברות שנתיות). תשלום שנתי ותאריך חידוש.",
     ),
-    mainSubscriptionsLink: p("All household subscriptions →", "כל המנויים של המשקה ←"),
+    mainSubscriptionsLink: p("All household subscriptions →", "כל המנויים של משק הבית ←"),
     addTitle: p("Add work subscription", "הוספת מנוי מקצועי"),
     listTitle: p("Work-linked subscriptions", "מנויים מקושרים למשרה"),
     empty: p("No work subscriptions yet.", "אין עדיין מנויים מקצועיים."),

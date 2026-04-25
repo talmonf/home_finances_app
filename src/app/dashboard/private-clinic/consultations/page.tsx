@@ -141,7 +141,7 @@ export default async function ConsultationsPage({
           </p>
         ) : null}
         <form
-          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4 lg:grid-cols-5"
           method="get"
         >
           {receiptFilter ? <input type="hidden" name="receipt" value={receiptFilter} /> : null}
@@ -150,7 +150,7 @@ export default async function ConsultationsPage({
             <select
               name="job"
               defaultValue={jobFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>
               {jobs.map((j) => (
@@ -165,7 +165,7 @@ export default async function ConsultationsPage({
             <select
               name="income_bank"
               defaultValue={incomeBankFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="all">{co.incomeBankAll}</option>
               <option value="linked">{co.incomeBankLinked}</option>
@@ -178,7 +178,7 @@ export default async function ConsultationsPage({
               name="from"
               type="date"
               defaultValue={sp.from ?? ""}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div>
@@ -187,7 +187,7 @@ export default async function ConsultationsPage({
               name="to"
               type="date"
               defaultValue={sp.to ?? ""}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <button

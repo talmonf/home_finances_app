@@ -80,11 +80,6 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
       <header className="space-y-2">
         <h2 className="text-lg font-medium text-slate-200">{t.title}</h2>
         <p className="text-sm text-slate-400">{t.blurb}</p>
-        <p className="text-xs text-slate-500">
-          <Link href="/dashboard/subscriptions" className="text-sky-400 hover:text-sky-300">
-            {t.mainSubscriptionsLink}
-          </Link>
-        </p>
       </header>
 
       {(resolved?.created || resolved?.error) && (
