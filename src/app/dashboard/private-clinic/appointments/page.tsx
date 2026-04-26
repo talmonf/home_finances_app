@@ -94,28 +94,25 @@ export default async function AppointmentsPage() {
                     {therapyVisitTypeLabel(uiLanguage, a.visit_type)}
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`${LIST}/${a.id}/edit`}
-                        className="text-xs text-sky-400 hover:text-sky-300"
-                      >
-                        {ap.edit}
-                      </Link>
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`${LIST}/${a.id}/reschedule`}
-                        className="text-xs text-sky-400 hover:text-sky-300"
+                        className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
                       >
                         {ap.reschedule}
                       </Link>
                       <ConfirmDeleteForm
                         action={cancelTherapyAppointment}
                         message={ap.cancelConfirm}
-                        className="inline"
+                        className="inline-flex items-center"
                       >
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="redirect_on_success" value={`${LIST}?updated=1`} />
                         <input type="hidden" name="cancellation_reason" value="Cancelled from upcoming list" />
-                        <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                        <button
+                          type="submit"
+                          className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
+                        >
                           {ap.cancel}
                         </button>
                       </ConfirmDeleteForm>

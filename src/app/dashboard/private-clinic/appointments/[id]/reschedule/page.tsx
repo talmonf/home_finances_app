@@ -84,7 +84,7 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
           />
         </label>
         <label className="text-sm text-slate-300">
-          Reason
+          {ap.reasonOptional}
           <input
             name="reschedule_reason"
             defaultValue={apt.reschedule_reason ?? ""}

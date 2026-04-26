@@ -837,7 +837,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     recurringToggle: p("Recurring appointment", "תור חוזר"),
     actionsCol: p("Actions", "פעולות"),
     cancel: p("Cancel", "ביטול"),
-    reschedule: p("Reschedule", "דחייה"),
+    reschedule: p("Reschedule", "עריכה"),
     edit: p("Edit", "עריכה"),
     cancelConfirm: p(
       "Mark this appointment as cancelled?",
@@ -866,6 +866,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     seriesStartDate: p("Series start date", "תאריך התחלת סדרה"),
     seriesEndDateOptional: p("Series end date (optional)", "תאריך סיום סדרה (אופציונלי)"),
     endOptional: p("End (optional)", "סיום (אופציונלי)"),
+    reasonOptional: p("Reason (optional)", "סיבה (אופציונלי)"),
   };
 }
 

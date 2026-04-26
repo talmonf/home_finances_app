@@ -10,7 +10,7 @@ import {
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicCommon, privateClinicUpcomingVisits } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
@@ -85,14 +85,17 @@ export default async function UpcomingVisitsPage({
             start_at: { gte: today },
           },
           orderBy: [{ start_at: "asc" }],
-          select: { client_id: true, start_at: true },
+          select: { id: true, client_id: true, start_at: true },
         })
       : [];
 
-  const nextAppointmentByClientId = new Map<string, Date>();
+  const nextAppointmentByClientId = new Map<string, { id: string; startAt: Date }>();
   for (const appointment of scheduledAppointments) {
     if (!nextAppointmentByClientId.has(appointment.client_id)) {
-      nextAppointmentByClientId.set(appointment.client_id, appointment.start_at);
+      nextAppointmentByClientId.set(appointment.client_id, {
+        id: appointment.id,
+        startAt: appointment.start_at,
+      });
     }
   }
 
@@ -121,7 +124,7 @@ export default async function UpcomingVisitsPage({
     nextDue: Date;
     isOverdue: boolean;
     isDueToday: boolean;
-    nextAppointmentAt: Date | null;
+    nextAppointment: { id: string; startAt: Date } | null;
   };
 
   const scheduled: ScheduledRow[] = [];
@@ -153,7 +156,7 @@ export default async function UpcomingVisitsPage({
       nextDue,
       isOverdue,
       isDueToday,
-      nextAppointmentAt: nextAppointmentByClientId.get(row.id) ?? null,
+      nextAppointment: nextAppointmentByClientId.get(row.id) ?? null,
     });
   }
 
@@ -301,17 +304,23 @@ export default async function UpcomingVisitsPage({
                             {uv.logTreatment}
                           </Link>
                           {" · "}
-                          <Link
-                            href={`${appointmentNewBase}?client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(r.nextDue))}`}
-                            className="font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {uv.scheduleAppointment}
-                          </Link>
-                          {r.nextAppointmentAt ? (
-                            <div className="mt-1 text-xs text-slate-400">
-                              {uv.scheduledOn(formatHouseholdDate(r.nextAppointmentAt, dateDisplayFormat))}
-                            </div>
-                          ) : null}
+                          {r.nextAppointment ? (
+                            <Link
+                              href={`/dashboard/private-clinic/appointments/${encodeURIComponent(r.nextAppointment.id)}/reschedule`}
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {uv.scheduledOn(
+                                formatHouseholdDateUtcWithTime(r.nextAppointment.startAt, dateDisplayFormat),
+                              )}
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`${appointmentNewBase}?client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(r.nextDue))}`}
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {uv.scheduleAppointment}
+                            </Link>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -329,6 +338,7 @@ export default async function UpcomingVisitsPage({
                 {needsFirstVisit.map((row) => {
                   const name =
                     [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
+                  const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
                   return (
                     <li key={row.id}>
                       <span>{obfuscate ? OBFUSCATED : name}</span>
@@ -340,12 +350,23 @@ export default async function UpcomingVisitsPage({
                         {uv.logTreatment}
                       </Link>
                       {" · "}
-                      <Link
-                        href={`${appointmentNewBase}?client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(today))}`}
-                        className="text-sky-400 hover:text-sky-300"
-                      >
-                        {uv.scheduleAppointment}
-                      </Link>
+                      {nextAppointment ? (
+                        <Link
+                          href={`/dashboard/private-clinic/appointments/${encodeURIComponent(nextAppointment.id)}/reschedule`}
+                          className="text-sky-400 hover:text-sky-300"
+                        >
+                          {uv.scheduledOn(
+                            formatHouseholdDateUtcWithTime(nextAppointment.startAt, dateDisplayFormat),
+                          )}
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`${appointmentNewBase}?client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(today))}`}
+                          className="text-sky-400 hover:text-sky-300"
+                        >
+                          {uv.scheduleAppointment}
+                        </Link>
+                      )}
                       {" · "}
                       <Link
                         href={`/dashboard/private-clinic/clients/${row.id}/edit`}
