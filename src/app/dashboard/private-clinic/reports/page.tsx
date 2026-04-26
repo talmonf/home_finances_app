@@ -21,9 +21,14 @@ type Snapshot = {
   reschedule_reason?: string | null;
 };
 
-function snapshotFromMetadata(meta: unknown): Snapshot | null {
+function toMetaRecord(meta: unknown): Record<string, unknown> | null {
   if (meta == null || typeof meta !== "object") return null;
-  const m = meta as Record<string, unknown>;
+  return meta as Record<string, unknown>;
+}
+
+function snapshotFromMetadata(meta: unknown): Snapshot | null {
+  const m = toMetaRecord(meta);
+  if (!m) return null;
   const snap = m.snapshot;
   if (snap && typeof snap === "object") return snap as Snapshot;
   const after = m.after;
@@ -31,6 +36,27 @@ function snapshotFromMetadata(meta: unknown): Snapshot | null {
   const before = m.before;
   if (before && typeof before === "object") return before as Snapshot;
   return null;
+}
+
+function textFromMetadata(meta: unknown, key: "reason" | "notes"): string {
+  const m = toMetaRecord(meta);
+  const value = m?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function detailTextFromAuditMetadata(meta: unknown): string {
+  const reasonFromMeta = textFromMetadata(meta, "reason");
+  const notesFromMeta = textFromMetadata(meta, "notes");
+  if (reasonFromMeta && notesFromMeta) {
+    return reasonFromMeta.includes(notesFromMeta)
+      ? reasonFromMeta
+      : `${reasonFromMeta}: ${notesFromMeta}`;
+  }
+  if (reasonFromMeta) return reasonFromMeta;
+  if (notesFromMeta) return notesFromMeta;
+
+  const snap = snapshotFromMetadata(meta);
+  return snap?.reschedule_reason || snap?.cancellation_reason || "—";
 }
 
 function formatIsoDateTime(value?: string | null): string {
@@ -125,7 +151,7 @@ export default async function PrivateClinicReportsPage() {
                   const appointmentText = snap?.end_at
                     ? `${formatIsoDateTime(snap.start_at)} → ${formatIsoDateTime(snap.end_at)}`
                     : formatIsoDateTime(snap?.start_at) || "—";
-                  const detail = snap?.reschedule_reason || snap?.cancellation_reason || "—";
+                  const detail = detailTextFromAuditMetadata(row.metadata);
                   return (
                     <tr key={row.id} className="border-b border-slate-700/60">
                       <td className="px-2 py-2 whitespace-nowrap text-slate-300">
