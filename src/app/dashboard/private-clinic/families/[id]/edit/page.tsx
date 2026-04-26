@@ -109,6 +109,10 @@ export default async function EditFamilyPage({ params }: Props) {
     editMember: t("Edit", "עריכה"),
     removeMember: t("Remove", "הסרה"),
     removeMemberConfirm: t("Remove this family member from the family?", "להסיר את חבר/ת המשפחה מהרשימה?"),
+    unsavedChangesConfirm: t("You have unsaved changes. Leave this page and lose them?", "יש שינויים שלא נשמרו. לצאת מהעמוד ולאבד אותם?"),
+    nameColumn: t("Name", "שם"),
+    positionColumn: t("Position", "תפקיד"),
+    actionsColumn: t("Actions", "פעולות"),
   };
 
   return (

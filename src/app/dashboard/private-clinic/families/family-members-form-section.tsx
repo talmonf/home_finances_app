@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 export type FamilyMemberPosition = "father" | "mother" | "son" | "daughter";
 
@@ -62,6 +62,10 @@ export type FamilyMembersFormLabels = {
   editMember: string;
   removeMember: string;
   removeMemberConfirm: string;
+  unsavedChangesConfirm: string;
+  nameColumn: string;
+  positionColumn: string;
+  actionsColumn: string;
 };
 
 type Props = {
@@ -137,6 +141,25 @@ function serializeRows(rows: FamilyRow[]) {
   );
 }
 
+function serializeInitialRows(initial: InitialFamilyMemberRow[]) {
+  return initial.map((r) =>
+    r.kind === "existing"
+      ? {
+          kind: "existing" as const,
+          clientId: r.clientId,
+          firstName: r.firstName.trim(),
+          lastName: r.lastName?.trim() || null,
+          position: r.member_position,
+        }
+      : {
+          kind: "new" as const,
+          firstName: r.firstName.trim(),
+          lastName: r.lastName?.trim() || null,
+          position: r.position,
+        },
+  );
+}
+
 type DraftPosition = "" | FamilyMemberPosition;
 
 function isPosition(v: DraftPosition): v is FamilyMemberPosition {
@@ -195,8 +218,49 @@ export function FamilyMembersFormSection({
   );
 
   const jsonPayload = useMemo(() => JSON.stringify(serializeRows(rows)), [rows]);
+  const initialPayload = useMemo(() => JSON.stringify(serializeInitialRows(initialRows)), [initialRows]);
 
   const effectiveMainIndex = rows.length === 0 ? 0 : Math.min(Math.max(0, mainSlotIndex), rows.length - 1);
+  const initialMainIndex = useMemo(
+    () => Math.min(Math.max(0, initialMainSlotIndex), Math.max(0, initialRows.length - 1)),
+    [initialMainSlotIndex, initialRows.length],
+  );
+  const hasUnsavedMemberChanges = jsonPayload !== initialPayload || effectiveMainIndex !== initialMainIndex;
+
+  useEffect(() => {
+    if (!hasUnsavedMemberChanges) return;
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = labels.unsavedChangesConfirm;
+    };
+
+    const onDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      const href = anchor.getAttribute("href") ?? "";
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+      const next = new URL(anchor.href, window.location.href);
+      const cur = new URL(window.location.href);
+      if (next.origin === cur.origin && next.pathname === cur.pathname && next.search === cur.search && next.hash === cur.hash) {
+        return;
+      }
+      if (!window.confirm(labels.unsavedChangesConfirm)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", onDocumentClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", onDocumentClick, true);
+    };
+  }, [hasUnsavedMemberChanges, labels.unsavedChangesConfirm]);
 
   const addSelectedExistingClient = useCallback(() => {
     if (!selectedExistingClientId) return;
@@ -357,7 +421,14 @@ export function FamilyMembersFormSection({
       {rows.length === 0 ? (
         <p className="text-xs text-slate-500">{labels.emptyListHint}</p>
       ) : (
-        <ul className="divide-y divide-slate-800 rounded-lg border border-slate-700 bg-slate-950/40">
+        <div className="rounded-lg border border-slate-700 bg-slate-950/40">
+          <div className="grid grid-cols-[minmax(12rem,1fr)_8rem_7rem_8rem] items-center gap-2 border-b border-slate-800 px-2 py-2 text-[11px] uppercase tracking-wide text-slate-500 sm:px-3">
+            <span>{labels.nameColumn}</span>
+            <span>{labels.positionColumn}</span>
+            <span>{labels.mainContact}</span>
+            <span className="text-right">{labels.actionsColumn}</span>
+          </div>
+          <ul className="divide-y divide-slate-800">
           {rows.map((r, i) => (
             <li key={r.key} className="flex flex-wrap items-center gap-2 px-2 py-2 text-sm sm:gap-3 sm:px-3">
               <span className="min-w-0 flex-1 text-slate-200">{rowLabel(r)}</span>
@@ -371,8 +442,8 @@ export function FamilyMembersFormSection({
                   checked={effectiveMainIndex === i}
                   onChange={() => setMainSlotIndex(i)}
                   className="border-slate-500 text-sky-500"
+                  aria-label={labels.mainContact}
                 />
-                {labels.mainContact}
               </label>
               <div className="ml-auto flex shrink-0 items-center gap-1">
                 <button
@@ -392,7 +463,8 @@ export function FamilyMembersFormSection({
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </div>
       )}
 
       <details className="rounded-lg border border-slate-800 bg-slate-950/30 p-2 text-slate-500">
