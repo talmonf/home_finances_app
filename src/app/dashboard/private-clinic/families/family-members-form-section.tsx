@@ -388,7 +388,7 @@ export function FamilyMembersFormSection({
 
   const rowLabel = useCallback(
     (r: FamilyRow) => {
-      if (r.kind === "existing") return r.label;
+      if (r.kind === "existing") return [r.firstName.trim(), r.lastName?.trim() ?? ""].join(" ").trim() || "…";
       return [r.firstName.trim(), r.lastName?.trim() ?? ""].join(" ").trim() || "…";
     },
     [],
