@@ -392,6 +392,10 @@ export function privateClinicClients(lang: UiLanguage) {
     errProgram: p("Default program must belong to the default job.", "תכנית ברירת המחדל חייבת להשתייך למשרת ברירת המחדל."),
     errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
+    errHasTreatments: p("Client cannot be deleted because treatments are associated with them.", "אי אפשר למחוק לקוח כי משויכים אליו טיפולים."),
+    deleteClient: p("Delete client", "מחיקת לקוח"),
+    deletingClient: p("Deleting client…", "מוחק לקוח…"),
+    deleteClientConfirm: p("Delete this client permanently? This action cannot be undone.", "למחוק את הלקוח לצמיתות? פעולה זו אינה ניתנת לביטול."),
     clientRelationshipsTitle: p("Related clients", "לקוחות קשורים"),
     clientRelationshipsHelp: p(
       "For this client, each row names another client and how they relate — for example, “mother” means that person is this client’s mother; “referred by” means this client was referred by that person.",

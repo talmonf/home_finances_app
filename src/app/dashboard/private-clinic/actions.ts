@@ -419,6 +419,19 @@ async function assertClientForCurrentUserScope(
   return !!c;
 }
 
+async function hasAssociatedTreatmentsForClients(householdId: string, clientIds: string[]): Promise<boolean> {
+  if (clientIds.length === 0) return false;
+  const [primaryCount, participantCount] = await Promise.all([
+    prisma.therapy_treatments.count({
+      where: { household_id: householdId, client_id: { in: clientIds } },
+    }),
+    prisma.therapy_treatment_participants.count({
+      where: { household_id: householdId, client_id: { in: clientIds } },
+    }),
+  ]);
+  return primaryCount > 0 || participantCount > 0;
+}
+
 /** Client on a receipt must be active, unless re-saving the same inactive client on update. */
 async function assertReceiptClientPicker(
   householdId: string,
@@ -1236,6 +1249,29 @@ export async function updateTherapyClient(formData: FormData) {
   redirect(`${BASE}/clients?updated=1`);
 }
 
+export async function deleteTherapyClient(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const id = (formData.get("id") as string | null)?.trim() || "";
+  if (!id) redirect(`${BASE}/clients?error=missing`);
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, id))) {
+    redirect(`${BASE}/clients?error=notfound`);
+  }
+  if (await hasAssociatedTreatmentsForClients(householdId, [id])) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "has-treatments");
+  }
+
+  await prisma.therapy_clients.delete({
+    where: { id },
+  });
+
+  revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/families`);
+  revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/receipts`);
+  redirect(`${BASE}/clients?updated=1`);
+}
+
 export async function addTherapyClientRelationship(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
@@ -1659,14 +1695,20 @@ export async function deleteTherapyFamily(formData: FormData) {
   });
   if (!row) redirect(`${BASE}/families?error=notfound`);
 
-  await prisma.$transaction(async (tx) => {
-    const memberIds = (
-      await tx.therapy_family_members.findMany({
-        where: { household_id: householdId, family_id: id },
-        select: { client_id: true },
-      })
-    ).map((m) => m.client_id);
+  const memberIds = (
+    await prisma.therapy_family_members.findMany({
+      where: { household_id: householdId, family_id: id },
+      select: { client_id: true },
+    })
+  ).map((m) => m.client_id);
 
+  if (deleteMembersAsClients && memberIds.length > 0) {
+    if (await hasAssociatedTreatmentsForClients(householdId, memberIds)) {
+      redirect(`${BASE}/families/${id}/edit?error=members-have-treatments`);
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.updateMany({
       where: { household_id: householdId, family_id: id },
       data: { family_id: null },

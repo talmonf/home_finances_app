@@ -21,9 +21,10 @@ function toDateInputValue(d: Date | null | undefined): string {
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
 };
 
-export default async function EditFamilyPage({ params }: Props) {
+export default async function EditFamilyPage({ params, searchParams }: Props) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -31,6 +32,15 @@ export default async function EditFamilyPage({ params }: Props) {
   const isHebrew = uiLanguage === "he";
   const t = (en: string, he: string) => (isHebrew ? he : en);
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const errorKey = (resolvedSearchParams.error ?? "").trim();
+  const errorMessage =
+    errorKey === "members-have-treatments"
+      ? t(
+          "Cannot delete family members as clients because one or more members have associated treatments.",
+          "לא ניתן למחוק את בני המשפחה כלקוחות כי לאחד או יותר מהם משויכים טיפולים.",
+        )
+      : null;
 
   const [settings, user] = await Promise.all([
     prisma.therapy_settings.findUnique({
@@ -135,6 +145,9 @@ export default async function EditFamilyPage({ params }: Props) {
           deletingLabel={t("Deleting family…", "מוחק משפחה…")}
         />
       </div>
+      {errorMessage ? (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">{errorMessage}</p>
+      ) : null}
       <form action={updateTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">
         <input type="hidden" name="id" value={family.id} />
         <input type="hidden" name="redirect_on_error" value={`${LIST}/${family.id}/edit`} />

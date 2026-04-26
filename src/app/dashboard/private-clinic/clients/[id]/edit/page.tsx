@@ -15,6 +15,8 @@ import {
 } from "../../load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "../../form-error-message";
 import { TherapyClientRelationshipsSection } from "../../therapy-client-relationships-section";
+import { DeleteClientForm } from "../../delete-client-form";
+import { deleteTherapyClient } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +61,17 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
   });
   if (!client) notFound();
 
-  const [{ jobs, programs, families }, otherClients] = await Promise.all([
+  const [{ jobs, programs, families }, otherClients, primaryTreatmentsCount, participantTreatmentsCount] = await Promise.all([
     loadTherapyClientFormOptions({ householdId, familyMemberId }),
     loadTherapyClientRelationshipPickerClients({ householdId, familyMemberId, excludeClientId: id }),
+    prisma.therapy_treatments.count({
+      where: { household_id: householdId, client_id: id },
+    }),
+    prisma.therapy_treatment_participants.count({
+      where: { household_id: householdId, client_id: id },
+    }),
   ]);
+  const canDeleteClient = primaryTreatmentsCount === 0 && participantTreatmentsCount === 0;
 
   const editPath = `${LIST_PATH}/${id}/edit`;
 
@@ -106,6 +115,15 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         }))}
         otherClients={otherClients}
       />
+      {canDeleteClient ? (
+        <DeleteClientForm
+          action={deleteTherapyClient}
+          clientId={id}
+          confirmMessage={cl.deleteClientConfirm}
+          buttonLabel={cl.deleteClient}
+          deletingLabel={cl.deletingClient}
+        />
+      ) : null}
     </div>
   );
 }
