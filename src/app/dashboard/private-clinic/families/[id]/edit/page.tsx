@@ -5,6 +5,8 @@ import { deleteTherapyFamily, updateTherapyFamily } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { FamilyMembersFormSection, type FamilyMembersFormLabels, type InitialFamilyMemberRow } from "../../family-members-form-section";
+import { formatJobDisplayLabel } from "@/lib/job-label";
+import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +45,8 @@ export default async function EditFamilyPage({ params }: Props) {
   if (!settings?.family_therapy_enabled) redirect("/dashboard/private-clinic");
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [family, clients] = await Promise.all([
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
+  const [family, clients, jobs] = await Promise.all([
     prisma.therapy_families.findFirst({
       where: { id, household_id: householdId },
       include: {
@@ -57,6 +60,11 @@ export default async function EditFamilyPage({ params }: Props) {
         ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
       },
       orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
+    }),
+    prisma.jobs.findMany({
+      where: { household_id: householdId, is_active: true, ...jobScope },
+      orderBy: [{ start_date: "desc" }, { created_at: "desc" }],
+      select: { id: true, job_title: true, employer_name: true },
     }),
   ]);
   if (!family) notFound();
@@ -165,6 +173,21 @@ export default async function EditFamilyPage({ params }: Props) {
             </div>
           }
         />
+        <div className="space-y-1 md:col-span-2">
+          <label className="block text-xs text-slate-400">{t("Job (for new members)", "משרה (לחברים חדשים)")}</label>
+          <select
+            name="default_job_id"
+            defaultValue={family.default_job_id ?? ""}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="">{t("Auto: latest private-clinic job", "אוטומטי: המשרה הפרטית האחרונה")}</option>
+            {jobs.map((job) => (
+              <option key={job.id} value={job.id}>
+                {formatJobDisplayLabel(job)}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Billing basis", "בסיס חיוב")}</label>
           <select name="billing_basis" defaultValue={family.billing_basis ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">

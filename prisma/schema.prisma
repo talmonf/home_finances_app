@@ -503,6 +503,7 @@ model jobs {
   therapy_service_programs therapy_service_programs[]
   therapy_clients_jobs     therapy_clients_jobs[]
   therapy_clients_default  therapy_clients[]         @relation("TherapyClientDefaultJob")
+  therapy_families_default therapy_families[]        @relation("TherapyFamilyDefaultJob")
   therapy_treatments       therapy_treatments[]
   therapy_receipts         therapy_receipts[]
   therapy_job_expenses     therapy_job_expenses[]
@@ -1690,6 +1691,7 @@ model therapy_families {
   name                  String
   start_date            DateTime? @db.Date
   end_date              DateTime? @db.Date
+  default_job_id        String?
   notes                 String?
   main_family_member_id String   @db.Uuid
   billing_basis         TherapyBillingBasis?
@@ -1699,6 +1701,7 @@ model therapy_families {
 
   household      households       @relation(fields: [household_id], references: [id], onDelete: Cascade)
   main_member    therapy_clients  @relation("TherapyFamilyMainMember", fields: [main_family_member_id], references: [id], onDelete: Restrict)
+  default_job    jobs?            @relation("TherapyFamilyDefaultJob", fields: [default_job_id], references: [id], onDelete: SetNull)
   clients        therapy_clients[]
   members        therapy_family_members[]
   treatments     therapy_treatments[]
@@ -1706,6 +1709,7 @@ model therapy_families {
   appointments   therapy_appointments[]
 
   @@index([household_id, name])
+  @@index([default_job_id])
 }
 
 model therapy_family_members {

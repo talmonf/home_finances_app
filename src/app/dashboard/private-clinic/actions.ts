@@ -1374,22 +1374,31 @@ async function resolveOrderedFamilyMemberRows(
   userFamilyMemberId: string | null,
   slots: FamilySlotInput[],
   newClientStartDate: Date | null,
+  requestedDefaultJobIdRaw: string | null,
 ): Promise<{ clientId: string; member_position: TherapyFamilyMemberPosition | null }[]> {
   const newSlots = slots.filter((s): s is Extract<FamilySlotInput, { kind: "new" }> => s.kind === "new");
   let defaultJobId: string | null = null;
   if (newSlots.length > 0) {
-    const defaultJob = await prisma.jobs.findFirst({
-      where: {
-        household_id: householdId,
-        is_private_clinic: true,
-        is_active: true,
-        ...(userFamilyMemberId ? { family_member_id: userFamilyMemberId } : {}),
-      },
-      orderBy: [{ start_date: "desc" }],
-      select: { id: true },
-    });
-    if (!defaultJob) redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-job");
-    defaultJobId = defaultJob.id;
+    const requestedDefaultJobId = requestedDefaultJobIdRaw?.trim() ?? "";
+    if (requestedDefaultJobId) {
+      if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, requestedDefaultJobId))) {
+        redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+      }
+      defaultJobId = requestedDefaultJobId;
+    } else {
+      const defaultJob = await prisma.jobs.findFirst({
+        where: {
+          household_id: householdId,
+          is_private_clinic: true,
+          is_active: true,
+          ...(userFamilyMemberId ? { family_member_id: userFamilyMemberId } : {}),
+        },
+        orderBy: [{ start_date: "desc" }],
+        select: { id: true },
+      });
+      if (!defaultJob) redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-job");
+      defaultJobId = defaultJob.id;
+    }
   }
 
   const createdNewIds = await (async () => {
@@ -1450,8 +1459,13 @@ export async function createTherapyFamily(formData: FormData) {
   if (!name) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
   const familyStartDate = parseDate((formData.get("start_date") as string | null) ?? null);
   const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
+  const familyDefaultJobIdRaw = (formData.get("default_job_id") as string | null) ?? null;
+  const familyDefaultJobId = familyDefaultJobIdRaw?.trim() || null;
   if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
+  }
+  if (familyDefaultJobId && !(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
 
   const slots = parseFamilySlotsFromForm(formData, fallbackPath);
@@ -1462,6 +1476,7 @@ export async function createTherapyFamily(formData: FormData) {
     userFamilyMemberId,
     slots,
     familyStartDate,
+    familyDefaultJobId,
   );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
@@ -1481,6 +1496,7 @@ export async function createTherapyFamily(formData: FormData) {
         name,
         start_date: familyStartDate,
         end_date: familyEndDate,
+        default_job_id: familyDefaultJobId,
         notes: (formData.get("notes") as string | null)?.trim() || null,
         main_family_member_id: mainFamilyMemberId,
         billing_basis,
@@ -1528,8 +1544,13 @@ export async function updateTherapyFamily(formData: FormData) {
   if (!existing) redirectPrivateClinicScoped(formData, "error", `${BASE}/families`, "notfound");
   const familyStartDate = parseDate((formData.get("start_date") as string | null) ?? null);
   const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
+  const familyDefaultJobIdRaw = (formData.get("default_job_id") as string | null) ?? null;
+  const familyDefaultJobId = familyDefaultJobIdRaw?.trim() || null;
   if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
+  }
+  if (familyDefaultJobId && !(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
 
   const slots = parseFamilySlotsFromForm(formData, fallbackPath);
@@ -1540,6 +1561,7 @@ export async function updateTherapyFamily(formData: FormData) {
     userFamilyMemberId,
     slots,
     familyStartDate,
+    familyDefaultJobId,
   );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
@@ -1557,6 +1579,7 @@ export async function updateTherapyFamily(formData: FormData) {
         name: (formData.get("name") as string | null)?.trim() || "",
         start_date: familyStartDate,
         end_date: familyEndDate,
+        default_job_id: familyDefaultJobId,
         notes: (formData.get("notes") as string | null)?.trim() || null,
         main_family_member_id: mainFamilyMemberId,
         billing_basis,
