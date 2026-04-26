@@ -49,6 +49,20 @@ const CLIENT_STATUS_OPTIONS = new Set([
   "filed_appeal",
   "filed_worsening",
 ]);
+const APPOINTMENT_CHANGE_REASON_OTHER = "other";
+
+function parseAppointmentChangeReason(
+  formData: FormData,
+  fieldName: "cancellation_reason" | "reschedule_reason",
+  notesFieldName: "cancellation_notes" | "reschedule_notes",
+): string | null {
+  const reason = (formData.get(fieldName) as string | null)?.trim() || "";
+  if (!reason) return null;
+  if (reason !== APPOINTMENT_CHANGE_REASON_OTHER) return reason;
+  const notes = (formData.get(notesFieldName) as string | null)?.trim() || "";
+  if (!notes) return null;
+  return `Other: ${notes}`;
+}
 
 function redirectPrivateClinicScoped(
   formData: FormData,
@@ -2695,8 +2709,12 @@ export async function cancelTherapyAppointment(formData: FormData) {
   if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
-  const cancellation_reason = (formData.get("cancellation_reason") as string | null)?.trim() || null;
-  if (!id) redirect(`${BASE}/appointments?error=missing`);
+  const cancellation_reason = parseAppointmentChangeReason(
+    formData,
+    "cancellation_reason",
+    "cancellation_notes",
+  );
+  if (!id || !cancellation_reason) redirect(`${BASE}/appointments?error=missing`);
 
   const before = await prisma.therapy_appointments.findFirst({
     where: { id, household_id: householdId },
@@ -2743,8 +2761,12 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
   const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
-  const reschedule_reason = (formData.get("reschedule_reason") as string | null)?.trim() || null;
-  if (!id || !start_at_raw) redirect(`${BASE}/appointments?error=missing`);
+  const reschedule_reason = parseAppointmentChangeReason(
+    formData,
+    "reschedule_reason",
+    "reschedule_notes",
+  );
+  if (!id || !start_at_raw || !reschedule_reason) redirect(`${BASE}/appointments?error=missing`);
 
   const before = await prisma.therapy_appointments.findFirst({
     where: { id, household_id: householdId },

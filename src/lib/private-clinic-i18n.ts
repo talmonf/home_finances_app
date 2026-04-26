@@ -839,6 +839,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     cancel: p("Cancel", "ביטול"),
     reschedule: p("Reschedule", "עריכה"),
     edit: p("Edit", "עריכה"),
+    cancelTitle: p("Cancel appointment", "ביטול תור"),
     cancelConfirm: p(
       "Mark this appointment as cancelled?",
       "לסמן את התור כמבוטל?",
@@ -867,7 +868,14 @@ export function privateClinicAppointments(lang: UiLanguage) {
     seriesStartDate: p("Series start date", "תאריך התחלת סדרה"),
     seriesEndDateOptional: p("Series end date (optional)", "תאריך סיום סדרה (אופציונלי)"),
     endOptional: p("End (optional)", "סיום (אופציונלי)"),
-    reasonOptional: p("Reason (optional)", "סיבה (אופציונלי)"),
+    reason: p("Reason", "סיבה"),
+    other: p("Other", "אחר"),
+    notes: p("Notes", "הערות"),
+    notesRequiredForOther: p("Notes are required when Other is selected.", "חובה למלא הערות כשנבחר \"אחר\"."),
+    therapistCancelled: p("Therapist cancelled", "המטפל ביטל"),
+    patientCancelled: p("Patient cancelled", "המטופל ביטל"),
+    therapistRescheduled: p("Therapist rescheduled", "המטפל דחה"),
+    patientRescheduled: p("Patient rescheduled", "המטופל דחה"),
   };
 }
 
@@ -884,12 +892,13 @@ export function privateClinicReports(lang: UiLanguage) {
       "All create, update, reschedule, cancel, and delete actions on appointments (audit trail).",
       "כל פעולות היצירה, העדכון, דחייה, ביטול ומחיקה על תורים (יומן ביקורת).",
     ),
-    download: p("Download spreadsheet", "הורדת יומן"),
+    download: p("Download", "Download"),
     empty: p("No audit entries yet.", "אין רשומות ביקורת עדיין."),
     tableWhen: p("When", "מתי"),
     tableUser: p("User", "משתמש"),
     tableAction: p("Action", "פעולה"),
     tableAppointment: p("Appointment", "תור"),
+    tableClient: p("Client", "לקוח"),
     tableDetails: p("Details", "פרטים"),
   };
 }

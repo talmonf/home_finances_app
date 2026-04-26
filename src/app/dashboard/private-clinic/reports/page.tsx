@@ -14,9 +14,11 @@ export const dynamic = "force-dynamic";
 type Snapshot = {
   job_id?: string;
   client_name?: string;
-  job_label?: string;
   start_at?: string;
+  end_at?: string | null;
   status?: string;
+  cancellation_reason?: string | null;
+  reschedule_reason?: string | null;
 };
 
 function snapshotFromMetadata(meta: unknown): Snapshot | null {
@@ -29,6 +31,11 @@ function snapshotFromMetadata(meta: unknown): Snapshot | null {
   const before = m.before;
   if (before && typeof before === "object") return before as Snapshot;
   return null;
+}
+
+function formatIsoDateTime(value?: string | null): string {
+  if (!value) return "";
+  return value.replace("T", " ").slice(0, 19);
 }
 
 export default async function PrivateClinicReportsPage() {
@@ -108,20 +115,17 @@ export default async function PrivateClinicReportsPage() {
                   <th className="px-2 py-2 text-slate-300">{r.tableUser}</th>
                   <th className="px-2 py-2 text-slate-300">{r.tableAction}</th>
                   <th className="px-2 py-2 text-slate-300">{r.tableAppointment}</th>
+                  <th className="px-2 py-2 text-slate-300">{r.tableClient}</th>
                   <th className="px-2 py-2 text-slate-300">{r.tableDetails}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row) => {
                   const snap = snapshotFromMetadata(row.metadata);
-                  const detail = [
-                    snap?.client_name,
-                    snap?.job_label,
-                    snap?.start_at,
-                    snap?.status,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ");
+                  const appointmentText = snap?.end_at
+                    ? `${formatIsoDateTime(snap.start_at)} → ${formatIsoDateTime(snap.end_at)}`
+                    : formatIsoDateTime(snap?.start_at) || "—";
+                  const detail = snap?.reschedule_reason || snap?.cancellation_reason || "—";
                   return (
                     <tr key={row.id} className="border-b border-slate-700/60">
                       <td className="px-2 py-2 whitespace-nowrap text-slate-300">
@@ -129,11 +133,12 @@ export default async function PrivateClinicReportsPage() {
                       </td>
                       <td className="px-2 py-2 text-slate-200">{row.user.full_name}</td>
                       <td className="px-2 py-2 text-slate-300">{row.action}</td>
-                      <td className="px-2 py-2 font-mono text-xs text-slate-400">
-                        {row.appointment_id ?? "—"}
+                      <td className="px-2 py-2 whitespace-nowrap text-slate-300">
+                        {appointmentText}
                       </td>
+                      <td className="px-2 py-2 text-slate-300">{snap?.client_name || "—"}</td>
                       <td className="px-2 py-2 text-slate-400 max-w-md truncate" title={detail}>
-                        {detail || "—"}
+                        {detail}
                       </td>
                     </tr>
                   );

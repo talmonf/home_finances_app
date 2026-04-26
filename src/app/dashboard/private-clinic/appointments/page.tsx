@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import {
   prisma,
   requireHouseholdMember,
@@ -12,7 +11,6 @@ import { formatClientNameForDisplay } from "@/lib/privacy-display";
 import { privateClinicAppointments, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
-import { cancelTherapyAppointment } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import {
   jobWherePrivateClinicScoped,
@@ -101,21 +99,12 @@ export default async function AppointmentsPage() {
                       >
                         {ap.reschedule}
                       </Link>
-                      <ConfirmDeleteForm
-                        action={cancelTherapyAppointment}
-                        message={ap.cancelConfirm}
-                        className="inline-flex items-center"
+                      <Link
+                        href={`${LIST}/${a.id}/cancel`}
+                        className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
                       >
-                        <input type="hidden" name="id" value={a.id} />
-                        <input type="hidden" name="redirect_on_success" value={`${LIST}?updated=1`} />
-                        <input type="hidden" name="cancellation_reason" value="Cancelled from upcoming list" />
-                        <button
-                          type="submit"
-                          className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
-                        >
-                          {ap.cancel}
-                        </button>
-                      </ConfirmDeleteForm>
+                        {ap.cancel}
+                      </Link>
                     </div>
                   </td>
                 </tr>

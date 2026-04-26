@@ -7,8 +7,7 @@ import {
 } from "@/lib/auth";
 import { privateClinicAppointments } from "@/lib/private-clinic-i18n";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
-import { rescheduleTherapyAppointment } from "../../../actions";
-import { dateToDatetimeLocalValue } from "@/lib/household-date-format";
+import { cancelTherapyAppointment } from "../../../actions";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
 
@@ -18,7 +17,7 @@ const LIST = "/dashboard/private-clinic/appointments";
 
 type PageProps = { params: Promise<{ id: string }> };
 
-export default async function RescheduleAppointmentPage({ params }: PageProps) {
+export default async function CancelAppointmentPage({ params }: PageProps) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -40,66 +39,37 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
       household_id: householdId,
       job: jobScope,
     },
-    include: { client: true, job: true },
+    include: { client: true },
   });
 
   if (!apt) notFound();
 
-  const redirectOnSuccess = `${LIST}/${id}/edit?rescheduled=1`;
-
   return (
-    <DashboardModal
-      title={ap.rescheduleTitle}
-      closeHref={LIST}
-      closeLabel={ap.backToAppointments}
-      maxWidthClassName="max-w-xl"
-    >
+    <DashboardModal title={ap.cancelTitle} closeHref={LIST} closeLabel={ap.backToAppointments} maxWidthClassName="max-w-xl">
       <p className="mb-4 text-sm text-slate-400">
-          {apt.client.first_name} {apt.client.last_name ?? ""}
+        {apt.client.first_name} {apt.client.last_name ?? ""}
       </p>
-      <form
-        action={rescheduleTherapyAppointment}
-        className="grid gap-3"
-      >
+      <form action={cancelTherapyAppointment} className="grid gap-3">
         <input type="hidden" name="id" value={apt.id} />
-        <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
-        <label className="text-sm text-slate-300">
-          {ap.startCol}
-          <input
-            name="start_at"
-            type="datetime-local"
-            required
-            defaultValue={dateToDatetimeLocalValue(apt.start_at)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </label>
-        <label className="text-sm text-slate-300">
-          {ap.endOptional}
-          <input
-            name="end_at"
-            type="datetime-local"
-            defaultValue={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </label>
+        <input type="hidden" name="redirect_on_success" value={`${LIST}?updated=1`} />
         <AppointmentChangeReasonFields
-          reasonFieldName="reschedule_reason"
-          notesFieldName="reschedule_notes"
+          reasonFieldName="cancellation_reason"
+          notesFieldName="cancellation_notes"
           reasonLabel={ap.reason}
           notesLabel={ap.notes}
           otherValue="other"
           notesRequiredMessage={ap.notesRequiredForOther}
           options={[
-            { value: "Therapist rescheduled", label: ap.therapistRescheduled },
-            { value: "Patient rescheduled", label: ap.patientRescheduled },
+            { value: "Therapist cancelled", label: ap.therapistCancelled },
+            { value: "Patient cancelled", label: ap.patientCancelled },
             { value: "other", label: ap.other },
           ]}
         />
         <button
           type="submit"
-          className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+          className="w-fit rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-400"
         >
-          {ap.save}
+          {ap.cancel}
         </button>
       </form>
     </DashboardModal>

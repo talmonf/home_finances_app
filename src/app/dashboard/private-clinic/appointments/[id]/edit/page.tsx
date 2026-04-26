@@ -177,6 +177,10 @@ export default async function EditAppointmentPage({ params }: PageProps) {
         <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
           {ap.reschedule}
         </Link>
+        {" · "}
+        <Link href={`${LIST}/${apt.id}/cancel`} className="text-rose-400 hover:text-rose-300">
+          {ap.cancel}
+        </Link>
       </p>
 
       <form
