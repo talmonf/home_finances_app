@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 098_therapy_family_member_position.sql (2026-04-26)
 - [x] 097_therapy_settings_note_visibility.sql (2026-04-24)
 - [x] 096_therapy_receipts_kind_and_net_amount.sql (2026-04-24)
 - [x] 095_private_clinic_receipts_import_currency_defaults.sql (2026-04-22)

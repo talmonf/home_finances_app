@@ -25,6 +25,7 @@ import type {
   TherapyBillingBasis,
   TherapyBillingTiming,
   TherapyClientRelationshipType,
+  TherapyFamilyMemberPosition,
   TherapyReceiptKind,
   TherapyReceiptPaymentMethod,
   TherapyReceiptRecipientType,
@@ -1319,59 +1320,123 @@ function parseUniqueIds(values: FormDataEntryValue[]): string[] {
   return [...new Set(items)];
 }
 
-async function resolveFamilyMemberClientIds(params: {
-  householdId: string;
-  userFamilyMemberId: string | null;
-  existingClientIds: string[];
-  newMemberFirstNames: string[];
-}): Promise<string[]> {
-  const existingIds: string[] = [];
-  for (const clientId of params.existingClientIds) {
-    if (await assertClientForCurrentUserScope(params.householdId, params.userFamilyMemberId, clientId)) {
-      existingIds.push(clientId);
+const FAMILY_MEMBER_POSITIONS = new Set<string>(["father", "mother", "son", "daughter"]);
+
+function parseFamilyMemberPositionField(raw: unknown): TherapyFamilyMemberPosition | null {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw !== "string") return null;
+  if (!FAMILY_MEMBER_POSITIONS.has(raw)) return null;
+  return raw as TherapyFamilyMemberPosition;
+}
+
+type FamilySlotInput =
+  | { kind: "existing"; clientId: string; position: TherapyFamilyMemberPosition | null }
+  | { kind: "new"; firstName: string; position: TherapyFamilyMemberPosition };
+
+function parseFamilySlotsFromForm(formData: FormData, fallbackPath: string): FamilySlotInput[] {
+  const raw = (formData.get("family_members_json") as string | null)?.trim() ?? "";
+  if (!raw) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-members");
+  }
+  const out: FamilySlotInput[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+    const rec = item as Record<string, unknown>;
+    const kind = rec.kind;
+    if (kind === "existing") {
+      const clientId = String(rec.clientId ?? "").trim();
+      if (!clientId) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+      const position = parseFamilyMemberPositionField(rec.position);
+      out.push({ kind: "existing", clientId, position });
+    } else if (kind === "new") {
+      const firstName = String(rec.firstName ?? "").trim();
+      const position = parseFamilyMemberPositionField(rec.position);
+      if (!firstName || !position) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+      out.push({ kind: "new", firstName, position });
+    } else {
+      redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
     }
   }
-  if (!params.newMemberFirstNames.length) return existingIds;
-  const defaultJob = await prisma.jobs.findFirst({
-    where: {
-      household_id: params.householdId,
-      is_private_clinic: true,
-      is_active: true,
-      ...(params.userFamilyMemberId ? { family_member_id: params.userFamilyMemberId } : {}),
-    },
-    orderBy: [{ start_date: "desc" }],
-    select: { id: true },
-  });
-  if (!defaultJob) return existingIds;
+  return out;
+}
 
-  const createdIds = await prisma.$transaction(async (tx) => {
-    const out: string[] = [];
-    for (const first_name of params.newMemberFirstNames) {
-      const id = crypto.randomUUID();
-      await tx.therapy_clients.create({
-        data: {
-          id,
-          household_id: params.householdId,
-          first_name,
-          default_job_id: defaultJob.id,
-          visits_per_period_count: 1,
-          visits_per_period_weeks: 1,
-        },
-      });
-      await tx.therapy_clients_jobs.create({
-        data: {
-          id: crypto.randomUUID(),
-          household_id: params.householdId,
-          client_id: id,
-          job_id: defaultJob.id,
-          is_primary: true,
-        },
-      });
-      out.push(id);
+async function resolveOrderedFamilyMemberRows(
+  formData: FormData,
+  fallbackPath: string,
+  householdId: string,
+  userFamilyMemberId: string | null,
+  slots: FamilySlotInput[],
+): Promise<{ clientId: string; member_position: TherapyFamilyMemberPosition | null }[]> {
+  const newSlots = slots.filter((s): s is Extract<FamilySlotInput, { kind: "new" }> => s.kind === "new");
+  let defaultJobId: string | null = null;
+  if (newSlots.length > 0) {
+    const defaultJob = await prisma.jobs.findFirst({
+      where: {
+        household_id: householdId,
+        is_private_clinic: true,
+        is_active: true,
+        ...(userFamilyMemberId ? { family_member_id: userFamilyMemberId } : {}),
+      },
+      orderBy: [{ start_date: "desc" }],
+      select: { id: true },
+    });
+    if (!defaultJob) redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-job");
+    defaultJobId = defaultJob.id;
+  }
+
+  const createdNewIds = await (async () => {
+    if (newSlots.length === 0 || !defaultJobId) return [] as string[];
+    return prisma.$transaction(async (tx) => {
+      const ids: string[] = [];
+      for (const slot of newSlots) {
+        const id = crypto.randomUUID();
+        await tx.therapy_clients.create({
+          data: {
+            id,
+            household_id: householdId,
+            first_name: slot.firstName,
+            default_job_id: defaultJobId,
+            visits_per_period_count: 1,
+            visits_per_period_weeks: 1,
+          },
+        });
+        await tx.therapy_clients_jobs.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: householdId,
+            client_id: id,
+            job_id: defaultJobId,
+            is_primary: true,
+          },
+        });
+        ids.push(id);
+      }
+      return ids;
+    });
+  })();
+
+  let newIdx = 0;
+  const resolved: { clientId: string; member_position: TherapyFamilyMemberPosition | null }[] = [];
+  for (const slot of slots) {
+    if (slot.kind === "existing") {
+      if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, slot.clientId))) {
+        redirectPrivateClinicScoped(formData, "error", fallbackPath, "client");
+      }
+      resolved.push({ clientId: slot.clientId, member_position: slot.position });
+    } else {
+      const clientId = createdNewIds[newIdx++];
+      if (!clientId) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+      resolved.push({ clientId, member_position: slot.position });
     }
-    return out;
-  });
-  return [...existingIds, ...createdIds];
+  }
+  return resolved;
 }
 
 export async function createTherapyFamily(formData: FormData) {
@@ -1382,21 +1447,13 @@ export async function createTherapyFamily(formData: FormData) {
   const name = (formData.get("name") as string | null)?.trim() || "";
   if (!name) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
 
-  const existingClientIds = parseUniqueIds(formData.getAll("member_client_ids"));
-  const newMemberFirstNames = parseUniqueIds(formData.getAll("new_member_first_names"));
-  const memberClientIds = await resolveFamilyMemberClientIds({
-    householdId,
-    userFamilyMemberId,
-    existingClientIds,
-    newMemberFirstNames,
-  });
-  if (memberClientIds.length === 0) {
-    redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-members");
-  }
-  const mainFamilyMemberId = (formData.get("main_family_member_id") as string | null)?.trim() || "";
-  if (!memberClientIds.includes(mainFamilyMemberId)) {
+  const slots = parseFamilySlotsFromForm(formData, fallbackPath);
+  const memberRows = await resolveOrderedFamilyMemberRows(formData, fallbackPath, householdId, userFamilyMemberId, slots);
+  const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
+  if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "main-member");
   }
+  const mainFamilyMemberId = memberRows[mainSlotRaw]!.clientId;
 
   const billing_basis = parseBillingBasis(formData.get("billing_basis") as string | null);
   const billing_timing = parseBillingTiming(formData.get("billing_timing") as string | null);
@@ -1414,17 +1471,18 @@ export async function createTherapyFamily(formData: FormData) {
         billing_timing,
       },
     });
-    for (const clientId of memberClientIds) {
+    for (const row of memberRows) {
       await tx.therapy_family_members.create({
         data: {
           id: crypto.randomUUID(),
           household_id: householdId,
           family_id: familyId,
-          client_id: clientId,
+          client_id: row.clientId,
+          member_position: row.member_position,
         },
       });
       await tx.therapy_clients.update({
-        where: { id: clientId },
+        where: { id: row.clientId },
         data: { family_id: familyId },
       });
     }
@@ -1450,19 +1508,13 @@ export async function updateTherapyFamily(formData: FormData) {
   });
   if (!existing) redirectPrivateClinicScoped(formData, "error", `${BASE}/families`, "notfound");
 
-  const existingClientIds = parseUniqueIds(formData.getAll("member_client_ids"));
-  const newMemberFirstNames = parseUniqueIds(formData.getAll("new_member_first_names"));
-  const memberClientIds = await resolveFamilyMemberClientIds({
-    householdId,
-    userFamilyMemberId,
-    existingClientIds,
-    newMemberFirstNames,
-  });
-  if (memberClientIds.length === 0) redirectPrivateClinicScoped(formData, "error", fallbackPath, "no-members");
-  const mainFamilyMemberId = (formData.get("main_family_member_id") as string | null)?.trim() || "";
-  if (!memberClientIds.includes(mainFamilyMemberId)) {
+  const slots = parseFamilySlotsFromForm(formData, fallbackPath);
+  const memberRows = await resolveOrderedFamilyMemberRows(formData, fallbackPath, householdId, userFamilyMemberId, slots);
+  const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
+  if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "main-member");
   }
+  const mainFamilyMemberId = memberRows[mainSlotRaw]!.clientId;
 
   const billing_basis = parseBillingBasis(formData.get("billing_basis") as string | null);
   const billing_timing = parseBillingTiming(formData.get("billing_timing") as string | null);
@@ -1483,17 +1535,18 @@ export async function updateTherapyFamily(formData: FormData) {
       where: { household_id: householdId, family_id: id },
       data: { family_id: null },
     });
-    for (const clientId of memberClientIds) {
+    for (const row of memberRows) {
       await tx.therapy_family_members.create({
         data: {
           id: crypto.randomUUID(),
           household_id: householdId,
           family_id: id,
-          client_id: clientId,
+          client_id: row.clientId,
+          member_position: row.member_position,
         },
       });
       await tx.therapy_clients.update({
-        where: { id: clientId },
+        where: { id: row.clientId },
         data: { family_id: id },
       });
     }

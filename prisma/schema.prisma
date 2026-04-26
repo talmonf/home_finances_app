@@ -1497,6 +1497,15 @@ enum TherapyBillingTiming {
   @@map("therapy_billing_timing")
 }
 
+enum TherapyFamilyMemberPosition {
+  father
+  mother
+  son
+  daughter
+
+  @@map("therapy_family_member_position")
+}
+
 enum TherapyImportAuditStatus {
   in_progress
   successful
@@ -1698,11 +1707,12 @@ model therapy_families {
 }
 
 model therapy_family_members {
-  id           String   @id @default(uuid()) @db.Uuid
-  household_id String   @db.Uuid
-  family_id    String   @db.Uuid
-  client_id    String   @db.Uuid
-  created_at   DateTime @default(now())
+  id              String                     @id @default(uuid()) @db.Uuid
+  household_id    String                     @db.Uuid
+  family_id       String                     @db.Uuid
+  client_id       String                     @db.Uuid
+  member_position TherapyFamilyMemberPosition?
+  created_at      DateTime                   @default(now())
 
   household households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
   family    therapy_families @relation(fields: [family_id], references: [id], onDelete: Cascade)
