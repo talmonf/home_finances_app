@@ -45,7 +45,7 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
 
   if (!apt) notFound();
 
-  const redirectOnSuccess = `${LIST}/${id}/edit?rescheduled=1`;
+  const redirectOnSuccess = LIST;
 
   return (
     <DashboardModal
