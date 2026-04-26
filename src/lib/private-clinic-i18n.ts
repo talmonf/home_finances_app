@@ -42,6 +42,7 @@ export function privateClinicLayoutStrings(lang: UiLanguage) {
       description:
         "ניהול לקוחות, מפגשים, קבלות והוצאות קליניקה לפי משרה.",
       navAriaLabel: "אזורים בקליניקה",
+      moreMenuLabel: "עוד",
     };
   }
   return {
@@ -49,6 +50,7 @@ export function privateClinicLayoutStrings(lang: UiLanguage) {
     title: "Clinic",
     description: "Manage clients, sessions, receipts, and clinic expenses per employment job.",
     navAriaLabel: "Clinic sections",
+    moreMenuLabel: "More",
   };
 }
 
@@ -58,6 +60,7 @@ export type PrivateClinicOverviewStatId =
   | "receipts"
   | "expenses"
   | "appointments"
+  | "upcomingVisits"
   | "consultations"
   | "travel";
 
@@ -69,6 +72,7 @@ export function privateClinicOverviewCardLabel(id: PrivateClinicOverviewStatId, 
       receipts: "קבלות",
       expenses: "הוצאות קליניקה",
       appointments: "תורים קרובים",
+      upcomingVisits: "ביקורים קרובים",
       consultations: "ייעוצים שתועדו",
       travel: "רישומי נסיעות",
     };
@@ -80,10 +84,20 @@ export function privateClinicOverviewCardLabel(id: PrivateClinicOverviewStatId, 
     receipts: "Receipts",
     expenses: "Clinic expenses",
     appointments: "Upcoming appointments",
+    upcomingVisits: "Upcoming visits",
     consultations: "Consultations logged",
     travel: "Travel entries",
   };
   return en[id];
+}
+
+export function privateClinicOverviewStrings(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    quickLinksTitle: p("Quick links", "קישורים מהירים"),
+    overdueCount: (count: number) =>
+      p(`${count} overdue`, `${count} באיחור`),
+  };
 }
 
 export function privateClinicCommon(lang: UiLanguage) {

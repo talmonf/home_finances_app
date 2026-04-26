@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type PrivateClinicNavClientItem = {
   key: string;
   href: string;
   label: string;
+  placement?: "primary" | "more";
   reminderBadgeCount?: number | null;
   reminderBadgeAriaLabel?: string;
 };
 
 type PrivateClinicNavClientProps = {
   navAriaLabel: string;
+  moreMenuLabel: string;
   items: PrivateClinicNavClientItem[];
 };
 
@@ -24,64 +26,83 @@ function normalizePathname(pathname: string): string {
 
 export default function PrivateClinicNavClient({
   navAriaLabel,
+  moreMenuLabel,
   items,
 }: PrivateClinicNavClientProps) {
   const pathname = usePathname();
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!pendingHref) return;
-    if (normalizePathname(pendingHref) === normalizedPathname) {
-      setPendingHref(null);
-    }
-  }, [normalizedPathname, pendingHref]);
+  const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
+  const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
+  const hasActiveMoreItem = moreItems.some(
+    (item) => normalizedPathname === normalizePathname(item.href),
+  );
+
+  const linkClassName = (isActive: boolean, isPending: boolean) =>
+    isActive
+      ? "inline-flex items-center gap-1.5 rounded-lg bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100 ring-1 ring-sky-400/60"
+      : isPending
+        ? "inline-flex items-center gap-1.5 rounded-lg bg-slate-700/90 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-500"
+        : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
+
+  const renderItemLink = (item: PrivateClinicNavClientItem) => {
+    const normalizedHref = normalizePathname(item.href);
+    const isActive = normalizedPathname === normalizedHref;
+    const isPending =
+      pendingHref === item.href && normalizePathname(item.href) !== normalizedPathname;
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        onClick={() => {
+          if (!isActive) setPendingHref(item.href);
+        }}
+        className={linkClassName(isActive, isPending)}
+      >
+        {isPending ? (
+          <span
+            className="inline-block h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-transparent"
+            aria-hidden
+          />
+        ) : null}
+        <span>{item.label}</span>
+        {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
+          <span
+            className="inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600/90 px-1 text-[10px] font-semibold text-white tabular-nums"
+            aria-label={item.reminderBadgeAriaLabel}
+          >
+            {item.reminderBadgeCount > 99 ? "99+" : item.reminderBadgeCount}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
 
   return (
     <nav
       className="flex flex-wrap gap-2 border-b border-slate-800 pb-3"
       aria-label={navAriaLabel}
     >
-      {items.map((item) => {
-        const normalizedHref = normalizePathname(item.href);
-        const isActive = normalizedPathname === normalizedHref;
-        const isPending = pendingHref === item.href;
-        const className = isActive
-          ? "inline-flex items-center gap-1.5 rounded-lg bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100 ring-1 ring-sky-400/60"
-          : isPending
-            ? "inline-flex items-center gap-1.5 rounded-lg bg-slate-700/90 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-500"
-            : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
-
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            onClick={() => {
-              if (!isActive) setPendingHref(item.href);
-            }}
-            className={className}
+      {primaryItems.map((item) => renderItemLink(item))}
+      {moreItems.length > 0 ? (
+        <details className="relative">
+          <summary
+            className={
+              hasActiveMoreItem
+                ? "inline-flex cursor-pointer list-none items-center rounded-lg bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100 ring-1 ring-sky-400/60"
+                : "inline-flex cursor-pointer list-none items-center rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800"
+            }
           >
-            {isPending ? (
-              <span
-                className="inline-block h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-transparent"
-                aria-hidden
-              />
-            ) : null}
-            <span>{item.label}</span>
-            {item.key === "reminders" &&
-            item.reminderBadgeCount != null &&
-            item.reminderBadgeCount > 0 ? (
-              <span
-                className="inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600/90 px-1 text-[10px] font-semibold text-white tabular-nums"
-                aria-label={item.reminderBadgeAriaLabel}
-              >
-                {item.reminderBadgeCount > 99 ? "99+" : item.reminderBadgeCount}
-              </span>
-            ) : null}
-          </Link>
-        );
-      })}
+            {moreMenuLabel}
+          </summary>
+          <div className="absolute z-30 mt-2 flex min-w-52 flex-col gap-2 rounded-xl border border-slate-700 bg-slate-900/95 p-2 shadow-xl">
+            {moreItems.map((item) => renderItemLink(item))}
+          </div>
+        </details>
+      ) : null}
     </nav>
   );
 }

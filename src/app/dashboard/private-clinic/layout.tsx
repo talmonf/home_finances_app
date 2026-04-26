@@ -64,10 +64,12 @@ export default async function PrivateClinicLayout({
         <header className="space-y-2">
           <PrivateClinicNavClient
             navAriaLabel={layoutCopy.navAriaLabel}
+            moreMenuLabel={layoutCopy.moreMenuLabel}
             items={navItems.map((item) => ({
               key: item.key,
               href: item.href,
               label: privateClinicNavLabel(item.key, uiLanguage),
+              placement: item.placement,
               reminderBadgeCount: item.key === "reminders" ? reminderBadgeCount : null,
               reminderBadgeAriaLabel:
                 item.key === "reminders" && reminderBadgeCount != null
