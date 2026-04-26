@@ -137,11 +137,7 @@ export function JobModalForm({
             <input type="checkbox" name="is_active" defaultChecked />
             {c.active}
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" name="is_private_clinic" defaultChecked />
-            {j.privateClinicRole}
-          </label>
-          <p className="text-xs text-slate-500 md:col-span-3">{j.privateClinicRoleHelp}</p>
+          <input type="hidden" name="is_private_clinic" value="1" />
           <div className="space-y-1 md:col-span-3">
             <label className="block text-xs text-slate-300">{c.notes}</label>
             <textarea
