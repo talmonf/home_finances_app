@@ -377,57 +377,55 @@ export function TherapyClientForm({
         )}
       </div>
 
+      <div className="space-y-1">
+        <label htmlFor={`${idPrefix}_billing_basis`} className="block text-xs text-slate-400">
+          Billing basis
+        </label>
+        <select
+          id={`${idPrefix}_billing_basis`}
+          name="billing_basis"
+          defaultValue={client?.billing_basis ?? ""}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          {families.length > 0 ? <option value="">Use family setting</option> : null}
+          <option value="per_treatment">Per treatment</option>
+          <option value="per_month">Per month</option>
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label htmlFor={`${idPrefix}_billing_timing`} className="block text-xs text-slate-400">
+          Billing timing
+        </label>
+        <select
+          id={`${idPrefix}_billing_timing`}
+          name="billing_timing"
+          defaultValue={client?.billing_timing ?? ""}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          {families.length > 0 ? <option value="">Use family setting</option> : null}
+          <option value="in_advance">In advance</option>
+          <option value="in_arrears">In arrears</option>
+        </select>
+      </div>
       {families.length > 0 ? (
-        <>
-          <div className="space-y-1">
-            <label htmlFor={`${idPrefix}_family_id`} className="block text-xs text-slate-400">
-              Family
-            </label>
-            <select
-              id={`${idPrefix}_family_id`}
-              name="family_id"
-              defaultValue={client?.family_id ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">No family</option>
-              {families.map((family) => (
-                <option key={family.id} value={family.id}>
-                  {family.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor={`${idPrefix}_billing_basis`} className="block text-xs text-slate-400">
-              Billing basis
-            </label>
-            <select
-              id={`${idPrefix}_billing_basis`}
-              name="billing_basis"
-              defaultValue={client?.billing_basis ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">Use family/default</option>
-              <option value="per_treatment">Per treatment</option>
-              <option value="per_month">Per month</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor={`${idPrefix}_billing_timing`} className="block text-xs text-slate-400">
-              Billing timing
-            </label>
-            <select
-              id={`${idPrefix}_billing_timing`}
-              name="billing_timing"
-              defaultValue={client?.billing_timing ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">Use family/default</option>
-              <option value="in_advance">In advance</option>
-              <option value="in_arrears">In arrears</option>
-            </select>
-          </div>
-        </>
+        <div className="space-y-1 md:col-span-2">
+          <label htmlFor={`${idPrefix}_family_id`} className="block text-xs text-slate-400">
+            Family
+          </label>
+          <select
+            id={`${idPrefix}_family_id`}
+            name="family_id"
+            defaultValue={client?.family_id ?? ""}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="">No family</option>
+            {families.map((family) => (
+              <option key={family.id} value={family.id}>
+                {family.name}
+              </option>
+            ))}
+          </select>
+        </div>
       ) : null}
 
       <ClientJobProgramFields

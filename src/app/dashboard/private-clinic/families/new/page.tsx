@@ -43,23 +43,25 @@ export default async function NewFamilyPage() {
     sectionTitle: t("Family members", "חברי משפחה"),
     addMember: t("Add member", "הוספת חבר/ה"),
     mainContact: t("Main contact", "איש קשר ראשי"),
-    advancedTitle: t("Advanced: link existing clients", "מתקדם: קישור לקוחות קיימים"),
-    advancedHint: t(
-      "Rarely needed if you create clients from this screen. Selected clients are added to the family list.",
-      "לרוב לא נדרש אם יוצרים כאן לקוחות חדשים. לקוחות נבחרים יתווספו לרשימת המשפחה.",
-    ),
+    advancedTitle: t("Add existing clients", "הוספת לקוחות קיימים"),
+    advancedHint: "",
     linkExistingLabel: t("Existing clients (multi-select)", "לקוחות קיימים (בחירה מרובה)"),
-    modalTitle: t("Add family member", "הוספת חבר/ת משפחה"),
+    modalTitleAdd: t("Add family member", "הוספת חבר/ת משפחה"),
+    modalTitleEdit: t("Edit family member", "עריכת חבר/ת משפחה"),
     firstName: t("First name", "שם פרטי"),
     familyPosition: t("Family position", "תפקיד במשפחה"),
+    positionPlaceholder: t("Select…", "בחרי…"),
     father: t("Father", "אב"),
     mother: t("Mother", "אם"),
     son: t("Son", "בן"),
     daughter: t("Daughter", "בת"),
     save: t("Add", "הוספה"),
+    saveEdit: t("Save", "שמירה"),
     cancel: t("Cancel", "ביטול"),
     emptyListHint: t("Add at least one family member using the button above.", "הוסיפו לפחות חבר/ת משפחה באמצעות הכפתור למעלה."),
     positionUnset: t("—", "—"),
+    editMember: t("Edit", "עריכה"),
+    removeMember: t("Remove", "הסרה"),
   };
 
   return (
@@ -72,15 +74,49 @@ export default async function NewFamilyPage() {
       </div>
       <form action={createTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">
         <input type="hidden" name="redirect_on_error" value={`${LIST}/new`} />
-        <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">{t("Family name", "שם משפחה")}</label>
-          <input name="name" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-        </div>
         <FamilyMembersFormSection
           labels={memberLabels}
           linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
           initialRows={[]}
           initialMainSlotIndex={0}
+          nameFieldSlot={
+            <>
+              <label className="block text-xs text-slate-400">{t("Family name", "שם משפחה")}</label>
+              <input
+                name="name"
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+              />
+            </>
+          }
+          startDateFieldSlot={
+            <div className="space-y-1">
+              <div className="flex flex-wrap gap-4">
+                <div className="min-w-0 max-w-xs flex-1 space-y-1">
+                  <label className="block text-xs text-slate-400">{t("Start date", "תאריך התחלה")}</label>
+                  <input
+                    type="date"
+                    name="start_date"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+                  />
+                </div>
+                <div className="min-w-0 max-w-xs flex-1 space-y-1">
+                  <label className="block text-xs text-slate-400">{t("End date", "תאריך סיום")}</label>
+                  <input
+                    type="date"
+                    name="end_date"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                {t(
+                  "Start date (if set) is also saved on each member’s client. End date is on the family only. End must be on or after start.",
+                  "תאריך התחלה (אם מוגדר) נשמר גם בכרטיס הלקוח של כל חבר. תאריך הסיום נשמר רק על המשפחה. תאריך הסיום חייב להיות לא מוקדם מתאריך ההתחלה.",
+                )}
+              </p>
+            </div>
+          }
         />
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Billing basis", "בסיס חיוב")}</label>

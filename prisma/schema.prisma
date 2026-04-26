@@ -1688,6 +1688,8 @@ model therapy_families {
   id                    String   @id @default(uuid()) @db.Uuid
   household_id          String   @db.Uuid
   name                  String
+  start_date            DateTime? @db.Date
+  end_date              DateTime? @db.Date
   notes                 String?
   main_family_member_id String   @db.Uuid
   billing_basis         TherapyBillingBasis?

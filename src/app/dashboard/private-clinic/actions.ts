@@ -1373,6 +1373,7 @@ async function resolveOrderedFamilyMemberRows(
   householdId: string,
   userFamilyMemberId: string | null,
   slots: FamilySlotInput[],
+  newClientStartDate: Date | null,
 ): Promise<{ clientId: string; member_position: TherapyFamilyMemberPosition | null }[]> {
   const newSlots = slots.filter((s): s is Extract<FamilySlotInput, { kind: "new" }> => s.kind === "new");
   let defaultJobId: string | null = null;
@@ -1405,6 +1406,7 @@ async function resolveOrderedFamilyMemberRows(
             default_job_id: defaultJobId,
             visits_per_period_count: 1,
             visits_per_period_weeks: 1,
+            ...(newClientStartDate ? { start_date: newClientStartDate } : {}),
           },
         });
         await tx.therapy_clients_jobs.create({
@@ -1446,9 +1448,21 @@ export async function createTherapyFamily(formData: FormData) {
   const fallbackPath = `${BASE}/families/new`;
   const name = (formData.get("name") as string | null)?.trim() || "";
   if (!name) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  const familyStartDate = parseDate((formData.get("start_date") as string | null) ?? null);
+  const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
+  if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
+  }
 
   const slots = parseFamilySlotsFromForm(formData, fallbackPath);
-  const memberRows = await resolveOrderedFamilyMemberRows(formData, fallbackPath, householdId, userFamilyMemberId, slots);
+  const memberRows = await resolveOrderedFamilyMemberRows(
+    formData,
+    fallbackPath,
+    householdId,
+    userFamilyMemberId,
+    slots,
+    familyStartDate,
+  );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "main-member");
@@ -1465,6 +1479,8 @@ export async function createTherapyFamily(formData: FormData) {
         id: familyId,
         household_id: householdId,
         name,
+        start_date: familyStartDate,
+        end_date: familyEndDate,
         notes: (formData.get("notes") as string | null)?.trim() || null,
         main_family_member_id: mainFamilyMemberId,
         billing_basis,
@@ -1483,7 +1499,10 @@ export async function createTherapyFamily(formData: FormData) {
       });
       await tx.therapy_clients.update({
         where: { id: row.clientId },
-        data: { family_id: familyId },
+        data: {
+          family_id: familyId,
+          ...(familyStartDate ? { start_date: familyStartDate } : {}),
+        },
       });
     }
   });
@@ -1507,9 +1526,21 @@ export async function updateTherapyFamily(formData: FormData) {
     select: { id: true },
   });
   if (!existing) redirectPrivateClinicScoped(formData, "error", `${BASE}/families`, "notfound");
+  const familyStartDate = parseDate((formData.get("start_date") as string | null) ?? null);
+  const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
+  if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
+  }
 
   const slots = parseFamilySlotsFromForm(formData, fallbackPath);
-  const memberRows = await resolveOrderedFamilyMemberRows(formData, fallbackPath, householdId, userFamilyMemberId, slots);
+  const memberRows = await resolveOrderedFamilyMemberRows(
+    formData,
+    fallbackPath,
+    householdId,
+    userFamilyMemberId,
+    slots,
+    familyStartDate,
+  );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "main-member");
@@ -1524,6 +1555,8 @@ export async function updateTherapyFamily(formData: FormData) {
       where: { id },
       data: {
         name: (formData.get("name") as string | null)?.trim() || "",
+        start_date: familyStartDate,
+        end_date: familyEndDate,
         notes: (formData.get("notes") as string | null)?.trim() || null,
         main_family_member_id: mainFamilyMemberId,
         billing_basis,
@@ -1547,7 +1580,10 @@ export async function updateTherapyFamily(formData: FormData) {
       });
       await tx.therapy_clients.update({
         where: { id: row.clientId },
-        data: { family_id: id },
+        data: {
+          family_id: id,
+          ...(familyStartDate ? { start_date: familyStartDate } : {}),
+        },
       });
     }
   });
