@@ -44,6 +44,8 @@ export default async function FamiliesPage() {
     },
     orderBy: [{ name: "asc" }],
   });
+  const thAlign = isHebrew ? "text-right" : "text-left";
+  const tdAlign = isHebrew ? "text-right" : "text-left";
 
   return (
     <div className="space-y-6">
@@ -60,28 +62,28 @@ export default async function FamiliesPage() {
         <p className="text-sm text-slate-500">{isHebrew ? "אין עדיין משפחות." : "No families yet."}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-700">
-          <table className="min-w-full divide-y divide-slate-700 text-sm">
+          <table dir={isHebrew ? "rtl" : "ltr"} className="min-w-full divide-y divide-slate-700 text-sm">
             <thead className="bg-slate-900/80">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "משפחה" : "Family"}</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "חבר/ה מרכזי/ת" : "Main member"}</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "חברים" : "Members"}</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "משרה ראשית" : "Main job"}</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">{isHebrew ? "פעולות" : "Actions"}</th>
+                <th className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 ${thAlign}`}>{isHebrew ? "משפחה" : "Family"}</th>
+                <th className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 ${thAlign}`}>{isHebrew ? "חבר/ה מרכזי/ת" : "Main member"}</th>
+                <th className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 ${thAlign}`}>{isHebrew ? "חברים" : "Members"}</th>
+                <th className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 ${thAlign}`}>{isHebrew ? "משרה ראשית" : "Main job"}</th>
+                <th className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 ${thAlign}`}>{isHebrew ? "פעולות" : "Actions"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 bg-slate-900/40">
               {families.map((family) => (
                 <tr key={family.id} className="hover:bg-slate-800/50">
-                  <td className="px-3 py-2 text-slate-200">{family.name}</td>
-                  <td className="px-3 py-2 text-slate-300">
+                  <td className={`px-3 py-2 text-slate-200 ${tdAlign}`}>{family.name}</td>
+                  <td className={`px-3 py-2 text-slate-300 ${tdAlign}`}>
                     {[family.main_member.first_name, family.main_member.last_name ?? ""].join(" ").trim()}
                   </td>
-                  <td className="px-3 py-2 text-slate-300">{family.members.length}</td>
-                  <td className="px-3 py-2 text-slate-300">
+                  <td className={`px-3 py-2 text-slate-300 ${tdAlign}`}>{family.members.length}</td>
+                  <td className={`px-3 py-2 text-slate-300 ${tdAlign}`}>
                     {formatJobDisplayLabel(family.main_member.default_job)}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className={`px-3 py-2 ${tdAlign}`}>
                     <Link className="text-sky-400 hover:text-sky-300" href={`${BASE}/${family.id}/edit`}>
                       {isHebrew ? "עריכה" : "Edit"}
                     </Link>

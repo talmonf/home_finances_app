@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 export type FamilyMemberPosition = "father" | "mother" | "son" | "daughter";
@@ -73,8 +72,9 @@ type Props = {
   linkableClients: LinkableClient[];
   initialRows: InitialFamilyMemberRow[];
   initialMainSlotIndex: number;
-  nameFieldSlot: ReactNode;
-  startDateFieldSlot: ReactNode;
+  clientEditBasePath?: string;
+  clientEditModalTitle?: string;
+  closeLabel?: string;
 };
 
 function clientLabel(c: LinkableClient): string {
@@ -171,8 +171,9 @@ export function FamilyMembersFormSection({
   linkableClients,
   initialRows,
   initialMainSlotIndex,
-  nameFieldSlot,
-  startDateFieldSlot,
+  clientEditBasePath,
+  clientEditModalTitle = "Edit Client",
+  closeLabel = "Close",
 }: Props) {
   const [rows, setRows] = useState<FamilyRow[]>(() => initialRowsToState(initialRows));
   const [mainSlotIndex, setMainSlotIndex] = useState(() =>
@@ -185,6 +186,7 @@ export function FamilyMembersFormSection({
   const [draftPosition, setDraftPosition] = useState<DraftPosition>("");
   const [advancedFilter, setAdvancedFilter] = useState("");
   const [selectedExistingClientId, setSelectedExistingClientId] = useState("");
+  const [openClientId, setOpenClientId] = useState<string | null>(null);
   const modalTitleId = useId();
 
   const editingRow = useMemo(() => (editingKey ? rows.find((r) => r.key === editingKey) : undefined), [editingKey, rows]);
@@ -399,8 +401,8 @@ export function FamilyMembersFormSection({
 
   return (
     <div className="space-y-3 md:col-span-2">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 max-w-sm flex-1 space-y-1">{nameFieldSlot}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="block text-xs font-medium text-slate-300">{labels.sectionTitle}</label>
         <button
           type="button"
           onClick={openAddModal}
@@ -408,11 +410,6 @@ export function FamilyMembersFormSection({
         >
           {labels.addMember}
         </button>
-      </div>
-      {startDateFieldSlot}
-
-      <div>
-        <label className="block text-xs font-medium text-slate-300">{labels.sectionTitle}</label>
       </div>
 
       <input type="hidden" name="family_members_json" value={jsonPayload} readOnly />
@@ -430,12 +427,26 @@ export function FamilyMembersFormSection({
           </div>
           <ul className="divide-y divide-slate-800">
           {rows.map((r, i) => (
-            <li key={r.key} className="flex flex-wrap items-center gap-2 px-2 py-2 text-sm sm:gap-3 sm:px-3">
-              <span className="min-w-0 flex-1 text-slate-200">{rowLabel(r)}</span>
-              <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+            <li
+              key={r.key}
+              className="grid grid-cols-[minmax(12rem,1fr)_8rem_7rem_8rem] items-center gap-2 px-2 py-2 text-sm sm:px-3"
+            >
+              {r.kind === "existing" && clientEditBasePath ? (
+                <button
+                  type="button"
+                  onClick={() => setOpenClientId(r.clientId)}
+                  className="truncate text-left text-sky-300 hover:text-sky-200 hover:underline"
+                  title={rowLabel(r)}
+                >
+                  {rowLabel(r)}
+                </button>
+              ) : (
+                <span className="truncate text-slate-200">{rowLabel(r)}</span>
+              )}
+              <span className="w-fit rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
                 {positionLabel(labels, r.kind === "existing" ? r.member_position : r.position)}
               </span>
-              <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+              <label className="flex cursor-pointer items-center text-xs text-slate-400">
                 <input
                   type="radio"
                   name="main_family_slot"
@@ -445,7 +456,7 @@ export function FamilyMembersFormSection({
                   aria-label={labels.mainContact}
                 />
               </label>
-              <div className="ml-auto flex shrink-0 items-center gap-1">
+              <div className="flex items-center justify-end gap-1">
                 <button
                   type="button"
                   onClick={() => openEditModal(r.key)}
@@ -583,6 +594,37 @@ export function FamilyMembersFormSection({
                 {modalSaveLabel}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {openClientId && clientEditBasePath ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6"
+          onClick={() => setOpenClientId(null)}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="h-[85vh] w-full max-w-6xl overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">
+              <h3 className="text-sm font-semibold text-slate-100">{clientEditModalTitle}</h3>
+              <button
+                type="button"
+                onClick={() => setOpenClientId(null)}
+                className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+              >
+                {closeLabel}
+              </button>
+            </div>
+            <iframe
+              title={clientEditModalTitle}
+              src={`${clientEditBasePath}/${encodeURIComponent(openClientId)}/edit`}
+              className="h-[calc(85vh-46px)] w-full bg-slate-950"
+            />
           </div>
         </div>
       ) : null}

@@ -127,64 +127,25 @@ export default async function EditFamilyPage({ params }: Props) {
         <DeleteFamilyForm
           action={deleteTherapyFamily}
           familyId={family.id}
-          confirmDeleteFamily={t("Delete family? This cannot be undone.", "למחוק את המשפחה? לא ניתן לבטל פעולה זו.")}
-          confirmDeleteClients={t(
-            "Also delete all family members as clients? Click Cancel to keep them as clients and only remove the family.",
-            "האם למחוק גם את כל חברי המשפחה כלקוחות? לחצו ביטול כדי להשאיר אותם כלקוחות ולמחוק רק את המשפחה.",
-          )}
+          confirmTitle={t("Delete family: choose what to delete.", "מחיקת משפחה: בחרו מה למחוק.")}
+          confirmDeleteFamilyOnly={t("Delete family only", "מחיקת משפחה בלבד")}
+          confirmDeleteFamilyAndClients={t("Delete family + clients", "מחיקת משפחה + לקוחות")}
+          cancelLabel={t("Cancel", "ביטול")}
           buttonLabel={t("Delete Family", "מחיקת משפחה")}
         />
       </div>
       <form action={updateTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">
         <input type="hidden" name="id" value={family.id} />
         <input type="hidden" name="redirect_on_error" value={`${LIST}/${family.id}/edit`} />
-        <FamilyMembersFormSection
-          labels={memberLabels}
-          linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
-          initialRows={initialRows}
-          initialMainSlotIndex={mainSlotIndex}
-          nameFieldSlot={
-            <>
-              <label className="block text-xs text-slate-400">{t("Family name", "שם משפחה")}</label>
-              <input
-                name="name"
-                required
-                defaultValue={family.name}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
-              />
-            </>
-          }
-          startDateFieldSlot={
-            <div className="space-y-1">
-              <div className="flex flex-wrap gap-4">
-                <div className="min-w-0 max-w-xs flex-1 space-y-1">
-                  <label className="block text-xs text-slate-400">{t("Start date", "תאריך התחלה")}</label>
-                  <input
-                    type="date"
-                    name="start_date"
-                    defaultValue={toDateInputValue(family.start_date ?? null)}
-                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
-                  />
-                </div>
-                <div className="min-w-0 max-w-xs flex-1 space-y-1">
-                  <label className="block text-xs text-slate-400">{t("End date", "תאריך סיום")}</label>
-                  <input
-                    type="date"
-                    name="end_date"
-                    defaultValue={toDateInputValue(family.end_date ?? null)}
-                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">
-                {t(
-                  "Start date (if set) is also saved on each member’s client. End date is on the family only. End must be on or after start.",
-                  "תאריך התחלה (אם מוגדר) נשמר גם בכרטיס הלקוח של כל חבר. תאריך הסיום נשמר רק על המשפחה. תאריך הסיום חייב להיות לא מוקדם מתאריך ההתחלה.",
-                )}
-              </p>
-            </div>
-          }
-        />
+        <div className="space-y-1 md:col-span-2">
+          <label className="block text-xs text-slate-400">{t("Name", "שם")}</label>
+          <input
+            name="name"
+            required
+            defaultValue={family.name}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+          />
+        </div>
         <div className="space-y-1 md:col-span-2">
           <label className="block text-xs text-slate-400">{t("Job", "משרה")}</label>
           <select
@@ -201,6 +162,39 @@ export default async function EditFamilyPage({ params }: Props) {
             ))}
           </select>
         </div>
+        <div className="space-y-1">
+          <label className="block text-xs text-slate-400">{t("Start date", "תאריך התחלה")}</label>
+          <input
+            type="date"
+            name="start_date"
+            defaultValue={toDateInputValue(family.start_date ?? null)}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs text-slate-400">{t("End date", "תאריך סיום")}</label>
+          <input
+            type="date"
+            name="end_date"
+            defaultValue={toDateInputValue(family.end_date ?? null)}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+          />
+        </div>
+        <div className="text-xs text-slate-500 md:col-span-2">
+          {t(
+            "Start date (if set) is also saved on each member’s client. End date is on the family only. End must be on or after start.",
+            "תאריך התחלה (אם מוגדר) נשמר גם בכרטיס הלקוח של כל חבר. תאריך הסיום נשמר רק על המשפחה. תאריך הסיום חייב להיות לא מוקדם מתאריך ההתחלה.",
+          )}
+        </div>
+        <FamilyMembersFormSection
+          labels={memberLabels}
+          linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
+          initialRows={initialRows}
+          initialMainSlotIndex={mainSlotIndex}
+          clientEditBasePath="/dashboard/private-clinic/clients"
+          clientEditModalTitle={t("Edit Client", "עריכת לקוח")}
+          closeLabel={t("Close", "סגירה")}
+        />
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Billing basis", "בסיס חיוב")}</label>
           <select name="billing_basis" defaultValue={family.billing_basis ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
