@@ -55,6 +55,7 @@ export type FamilyMembersFormLabels = {
   positionUnset: string;
   editMember: string;
   removeMember: string;
+  removeMemberConfirm: string;
 };
 
 type Props = {
@@ -155,15 +156,20 @@ export function FamilyMembersFormSection({
 
   const existingIdsSelected = useMemo(
     () =>
-      rows
-        .filter((r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing")
-        .map((r) => r.clientId),
+      new Set(
+        rows
+          .filter((r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing")
+          .map((r) => r.clientId),
+      ),
     [rows],
   );
 
   const linkableOptions = useMemo(
-    () => [...linkableClients].sort((a, b) => clientLabel(a).localeCompare(clientLabel(b), undefined, { sensitivity: "base" })),
-    [linkableClients],
+    () =>
+      [...linkableClients]
+        .filter((c) => !existingIdsSelected.has(c.id))
+        .sort((a, b) => clientLabel(a).localeCompare(clientLabel(b), undefined, { sensitivity: "base" })),
+    [linkableClients, existingIdsSelected],
   );
 
   const jsonPayload = useMemo(() => JSON.stringify(serializeRows(rows)), [rows]);
@@ -173,25 +179,29 @@ export function FamilyMembersFormSection({
   const onAdvancedChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+      if (selected.length === 0) return;
       setRows((prev) => {
-        const news = prev.filter((r): r is Extract<FamilyRow, { kind: "new" }> => r.kind === "new");
-        const prevExistings = new Map(
-          prev.filter((r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing").map((r) => [r.clientId, r]),
+        const existingSet = new Set(
+          prev
+            .filter((r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing")
+            .map((r) => r.clientId),
         );
-        const rebuiltExistings: FamilyRow[] = selected.map((id) => {
-          const old = prevExistings.get(id);
-          if (old) return old;
+        const toAdd: FamilyRow[] = [];
+        for (const id of selected) {
+          if (existingSet.has(id)) continue;
           const c = linkableClients.find((x) => x.id === id);
-          return {
+          toAdd.push({
             key: newKey(),
-            kind: "existing" as const,
+            kind: "existing",
             clientId: id,
             label: c ? clientLabel(c) : id,
             member_position: null,
-          };
-        });
-        return [...rebuiltExistings, ...news];
+          });
+        }
+        if (toAdd.length === 0) return prev;
+        return [...prev, ...toAdd];
       });
+      for (const option of e.currentTarget.options) option.selected = false;
     },
     [linkableClients],
   );
@@ -258,6 +268,7 @@ export function FamilyMembersFormSection({
   }, [editingKey, rows, draftFirst, draftPosition, closeModal]);
 
   const removeRow = useCallback((key: string) => {
+    if (!window.confirm(labels.removeMemberConfirm)) return;
     setRows((prev) => {
       const idx = prev.findIndex((r) => r.key === key);
       if (idx === -1) return prev;
@@ -270,7 +281,7 @@ export function FamilyMembersFormSection({
       });
       return next;
     });
-  }, []);
+  }, [labels.removeMemberConfirm]);
 
   const rowLabel = useCallback(
     (r: FamilyRow) => {
@@ -354,7 +365,6 @@ export function FamilyMembersFormSection({
         <select
           multiple
           className="mt-1 max-h-24 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300"
-          value={existingIdsSelected}
           onChange={onAdvancedChange}
         >
           {linkableOptions.map((c) => (

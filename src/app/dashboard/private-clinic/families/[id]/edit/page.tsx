@@ -96,6 +96,7 @@ export default async function EditFamilyPage({ params }: Props) {
     positionUnset: t("—", "—"),
     editMember: t("Edit", "עריכה"),
     removeMember: t("Remove", "הסרה"),
+    removeMemberConfirm: t("Remove this family member from the family?", "להסיר את חבר/ת המשפחה מהרשימה?"),
   };
 
   return (
