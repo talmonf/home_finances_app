@@ -442,6 +442,8 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
     overdue: p("Overdue", "באיחור"),
     dueToday: p("Today", "היום"),
     logTreatment: p("Log treatment", "רישום טיפול"),
+    scheduleAppointment: p("Schedule appointment", "תזמון תור"),
+    scheduledOn: (dateText: string) => p(`Scheduled on ${dateText}`, `תור מתוזמן ל־${dateText}`),
     editClient: c.edit,
     sectionNeedsFirstVisit: p("No logged visits yet", "עדיין אין טיפולים רשומים"),
     sectionNeedsFirstVisitHint: p(
@@ -858,6 +860,11 @@ export function privateClinicAppointments(lang: UiLanguage) {
       "למחוק את הסדרה החוזרת ואת כל התורים הקשורים אליה? לא ניתן לבטל.",
     ),
     visitTypeCol: p("Visit type", "סוג ביקור"),
+    dayOfWeek: p("Day of week", "יום בשבוע"),
+    startDateTime: p("Start date & time", "תאריך ושעת התחלה"),
+    timeOfDay: p("Time of day", "שעת התחלה"),
+    seriesStartDate: p("Series start date", "תאריך התחלת סדרה"),
+    seriesEndDateOptional: p("Series end date (optional)", "תאריך סיום סדרה (אופציונלי)"),
     endOptional: p("End (optional)", "סיום (אופציונלי)"),
   };
 }

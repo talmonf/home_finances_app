@@ -20,10 +20,21 @@ export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/appointments";
 
-export default async function NewAppointmentPage() {
+export default async function NewAppointmentPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    client?: string;
+    job?: string;
+    program?: string;
+    visitType?: string;
+    startAt?: string;
+  }>;
+}) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const sp = searchParams ? await searchParams : {};
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -79,6 +90,9 @@ export default async function NewAppointmentPage() {
   const clientOpts = clients.map((cl) => ({
     id: cl.id,
     label: `${cl.first_name} ${cl.last_name ?? ""}`.trim(),
+    defaultJobId: cl.default_job_id ?? null,
+    defaultProgramId: cl.default_program_id ?? null,
+    defaultVisitType: cl.default_visit_type ?? null,
   }));
 
   return (
@@ -93,18 +107,35 @@ export default async function NewAppointmentPage() {
       <AppointmentAddForm
         copy={{
           recurringToggle: ap.recurringToggle,
+          clientLabel: c.client,
+          jobLabel: c.job,
+          jobSelect: c.select,
           programOptional: ap.programOptional,
+          visitTypeLabel: ap.visitTypeCol,
+          recurrenceLabel: ap.recurringRules,
+          dayOfWeekLabel: ap.dayOfWeek,
+          startDateTimeLabel: ap.startDateTime,
+          endDateTimeOptionalLabel: ap.endOptional,
+          timeOfDayLabel: ap.timeOfDay,
+          seriesStartDateLabel: ap.seriesStartDate,
+          seriesEndDateOptionalLabel: ap.seriesEndDateOptional,
           schedule: ap.schedule,
           createSeriesGenerate: ap.createSeriesGenerate,
           weekly: ap.weekly,
           biweekly: ap.biweekly,
         }}
-        clientLabel={c.client}
         visitOptions={visitOptions}
         jobs={jobOpts}
         programs={programOpts}
         clients={clientOpts}
         dow={dow}
+        prefill={{
+          clientId: sp.client,
+          jobId: sp.job,
+          programId: sp.program,
+          visitType: sp.visitType,
+          startAt: sp.startAt,
+        }}
         redirectOnSuccess={`${LIST}?created=1`}
       />
     </div>

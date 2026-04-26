@@ -72,7 +72,30 @@ export default async function UpcomingVisitsPage({
     },
   });
 
+  const today = startOfTodayLocal();
   const clientIds = clients.map((x) => x.id);
+  const clientById = new Map(clients.map((row) => [row.id, row]));
+  const scheduledAppointments =
+    clientIds.length > 0
+      ? await prisma.therapy_appointments.findMany({
+          where: {
+            household_id: householdId,
+            client_id: { in: clientIds },
+            status: "scheduled",
+            start_at: { gte: today },
+          },
+          orderBy: [{ start_at: "asc" }],
+          select: { client_id: true, start_at: true },
+        })
+      : [];
+
+  const nextAppointmentByClientId = new Map<string, Date>();
+  for (const appointment of scheduledAppointments) {
+    if (!nextAppointmentByClientId.has(appointment.client_id)) {
+      nextAppointmentByClientId.set(appointment.client_id, appointment.start_at);
+    }
+  }
+
   const lastTreatmentRows =
     clientIds.length > 0
       ? await prisma.therapy_treatments.groupBy({
@@ -89,8 +112,6 @@ export default async function UpcomingVisitsPage({
     lastTreatmentRows.map((row) => [row.client_id, row._max.occurred_at]),
   );
 
-  const today = startOfTodayLocal();
-
   type ScheduledRow = {
     clientId: string;
     name: string;
@@ -100,6 +121,7 @@ export default async function UpcomingVisitsPage({
     nextDue: Date;
     isOverdue: boolean;
     isDueToday: boolean;
+    nextAppointmentAt: Date | null;
   };
 
   const scheduled: ScheduledRow[] = [];
@@ -131,12 +153,19 @@ export default async function UpcomingVisitsPage({
       nextDue,
       isOverdue,
       isDueToday,
+      nextAppointmentAt: nextAppointmentByClientId.get(row.id) ?? null,
     });
   }
 
   scheduled.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
 
   const treatmentsBase = "/dashboard/private-clinic/treatments";
+  const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
+
+  const toDateTimeLocalInput = (date: Date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  };
 
   return (
     <div className="space-y-8">
@@ -271,6 +300,18 @@ export default async function UpcomingVisitsPage({
                           >
                             {uv.logTreatment}
                           </Link>
+                          {" · "}
+                          <Link
+                            href={`${appointmentNewBase}?client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(r.nextDue))}`}
+                            className="font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {uv.scheduleAppointment}
+                          </Link>
+                          {r.nextAppointmentAt ? (
+                            <div className="mt-1 text-xs text-slate-400">
+                              {uv.scheduledOn(formatHouseholdDate(r.nextAppointmentAt, dateDisplayFormat))}
+                            </div>
+                          ) : null}
                         </td>
                       </tr>
                     ))}
@@ -297,6 +338,13 @@ export default async function UpcomingVisitsPage({
                         className="text-sky-400 hover:text-sky-300"
                       >
                         {uv.logTreatment}
+                      </Link>
+                      {" · "}
+                      <Link
+                        href={`${appointmentNewBase}?client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(today))}`}
+                        className="text-sky-400 hover:text-sky-300"
+                      >
+                        {uv.scheduleAppointment}
                       </Link>
                       {" · "}
                       <Link

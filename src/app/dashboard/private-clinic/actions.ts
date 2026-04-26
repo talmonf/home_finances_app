@@ -2626,18 +2626,12 @@ export async function createTherapyAppointment(formData: FormData) {
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const program_id = (formData.get("program_id") as string)?.trim() || "";
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
-  const additionalClientIds = parseUniqueIds(formData.getAll("additional_client_ids"));
   const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
   if (!client_id || !job_id || !visit_type || !start_at_raw) {
     redirect(`${BASE}/appointments?error=missing`);
   }
   if (!(await assertClientForCurrentUserScope(householdId, userFm, client_id))) {
     redirect(`${BASE}/appointments?error=client`);
-  }
-  for (const participantId of additionalClientIds) {
-    if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
-      redirect(`${BASE}/appointments?error=client`);
-    }
   }
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/appointments?error=job`);
 
@@ -2674,7 +2668,7 @@ export async function createTherapyAppointment(formData: FormData) {
     householdId,
     appointmentId: created.id,
     primaryClientId: client_id,
-    participantIdsRaw: additionalClientIds,
+    participantIdsRaw: [],
   });
   const createdWithParticipants = await prisma.therapy_appointments.findFirst({
     where: { id: created.id, household_id: householdId },
