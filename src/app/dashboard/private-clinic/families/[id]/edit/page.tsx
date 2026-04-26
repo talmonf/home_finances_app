@@ -129,7 +129,7 @@ export default async function EditFamilyPage({ params }: Props) {
           familyId={family.id}
           confirmTitle={t("Delete family: choose what to delete.", "מחיקת משפחה: בחרו מה למחוק.")}
           confirmDeleteFamilyOnly={t("Delete family only", "מחיקת משפחה בלבד")}
-          confirmDeleteFamilyAndClients={t("Delete family + clients", "מחיקת משפחה + לקוחות")}
+          confirmDeleteFamilyAndClients={t("Delete family and members", "מחיקת משפחה וחברים")}
           cancelLabel={t("Cancel", "ביטול")}
           buttonLabel={t("Delete Family", "מחיקת משפחה")}
         />
@@ -137,8 +137,8 @@ export default async function EditFamilyPage({ params }: Props) {
       <form action={updateTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">
         <input type="hidden" name="id" value={family.id} />
         <input type="hidden" name="redirect_on_error" value={`${LIST}/${family.id}/edit`} />
-        <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">{t("Name", "שם")}</label>
+        <div className="space-y-1">
+          <label className="block text-xs text-slate-400">{t("Family Name", "שם משפחה")}</label>
           <input
             name="name"
             required
@@ -146,7 +146,7 @@ export default async function EditFamilyPage({ params }: Props) {
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
           />
         </div>
-        <div className="space-y-1 md:col-span-2">
+        <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Job", "משרה")}</label>
           <select
             name="default_job_id"
@@ -191,6 +191,7 @@ export default async function EditFamilyPage({ params }: Props) {
           linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
           initialRows={initialRows}
           initialMainSlotIndex={mainSlotIndex}
+          isRtl={isHebrew}
           clientEditBasePath="/dashboard/private-clinic/clients"
           clientEditModalTitle={t("Edit Client", "עריכת לקוח")}
           closeLabel={t("Close", "סגירה")}

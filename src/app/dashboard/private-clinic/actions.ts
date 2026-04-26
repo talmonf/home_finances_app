@@ -1385,6 +1385,7 @@ async function resolveOrderedFamilyMemberRows(
   slots: FamilySlotInput[],
   newClientStartDate: Date | null,
   requestedDefaultJobIdRaw: string | null,
+  familyName: string,
 ): Promise<{ clientId: string; member_position: TherapyFamilyMemberPosition | null }[]> {
   const newSlots = slots.filter((s): s is Extract<FamilySlotInput, { kind: "new" }> => s.kind === "new");
   let defaultJobId: string | null = null;
@@ -1422,7 +1423,7 @@ async function resolveOrderedFamilyMemberRows(
             id,
             household_id: householdId,
             first_name: slot.firstName,
-            last_name: slot.lastName,
+            last_name: familyName,
             default_job_id: defaultJobId,
             visits_per_period_count: 1,
             visits_per_period_weeks: 1,
@@ -1498,6 +1499,7 @@ export async function createTherapyFamily(formData: FormData) {
     slots,
     familyStartDate,
     familyDefaultJobId,
+    name,
   );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {
@@ -1587,6 +1589,7 @@ export async function updateTherapyFamily(formData: FormData) {
     slots,
     familyStartDate,
     familyDefaultJobId,
+    (formData.get("name") as string | null)?.trim() || "",
   );
   const mainSlotRaw = Number((formData.get("main_member_slot_index") as string | null) ?? "");
   if (!Number.isInteger(mainSlotRaw) || mainSlotRaw < 0 || mainSlotRaw >= memberRows.length) {

@@ -72,6 +72,7 @@ type Props = {
   linkableClients: LinkableClient[];
   initialRows: InitialFamilyMemberRow[];
   initialMainSlotIndex: number;
+  isRtl?: boolean;
   clientEditBasePath?: string;
   clientEditModalTitle?: string;
   closeLabel?: string;
@@ -171,6 +172,7 @@ export function FamilyMembersFormSection({
   linkableClients,
   initialRows,
   initialMainSlotIndex,
+  isRtl = false,
   clientEditBasePath,
   clientEditModalTitle = "Edit Client",
   closeLabel = "Close",
@@ -420,7 +422,7 @@ export function FamilyMembersFormSection({
       ) : (
         <div className="rounded-lg border border-slate-700 bg-slate-950/40">
           <div className="grid grid-cols-[minmax(12rem,1fr)_8rem_7rem_8rem] items-center gap-2 border-b border-slate-800 px-2 py-2 text-[11px] uppercase tracking-wide text-slate-500 sm:px-3">
-            <span>{labels.nameColumn}</span>
+            <span className={isRtl ? "text-right" : "text-left"}>{labels.nameColumn}</span>
             <span>{labels.positionColumn}</span>
             <span>{labels.mainContact}</span>
             <span className="text-right">{labels.actionsColumn}</span>
@@ -435,13 +437,13 @@ export function FamilyMembersFormSection({
                 <button
                   type="button"
                   onClick={() => setOpenClientId(r.clientId)}
-                  className="truncate text-left text-sky-300 hover:text-sky-200 hover:underline"
+                  className={`truncate text-sky-300 hover:text-sky-200 hover:underline ${isRtl ? "text-right" : "text-left"}`}
                   title={rowLabel(r)}
                 >
                   {rowLabel(r)}
                 </button>
               ) : (
-                <span className="truncate text-slate-200">{rowLabel(r)}</span>
+                <span className={`truncate text-slate-200 ${isRtl ? "text-right" : "text-left"}`}>{rowLabel(r)}</span>
               )}
               <span className="w-fit rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
                 {positionLabel(labels, r.kind === "existing" ? r.member_position : r.position)}

@@ -58,13 +58,6 @@ export function DeleteFamilyForm({
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setConfirmOpen(false)}
-                className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-              >
-                {cancelLabel}
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   setConfirmOpen(false);
                   submitDelete(false);
@@ -82,6 +75,13 @@ export function DeleteFamilyForm({
                 className="rounded-lg border border-rose-700 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40"
               >
                 {confirmDeleteFamilyAndClients}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+              >
+                {cancelLabel}
               </button>
             </div>
           </div>
