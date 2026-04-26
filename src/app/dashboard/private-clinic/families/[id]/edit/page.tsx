@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { deleteTherapyFamily, updateTherapyFamily } from "../../../actions";
-import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { FamilyMembersFormSection, type FamilyMembersFormLabels, type InitialFamilyMemberRow } from "../../family-members-form-section";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
+import { DeleteFamilyForm } from "../../delete-family-form";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +72,8 @@ export default async function EditFamilyPage({ params }: Props) {
   const initialRows: InitialFamilyMemberRow[] = family.members.map((m) => ({
     kind: "existing" as const,
     clientId: m.client_id,
-    label: [m.client.first_name, m.client.last_name ?? ""].join(" ").trim(),
+    firstName: m.client.first_name,
+    lastName: m.client.last_name ?? null,
     member_position: m.member_position ?? null,
   }));
 
@@ -91,8 +92,11 @@ export default async function EditFamilyPage({ params }: Props) {
     modalTitleAdd: t("Add family member", "הוספת חבר/ת משפחה"),
     modalTitleEdit: t("Edit family member", "עריכת חבר/ת משפחה"),
     firstName: t("First name", "שם פרטי"),
+    lastName: t("Last name", "שם משפחה"),
     familyPosition: t("Family position", "תפקיד במשפחה"),
     positionPlaceholder: t("Select…", "בחרי…"),
+    filterByName: t("Filter by first or last name", "סינון לפי שם פרטי או משפחה"),
+    selectClient: t("Select client", "בחירת לקוח"),
     father: t("Father", "אב"),
     mother: t("Mother", "אם"),
     son: t("Son", "בן"),
@@ -116,12 +120,16 @@ export default async function EditFamilyPage({ params }: Props) {
           </Link>
           <h2 className="mt-2 text-lg font-medium text-slate-200">{t("Edit Family", "עריכת משפחה")}</h2>
         </div>
-        <ConfirmDeleteForm action={deleteTherapyFamily} message={t("Delete family? This cannot be undone.", "למחוק את המשפחה? לא ניתן לבטל פעולה זו.")} className="inline">
-          <input type="hidden" name="id" value={family.id} />
-          <button type="submit" className="rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50">
-            {t("Delete Family", "מחיקת משפחה")}
-          </button>
-        </ConfirmDeleteForm>
+        <DeleteFamilyForm
+          action={deleteTherapyFamily}
+          familyId={family.id}
+          confirmDeleteFamily={t("Delete family? This cannot be undone.", "למחוק את המשפחה? לא ניתן לבטל פעולה זו.")}
+          confirmDeleteClients={t(
+            "Also delete all family members as clients? Click Cancel to keep them as clients and only remove the family.",
+            "האם למחוק גם את כל חברי המשפחה כלקוחות? לחצו ביטול כדי להשאיר אותם כלקוחות ולמחוק רק את המשפחה.",
+          )}
+          buttonLabel={t("Delete Family", "מחיקת משפחה")}
+        />
       </div>
       <form action={updateTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">
         <input type="hidden" name="id" value={family.id} />
@@ -174,13 +182,14 @@ export default async function EditFamilyPage({ params }: Props) {
           }
         />
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">{t("Job (for new members)", "משרה (לחברים חדשים)")}</label>
+          <label className="block text-xs text-slate-400">{t("Job", "משרה")}</label>
           <select
             name="default_job_id"
             defaultValue={family.default_job_id ?? ""}
+            required
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{t("Auto: latest private-clinic job", "אוטומטי: המשרה הפרטית האחרונה")}</option>
+            <option value="">{t("Select job", "בחירת משרה")}</option>
             {jobs.map((job) => (
               <option key={job.id} value={job.id}>
                 {formatJobDisplayLabel(job)}

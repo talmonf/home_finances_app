@@ -59,8 +59,11 @@ export default async function NewFamilyPage() {
     modalTitleAdd: t("Add family member", "הוספת חבר/ת משפחה"),
     modalTitleEdit: t("Edit family member", "עריכת חבר/ת משפחה"),
     firstName: t("First name", "שם פרטי"),
+    lastName: t("Last name", "שם משפחה"),
     familyPosition: t("Family position", "תפקיד במשפחה"),
     positionPlaceholder: t("Select…", "בחרי…"),
+    filterByName: t("Filter by first or last name", "סינון לפי שם פרטי או משפחה"),
+    selectClient: t("Select client", "בחירת לקוח"),
     father: t("Father", "אב"),
     mother: t("Mother", "אם"),
     son: t("Son", "בן"),
@@ -87,7 +90,7 @@ export default async function NewFamilyPage() {
         <input type="hidden" name="redirect_on_error" value={`${LIST}/new`} />
         <FamilyMembersFormSection
           labels={memberLabels}
-          linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
+    linkableClients={clients.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }))}
           initialRows={[]}
           initialMainSlotIndex={0}
           nameFieldSlot={
@@ -130,13 +133,14 @@ export default async function NewFamilyPage() {
           }
         />
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-xs text-slate-400">{t("Job (for new members)", "משרה (לחברים חדשים)")}</label>
+          <label className="block text-xs text-slate-400">{t("Job", "משרה")}</label>
           <select
             name="default_job_id"
             defaultValue=""
+            required
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{t("Auto: latest private-clinic job", "אוטומטי: המשרה הפרטית האחרונה")}</option>
+            <option value="">{t("Select job", "בחירת משרה")}</option>
             {jobs.map((job) => (
               <option key={job.id} value={job.id}>
                 {formatJobDisplayLabel(job)}

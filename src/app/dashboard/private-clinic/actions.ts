@@ -1330,8 +1330,14 @@ function parseFamilyMemberPositionField(raw: unknown): TherapyFamilyMemberPositi
 }
 
 type FamilySlotInput =
-  | { kind: "existing"; clientId: string; position: TherapyFamilyMemberPosition | null }
-  | { kind: "new"; firstName: string; position: TherapyFamilyMemberPosition };
+  | {
+      kind: "existing";
+      clientId: string;
+      firstName: string;
+      lastName: string | null;
+      position: TherapyFamilyMemberPosition | null;
+    }
+  | { kind: "new"; firstName: string; lastName: string | null; position: TherapyFamilyMemberPosition };
 
 function parseFamilySlotsFromForm(formData: FormData, fallbackPath: string): FamilySlotInput[] {
   const raw = (formData.get("family_members_json") as string | null)?.trim() ?? "";
@@ -1353,13 +1359,17 @@ function parseFamilySlotsFromForm(formData: FormData, fallbackPath: string): Fam
     if (kind === "existing") {
       const clientId = String(rec.clientId ?? "").trim();
       if (!clientId) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+      const firstName = String(rec.firstName ?? "").trim();
+      if (!firstName) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
+      const lastNameRaw = String(rec.lastName ?? "").trim();
       const position = parseFamilyMemberPositionField(rec.position);
-      out.push({ kind: "existing", clientId, position });
+      out.push({ kind: "existing", clientId, firstName, lastName: lastNameRaw || null, position });
     } else if (kind === "new") {
       const firstName = String(rec.firstName ?? "").trim();
+      const lastNameRaw = String(rec.lastName ?? "").trim();
       const position = parseFamilyMemberPositionField(rec.position);
       if (!firstName || !position) redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
-      out.push({ kind: "new", firstName, position });
+      out.push({ kind: "new", firstName, lastName: lastNameRaw || null, position });
     } else {
       redirectPrivateClinicScoped(formData, "error", fallbackPath, "members-json");
     }
@@ -1412,6 +1422,7 @@ async function resolveOrderedFamilyMemberRows(
             id,
             household_id: householdId,
             first_name: slot.firstName,
+            last_name: slot.lastName,
             default_job_id: defaultJobId,
             visits_per_period_count: 1,
             visits_per_period_weeks: 1,
@@ -1440,6 +1451,13 @@ async function resolveOrderedFamilyMemberRows(
       if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, slot.clientId))) {
         redirectPrivateClinicScoped(formData, "error", fallbackPath, "client");
       }
+      await prisma.therapy_clients.update({
+        where: { id: slot.clientId },
+        data: {
+          first_name: slot.firstName,
+          last_name: slot.lastName,
+        },
+      });
       resolved.push({ clientId: slot.clientId, member_position: slot.position });
     } else {
       const clientId = createdNewIds[newIdx++];
@@ -1461,10 +1479,13 @@ export async function createTherapyFamily(formData: FormData) {
   const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
   const familyDefaultJobIdRaw = (formData.get("default_job_id") as string | null) ?? null;
   const familyDefaultJobId = familyDefaultJobIdRaw?.trim() || null;
+  if (!familyDefaultJobId) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
   if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
   }
-  if (familyDefaultJobId && !(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
 
@@ -1517,6 +1538,7 @@ export async function createTherapyFamily(formData: FormData) {
         where: { id: row.clientId },
         data: {
           family_id: familyId,
+          default_job_id: familyDefaultJobId,
           ...(familyStartDate ? { start_date: familyStartDate } : {}),
         },
       });
@@ -1546,10 +1568,13 @@ export async function updateTherapyFamily(formData: FormData) {
   const familyEndDate = parseDate((formData.get("end_date") as string | null) ?? null);
   const familyDefaultJobIdRaw = (formData.get("default_job_id") as string | null) ?? null;
   const familyDefaultJobId = familyDefaultJobIdRaw?.trim() || null;
+  if (!familyDefaultJobId) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
+  }
   if (familyEndDate && familyStartDate && familyEndDate < familyStartDate) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "date-range");
   }
-  if (familyDefaultJobId && !(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, familyDefaultJobId))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
 
@@ -1605,6 +1630,7 @@ export async function updateTherapyFamily(formData: FormData) {
         where: { id: row.clientId },
         data: {
           family_id: id,
+          default_job_id: familyDefaultJobId,
           ...(familyStartDate ? { start_date: familyStartDate } : {}),
         },
       });
@@ -1622,6 +1648,7 @@ export async function deleteTherapyFamily(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   await assertFamilyTherapyEnabled(householdId);
   const id = (formData.get("id") as string | null)?.trim() || "";
+  const deleteMembersAsClients = (formData.get("delete_members_as_clients") as string | null)?.trim() === "1";
   if (!id) redirect(`${BASE}/families?error=missing`);
   const row = await prisma.therapy_families.findFirst({
     where: { id, household_id: householdId },
@@ -1630,12 +1657,24 @@ export async function deleteTherapyFamily(formData: FormData) {
   if (!row) redirect(`${BASE}/families?error=notfound`);
 
   await prisma.$transaction(async (tx) => {
+    const memberIds = (
+      await tx.therapy_family_members.findMany({
+        where: { household_id: householdId, family_id: id },
+        select: { client_id: true },
+      })
+    ).map((m) => m.client_id);
+
     await tx.therapy_clients.updateMany({
       where: { household_id: householdId, family_id: id },
       data: { family_id: null },
     });
     await tx.therapy_family_members.deleteMany({ where: { household_id: householdId, family_id: id } });
     await tx.therapy_families.delete({ where: { id } });
+    if (deleteMembersAsClients && memberIds.length > 0) {
+      await tx.therapy_clients.deleteMany({
+        where: { household_id: householdId, id: { in: memberIds } },
+      });
+    }
   });
 
   revalidatePath(`${BASE}/families`);

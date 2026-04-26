@@ -11,23 +11,26 @@ export type InitialFamilyMemberRow =
   | {
       kind: "existing";
       clientId: string;
-      label: string;
+      firstName: string;
+      lastName: string | null;
       member_position: FamilyMemberPosition | null;
     }
-  | { kind: "new"; firstName: string; position: FamilyMemberPosition };
+  | { kind: "new"; firstName: string; lastName: string | null; position: FamilyMemberPosition };
 
 type FamilyRow =
   | {
       key: string;
       kind: "existing";
       clientId: string;
-      label: string;
+      firstName: string;
+      lastName: string | null;
       member_position: FamilyMemberPosition | null;
     }
   | {
       key: string;
       kind: "new";
       firstName: string;
+      lastName: string | null;
       position: FamilyMemberPosition;
     };
 
@@ -42,8 +45,11 @@ export type FamilyMembersFormLabels = {
   modalTitleAdd: string;
   modalTitleEdit: string;
   firstName: string;
+  lastName: string;
   familyPosition: string;
   positionPlaceholder: string;
+  filterByName: string;
+  selectClient: string;
   father: string;
   mother: string;
   son: string;
@@ -82,13 +88,15 @@ function initialRowsToState(initial: InitialFamilyMemberRow[]): FamilyRow[] {
           key: newKey(),
           kind: "existing",
           clientId: r.clientId,
-          label: r.label,
+          firstName: r.firstName,
+          lastName: r.lastName,
           member_position: r.member_position,
         }
       : {
           key: newKey(),
           kind: "new",
           firstName: r.firstName,
+          lastName: r.lastName,
           position: r.position,
         },
   );
@@ -116,11 +124,14 @@ function serializeRows(rows: FamilyRow[]) {
       ? {
           kind: "existing" as const,
           clientId: r.clientId,
+          firstName: r.firstName.trim(),
+          lastName: r.lastName?.trim() || null,
           position: r.member_position,
         }
       : {
           kind: "new" as const,
           firstName: r.firstName.trim(),
+          lastName: r.lastName?.trim() || null,
           position: r.position,
         },
   );
@@ -147,12 +158,18 @@ export function FamilyMembersFormSection({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draftFirst, setDraftFirst] = useState("");
+  const [draftLast, setDraftLast] = useState("");
   const [draftPosition, setDraftPosition] = useState<DraftPosition>("");
+  const [advancedFilter, setAdvancedFilter] = useState("");
+  const [selectedExistingClientId, setSelectedExistingClientId] = useState("");
   const modalTitleId = useId();
 
   const editingRow = useMemo(() => (editingKey ? rows.find((r) => r.key === editingKey) : undefined), [editingKey, rows]);
   const editingIsExisting = editingRow?.kind === "existing";
-  const existingEditLabel = editingRow?.kind === "existing" ? editingRow.label : "";
+  const existingEditLabel =
+    editingRow?.kind === "existing"
+      ? [editingRow.firstName, editingRow.lastName ?? ""].join(" ").trim()
+      : "";
 
   const existingIdsSelected = useMemo(
     () =>
@@ -168,47 +185,58 @@ export function FamilyMembersFormSection({
     () =>
       [...linkableClients]
         .filter((c) => !existingIdsSelected.has(c.id))
+        .filter((c) => {
+          const q = advancedFilter.trim().toLowerCase();
+          if (!q) return true;
+          return c.first_name.toLowerCase().includes(q) || (c.last_name ?? "").toLowerCase().includes(q);
+        })
         .sort((a, b) => clientLabel(a).localeCompare(clientLabel(b), undefined, { sensitivity: "base" })),
-    [linkableClients, existingIdsSelected],
+    [linkableClients, existingIdsSelected, advancedFilter],
   );
 
   const jsonPayload = useMemo(() => JSON.stringify(serializeRows(rows)), [rows]);
 
   const effectiveMainIndex = rows.length === 0 ? 0 : Math.min(Math.max(0, mainSlotIndex), rows.length - 1);
 
-  const onAdvancedChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-      if (selected.length === 0) return;
-      setRows((prev) => {
-        const existingSet = new Set(
-          prev
-            .filter((r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing")
-            .map((r) => r.clientId),
-        );
-        const toAdd: FamilyRow[] = [];
-        for (const id of selected) {
-          if (existingSet.has(id)) continue;
-          const c = linkableClients.find((x) => x.id === id);
-          toAdd.push({
-            key: newKey(),
-            kind: "existing",
-            clientId: id,
-            label: c ? clientLabel(c) : id,
-            member_position: null,
-          });
-        }
-        if (toAdd.length === 0) return prev;
-        return [...prev, ...toAdd];
-      });
-      for (const option of e.currentTarget.options) option.selected = false;
-    },
-    [linkableClients],
-  );
+  const addSelectedExistingClient = useCallback(() => {
+    if (!selectedExistingClientId) return;
+    const selected = linkableClients.find((c) => c.id === selectedExistingClientId);
+    if (!selected) return;
+    setRows((prev) => {
+      const existing = prev.find(
+        (r): r is Extract<FamilyRow, { kind: "existing" }> => r.kind === "existing" && r.clientId === selected.id,
+      );
+      if (existing) {
+        setEditingKey(existing.key);
+        setDraftFirst(existing.firstName);
+        setDraftLast(existing.lastName ?? "");
+        const p = existing.member_position;
+        setDraftPosition(p === "father" || p === "mother" || p === "son" || p === "daughter" ? p : "");
+        setModalOpen(true);
+        return prev;
+      }
+      const created: FamilyRow = {
+        key: newKey(),
+        kind: "existing",
+        clientId: selected.id,
+        firstName: selected.first_name,
+        lastName: selected.last_name,
+        member_position: null,
+      };
+      setEditingKey(created.key);
+      setDraftFirst(created.firstName);
+      setDraftLast(created.lastName ?? "");
+      setDraftPosition("");
+      setModalOpen(true);
+      return [...prev, created];
+    });
+    setSelectedExistingClientId("");
+  }, [linkableClients, selectedExistingClientId]);
 
   const openAddModal = useCallback(() => {
     setEditingKey(null);
     setDraftFirst("");
+    setDraftLast("");
     setDraftPosition("");
     setModalOpen(true);
   }, []);
@@ -219,11 +247,13 @@ export function FamilyMembersFormSection({
       if (!r) return;
       setEditingKey(key);
       if (r.kind === "existing") {
-        setDraftFirst("");
+        setDraftFirst(r.firstName);
+        setDraftLast(r.lastName ?? "");
         const p = r.member_position;
         setDraftPosition(p === "father" || p === "mother" || p === "son" || p === "daughter" ? p : "");
       } else {
         setDraftFirst(r.firstName);
+        setDraftLast(r.lastName ?? "");
         setDraftPosition(r.position);
       }
       setModalOpen(true);
@@ -234,6 +264,7 @@ export function FamilyMembersFormSection({
   const closeModal = useCallback(() => {
     setModalOpen(false);
     setEditingKey(null);
+    setDraftLast("");
   }, []);
 
   const applyModal = useCallback(() => {
@@ -247,12 +278,20 @@ export function FamilyMembersFormSection({
         const name = draftFirst.trim();
         if (!name || !isPosition(draftPosition)) return;
         setRows((prev) =>
-          prev.map((r) => (r.key === editingKey && r.kind === "new" ? { ...r, firstName: name, position: draftPosition } : r)),
+          prev.map((r) =>
+            r.key === editingKey && r.kind === "new"
+              ? { ...r, firstName: name, lastName: draftLast.trim() || null, position: draftPosition }
+              : r,
+          ),
         );
       } else {
         const pos: FamilyMemberPosition | null = draftPosition === "" ? null : isPosition(draftPosition) ? draftPosition : null;
         setRows((prev) =>
-          prev.map((r) => (r.key === editingKey && r.kind === "existing" ? { ...r, member_position: pos } : r)),
+          prev.map((r) =>
+            r.key === editingKey && r.kind === "existing"
+              ? { ...r, firstName: draftFirst.trim() || r.firstName, lastName: draftLast.trim() || null, member_position: pos }
+              : r,
+          ),
         );
       }
       closeModal();
@@ -262,10 +301,10 @@ export function FamilyMembersFormSection({
     const pos = draftPosition;
     if (!name || !isPosition(pos)) return;
     const wasEmpty = rows.length === 0;
-    setRows((prev) => [...prev, { key: newKey(), kind: "new", firstName: name, position: pos }]);
+    setRows((prev) => [...prev, { key: newKey(), kind: "new", firstName: name, lastName: draftLast.trim() || null, position: pos }]);
     if (wasEmpty) setMainSlotIndex(0);
     closeModal();
-  }, [editingKey, rows, draftFirst, draftPosition, closeModal]);
+  }, [editingKey, rows, draftFirst, draftLast, draftPosition, closeModal]);
 
   const removeRow = useCallback((key: string) => {
     if (!window.confirm(labels.removeMemberConfirm)) return;
@@ -286,7 +325,7 @@ export function FamilyMembersFormSection({
   const rowLabel = useCallback(
     (r: FamilyRow) => {
       if (r.kind === "existing") return r.label;
-      return r.firstName.trim() || "…";
+      return [r.firstName.trim(), r.lastName?.trim() ?? ""].join(" ").trim() || "…";
     },
     [],
   );
@@ -362,17 +401,36 @@ export function FamilyMembersFormSection({
         </summary>
         {labels.advancedHint ? <p className="mt-2 text-xs text-slate-500">{labels.advancedHint}</p> : null}
         <label className="mt-2 block text-xs text-slate-500">{labels.linkExistingLabel}</label>
+        <input
+          type="text"
+          value={advancedFilter}
+          onChange={(e) => setAdvancedFilter(e.target.value)}
+          placeholder={labels.filterByName}
+          className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+        />
         <select
-          multiple
+          size={8}
           className="mt-1 max-h-24 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300"
-          onChange={onAdvancedChange}
+          value={selectedExistingClientId}
+          onChange={(e) => setSelectedExistingClientId(e.target.value)}
         >
+          <option value="">--</option>
           {linkableOptions.map((c) => (
             <option key={c.id} value={c.id}>
               {clientLabel(c)}
             </option>
           ))}
         </select>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={addSelectedExistingClient}
+            disabled={!selectedExistingClientId}
+            className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {labels.selectClient}
+          </button>
+        </div>
       </details>
 
       {modalOpen ? (
@@ -403,6 +461,27 @@ export function FamilyMembersFormSection({
                     autoFocus={!editingIsExisting}
                   />
                 </div>
+              ) : null}
+              {editingIsExisting ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{labels.firstName}</label>
+                    <input
+                      value={draftFirst}
+                      onChange={(e) => setDraftFirst(e.target.value)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs text-slate-400">{labels.lastName}</label>
+                    <input
+                      value={draftLast}
+                      onChange={(e) => setDraftLast(e.target.value)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                </>
               ) : null}
               <div className="space-y-1">
                 <label className="block text-xs text-slate-400">{labels.familyPosition}</label>
