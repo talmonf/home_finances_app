@@ -22,13 +22,12 @@ type Props = {
     recurringToggle: string;
     clientLabel: string;
     jobLabel: string;
-    jobSelect: string;
     programOptional: string;
     visitTypeLabel: string;
     recurrenceLabel: string;
     dayOfWeekLabel: string;
     startDateTimeLabel: string;
-    endDateTimeOptionalLabel: string;
+    endDateTimeLabel: string;
     timeOfDayLabel: string;
     seriesStartDateLabel: string;
     seriesEndDateOptionalLabel: string;
@@ -69,12 +68,8 @@ export function AppointmentAddForm({
   const [singleProgramId, setSingleProgramId] = useState(prefill?.programId ?? "");
   const [seriesJobId, setSeriesJobId] = useState(prefill?.jobId ?? "");
   const [seriesProgramId, setSeriesProgramId] = useState(prefill?.programId ?? "");
-  const [singleVisitType, setSingleVisitType] = useState(
-    prefill?.visitType ?? visitOptions[0]?.value ?? "clinic",
-  );
-  const [seriesVisitType, setSeriesVisitType] = useState(
-    prefill?.visitType ?? visitOptions[0]?.value ?? "clinic",
-  );
+  const [singleVisitType, setSingleVisitType] = useState(prefill?.visitType ?? "");
+  const [seriesVisitType, setSeriesVisitType] = useState(prefill?.visitType ?? "");
 
   const clientById = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -127,7 +122,7 @@ export function AppointmentAddForm({
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.clientLabel}</option>
+              <option value=""></option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>
                   {cl.label}
@@ -147,7 +142,7 @@ export function AppointmentAddForm({
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.jobSelect}</option>
+              <option value=""></option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.label}
@@ -163,7 +158,7 @@ export function AppointmentAddForm({
               onChange={(e) => setSingleProgramId(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.programOptional}</option>
+              <option value=""></option>
               {singlePrograms.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -180,6 +175,7 @@ export function AppointmentAddForm({
               onChange={(e) => setSingleVisitType(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
+              <option value=""></option>
               {visitOptions.map((v) => (
                 <option key={v.value} value={v.value}>
                   {v.label}
@@ -198,7 +194,7 @@ export function AppointmentAddForm({
             />
           </label>
           <label className="space-y-1">
-            <span className="block text-xs text-slate-300">{copy.endDateTimeOptionalLabel}</span>
+            <span className="block text-xs text-slate-300">{copy.endDateTimeLabel}</span>
             <input
               name="end_at"
               type="datetime-local"
@@ -237,7 +233,7 @@ export function AppointmentAddForm({
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.clientLabel}</option>
+              <option value=""></option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>
                   {cl.label}
@@ -257,7 +253,7 @@ export function AppointmentAddForm({
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.jobSelect}</option>
+              <option value=""></option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.label}
@@ -273,7 +269,7 @@ export function AppointmentAddForm({
               onChange={(e) => setSeriesProgramId(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{copy.programOptional}</option>
+              <option value=""></option>
               {seriesPrograms.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -290,6 +286,7 @@ export function AppointmentAddForm({
               onChange={(e) => setSeriesVisitType(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
+              <option value=""></option>
               {visitOptions.map((v) => (
                 <option key={v.value} value={v.value}>
                   {v.label}

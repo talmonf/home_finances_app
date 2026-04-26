@@ -862,6 +862,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     visitTypeCol: p("Visit type", "סוג ביקור"),
     dayOfWeek: p("Day of week", "יום בשבוע"),
     startDateTime: p("Start date & time", "תאריך ושעת התחלה"),
+    endDateTime: p("End date & time", "תאריך ושעת סיום"),
     timeOfDay: p("Time of day", "שעת התחלה"),
     seriesStartDate: p("Series start date", "תאריך התחלת סדרה"),
     seriesEndDateOptional: p("Series end date (optional)", "תאריך סיום סדרה (אופציונלי)"),

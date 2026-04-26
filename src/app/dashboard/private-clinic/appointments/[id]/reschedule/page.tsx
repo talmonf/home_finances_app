@@ -49,8 +49,8 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`${LIST}/${id}/edit`} className="text-sm text-slate-400 hover:text-slate-200">
-          ← {ap.editTitle}
+        <Link href={LIST} className="text-sm text-slate-400 hover:text-slate-200">
+          {ap.backToAppointments}
         </Link>
         <h2 className="mt-2 text-lg font-medium text-slate-200">{ap.rescheduleTitle}</h2>
         <p className="text-sm text-slate-400">
