@@ -12,6 +12,7 @@ type DeleteFamilyFormProps = {
   confirmDeleteFamilyAndClients: string;
   cancelLabel: string;
   buttonLabel: string;
+  deletingLabel: string;
 };
 
 export function DeleteFamilyForm({
@@ -22,15 +23,18 @@ export function DeleteFamilyForm({
   confirmDeleteFamilyAndClients,
   cancelLabel,
   buttonLabel,
+  deletingLabel,
 }: DeleteFamilyFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const deleteClientsRef = useRef<HTMLInputElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitDelete = (deleteClients: boolean) => {
     if (deleteClientsRef.current) {
       deleteClientsRef.current.value = deleteClients ? "1" : "0";
     }
+    setIsSubmitting(true);
     formRef.current?.requestSubmit();
   };
 
@@ -43,9 +47,10 @@ export function DeleteFamilyForm({
       <button
         type="button"
         onClick={() => setConfirmOpen(true)}
+        disabled={isSubmitting}
         className="rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50"
       >
-        {buttonLabel}
+        {isSubmitting ? deletingLabel : buttonLabel}
       </button>
       {confirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6" role="presentation">
@@ -54,7 +59,7 @@ export function DeleteFamilyForm({
             aria-modal="true"
             className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-xl"
           >
-            <p className="text-sm text-slate-200">{confirmTitle}</p>
+            <p className="text-sm text-slate-200">{isSubmitting ? deletingLabel : confirmTitle}</p>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
@@ -62,6 +67,7 @@ export function DeleteFamilyForm({
                   setConfirmOpen(false);
                   submitDelete(false);
                 }}
+                disabled={isSubmitting}
                 className="rounded-lg border border-amber-700 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-950/40"
               >
                 {confirmDeleteFamilyOnly}
@@ -72,6 +78,7 @@ export function DeleteFamilyForm({
                   setConfirmOpen(false);
                   submitDelete(true);
                 }}
+                disabled={isSubmitting}
                 className="rounded-lg border border-rose-700 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40"
               >
                 {confirmDeleteFamilyAndClients}
@@ -79,6 +86,7 @@ export function DeleteFamilyForm({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
+                disabled={isSubmitting}
                 className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
               >
                 {cancelLabel}

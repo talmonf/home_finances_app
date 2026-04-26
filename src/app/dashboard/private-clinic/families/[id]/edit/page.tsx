@@ -83,10 +83,10 @@ export default async function EditFamilyPage({ params }: Props) {
   );
 
   const memberLabels: FamilyMembersFormLabels = {
-    sectionTitle: t("Family members", "חברי משפחה"),
-    addMember: t("Add member", "הוספת חבר/ה"),
+    sectionTitle: t("Family members", "בני משפחה"),
+    addMember: t("Add member", "הוספת בן משפחה"),
     mainContact: t("Main contact", "איש קשר ראשי"),
-    advancedTitle: t("Add existing clients", "הוספת לקוחות קיימים"),
+    advancedTitle: t("Add existing clients", "הוספת בני משפחה מתוך לקוחות קיימים"),
     advancedHint: "",
     linkExistingLabel: t("Existing clients (multi-select)", "לקוחות קיימים (בחירה מרובה)"),
     modalTitleAdd: t("Add family member", "הוספת חבר/ת משפחה"),
@@ -129,9 +129,10 @@ export default async function EditFamilyPage({ params }: Props) {
           familyId={family.id}
           confirmTitle={t("Delete family: choose what to delete.", "מחיקת משפחה: בחרו מה למחוק.")}
           confirmDeleteFamilyOnly={t("Delete family only", "מחיקת משפחה בלבד")}
-          confirmDeleteFamilyAndClients={t("Delete family and members", "מחיקת משפחה וחברים")}
+          confirmDeleteFamilyAndClients={t("Delete family and members", "מחיקת משפחה ובני המשפחה")}
           cancelLabel={t("Cancel", "ביטול")}
           buttonLabel={t("Delete Family", "מחיקת משפחה")}
+          deletingLabel={t("Deleting family…", "מוחק משפחה…")}
         />
       </div>
       <form action={updateTherapyFamily} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2">

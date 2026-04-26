@@ -50,10 +50,10 @@ export default async function NewFamilyPage() {
   ]);
 
   const memberLabels: FamilyMembersFormLabels = {
-    sectionTitle: t("Family members", "חברי משפחה"),
-    addMember: t("Add member", "הוספת חבר/ה"),
+    sectionTitle: t("Family members", "בני משפחה"),
+    addMember: t("Add member", "הוספת בן משפחה"),
     mainContact: t("Main contact", "איש קשר ראשי"),
-    advancedTitle: t("Add existing clients", "הוספת לקוחות קיימים"),
+    advancedTitle: t("Add existing clients", "הוספת בני משפחה מתוך לקוחות קיימים"),
     advancedHint: "",
     linkExistingLabel: t("Existing clients (multi-select)", "לקוחות קיימים (בחירה מרובה)"),
     modalTitleAdd: t("Add family member", "הוספת חבר/ת משפחה"),
