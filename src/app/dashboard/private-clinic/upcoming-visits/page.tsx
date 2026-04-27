@@ -8,7 +8,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { OBFUSCATED } from "@/lib/privacy-display";
-import { privateClinicCommon, privateClinicUpcomingVisits } from "@/lib/private-clinic-i18n";
+import { privateClinicClients, privateClinicCommon, privateClinicUpcomingVisits } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
@@ -32,6 +32,7 @@ export default async function UpcomingVisitsPage({
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const uv = privateClinicUpcomingVisits(uiLanguage);
+  const cl = privateClinicClients(uiLanguage);
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const anyFamilyLabel = uiLanguage === "he" ? "כל משפחה" : "Any family";
 
@@ -121,6 +122,7 @@ export default async function UpcomingVisitsPage({
     jobLabel: string;
     programId: string | null;
     programLabel: string;
+    kupatHolimLabel: string;
     lastVisit: Date;
     nextDue: Date;
     isOverdue: boolean;
@@ -154,6 +156,16 @@ export default async function UpcomingVisitsPage({
       jobLabel: formatJobDisplayLabel(row.default_job),
       programId: row.default_program_id,
       programLabel: row.default_program?.name ?? c.none,
+      kupatHolimLabel:
+        row.kupat_holim === "clalit"
+          ? cl.kupatClalit
+          : row.kupat_holim === "maccabi"
+            ? cl.kupatMaccabi
+            : row.kupat_holim === "meuhedet"
+              ? cl.kupatMeuhedet
+              : row.kupat_holim === "leumit"
+                ? cl.kupatLeumit
+                : c.none,
       lastVisit: lastAt,
       nextDue,
       isOverdue,
@@ -239,6 +251,12 @@ export default async function UpcomingVisitsPage({
                       >
                         {uv.colProgram}
                       </th>
+                      <th
+                        scope="col"
+                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                      >
+                        {uv.colKupatHolim}
+                      </th>
                       {settings?.family_therapy_enabled ? (
                         <th
                           scope="col"
@@ -310,6 +328,9 @@ export default async function UpcomingVisitsPage({
                           ) : (
                             r.programLabel
                           )}
+                        </td>
+                        <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.kupatHolimLabel}>
+                          {r.kupatHolimLabel}
                         </td>
                         {settings?.family_therapy_enabled ? (
                           <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>

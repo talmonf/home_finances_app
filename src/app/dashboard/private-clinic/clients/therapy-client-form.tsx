@@ -27,6 +27,7 @@ export type TherapyClientFormEditRow = {
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+  kupat_holim: "clalit" | "maccabi" | "meuhedet" | "leumit" | null;
   family_id: string | null;
   billing_basis: "per_treatment" | "per_month" | null;
   billing_timing: "in_advance" | "in_arrears" | null;
@@ -95,6 +96,11 @@ export function TherapyClientForm({
     visitHome: cl.visitHome,
     visitPhone: cl.visitPhone,
     visitVideo: cl.visitVideo,
+    kupatHolimOptional: cl.kupatHolimOptional,
+    kupatClalit: cl.kupatClalit,
+    kupatMaccabi: cl.kupatMaccabi,
+    kupatMeuhedet: cl.kupatMeuhedet,
+    kupatLeumit: cl.kupatLeumit,
   };
 
   const rowId = client?.id ?? "new";
@@ -387,7 +393,7 @@ export function TherapyClientForm({
           defaultValue={client?.billing_basis ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          {families.length > 0 ? <option value="">Use family setting</option> : null}
+          <option value="">{families.length > 0 ? "Use family setting" : c.none}</option>
           <option value="per_treatment">Per treatment</option>
           <option value="per_month">Per month</option>
         </select>
@@ -402,7 +408,7 @@ export function TherapyClientForm({
           defaultValue={client?.billing_timing ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          {families.length > 0 ? <option value="">Use family setting</option> : null}
+          <option value="">{families.length > 0 ? "Use family setting" : c.none}</option>
           <option value="in_advance">In advance</option>
           <option value="in_arrears">In arrears</option>
         </select>
@@ -434,6 +440,7 @@ export function TherapyClientForm({
         defaultJobId={client?.default_job_id}
         defaultProgramId={client?.default_program_id}
         defaultVisitType={client?.default_visit_type}
+        defaultKupatHolim={client?.kupat_holim}
         defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
         labels={jobFieldLabels}
         inheritProgramVisitFrequency={mode === "create"}

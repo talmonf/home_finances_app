@@ -389,6 +389,13 @@ function parseBillingTiming(raw: string | null | undefined): TherapyBillingTimin
   return null;
 }
 
+function parseKupatHolim(
+  raw: string | null | undefined,
+): "clalit" | "maccabi" | "meuhedet" | "leumit" | null {
+  if (raw === "clalit" || raw === "maccabi" || raw === "meuhedet" || raw === "leumit") return raw;
+  return null;
+}
+
 async function assertFamilyTherapyEnabled(householdId: string): Promise<void> {
   const settings = await prisma.therapy_settings.findUnique({
     where: { household_id: householdId },
@@ -1176,6 +1183,7 @@ export async function createTherapyClient(formData: FormData) {
   if (default_visit_type_raw && !default_visit_type) {
     redirectTherapyClientFormError(formData, fallbackErrorPath, "visit-type");
   }
+  const kupat_holim = parseKupatHolim((formData.get("kupat_holim") as string | null) ?? null);
 
   const family_id = family_id_raw ? await assertFamily(householdId, family_id_raw) : null;
   const billing_basis = parseBillingBasis((formData.get("billing_basis") as string | null) ?? null);
@@ -1227,6 +1235,7 @@ export async function createTherapyClient(formData: FormData) {
         default_job_id,
         default_program_id,
         default_visit_type,
+        kupat_holim,
         family_id,
         billing_basis,
         billing_timing,
@@ -1290,6 +1299,7 @@ export async function updateTherapyClient(formData: FormData) {
   if (default_visit_type_raw && !default_visit_type) {
     redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "visit-type");
   }
+  const kupat_holim = parseKupatHolim((formData.get("kupat_holim") as string | null) ?? null);
 
   const family_id = family_id_raw ? await assertFamily(householdId, family_id_raw) : null;
   const billing_basis = parseBillingBasis((formData.get("billing_basis") as string | null) ?? null);
@@ -1322,6 +1332,7 @@ export async function updateTherapyClient(formData: FormData) {
         default_job_id,
         default_program_id,
         default_visit_type,
+        kupat_holim,
         family_id,
         billing_basis,
         billing_timing,

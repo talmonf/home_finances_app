@@ -192,6 +192,7 @@ export async function GET() {
         billing_basis: c.billing_basis ?? "",
         billing_timing: c.billing_timing ?? "",
         default_visit_type: c.default_visit_type ?? "",
+        kupat_holim: c.kupat_holim ?? "",
         import_key: c.import_key ?? "",
         is_active: c.is_active,
       })),

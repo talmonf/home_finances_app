@@ -15,6 +15,7 @@ export type ClientJobProgramFieldLabels = {
   defaultJob: string;
   defaultProgramOptional: string;
   defaultVisitTypeOptional: string;
+  kupatHolimOptional: string;
   selectJob: string;
   none: string;
   alsoSeenUnder: string;
@@ -22,12 +23,17 @@ export type ClientJobProgramFieldLabels = {
   visitHome: string;
   visitPhone: string;
   visitVideo: string;
+  kupatClalit: string;
+  kupatMaccabi: string;
+  kupatMeuhedet: string;
+  kupatLeumit: string;
 };
 
 const DEFAULT_LABELS: ClientJobProgramFieldLabels = {
   defaultJob: "Default job",
   defaultProgramOptional: "Default program (optional)",
   defaultVisitTypeOptional: "Default visit type (optional)",
+  kupatHolimOptional: "Kupat Holim (optional)",
   selectJob: "Select job",
   none: "None",
   alsoSeenUnder: "Also seen under these jobs (includes default)",
@@ -35,6 +41,10 @@ const DEFAULT_LABELS: ClientJobProgramFieldLabels = {
   visitHome: "Home",
   visitPhone: "Phone",
   visitVideo: "Video",
+  kupatClalit: "Clalit",
+  kupatMaccabi: "Maccabi",
+  kupatMeuhedet: "Meuhedet",
+  kupatLeumit: "Leumit",
 };
 
 export function ClientJobProgramFields({
@@ -43,6 +53,7 @@ export function ClientJobProgramFields({
   defaultJobId,
   defaultProgramId,
   defaultVisitType,
+  defaultKupatHolim,
   defaultCheckedJobIds,
   requiredProgram,
   inheritProgramVisitFrequency,
@@ -55,6 +66,7 @@ export function ClientJobProgramFields({
   defaultJobId?: string | null;
   defaultProgramId?: string | null;
   defaultVisitType?: "clinic" | "home" | "phone" | "video" | null;
+  defaultKupatHolim?: "clalit" | "maccabi" | "meuhedet" | "leumit" | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
   inheritProgramVisitFrequency?: boolean;
@@ -120,7 +132,7 @@ export function ClientJobProgramFields({
 
   return (
     <>
-      <div className="md:col-span-2 space-y-1">
+      <div className="space-y-1">
         <label className="block text-xs text-slate-400">{labels.defaultJob}</label>
         <select
           name="default_job_id"
@@ -138,7 +150,7 @@ export function ClientJobProgramFields({
         </select>
       </div>
 
-      <div className="md:col-span-2 space-y-1">
+      <div className="space-y-1">
         <label className="block text-xs text-slate-400">{labels.defaultProgramOptional}</label>
         <select
           name="default_program_id"
@@ -156,7 +168,7 @@ export function ClientJobProgramFields({
         </select>
       </div>
 
-      <div className="md:col-span-2 space-y-1">
+      <div className="space-y-1">
         <label className="block text-xs text-slate-400">{labels.defaultVisitTypeOptional}</label>
         <select
           name="default_visit_type"
@@ -168,6 +180,21 @@ export function ClientJobProgramFields({
           <option value="home">{labels.visitHome}</option>
           <option value="phone">{labels.visitPhone}</option>
           <option value="video">{labels.visitVideo}</option>
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="block text-xs text-slate-400">{labels.kupatHolimOptional}</label>
+        <select
+          name="kupat_holim"
+          defaultValue={defaultKupatHolim ?? ""}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="">{labels.none}</option>
+          <option value="clalit">{labels.kupatClalit}</option>
+          <option value="maccabi">{labels.kupatMaccabi}</option>
+          <option value="meuhedet">{labels.kupatMeuhedet}</option>
+          <option value="leumit">{labels.kupatLeumit}</option>
         </select>
       </div>
 

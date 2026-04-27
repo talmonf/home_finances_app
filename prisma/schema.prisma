@@ -1507,6 +1507,15 @@ enum TherapyBillingTiming {
   @@map("therapy_billing_timing")
 }
 
+enum TherapyKupatHolim {
+  clalit
+  maccabi
+  meuhedet
+  leumit
+
+  @@map("therapy_kupat_holim")
+}
+
 enum TherapyFamilyMemberPosition {
   father
   mother
@@ -1672,6 +1681,7 @@ model therapy_clients {
   default_job_id     String
   default_program_id String?
   default_visit_type TherapyVisitType?
+  kupat_holim        TherapyKupatHolim?
   billing_basis      TherapyBillingBasis?
   billing_timing     TherapyBillingTiming?
   email              String?

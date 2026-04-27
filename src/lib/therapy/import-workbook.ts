@@ -154,6 +154,14 @@ export async function importTherapyWorkbook(params: {
           : billingTimingRaw === "in_arrears"
             ? "in_arrears"
             : null;
+      const kupatHolimRaw = str(r.kupat_holim);
+      const kupat_holim: "clalit" | "maccabi" | "meuhedet" | "leumit" | null =
+        kupatHolimRaw === "clalit" ||
+        kupatHolimRaw === "maccabi" ||
+        kupatHolimRaw === "meuhedet" ||
+        kupatHolimRaw === "leumit"
+          ? kupatHolimRaw
+          : null;
       const data = {
         first_name,
         last_name: str(r.last_name) || null,
@@ -177,6 +185,7 @@ export async function importTherapyWorkbook(params: {
         family_id: str(r.family_id) || null,
         billing_basis,
         billing_timing,
+        kupat_holim,
         default_visit_type: parseVisit(str(r.default_visit_type))
           ? (str(r.default_visit_type) as "clinic" | "home" | "phone" | "video")
           : null,

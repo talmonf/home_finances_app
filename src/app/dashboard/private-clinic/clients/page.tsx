@@ -488,6 +488,9 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
+                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {cl.colKupatHolim}
+                </th>
                 {familyTherapyEnabled ? (
                   <SortHeader
                     column="family"
@@ -541,6 +544,16 @@ export default async function ClientsPage({
               {clients.map((row) => {
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
+                const kupatHolimLabel =
+                  row.kupat_holim === "clalit"
+                    ? cl.kupatClalit
+                    : row.kupat_holim === "maccabi"
+                      ? cl.kupatMaccabi
+                      : row.kupat_holim === "meuhedet"
+                        ? cl.kupatMeuhedet
+                        : row.kupat_holim === "leumit"
+                          ? cl.kupatLeumit
+                          : c.none;
                 const treatmentsCount = treatmentCountByClientId.get(row.id) ?? 0;
                 const lastVisitAt = lastVisitAtByClientId.get(row.id);
                 const vc = row.visits_per_period_count;
@@ -576,6 +589,9 @@ export default async function ClientsPage({
                     </td>
                     <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={programLabel}>
                       {programLabel}
+                    </td>
+                    <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={kupatHolimLabel}>
+                      {kupatHolimLabel}
                     </td>
                     {familyTherapyEnabled ? (
                       <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={row.family?.name ?? "—"}>
