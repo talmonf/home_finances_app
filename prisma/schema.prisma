@@ -1615,6 +1615,7 @@ model therapy_service_programs {
   job_id       String
   name         String
   start_date   DateTime? @db.Date
+  end_date     DateTime? @db.Date
   description  String?
   sort_order   Int      @default(0)
   is_active    Boolean  @default(true)

@@ -7,7 +7,7 @@ import { deleteTherapyProgram, saveTherapyProgramVisitTypeDefaults, updateTherap
 import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWhereInPrivateClinicModule } from "@/lib/private-clinic/jobs-scope";
+import { jobWhereInPrivateClinicModule, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -35,17 +35,32 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const program = await prisma.therapy_service_programs.findFirst({
-    where: {
-      id,
-      household_id: householdId,
-      job: {
-        ...jobWhereInPrivateClinicModule,
-        ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+  const [program, jobs, treatmentsCount, receiptsCount, seriesCount, appointmentsCount, clientsCount] = await Promise.all([
+    prisma.therapy_service_programs.findFirst({
+      where: {
+        id,
+        household_id: householdId,
+        job: {
+          ...jobWhereInPrivateClinicModule,
+          ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+        },
       },
-    },
-    include: { job: true },
-  });
+      include: { job: true },
+    }),
+    prisma.jobs.findMany({
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        familyMemberId,
+      }),
+      orderBy: { start_date: "desc" },
+      include: { family_member: true },
+    }),
+    prisma.therapy_treatments.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_receipts.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_appointment_series.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_appointments.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_clients.count({ where: { household_id: householdId, default_program_id: id } }),
+  ]);
   if (!program) notFound();
 
   const programVisitDefaults = await prisma.therapy_visit_type_default_amounts.findMany({
@@ -72,11 +87,17 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
           ? pr.programErrNotfound
           : resolved?.error === "id"
             ? pr.programErrId
-            : resolved?.error
+        : resolved?.error === "linked"
+          ? pr.programErrLinked
+          : resolved?.error
               ? c.saveFailedGeneric
               : null;
 
-  const jobLabel = formatJobDisplayLabel(program.job);
+  const canDelete = !(treatmentsCount || receiptsCount || seriesCount || appointmentsCount || clientsCount);
+  const jobsForSelect = jobs.some((j) => j.id === program.job_id) ? jobs : [program.job, ...jobs];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const effectiveIsActive = program.is_active && !(program.end_date && program.end_date < todayStart);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -97,29 +118,46 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">{c.saved}</p>
       )}
 
-      <p className="text-sm text-slate-400">
-        {c.job}: <span className="text-slate-200">{jobLabel}</span>
-      </p>
-
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
         <form action={updateTherapyProgram} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
           <input type="hidden" name="redirect_on_error" value={editHref} />
           <input type="hidden" name="id" value={program.id} />
-          <input
-            name="name"
-            defaultValue={program.name}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <input
-            name="sort_order"
-            type="number"
-            defaultValue={program.sort_order}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.job}</label>
+            <select
+              name="job_id"
+              required
+              defaultValue={program.job_id}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {jobsForSelect.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {formatJobDisplayLabel(j)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{pr.programName}</label>
+            <input
+              name="name"
+              defaultValue={program.name}
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-400">{c.description}</label>
+            <textarea
+              name="description"
+              defaultValue={program.description ?? ""}
+              placeholder={c.description}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-300 md:col-span-2">
-            <input type="checkbox" name="is_active" defaultChecked={program.is_active} />
+            <input type="checkbox" name="is_active" defaultChecked={effectiveIsActive} />
             {pr.active}
           </label>
           <div className="space-y-1">
@@ -131,23 +169,27 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div className="space-y-1 md:col-span-2">
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.endDate}</label>
+            <input
+              name="end_date"
+              type="date"
+              defaultValue={program.end_date ? program.end_date.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1">
             <label className="block text-xs text-slate-300">Default session length (minutes)</label>
             <input
               name="default_session_length_minutes"
               type="number"
               min={1}
+              max={999}
               step={1}
               defaultValue={program.default_session_length_minutes ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <textarea
-            name="description"
-            defaultValue={program.description ?? ""}
-            placeholder={c.description}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
           <div className="md:col-span-2 space-y-1">
             <p className="text-xs text-slate-400">{pr.visitFrequency}</p>
             <p className="text-xs text-slate-500">{pr.visitFrequencyHint}</p>
@@ -231,16 +273,25 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
             >
               {c.save}
             </button>
-            <ConfirmDeleteForm action={deleteTherapyProgram}>
-              <input type="hidden" name="redirect_on_success" value={`${PROGRAMS_BASE}?updated=1`} />
-              <input type="hidden" name="redirect_on_error" value={editHref} />
-              <input type="hidden" name="id" value={program.id} />
-              <button type="submit" className="text-sm text-rose-400 hover:text-rose-300">
-                {c.delete}
-              </button>
-            </ConfirmDeleteForm>
           </div>
         </form>
+        <div className="mt-3 flex flex-col items-end gap-1">
+          <ConfirmDeleteForm action={deleteTherapyProgram}>
+            <input type="hidden" name="redirect_on_success" value={`${PROGRAMS_BASE}?updated=1`} />
+            <input type="hidden" name="redirect_on_error" value={editHref} />
+            <input type="hidden" name="id" value={program.id} />
+            <button
+              type="submit"
+              disabled={!canDelete}
+              className="text-sm text-rose-400 enabled:hover:text-rose-300 disabled:cursor-not-allowed disabled:text-slate-500"
+            >
+              {c.delete}
+            </button>
+          </ConfirmDeleteForm>
+          {!canDelete ? (
+            <p className="text-xs text-amber-300">{pr.programErrLinked}</p>
+          ) : null}
+        </div>
       </section>
 
       <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">

@@ -76,6 +76,14 @@ export function ProgramModalForm({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.endDate}</label>
+            <input
+              name="end_date"
+              type="date"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <div className="space-y-1 md:col-span-2">
             <label className="block text-xs text-slate-300">Default session length (minutes)</label>
             <input

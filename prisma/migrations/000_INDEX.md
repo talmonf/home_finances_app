@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 102_therapy_program_end_date.sql (2026-04-27)
 - [x] 101_therapy_program_start_date_supported_visit_types.sql (2026-04-27)
 - [x] 100_google_calendar_and_session_duration.sql (2026-04-27)
 - [x] 099_therapy_families_start_date.sql (2026-04-26)
@@ -124,6 +125,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 102 | `102_therapy_program_end_date.sql` (2026-04-27) | ALTER | `therapy_service_programs`: add optional `end_date` (`DATE`) for program lifecycle tracking and automatic active-state behavior in app logic. |
 | 101 | `101_therapy_program_start_date_supported_visit_types.sql` (2026-04-27) | ALTER | `therapy_service_programs`: add optional `start_date` and required `supported_visit_types` enum-array (default all visit types: clinic/home/phone/video) so each program can declare allowed visit modes. |
 | 100 | `100_google_calendar_and_session_duration.sql` (2026-04-27) | ALTER | Adds per-user Google Calendar integration fields (enable flag, Gmail address, encrypted OAuth tokens, sync error metadata), adds session duration defaults (`therapy_settings`, `jobs`, `therapy_service_programs`), and appointment sync fields (`duration_minutes`, Google event id + sync status). |
 | 097 | `097_therapy_settings_note_visibility.sql` (2026-04-24) | ALTER | `therapy_settings`: add `note_1_visible`, `note_2_visible`, `note_3_visible` booleans (default `true`) for explicit per-note field visibility on treatment forms. |

@@ -307,6 +307,10 @@ export function privateClinicPrograms(lang: UiLanguage) {
     programErrJob: p("That job is not available for your account.", "המשרה אינה זמינה לחשבון שלך."),
     programErrNotfound: p("Program not found.", "התכנית לא נמצאה."),
     programErrId: p("Invalid program.", "תכנית לא תקינה."),
+    programErrLinked: p(
+      "Program cannot be deleted because it is linked to existing records.",
+      "לא ניתן למחוק את התכנית כי היא מקושרת לרשומות קיימות.",
+    ),
     programName: p("Program name", "שם תכנית"),
     visitFrequency: p("Visit frequency", "תדירות ביקורים"),
     visitFrequencyHint: p(

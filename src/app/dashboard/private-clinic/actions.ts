@@ -248,6 +248,14 @@ function parseSupportedVisitTypes(values: FormDataEntryValue[]): TherapyVisitTyp
   return [...new Set(selected)];
 }
 
+function isDateInPast(date: Date): boolean {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return value < today;
+}
+
 function parseTherapyClientRelationshipType(raw: string | null | undefined): TherapyClientRelationshipType | null {
   if (
     raw === "mother" ||
@@ -917,7 +925,9 @@ export async function createTherapyProgram(formData: FormData) {
     (formData.get("default_session_length_minutes") as string | null) ?? null,
   );
   const start_date = parseDate((formData.get("start_date") as string | null) ?? null);
+  const end_date = parseDate((formData.get("end_date") as string | null) ?? null);
   const supported_visit_types = parseSupportedVisitTypes(formData.getAll("supported_visit_types"));
+  const is_active = formData.has("is_active") && !(end_date && isDateInPast(end_date));
 
   await prisma.therapy_service_programs.create({
     data: {
@@ -926,9 +936,10 @@ export async function createTherapyProgram(formData: FormData) {
       job_id,
       name,
       start_date,
+      end_date,
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || 0) || 0,
-      is_active: formData.has("is_active"),
+      is_active,
       supported_visit_types,
       visits_per_period_count,
       visits_per_period_weeks,
@@ -944,6 +955,7 @@ export async function updateTherapyProgram(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
+  const job_id = (formData.get("job_id") as string)?.trim() || "";
   const fallbackError = `${BASE}/programs`;
   if (!id) redirectPrivateClinicScoped(formData, "error", fallbackError, "id");
   const row = await prisma.therapy_service_programs.findFirst({
@@ -953,6 +965,9 @@ export async function updateTherapyProgram(formData: FormData) {
   if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
   }
+  if (!job_id || !(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
 
   const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
   const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
@@ -960,16 +975,20 @@ export async function updateTherapyProgram(formData: FormData) {
     (formData.get("default_session_length_minutes") as string | null) ?? null,
   );
   const start_date = parseDate((formData.get("start_date") as string | null) ?? null);
+  const end_date = parseDate((formData.get("end_date") as string | null) ?? null);
   const supported_visit_types = parseSupportedVisitTypes(formData.getAll("supported_visit_types"));
+  const is_active = formData.has("is_active") && !(end_date && isDateInPast(end_date));
 
   await prisma.therapy_service_programs.update({
     where: { id },
     data: {
+      job_id,
       name: (formData.get("name") as string)?.trim() || row.name,
       start_date,
+      end_date,
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || row.sort_order) || 0,
-      is_active: formData.has("is_active"),
+      is_active,
       supported_visit_types,
       visits_per_period_count,
       visits_per_period_weeks,
@@ -996,6 +1015,16 @@ export async function deleteTherapyProgram(formData: FormData) {
   if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
   if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
+  const [treatmentsCount, receiptsCount, seriesCount, appointmentsCount, clientsCount] = await Promise.all([
+    prisma.therapy_treatments.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_receipts.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_appointment_series.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_appointments.count({ where: { household_id: householdId, program_id: id } }),
+    prisma.therapy_clients.count({ where: { household_id: householdId, default_program_id: id } }),
+  ]);
+  if (treatmentsCount || receiptsCount || seriesCount || appointmentsCount || clientsCount) {
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/programs/${id}/edit`, "linked");
   }
   revalidatePath(`${BASE}/programs/${id}/edit`);
   await prisma.therapy_service_programs.deleteMany({
