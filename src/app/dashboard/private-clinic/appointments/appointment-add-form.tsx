@@ -257,18 +257,20 @@ export function AppointmentAddForm({
                 className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startTimeLabel}
               />
-              <input
-                name="duration_minutes"
-                type="number"
-                min={1}
-                max={999}
-                step={1}
-                required
-                value={singleDurationMinutes}
-                onChange={(e) => setSingleDurationMinutes(e.target.value)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label={copy.durationMinutesLabel}
-              />
+              <label className="space-y-1">
+                <span className="block text-xs text-slate-300">{copy.durationMinutesLabel}</span>
+                <input
+                  name="duration_minutes"
+                  type="number"
+                  min={1}
+                  max={999}
+                  step={1}
+                  required
+                  value={singleDurationMinutes}
+                  onChange={(e) => setSingleDurationMinutes(e.target.value)}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </label>
             </div>
           </div>
           <label className="space-y-1">

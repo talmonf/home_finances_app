@@ -51,6 +51,8 @@ type SortKey =
   | "start_date"
   | "end_date"
   | "job"
+  | "kupat_holim"
+  | "next_visit_due"
   | "family"
   | "program"
   | "active";
@@ -62,6 +64,8 @@ function parseSortKey(s: string | undefined): SortKey {
     "start_date",
     "end_date",
     "job",
+    "kupat_holim",
+    "next_visit_due",
     "family",
     "program",
     "active",
@@ -81,6 +85,11 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ end_date: dir }, { id: dir }];
     case "job":
       return [{ default_job: { job_title: dir } }, { id: dir }];
+    case "kupat_holim":
+      return [{ kupat_holim: dir }, { id: dir }];
+    case "next_visit_due":
+      // This column is derived from treatment history + visit frequency and is sorted in-memory below.
+      return [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }];
     case "family":
       return [{ family: { name: dir } }, { id: dir }];
     case "program":
@@ -311,6 +320,39 @@ export default async function ClientsPage({
     lastTreatmentByClientId.map((row) => [row.client_id, row._max.occurred_at]),
   );
 
+  const nextVisitDueByClientId = new Map<string, Date | null>();
+  for (const client of clients) {
+    const vc = client.visits_per_period_count;
+    const vw = client.visits_per_period_weeks;
+    const lastVisitAt = lastVisitAtByClientId.get(client.id);
+    if (vc == null || vw == null || !lastVisitAt) {
+      nextVisitDueByClientId.set(client.id, null);
+      continue;
+    }
+    nextVisitDueByClientId.set(client.id, nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw));
+  }
+
+  const sortedClients =
+    sort === "next_visit_due"
+      ? [...clients].sort((a, b) => {
+          const aDue = nextVisitDueByClientId.get(a.id) ?? null;
+          const bDue = nextVisitDueByClientId.get(b.id) ?? null;
+          if (aDue && bDue) {
+            const diff = aDue.getTime() - bDue.getTime();
+            if (diff !== 0) return dir === "asc" ? diff : -diff;
+          } else if (aDue && !bDue) {
+            return -1;
+          } else if (!aDue && bDue) {
+            return 1;
+          }
+          const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
+          const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
+          const nameCmp = aName.localeCompare(bName);
+          if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
+          return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+        })
+      : clients;
+
   const hasActiveFilters =
     Boolean(q) ||
     status !== "active" ||
@@ -521,9 +563,15 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
-                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {cl.colKupatHolim}
-                </th>
+                <SortHeader
+                  column="kupat_holim"
+                  label={cl.colKupatHolim}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
                 {familyTherapyEnabled ? (
                   <SortHeader
                     column="family"
@@ -538,9 +586,15 @@ export default async function ClientsPage({
                 <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {cl.colTreatmentsCount}
                 </th>
-                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {cl.colNextVisitDue}
-                </th>
+                <SortHeader
+                  column="next_visit_due"
+                  label={cl.colNextVisitDue}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
                 <SortHeader
                   column="start_date"
                   label={cl.colStart}
@@ -574,7 +628,7 @@ export default async function ClientsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 bg-slate-900/40">
-              {clients.map((row) => {
+              {sortedClients.map((row) => {
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
                 const kupatHolimLabel =
@@ -600,7 +654,7 @@ export default async function ClientsPage({
                   nextVisitDisp = "—";
                   nextVisitTitle = cl.nextVisitNoTreatments;
                 } else {
-                  const due = nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw);
+                  const due = nextVisitDueByClientId.get(row.id) ?? nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw);
                   nextVisitDisp = formatHouseholdDate(due, dateDisplayFormat);
                   nextVisitTitle = undefined;
                 }
