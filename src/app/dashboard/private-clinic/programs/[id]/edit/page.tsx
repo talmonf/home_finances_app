@@ -15,7 +15,7 @@ const PROGRAMS_BASE = "/dashboard/private-clinic/programs";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ updated?: string; error?: string }>;
+  searchParams?: Promise<{ updated?: string; error?: string; fromUpcoming?: string; modal?: string }>;
 };
 
 export default async function EditProgramPage({ params, searchParams }: PageProps) {
@@ -28,6 +28,8 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
   const c = privateClinicCommon(uiLanguage);
   const pr = privateClinicPrograms(uiLanguage);
   const resolved = searchParams ? await searchParams : undefined;
+  const fromUpcoming = resolved?.fromUpcoming === "1";
+  const showModal = resolved?.modal === "1";
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -78,6 +80,10 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
   }
 
   const editHref = `${PROGRAMS_BASE}/${id}/edit`;
+  const backHref = fromUpcoming ? "/dashboard/private-clinic/upcoming-visits" : PROGRAMS_BASE;
+  const backLabel = fromUpcoming ? "Back to Upcoming visits" : pr.backToPrograms;
+  const redirectSuffix = fromUpcoming ? "?fromUpcoming=1&modal=1" : "";
+  const editRedirectHref = `${editHref}${redirectSuffix}`;
   const errorMessage =
     resolved?.error === "missing"
       ? pr.programErrMissing
@@ -99,15 +105,15 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
   todayStart.setHours(0, 0, 0, 0);
   const effectiveIsActive = program.is_active && !(program.end_date && program.end_date < todayStart);
 
-  return (
+  const pageContent = (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-50">{pr.editProgramPageTitle}</h1>
         <Link
-          href={PROGRAMS_BASE}
+          href={backHref}
           className="inline-flex shrink-0 items-center rounded-lg border border-slate-600 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
         >
-          {pr.backToPrograms}
+          {backLabel}
         </Link>
       </header>
 
@@ -120,8 +126,8 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
         <form action={updateTherapyProgram} className="grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
-          <input type="hidden" name="redirect_on_error" value={editHref} />
+          <input type="hidden" name="redirect_on_success" value={`${editRedirectHref}${editRedirectHref.includes("?") ? "&" : "?"}updated=1`} />
+          <input type="hidden" name="redirect_on_error" value={editRedirectHref} />
           <input type="hidden" name="id" value={program.id} />
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.job}</label>
@@ -278,7 +284,7 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
         <div className="mt-3 flex flex-col items-end gap-1">
           <ConfirmDeleteForm action={deleteTherapyProgram}>
             <input type="hidden" name="redirect_on_success" value={`${PROGRAMS_BASE}?updated=1`} />
-            <input type="hidden" name="redirect_on_error" value={editHref} />
+            <input type="hidden" name="redirect_on_error" value={editRedirectHref} />
             <input type="hidden" name="id" value={program.id} />
             <button
               type="submit"
@@ -296,8 +302,8 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
         <h2 className="text-sm font-medium text-slate-200">{c.defaultFeesByVisitType}</h2>
         <p className="text-xs text-slate-500">{c.defaultFeesByVisitTypeHint}</p>
         <form action={saveTherapyProgramVisitTypeDefaults} className="space-y-3">
-          <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
-          <input type="hidden" name="redirect_on_error" value={editHref} />
+          <input type="hidden" name="redirect_on_success" value={`${editRedirectHref}${editRedirectHref.includes("?") ? "&" : "?"}updated=1`} />
+          <input type="hidden" name="redirect_on_error" value={editRedirectHref} />
           <input type="hidden" name="program_id" value={program.id} />
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {visitTypes.map((vt) => {
@@ -331,5 +337,15 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
         </form>
       </section>
     </div>
+  );
+
+  return showModal ? (
+    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+        {pageContent}
+      </div>
+    </div>
+  ) : (
+    pageContent
   );
 }

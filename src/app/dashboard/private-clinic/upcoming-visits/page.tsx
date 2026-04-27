@@ -119,6 +119,7 @@ export default async function UpcomingVisitsPage({
     clientId: string;
     name: string;
     jobLabel: string;
+    programId: string | null;
     programLabel: string;
     lastVisit: Date;
     nextDue: Date;
@@ -151,6 +152,7 @@ export default async function UpcomingVisitsPage({
       clientId: row.id,
       name,
       jobLabel: formatJobDisplayLabel(row.default_job),
+      programId: row.default_program_id,
       programLabel: row.default_program?.name ?? c.none,
       lastVisit: lastAt,
       nextDue,
@@ -280,7 +282,16 @@ export default async function UpcomingVisitsPage({
                           ) : null}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                          {obfuscate ? OBFUSCATED : r.name}
+                          {obfuscate ? (
+                            OBFUSCATED
+                          ) : (
+                            <Link
+                              href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {r.name}
+                            </Link>
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                           {formatHouseholdDate(r.lastVisit, dateDisplayFormat)}
@@ -289,7 +300,16 @@ export default async function UpcomingVisitsPage({
                           {r.jobLabel}
                         </td>
                         <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.programLabel}>
-                          {r.programLabel}
+                          {r.programId ? (
+                            <Link
+                              href={`/dashboard/private-clinic/programs/${encodeURIComponent(r.programId)}/edit?fromUpcoming=1&modal=1`}
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {r.programLabel}
+                            </Link>
+                          ) : (
+                            r.programLabel
+                          )}
                         </td>
                         {settings?.family_therapy_enabled ? (
                           <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>
@@ -369,7 +389,7 @@ export default async function UpcomingVisitsPage({
                       )}
                       {" · "}
                       <Link
-                        href={`/dashboard/private-clinic/clients/${row.id}/edit`}
+                        href={`/dashboard/private-clinic/clients/${row.id}/edit?fromUpcoming=1&modal=1`}
                         className="text-sky-400/90 hover:text-sky-300"
                       >
                         {uv.editClient}
