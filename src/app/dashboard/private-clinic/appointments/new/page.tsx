@@ -19,6 +19,7 @@ import { AppointmentAddForm } from "../appointment-add-form";
 export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/appointments";
+const UPCOMING_VISITS = "/dashboard/private-clinic/upcoming-visits";
 
 export default async function NewAppointmentPage({
   searchParams,
@@ -28,7 +29,10 @@ export default async function NewAppointmentPage({
     job?: string;
     program?: string;
     visitType?: string;
+    startDate?: string;
     startAt?: string;
+    durationMinutes?: string;
+    fromUpcoming?: string;
   }>;
 }) {
   const session = await requireHouseholdMember();
@@ -81,11 +85,16 @@ export default async function NewAppointmentPage({
     label: weekdayLongLabel(uiLanguage, v),
   }));
 
-  const jobOpts = jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }));
+  const jobOpts = jobs.map((j) => ({
+    id: j.id,
+    label: formatJobDisplayLabel(j),
+    defaultDurationMinutes: j.default_session_length_minutes ?? null,
+  }));
   const programOpts = programs.map((p) => ({
     id: p.id,
     jobId: p.job_id,
     label: p.name,
+    defaultDurationMinutes: p.default_session_length_minutes ?? null,
   }));
   const clientOpts = clients.map((cl) => ({
     id: cl.id,
@@ -94,12 +103,15 @@ export default async function NewAppointmentPage({
     defaultProgramId: cl.default_program_id ?? null,
     defaultVisitType: cl.default_visit_type ?? null,
   }));
+  const fromUpcoming = sp.fromUpcoming === "1";
+  const startDatePrefill = (sp.startDate ?? "").trim() || (sp.startAt ?? "").trim().slice(0, 10) || undefined;
+  const durationMinutesPrefill = (sp.durationMinutes ?? "").trim() || undefined;
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href={LIST} className="text-sm text-slate-400 hover:text-slate-200">
-          {ap.backToAppointments}
+        <Link href={fromUpcoming ? UPCOMING_VISITS : LIST} className="text-sm text-slate-400 hover:text-slate-200">
+          {fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments}
         </Link>
         <h2 className="mt-2 text-lg font-medium text-slate-200">{ap.newTitle}</h2>
       </div>
@@ -114,7 +126,10 @@ export default async function NewAppointmentPage({
           recurrenceLabel: ap.recurringRules,
           dayOfWeekLabel: ap.dayOfWeek,
           startDateTimeLabel: ap.startDateTime,
+          startDateLabel: ap.startDate,
+          startTimeLabel: ap.startTime,
           endDateTimeLabel: ap.endDateTime,
+          durationMinutesLabel: ap.durationMinutes,
           timeOfDayLabel: ap.timeOfDay,
           seriesStartDateLabel: ap.seriesStartDate,
           seriesEndDateOptionalLabel: ap.seriesEndDateOptional,
@@ -133,8 +148,10 @@ export default async function NewAppointmentPage({
           jobId: sp.job,
           programId: sp.program,
           visitType: sp.visitType,
-          startAt: sp.startAt,
+          startDate: startDatePrefill,
+          durationMinutes: durationMinutesPrefill,
         }}
+        allowRecurring={!fromUpcoming}
         redirectOnSuccess={`${LIST}?created=1`}
       />
     </div>

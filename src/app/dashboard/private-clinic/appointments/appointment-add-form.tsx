@@ -5,8 +5,8 @@ import {
   createTherapyAppointment,
   createTherapyAppointmentSeries,
 } from "../actions";
-type JobOption = { id: string; label: string };
-type ProgramOption = { id: string; jobId: string; label: string };
+type JobOption = { id: string; label: string; defaultDurationMinutes: number | null };
+type ProgramOption = { id: string; jobId: string; label: string; defaultDurationMinutes: number | null };
 type ClientOption = {
   id: string;
   label: string;
@@ -27,7 +27,10 @@ type Props = {
     recurrenceLabel: string;
     dayOfWeekLabel: string;
     startDateTimeLabel: string;
+    startDateLabel: string;
+    startTimeLabel: string;
     endDateTimeLabel: string;
+    durationMinutesLabel: string;
     timeOfDayLabel: string;
     seriesStartDateLabel: string;
     seriesEndDateOptionalLabel: string;
@@ -47,8 +50,10 @@ type Props = {
     jobId?: string;
     programId?: string;
     visitType?: string;
-    startAt?: string;
+    startDate?: string;
+    durationMinutes?: string;
   };
+  allowRecurring?: boolean;
 };
 
 export function AppointmentAddForm({
@@ -60,6 +65,7 @@ export function AppointmentAddForm({
   dow,
   redirectOnSuccess,
   prefill,
+  allowRecurring = true,
 }: Props) {
   const [recurring, setRecurring] = useState(false);
   const [singleClientId, setSingleClientId] = useState(prefill?.clientId ?? "");
@@ -70,6 +76,9 @@ export function AppointmentAddForm({
   const [seriesProgramId, setSeriesProgramId] = useState(prefill?.programId ?? "");
   const [singleVisitType, setSingleVisitType] = useState(prefill?.visitType ?? "");
   const [seriesVisitType, setSeriesVisitType] = useState(prefill?.visitType ?? "");
+  const [singleStartDate, setSingleStartDate] = useState(prefill?.startDate ?? "");
+  const [singleStartTime, setSingleStartTime] = useState("");
+  const [singleDurationMinutes, setSingleDurationMinutes] = useState(prefill?.durationMinutes ?? "");
 
   const clientById = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -84,18 +93,41 @@ export function AppointmentAddForm({
     () => (seriesJobId ? programs.filter((p) => p.jobId === seriesJobId) : []),
     [programs, seriesJobId],
   );
+  const programById = useMemo(() => new Map(programs.map((program) => [program.id, program])), [programs]);
+  const jobById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
+  const selectedJobDefaultDuration = singleJobId
+    ? jobById.get(singleJobId)?.defaultDurationMinutes ?? null
+    : null;
+
+  const startAtValue = useMemo(() => {
+    if (!singleStartDate || !singleStartTime) return "";
+    return `${singleStartDate}T${singleStartTime}`;
+  }, [singleStartDate, singleStartTime]);
+
+  const endAtValue = useMemo(() => {
+    if (!startAtValue) return "";
+    const parsedDuration = Number.parseInt(singleDurationMinutes, 10);
+    if (!Number.isFinite(parsedDuration) || parsedDuration <= 0) return "";
+    const start = new Date(startAtValue);
+    if (Number.isNaN(start.getTime())) return "";
+    const end = new Date(start.getTime() + parsedDuration * 60 * 1000);
+    const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  }, [singleDurationMinutes, startAtValue]);
 
   return (
     <div className="space-y-4">
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
-        <input
-          type="checkbox"
-          checked={recurring}
-          onChange={(e) => setRecurring(e.target.checked)}
-          className="rounded border-slate-600"
-        />
-        {copy.recurringToggle}
-      </label>
+      {allowRecurring ? (
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={recurring}
+            onChange={(e) => setRecurring(e.target.checked)}
+            className="rounded border-slate-600"
+          />
+          {copy.recurringToggle}
+        </label>
+      ) : null}
 
       {!recurring ? (
         <form
@@ -103,6 +135,7 @@ export function AppointmentAddForm({
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
         >
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
+          <input type="hidden" name="start_at" value={startAtValue} />
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.clientLabel}</span>
             <select
@@ -118,6 +151,13 @@ export function AppointmentAddForm({
                   setSingleJobId(selectedClient.defaultJobId);
                   setSingleProgramId(selectedClient.defaultProgramId ?? "");
                   if (selectedClient.defaultVisitType) setSingleVisitType(selectedClient.defaultVisitType);
+                  const selectedProgramDuration = selectedClient.defaultProgramId
+                    ? programById.get(selectedClient.defaultProgramId)?.defaultDurationMinutes ?? null
+                    : null;
+                  const selectedJobDuration =
+                    jobById.get(selectedClient.defaultJobId)?.defaultDurationMinutes ?? null;
+                  const nextDuration = selectedProgramDuration ?? selectedJobDuration;
+                  if (nextDuration && nextDuration > 0) setSingleDurationMinutes(String(nextDuration));
                 }
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
@@ -137,8 +177,13 @@ export function AppointmentAddForm({
               required
               value={singleJobId}
               onChange={(e) => {
-                setSingleJobId(e.target.value);
+                const nextJobId = e.target.value;
+                setSingleJobId(nextJobId);
                 setSingleProgramId("");
+                const nextDuration = nextJobId
+                  ? jobById.get(nextJobId)?.defaultDurationMinutes ?? null
+                  : null;
+                if (nextDuration && nextDuration > 0) setSingleDurationMinutes(String(nextDuration));
               }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
@@ -155,7 +200,15 @@ export function AppointmentAddForm({
             <select
               name="program_id"
               value={singleProgramId}
-              onChange={(e) => setSingleProgramId(e.target.value)}
+              onChange={(e) => {
+                const nextProgramId = e.target.value;
+                setSingleProgramId(nextProgramId);
+                const programDuration = nextProgramId
+                  ? programById.get(nextProgramId)?.defaultDurationMinutes ?? null
+                  : null;
+                const nextDuration = programDuration ?? selectedJobDefaultDuration;
+                if (nextDuration && nextDuration > 0) setSingleDurationMinutes(String(nextDuration));
+              }}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value=""></option>
@@ -183,31 +236,48 @@ export function AppointmentAddForm({
               ))}
             </select>
           </label>
-          <label className="space-y-1">
+          <div className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.startDateTimeLabel}</span>
-            <input
-              name="start_at"
-              type="datetime-local"
-              defaultValue={prefill?.startAt}
-              required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </label>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem_5.5rem]">
+              <input
+                name="start_date"
+                type="date"
+                value={singleStartDate}
+                onChange={(e) => setSingleStartDate(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.startDateLabel}
+              />
+              <input
+                name="start_time"
+                type="time"
+                value={singleStartTime}
+                onChange={(e) => setSingleStartTime(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.startTimeLabel}
+              />
+              <input
+                name="duration_minutes"
+                type="number"
+                min={1}
+                max={999}
+                step={1}
+                required
+                value={singleDurationMinutes}
+                onChange={(e) => setSingleDurationMinutes(e.target.value)}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.durationMinutesLabel}
+              />
+            </div>
+          </div>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.endDateTimeLabel}</span>
             <input
               name="end_at"
               type="datetime-local"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="block text-xs text-slate-300">Duration (minutes, optional)</span>
-            <input
-              name="duration_minutes"
-              type="number"
-              min={1}
-              step={1}
+              value={endAtValue}
+              readOnly
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </label>
@@ -218,7 +288,7 @@ export function AppointmentAddForm({
             {copy.schedule}
           </button>
         </form>
-      ) : (
+      ) : allowRecurring ? (
         <form
           action={createTherapyAppointmentSeries}
           className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
@@ -362,7 +432,7 @@ export function AppointmentAddForm({
             {copy.createSeriesGenerate}
           </button>
         </form>
-      )}
+      ) : null}
     </div>
   );
 }

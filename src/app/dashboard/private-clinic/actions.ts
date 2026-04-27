@@ -2870,7 +2870,7 @@ export async function createTherapyAppointment(formData: FormData) {
   const appointmentDurationMinutesInput = parsePositiveInt(
     (formData.get("duration_minutes") as string | null) ?? null,
   );
-  if (!client_id || !job_id || !visit_type || !start_at_raw) {
+  if (!client_id || !job_id || !visit_type || !start_at_raw || !appointmentDurationMinutesInput) {
     redirect(`${BASE}/appointments?error=missing`);
   }
   if (!(await assertClientForCurrentUserScope(householdId, userFm, client_id))) {
@@ -2914,7 +2914,7 @@ export async function createTherapyAppointment(formData: FormData) {
       visit_type,
       start_at,
       end_at: resolvedEndAt,
-      duration_minutes: appointmentDurationMinutesInput,
+      duration_minutes: resolvedDurationMinutes,
       status: "scheduled",
     },
     include: APPOINTMENT_AUDIT_INCLUDE,

@@ -31,7 +31,6 @@ export default function PrivateClinicNavClient({
 }: PrivateClinicNavClientProps) {
   const pathname = usePathname();
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
@@ -40,36 +39,23 @@ export default function PrivateClinicNavClient({
     (item) => normalizedPathname === normalizePathname(item.href),
   );
 
-  const linkClassName = (isActive: boolean, isPending: boolean) =>
+  const linkClassName = (isActive: boolean) =>
     isActive
       ? "inline-flex items-center gap-1.5 rounded-lg bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100 ring-1 ring-sky-400/60"
-      : isPending
-        ? "inline-flex items-center gap-1.5 rounded-lg bg-slate-700/90 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-500"
-        : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
+      : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
 
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isPending =
-      pendingHref === item.href && normalizePathname(item.href) !== normalizedPathname;
 
     return (
       <Link
         key={item.href}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        onClick={() => {
-          setIsMoreOpen(false);
-          if (!isActive) setPendingHref(item.href);
-        }}
-        className={linkClassName(isActive, isPending)}
+        onClick={() => setIsMoreOpen(false)}
+        className={linkClassName(isActive)}
       >
-        {isPending ? (
-          <span
-            className="inline-block h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-transparent"
-            aria-hidden
-          />
-        ) : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span

@@ -165,9 +165,9 @@ export default async function UpcomingVisitsPage({
   const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
 
-  const toDateTimeLocalInput = (date: Date) => {
+  const toDateLocalInput = (date: Date) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
+    return local.toISOString().slice(0, 10);
   };
 
   return (
@@ -315,7 +315,7 @@ export default async function UpcomingVisitsPage({
                             </Link>
                           ) : (
                             <Link
-                              href={`${appointmentNewBase}?client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(r.nextDue))}`}
+                              href={`${appointmentNewBase}?fromUpcoming=1&client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startDate=${encodeURIComponent(toDateLocalInput(r.isOverdue ? today : r.nextDue))}&durationMinutes=${encodeURIComponent(String(clientById.get(r.clientId)?.default_program?.default_session_length_minutes ?? clientById.get(r.clientId)?.default_job?.default_session_length_minutes ?? ""))}`}
                               className="font-medium text-sky-400 hover:text-sky-300"
                             >
                               {uv.scheduleAppointment}
@@ -361,7 +361,7 @@ export default async function UpcomingVisitsPage({
                         </Link>
                       ) : (
                         <Link
-                          href={`${appointmentNewBase}?client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startAt=${encodeURIComponent(toDateTimeLocalInput(today))}`}
+                          href={`${appointmentNewBase}?fromUpcoming=1&client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startDate=${encodeURIComponent(toDateLocalInput(today))}&durationMinutes=${encodeURIComponent(String(row.default_program?.default_session_length_minutes ?? row.default_job?.default_session_length_minutes ?? ""))}`}
                           className="text-sky-400 hover:text-sky-300"
                         >
                           {uv.scheduleAppointment}
