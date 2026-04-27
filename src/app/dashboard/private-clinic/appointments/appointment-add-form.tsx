@@ -254,7 +254,7 @@ export function AppointmentAddForm({
                 value={singleStartTime}
                 onChange={(e) => setSingleStartTime(e.target.value)}
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startTimeLabel}
               />
               <input
@@ -405,7 +405,7 @@ export function AppointmentAddForm({
               name="time_of_day"
               type="time"
               required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </label>
           <label className="space-y-1">

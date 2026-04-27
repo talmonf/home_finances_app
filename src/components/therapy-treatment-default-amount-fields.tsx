@@ -204,7 +204,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           type="time"
           step={60}
           defaultValue={defaultValues?.occurred_time ?? ""}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="mt-1 w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
       <div>
