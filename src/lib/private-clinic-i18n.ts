@@ -401,6 +401,8 @@ export function privateClinicClients(lang: UiLanguage) {
     filterStatusInactiveOnly: p("Inactive only", "לא פעילים בלבד"),
     filterJobLabel: p("Job (default or linked)", "משרה (ברירת מחדל או מקושרת)"),
     filterJobAny: p("Any job", "כל משרה"),
+    filterProgramLabel: p("Program", "תכנית"),
+    filterProgramAny: p("Any program", "כל תכנית"),
     filterFamilyLabel: p("Family", "משפחה"),
     filterFamilyAny: p("Any family", "כל משפחה"),
     filterDateRangeHelp: p(

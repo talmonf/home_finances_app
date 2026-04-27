@@ -21,6 +21,7 @@ type ListFilterQs = {
   q: string;
   status: string;
   job: string;
+  program: string;
   family: string;
   from: string;
   to: string;
@@ -95,6 +96,7 @@ function clientsListHref(p: {
   q?: string;
   status?: string;
   job?: string;
+  program?: string;
   family?: string;
   from?: string;
   to?: string;
@@ -105,6 +107,7 @@ function clientsListHref(p: {
   if (p.q?.trim()) sp.set("q", p.q.trim());
   if (p.status && p.status !== "active") sp.set("status", p.status);
   if (p.job?.trim()) sp.set("job", p.job.trim());
+  if (p.program?.trim()) sp.set("program", p.program.trim());
   if (p.family?.trim()) sp.set("family", p.family.trim());
   if (p.from?.trim()) sp.set("from", p.from.trim());
   if (p.to?.trim()) sp.set("to", p.to.trim());
@@ -157,6 +160,7 @@ export default async function ClientsPage({
     q?: string;
     status?: string;
     job?: string;
+    program?: string;
     family?: string;
     from?: string;
     to?: string;
@@ -191,7 +195,7 @@ export default async function ClientsPage({
     select: { family_member_id: true },
   });
   const familyMemberId = user?.family_member_id ?? null;
-  const { jobs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
+  const { jobs, programs } = await loadTherapyClientFormOptions({ householdId, familyMemberId });
   const settings = await prisma.therapy_settings.findUnique({
     where: { household_id: householdId },
     select: { family_therapy_enabled: true },
@@ -207,6 +211,9 @@ export default async function ClientsPage({
   const allowedJobIds = new Set(jobs.map((j) => j.id));
   const jobIdRaw = (resolved?.job ?? "").trim();
   const jobId = allowedJobIds.has(jobIdRaw) ? jobIdRaw : "";
+  const allowedProgramIds = new Set(programs.map((p) => p.id));
+  const programIdRaw = (resolved?.program ?? "").trim();
+  const programId = allowedProgramIds.has(programIdRaw) ? programIdRaw : "";
   const familyIdRaw = (resolved?.family ?? "").trim();
   const allowedFamilyIds = new Set(families.map((f) => f.id));
   const familyId = allowedFamilyIds.has(familyIdRaw) ? familyIdRaw : "";
@@ -224,6 +231,7 @@ export default async function ClientsPage({
     q,
     status,
     job: jobId,
+    program: programId,
     family: familyId,
     from: fromRaw,
     to: toRaw,
@@ -247,6 +255,7 @@ export default async function ClientsPage({
           OR: [{ default_job_id: jobId }, { client_jobs: { some: { job_id: jobId } } }],
         }
       : {}),
+    ...(programId ? { default_program_id: programId } : {}),
     ...(familyId ? { family_id: familyId } : {}),
     ...(dateRangeActive && dateFrom && dateTo
       ? {
@@ -303,7 +312,13 @@ export default async function ClientsPage({
   );
 
   const hasActiveFilters =
-    Boolean(q) || status !== "active" || Boolean(jobId) || Boolean(familyId) || Boolean(fromRaw) || Boolean(toRaw);
+    Boolean(q) ||
+    status !== "active" ||
+    Boolean(jobId) ||
+    Boolean(programId) ||
+    Boolean(familyId) ||
+    Boolean(fromRaw) ||
+    Boolean(toRaw);
 
   return (
     <div className="space-y-6">
@@ -328,14 +343,14 @@ export default async function ClientsPage({
         </Link>
       </div>
 
-      <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+      <section className="space-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3">
         <h2 className="text-sm font-medium text-slate-300">{cl.filters}</h2>
-        <form method="get" className="space-y-3">
+        <form method="get" className="space-y-2">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[12rem] flex-1 space-y-1">
-              <label htmlFor="clients_filter_q" className="block text-xs text-slate-400">
+          <div className="grid grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto_auto]">
+            <div className="space-y-1 xl:min-w-0">
+              <label htmlFor="clients_filter_q" className="block text-[11px] text-slate-400">
                 {cl.filterSearchLabel}
               </label>
               <input
@@ -344,18 +359,18 @@ export default async function ClientsPage({
                 type="search"
                 defaultValue={q}
                 placeholder={cl.filterSearchPlaceholder}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="min-w-[12rem] space-y-1">
-              <label htmlFor="clients_filter_job" className="block text-xs text-slate-400">
+            <div className="space-y-1 xl:min-w-0">
+              <label htmlFor="clients_filter_job" className="block text-[11px] text-slate-400">
                 {cl.filterJobLabel}
               </label>
               <select
                 id="clients_filter_job"
                 name="job"
                 defaultValue={jobId}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               >
                 <option value="">{cl.filterJobAny}</option>
                 {jobs.map((j) => (
@@ -365,45 +380,63 @@ export default async function ClientsPage({
                 ))}
               </select>
             </div>
-            <div className="min-w-[10rem] space-y-1">
-              {familyTherapyEnabled ? (
-                <>
-                  <label htmlFor="clients_filter_family" className="block text-xs text-slate-400">
-                    {cl.filterFamilyLabel}
-                  </label>
-                  <select
-                    id="clients_filter_family"
-                    name="family"
-                    defaultValue={familyId}
-                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                  >
-                    <option value="">{cl.filterFamilyAny}</option>
-                    {families.map((family) => (
-                      <option key={family.id} value={family.id}>
-                        {family.name}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              ) : null}
-            </div>
-            <div className="min-w-[10rem] space-y-1">
-              <label htmlFor="clients_filter_status" className="block text-xs text-slate-400">
+            {programs.length > 0 ? (
+              <div className="space-y-1 xl:min-w-0">
+                <label htmlFor="clients_filter_program" className="block text-[11px] text-slate-400">
+                  {cl.filterProgramLabel}
+                </label>
+                <select
+                  id="clients_filter_program"
+                  name="program"
+                  defaultValue={programId}
+                  className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+                >
+                  <option value="">{cl.filterProgramAny}</option>
+                  {programs.map((program) => (
+                    <option key={program.id} value={program.id}>
+                      {program.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {familyTherapyEnabled ? (
+              <div className="space-y-1 xl:min-w-0">
+                <label htmlFor="clients_filter_family" className="block text-[11px] text-slate-400">
+                  {cl.filterFamilyLabel}
+                </label>
+                <select
+                  id="clients_filter_family"
+                  name="family"
+                  defaultValue={familyId}
+                  className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+                >
+                  <option value="">{cl.filterFamilyAny}</option>
+                  {families.map((family) => (
+                    <option key={family.id} value={family.id}>
+                      {family.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            <div className="space-y-1 xl:min-w-0">
+              <label htmlFor="clients_filter_status" className="block text-[11px] text-slate-400">
                 {cl.filterStatusLabel}
               </label>
               <select
                 id="clients_filter_status"
                 name="status"
                 defaultValue={status}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               >
                 <option value="all">{cl.filterStatusAll}</option>
                 <option value="active">{cl.filterStatusActiveOnly}</option>
                 <option value="inactive">{cl.filterStatusInactiveOnly}</option>
               </select>
             </div>
-            <div className="min-w-[9rem] space-y-1">
-              <label htmlFor="clients_filter_from" className="block text-xs text-slate-400">
+            <div className="space-y-1 xl:min-w-0">
+              <label htmlFor="clients_filter_from" className="block text-[11px] text-slate-400">
                 {c.from}
               </label>
               <input
@@ -411,11 +444,11 @@ export default async function ClientsPage({
                 name="from"
                 type="date"
                 defaultValue={fromRaw}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="min-w-[9rem] space-y-1">
-              <label htmlFor="clients_filter_to" className="block text-xs text-slate-400">
+            <div className="space-y-1 xl:min-w-0">
+              <label htmlFor="clients_filter_to" className="block text-[11px] text-slate-400">
                 {c.to}
               </label>
               <input
@@ -423,25 +456,25 @@ export default async function ClientsPage({
                 name="to"
                 type="date"
                 defaultValue={toRaw}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
             <button
               type="submit"
-              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
+              className="h-9 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80 xl:self-end"
             >
               {c.apply}
             </button>
             {hasActiveFilters ? (
               <Link
                 href={clientsListHref({ sort, dir })}
-                className="text-sm text-sky-400 hover:text-sky-300"
+                className="text-sm text-sky-400 hover:text-sky-300 xl:self-end xl:pb-1"
               >
                 {c.cancel}
               </Link>
             ) : null}
           </div>
-          <p className="text-xs text-slate-500">{cl.filterDateRangeHelp}</p>
+          <p className="text-[11px] text-slate-500">{cl.filterDateRangeHelp}</p>
         </form>
       </section>
 
