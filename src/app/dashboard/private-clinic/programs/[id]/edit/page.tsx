@@ -283,14 +283,12 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
             <button
               type="submit"
               disabled={!canDelete}
+              title={!canDelete ? pr.programErrLinked : undefined}
               className="text-sm text-rose-400 enabled:hover:text-rose-300 disabled:cursor-not-allowed disabled:text-slate-500"
             >
               {c.delete}
             </button>
           </ConfirmDeleteForm>
-          {!canDelete ? (
-            <p className="text-xs text-amber-300">{pr.programErrLinked}</p>
-          ) : null}
         </div>
       </section>
 

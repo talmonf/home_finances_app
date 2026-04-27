@@ -117,12 +117,6 @@ export default async function ProgramsPage({
                     scope="col"
                     className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
                   >
-                    {pr.tableSort}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                  >
                     {c.startDate}
                   </th>
                   <th
@@ -148,7 +142,6 @@ export default async function ProgramsPage({
                       <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={jobLabel}>
                         {jobLabel}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">{p.sort_order}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {p.start_date ? p.start_date.toISOString().slice(0, 10) : c.none}
                       </td>

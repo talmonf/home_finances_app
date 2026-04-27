@@ -37,32 +37,36 @@ export function ProgramModalForm({
         <form action={action} className="grid gap-3 rounded-xl border border-slate-700/80 bg-slate-900/60 p-4 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
-          <select
-            name="job_id"
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{c.job}</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {formatJobDisplayLabel(j)} — {j.family_member.full_name}
-              </option>
-            ))}
-          </select>
-          <input
-            name="name"
-            placeholder={pr.programName}
-            required
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
           <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.job}</label>
+            <select
+              name="job_id"
+              required
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.job}</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {formatJobDisplayLabel(j)} — {j.family_member.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{pr.programName}</label>
             <input
-              name="sort_order"
-              type="number"
-              placeholder={c.sortOrderPh}
+              name="name"
+              required
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
-            <p className="text-xs text-slate-400">{c.sortOrderHint}</p>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-400">{c.description}</label>
+            <textarea
+              name="description"
+              placeholder={c.description}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="checkbox" name="is_active" defaultChecked />
@@ -84,21 +88,17 @@ export function ProgramModalForm({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div className="space-y-1 md:col-span-2">
+          <div className="space-y-1">
             <label className="block text-xs text-slate-300">Default session length (minutes)</label>
             <input
               name="default_session_length_minutes"
               type="number"
               min={1}
+              max={999}
               step={1}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <textarea
-            name="description"
-            placeholder={c.description}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
           <div className="md:col-span-2 space-y-1">
             <p className="text-xs text-slate-400">{pr.visitFrequency}</p>
             <p className="text-xs text-slate-500">{pr.visitFrequencyHint}</p>
