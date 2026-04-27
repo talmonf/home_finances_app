@@ -68,6 +68,24 @@ export function ProgramModalForm({
             <input type="checkbox" name="is_active" defaultChecked />
             {pr.active}
           </label>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.startDate}</label>
+            <input
+              name="start_date"
+              type="date"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-300">Default session length (minutes)</label>
+            <input
+              name="default_session_length_minutes"
+              type="number"
+              min={1}
+              step={1}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <textarea
             name="description"
             placeholder={c.description}
@@ -105,6 +123,28 @@ export function ProgramModalForm({
                 className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <span className="text-xs text-slate-400">{pr.weeks}</span>
+            </div>
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs text-slate-400">{pr.supportedVisitTypes}</p>
+            <p className="text-xs text-slate-500">{pr.supportedVisitTypesHint}</p>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="supported_visit_types" value="clinic" defaultChecked />
+                {pr.visitClinic}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="supported_visit_types" value="home" defaultChecked />
+                {pr.visitHome}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="supported_visit_types" value="phone" defaultChecked />
+                {pr.visitPhone}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="supported_visit_types" value="video" defaultChecked />
+                {pr.visitVideo}
+              </label>
             </div>
           </div>
           <div className="md:col-span-2 flex flex-wrap items-center gap-3">

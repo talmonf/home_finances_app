@@ -15,7 +15,19 @@ import {
 } from "@/lib/therapy/appointment-audit";
 import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
+import {
+  getSystemDefaultSessionMinutes,
+  resolveSessionDurationMinutes,
+} from "@/lib/therapy/session-duration";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
+import {
+  deleteGoogleCalendarEvent,
+  isGmailAddress,
+  saveGoogleSyncFailure,
+  saveGoogleSyncSuccess,
+  upsertGoogleCalendarEvent,
+  type GoogleCalendarUserConfig,
+} from "@/lib/google-calendar/calendar";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
@@ -201,6 +213,15 @@ function parseDate(raw: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function parsePositiveInt(raw: string | null | undefined): number | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  const rounded = Math.trunc(parsed);
+  return rounded > 0 ? rounded : null;
+}
+
 function parseLitres(raw: string | null | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;
@@ -217,6 +238,14 @@ function parseDateRequired(raw: string | null | undefined): Date | null {
 function parseVisitType(raw: string | null | undefined): TherapyVisitType | null {
   if (raw === "clinic" || raw === "home" || raw === "phone" || raw === "video") return raw;
   return null;
+}
+
+function parseSupportedVisitTypes(values: FormDataEntryValue[]): TherapyVisitType[] {
+  const selected = values
+    .map((v) => parseVisitType(typeof v === "string" ? v : null))
+    .filter((v): v is TherapyVisitType => v !== null);
+  if (selected.length === 0) return [...THERAPY_VISIT_TYPES];
+  return [...new Set(selected)];
 }
 
 function parseTherapyClientRelationshipType(raw: string | null | undefined): TherapyClientRelationshipType | null {
@@ -637,6 +666,9 @@ export async function createTherapyJob(formData: FormData) {
   const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
   const end_date_raw = (formData.get("end_date") as string)?.trim() || "";
   const job_title = (formData.get("job_title") as string)?.trim() || "";
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
 
   if (!employment_type || !start_date_raw || !job_title) {
     redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
@@ -661,6 +693,7 @@ export async function createTherapyJob(formData: FormData) {
       employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
+      default_session_length_minutes,
       is_active: formData.has("is_active"),
       is_private_clinic: formData.has("is_private_clinic"),
     },
@@ -690,6 +723,9 @@ export async function updateTherapyJob(formData: FormData) {
   const start_date_raw = (formData.get("start_date") as string)?.trim() || "";
   const end_date_raw = (formData.get("end_date") as string)?.trim() || "";
   const job_title = (formData.get("job_title") as string)?.trim() || "";
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
 
   if (!employment_type || !start_date_raw || !job_title) {
     redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
@@ -712,6 +748,7 @@ export async function updateTherapyJob(formData: FormData) {
       employer_tax_number: (formData.get("employer_tax_number") as string)?.trim() || null,
       employer_address: (formData.get("employer_address") as string)?.trim() || null,
       notes: (formData.get("notes") as string)?.trim() || null,
+      default_session_length_minutes,
       is_active: formData.has("is_active"),
       is_private_clinic: formData.has("is_private_clinic"),
     },
@@ -876,6 +913,11 @@ export async function createTherapyProgram(formData: FormData) {
 
   const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
   const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
+  const start_date = parseDate((formData.get("start_date") as string | null) ?? null);
+  const supported_visit_types = parseSupportedVisitTypes(formData.getAll("supported_visit_types"));
 
   await prisma.therapy_service_programs.create({
     data: {
@@ -883,11 +925,14 @@ export async function createTherapyProgram(formData: FormData) {
       household_id: householdId,
       job_id,
       name,
+      start_date,
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || 0) || 0,
       is_active: formData.has("is_active"),
+      supported_visit_types,
       visits_per_period_count,
       visits_per_period_weeks,
+      default_session_length_minutes,
     },
   });
 
@@ -911,16 +956,24 @@ export async function updateTherapyProgram(formData: FormData) {
 
   const visits_per_period_count = parseVisitCount(formData.get("visits_per_period_count") as string | null);
   const visits_per_period_weeks = parseVisitWeeks(formData.get("visits_per_period_weeks") as string | null);
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
+  const start_date = parseDate((formData.get("start_date") as string | null) ?? null);
+  const supported_visit_types = parseSupportedVisitTypes(formData.getAll("supported_visit_types"));
 
   await prisma.therapy_service_programs.update({
     where: { id },
     data: {
       name: (formData.get("name") as string)?.trim() || row.name,
+      start_date,
       description: (formData.get("description") as string)?.trim() || null,
       sort_order: Number(formData.get("sort_order") || row.sort_order) || 0,
       is_active: formData.has("is_active"),
+      supported_visit_types,
       visits_per_period_count,
       visits_per_period_weeks,
+      default_session_length_minutes,
     },
   });
 
@@ -2642,6 +2695,138 @@ function appointmentsSuccessRedirect(formData: FormData, fallback: string): neve
   redirect(path);
 }
 
+async function getGoogleCalendarUserForSync(
+  householdId: string,
+  userId: string,
+): Promise<GoogleCalendarUserConfig | null> {
+  const user = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId, is_active: true },
+    select: {
+      id: true,
+      household_id: true,
+      google_calendar_enabled: true,
+      google_gmail_address: true,
+      google_calendar_access_token_encrypted: true,
+      google_calendar_refresh_token_encrypted: true,
+      google_calendar_token_expires_at: true,
+    },
+  });
+  if (!user?.google_calendar_enabled) return null;
+  if (!user.google_gmail_address || !isGmailAddress(user.google_gmail_address)) return null;
+  return user;
+}
+
+async function resolveAppointmentDurationMinutes(params: {
+  householdId: string;
+  jobId: string;
+  programId: string | null;
+  appointmentDurationMinutes: number | null;
+}) {
+  const [settings, job, program] = await Promise.all([
+    prisma.therapy_settings.findUnique({
+      where: { household_id: params.householdId },
+      select: { default_session_length_minutes: true },
+    }),
+    prisma.jobs.findFirst({
+      where: { id: params.jobId, household_id: params.householdId },
+      select: { default_session_length_minutes: true },
+    }),
+    params.programId
+      ? prisma.therapy_service_programs.findFirst({
+          where: { id: params.programId, household_id: params.householdId },
+          select: { default_session_length_minutes: true },
+        })
+      : null,
+  ]);
+
+  return resolveSessionDurationMinutes({
+    systemDefaultMinutes: getSystemDefaultSessionMinutes(),
+    therapySettingsDefaultMinutes: settings?.default_session_length_minutes ?? null,
+    jobDefaultMinutes: job?.default_session_length_minutes ?? null,
+    programDefaultMinutes: program?.default_session_length_minutes ?? null,
+    appointmentDurationMinutes: params.appointmentDurationMinutes,
+  });
+}
+
+function appointmentTextByLanguage(language: "he" | "en", action: "create" | "update" | "cancel") {
+  if (language === "he") {
+    if (action === "cancel") {
+      return { summaryPrefix: "תור בוטל", descriptionPrefix: "התור בוטל במערכת הקליניקה." };
+    }
+    return { summaryPrefix: "תור טיפול", descriptionPrefix: "סנכרון אוטומטי ממערכת הקליניקה." };
+  }
+  if (action === "cancel") {
+    return { summaryPrefix: "Appointment cancelled", descriptionPrefix: "This appointment was cancelled in the clinic app." };
+  }
+  return { summaryPrefix: "Therapy appointment", descriptionPrefix: "Automatically synced from the clinic app." };
+}
+
+async function syncAppointmentToGoogleCalendar(params: {
+  householdId: string;
+  actingUserId: string;
+  actingUserLanguage: "he" | "en";
+  appointment: {
+    id: string;
+    start_at: Date;
+    duration_minutes: number | null;
+    google_calendar_event_id: string | null;
+    status: TherapyAppointmentStatus;
+    client: { first_name: string; last_name: string | null };
+    job: { job_title: string };
+  };
+}): Promise<string | null> {
+  const googleUser = await getGoogleCalendarUserForSync(params.householdId, params.actingUserId);
+  if (!googleUser) return null;
+
+  try {
+    if (
+      params.appointment.status === "cancelled" &&
+      params.appointment.google_calendar_event_id
+    ) {
+      await deleteGoogleCalendarEvent({
+        user: googleUser,
+        eventId: params.appointment.google_calendar_event_id,
+      });
+      await saveGoogleSyncSuccess(params.appointment.id, null);
+      return null;
+    }
+
+    if (params.appointment.status === "cancelled") {
+      return null;
+    }
+
+    const duration = params.appointment.duration_minutes;
+    if (!duration || duration <= 0) {
+      const error = "Missing valid session duration; Google Calendar sync skipped.";
+      await saveGoogleSyncFailure(params.appointment.id, error);
+      return error;
+    }
+
+    const endAt = new Date(params.appointment.start_at.getTime() + duration * 60 * 1000);
+    const action = params.appointment.google_calendar_event_id ? "update" : "create";
+    const text = appointmentTextByLanguage(params.actingUserLanguage, action);
+    const clientFullName = [params.appointment.client.first_name, params.appointment.client.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    const eventId = await upsertGoogleCalendarEvent({
+      user: googleUser,
+      existingEventId: params.appointment.google_calendar_event_id,
+      summary: `${text.summaryPrefix}: ${clientFullName || params.appointment.client.first_name}`,
+      description: `${text.descriptionPrefix}\n${params.actingUserLanguage === "he" ? "תפקיד" : "Role"}: ${params.appointment.job.job_title}`,
+      startIsoUtc: params.appointment.start_at.toISOString(),
+      endIsoUtc: endAt.toISOString(),
+    });
+    await saveGoogleSyncSuccess(params.appointment.id, eventId);
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Google Calendar sync failed";
+    await saveGoogleSyncFailure(params.appointment.id, message);
+    return message;
+  }
+}
+
 export async function createTherapyAppointment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const session = await getAuthSession();
@@ -2653,6 +2838,9 @@ export async function createTherapyAppointment(formData: FormData) {
   const program_id = (formData.get("program_id") as string)?.trim() || "";
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
   const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
+  const appointmentDurationMinutesInput = parsePositiveInt(
+    (formData.get("duration_minutes") as string | null) ?? null,
+  );
   if (!client_id || !job_id || !visit_type || !start_at_raw) {
     redirect(`${BASE}/appointments?error=missing`);
   }
@@ -2675,6 +2863,17 @@ export async function createTherapyAppointment(formData: FormData) {
     where: { id: client_id, household_id: householdId },
     select: { family_id: true },
   });
+  const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
+    householdId,
+    jobId: job_id,
+    programId: programIdOrNull,
+    appointmentDurationMinutes: appointmentDurationMinutesInput,
+  });
+  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const resolvedEndAt =
+    explicitEndAt ??
+    (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
+
   const created = await prisma.therapy_appointments.create({
     data: {
       id: appointmentId,
@@ -2685,7 +2884,8 @@ export async function createTherapyAppointment(formData: FormData) {
       program_id: programIdOrNull,
       visit_type,
       start_at,
-      end_at: parseDate((formData.get("end_at") as string) || null),
+      end_at: resolvedEndAt,
+      duration_minutes: appointmentDurationMinutesInput,
       status: "scheduled",
     },
     include: APPOINTMENT_AUDIT_INCLUDE,
@@ -2709,9 +2909,32 @@ export async function createTherapyAppointment(formData: FormData) {
     metadata: { snapshot: appointmentToSnapshot(createdWithParticipants ?? created) },
   });
 
+  const actingUser = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId },
+    select: { ui_language: true },
+  });
+  const syncError = await syncAppointmentToGoogleCalendar({
+    householdId,
+    actingUserId: userId,
+    actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+    appointment: {
+      id: created.id,
+      start_at: created.start_at,
+      duration_minutes: resolvedDurationMinutes,
+      google_calendar_event_id: created.google_calendar_event_id ?? null,
+      status: created.status,
+      client: {
+        first_name: created.client.first_name,
+        last_name: created.client.last_name,
+      },
+      job: { job_title: created.job.job_title },
+    },
+  });
+
   revalidatePath(`${BASE}/appointments`);
   revalidatePath(`${BASE}/reports`);
-  appointmentsSuccessRedirect(formData, `${BASE}/appointments?created=1`);
+  const createdSuffix = syncError ? "created=1&warn=google-sync" : "created=1";
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?${createdSuffix}`);
 }
 
 export async function cancelTherapyAppointment(formData: FormData) {
@@ -2764,6 +2987,27 @@ export async function cancelTherapyAppointment(formData: FormData) {
         notes: cancellationReasonDetails.notes,
       },
     });
+    const actingUser = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId },
+      select: { ui_language: true },
+    });
+    await syncAppointmentToGoogleCalendar({
+      householdId,
+      actingUserId: userId,
+      actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+      appointment: {
+        id: after.id,
+        start_at: after.start_at,
+        duration_minutes: after.duration_minutes ?? null,
+        google_calendar_event_id: after.google_calendar_event_id ?? null,
+        status: after.status,
+        client: {
+          first_name: after.client.first_name,
+          last_name: after.client.last_name,
+        },
+        job: { job_title: after.job.job_title },
+      },
+    });
   }
 
   revalidatePath(`${BASE}/appointments`);
@@ -2779,6 +3023,9 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const id = (formData.get("id") as string)?.trim() || "";
   const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
+  const appointmentDurationMinutesInput = parsePositiveInt(
+    (formData.get("duration_minutes") as string | null) ?? null,
+  );
   const rescheduleReasonDetails = getAppointmentChangeReasonAndNotes(
     formData,
     "reschedule_reason",
@@ -2802,11 +3049,26 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
 
   const start_at = new Date(start_at_raw);
   if (Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
-  const end_at = parseDate((formData.get("end_at") as string) || null);
+  const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
+    householdId,
+    jobId: before.job_id,
+    programId: before.program_id,
+    appointmentDurationMinutes:
+      appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+  });
+  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const end_at =
+    explicitEndAt ??
+    (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
 
   await prisma.therapy_appointments.updateMany({
     where: { id, household_id: householdId },
-    data: { start_at, end_at, reschedule_reason },
+    data: {
+      start_at,
+      end_at,
+      reschedule_reason,
+      duration_minutes: appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+    },
   });
 
   const after = await prisma.therapy_appointments.findFirst({
@@ -2824,6 +3086,27 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
         after: appointmentToSnapshot(after),
         reason: rescheduleReasonDetails.reason,
         notes: rescheduleReasonDetails.notes,
+      },
+    });
+    const actingUser = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId },
+      select: { ui_language: true },
+    });
+    await syncAppointmentToGoogleCalendar({
+      householdId,
+      actingUserId: userId,
+      actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+      appointment: {
+        id: after.id,
+        start_at: after.start_at,
+        duration_minutes: resolvedDurationMinutes,
+        google_calendar_event_id: after.google_calendar_event_id ?? null,
+        status: after.status,
+        client: {
+          first_name: after.client.first_name,
+          last_name: after.client.last_name,
+        },
+        job: { job_title: after.job.job_title },
       },
     });
   }
@@ -2846,6 +3129,9 @@ export async function updateTherapyAppointment(formData: FormData) {
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
   const status = parseAppointmentStatus((formData.get("status") as string)?.trim() || null);
   const additionalClientIds = parseUniqueIds(formData.getAll("additional_client_ids"));
+  const appointmentDurationMinutesInput = parsePositiveInt(
+    (formData.get("duration_minutes") as string | null) ?? null,
+  );
   if (!id || !client_id || !job_id || !visit_type || !status) {
     redirect(`${BASE}/appointments?error=missing`);
   }
@@ -2879,6 +3165,18 @@ export async function updateTherapyAppointment(formData: FormData) {
     select: { family_id: true },
   });
 
+  const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
+    householdId,
+    jobId: job_id,
+    programId: programIdOrNull,
+    appointmentDurationMinutes:
+      appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+  });
+  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const resolvedEndAt =
+    explicitEndAt ??
+    (resolvedDurationMinutes ? new Date(before.start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
+
   await prisma.therapy_appointments.updateMany({
     where: { id, household_id: householdId },
     data: {
@@ -2888,7 +3186,8 @@ export async function updateTherapyAppointment(formData: FormData) {
       program_id: programIdOrNull,
       visit_type,
       status,
-      end_at: parseDate((formData.get("end_at") as string) || null),
+      end_at: resolvedEndAt,
+      duration_minutes: appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
       cancellation_reason:
         status === "cancelled"
           ? (formData.get("cancellation_reason") as string | null)?.trim() || null
@@ -2915,6 +3214,27 @@ export async function updateTherapyAppointment(formData: FormData) {
       metadata: {
         before: appointmentToSnapshot(before),
         after: appointmentToSnapshot(after),
+      },
+    });
+    const actingUser = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId },
+      select: { ui_language: true },
+    });
+    await syncAppointmentToGoogleCalendar({
+      householdId,
+      actingUserId: userId,
+      actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+      appointment: {
+        id: after.id,
+        start_at: after.start_at,
+        duration_minutes: resolvedDurationMinutes,
+        google_calendar_event_id: after.google_calendar_event_id ?? null,
+        status: after.status,
+        client: {
+          first_name: after.client.first_name,
+          last_name: after.client.last_name,
+        },
+        job: { job_title: after.job.job_title },
       },
     });
   }

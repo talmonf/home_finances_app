@@ -122,6 +122,26 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
             <input type="checkbox" name="is_active" defaultChecked={program.is_active} />
             {pr.active}
           </label>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">{c.startDate}</label>
+            <input
+              name="start_date"
+              type="date"
+              defaultValue={program.start_date ? program.start_date.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-xs text-slate-300">Default session length (minutes)</label>
+            <input
+              name="default_session_length_minutes"
+              type="number"
+              min={1}
+              step={1}
+              defaultValue={program.default_session_length_minutes ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
           <textarea
             name="description"
             defaultValue={program.description ?? ""}
@@ -160,6 +180,48 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
                 className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <span className="text-xs text-slate-400">{pr.weeks}</span>
+            </div>
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs text-slate-400">{pr.supportedVisitTypes}</p>
+            <p className="text-xs text-slate-500">{pr.supportedVisitTypesHint}</p>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  name="supported_visit_types"
+                  value="clinic"
+                  defaultChecked={program.supported_visit_types.includes("clinic")}
+                />
+                {pr.visitClinic}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  name="supported_visit_types"
+                  value="home"
+                  defaultChecked={program.supported_visit_types.includes("home")}
+                />
+                {pr.visitHome}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  name="supported_visit_types"
+                  value="phone"
+                  defaultChecked={program.supported_visit_types.includes("phone")}
+                />
+                {pr.visitPhone}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  name="supported_visit_types"
+                  value="video"
+                  defaultChecked={program.supported_visit_types.includes("video")}
+                />
+                {pr.visitVideo}
+              </label>
             </div>
           </div>
           <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2">

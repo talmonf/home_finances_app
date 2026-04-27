@@ -93,6 +93,8 @@ export default async function EditHouseholdUserPage({
   const isClinicOnlyHousehold =
     visibleHouseholdSections.length === 1 &&
     visibleHouseholdSections[0]?.id === "privateClinic";
+  const gmailFromLoginEmail = user.email.toLowerCase().endsWith("@gmail.com") ? user.email : "";
+  const defaultGoogleGmailAddress = user.google_gmail_address ?? gmailFromLoginEmail;
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -278,6 +280,39 @@ export default async function EditHouseholdUserPage({
                   When enabled, the user sees section quick links on dashboard pages. Super-admin only.
                 </span>
               </label>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Google Calendar integration
+              </p>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    id="google_calendar_enabled"
+                    name="google_calendar_enabled"
+                    defaultChecked={user.google_calendar_enabled ?? false}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-sky-500"
+                  />
+                  Enable one-way Google Calendar sync for appointments
+                </label>
+                <div>
+                  <label
+                    htmlFor="google_gmail_address"
+                    className="mb-1 block text-xs font-medium text-slate-300"
+                  >
+                    Gmail address
+                  </label>
+                  <input
+                    id="google_gmail_address"
+                    name="google_gmail_address"
+                    type="email"
+                    defaultValue={defaultGoogleGmailAddress}
+                    placeholder="name@gmail.com"
+                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label

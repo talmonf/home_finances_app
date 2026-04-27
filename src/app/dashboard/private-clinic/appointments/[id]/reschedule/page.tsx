@@ -82,6 +82,17 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </label>
+        <label className="text-sm text-slate-300">
+          Duration (minutes, optional)
+          <input
+            name="duration_minutes"
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={apt.duration_minutes ?? ""}
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+        </label>
         <AppointmentChangeReasonFields
           reasonFieldName="reschedule_reason"
           notesFieldName="reschedule_notes"

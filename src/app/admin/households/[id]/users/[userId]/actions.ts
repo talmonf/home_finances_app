@@ -16,6 +16,13 @@ const ALLOWED_USER_TYPES = [
   "other",
 ] as const;
 
+function normalizeGoogleGmailAddress(raw: string | null): string | null {
+  const value = raw?.trim().toLowerCase() ?? "";
+  if (!value) return null;
+  if (!/^[^@\s]+@gmail\.com$/i.test(value)) return null;
+  return value;
+}
+
 export async function updateHouseholdUser(formData: FormData) {
   const session = await getAuthSession();
   if (!session?.user?.isSuperAdmin) {
@@ -34,6 +41,10 @@ export async function updateHouseholdUser(formData: FormData) {
   const newPassword = (formData.get("new_password") as string | null)?.trim() || "";
   const mustChangePasswordRequested = formData.get("must_change_password") === "on";
   const showUsefulLinks = formData.get("show_useful_links") === "on";
+  const googleCalendarEnabled = formData.get("google_calendar_enabled") === "on";
+  const googleGmailAddress = normalizeGoogleGmailAddress(
+    (formData.get("google_gmail_address") as string | null) ?? null,
+  );
 
   if (!householdId || !userId) {
     redirect("/admin/households?error=" + encodeURIComponent("Missing household or user."));
@@ -42,6 +53,12 @@ export async function updateHouseholdUser(formData: FormData) {
   if (!email || !fullName || !role || !userType) {
     redirect(
       `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("All fields are required")}`,
+    );
+  }
+
+  if (googleCalendarEnabled && !googleGmailAddress) {
+    redirect(
+      `/admin/households/${householdId}/users/${userId}?error=${encodeURIComponent("Please enter a valid Gmail address to enable Google Calendar integration.")}`,
     );
   }
 
@@ -108,6 +125,8 @@ export async function updateHouseholdUser(formData: FormData) {
     password_hash?: string;
     must_change_password: boolean;
     password_changed_at?: Date;
+    google_calendar_enabled: boolean;
+    google_gmail_address: string | null;
   } = {
     email,
     full_name: fullName,
@@ -115,6 +134,8 @@ export async function updateHouseholdUser(formData: FormData) {
     user_type: userType as (typeof ALLOWED_USER_TYPES)[number],
     family_member_id: familyMemberId,
     show_useful_links: showUsefulLinks,
+    google_calendar_enabled: googleCalendarEnabled,
+    google_gmail_address: googleGmailAddress,
     ...(password_hash
       ? {
           password_hash,

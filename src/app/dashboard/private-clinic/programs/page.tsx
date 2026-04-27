@@ -123,6 +123,12 @@ export default async function ProgramsPage({
                     scope="col"
                     className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
                   >
+                    {c.startDate}
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                  >
                     {pr.tableActive}
                   </th>
                   <th
@@ -143,6 +149,9 @@ export default async function ProgramsPage({
                         {jobLabel}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">{p.sort_order}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                        {p.start_date ? p.start_date.toISOString().slice(0, 10) : c.none}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {p.is_active ? c.active : c.inactive}
                       </td>

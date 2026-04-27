@@ -14,6 +14,8 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 101_therapy_program_start_date_supported_visit_types.sql (2026-04-27)
+- [x] 100_google_calendar_and_session_duration.sql (2026-04-27)
 - [x] 099_therapy_families_start_date.sql (2026-04-26)
 - [x] 098_therapy_family_member_position.sql (2026-04-26)
 - [x] 097_therapy_settings_note_visibility.sql (2026-04-24)
@@ -122,6 +124,8 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 101 | `101_therapy_program_start_date_supported_visit_types.sql` (2026-04-27) | ALTER | `therapy_service_programs`: add optional `start_date` and required `supported_visit_types` enum-array (default all visit types: clinic/home/phone/video) so each program can declare allowed visit modes. |
+| 100 | `100_google_calendar_and_session_duration.sql` (2026-04-27) | ALTER | Adds per-user Google Calendar integration fields (enable flag, Gmail address, encrypted OAuth tokens, sync error metadata), adds session duration defaults (`therapy_settings`, `jobs`, `therapy_service_programs`), and appointment sync fields (`duration_minutes`, Google event id + sync status). |
 | 097 | `097_therapy_settings_note_visibility.sql` (2026-04-24) | ALTER | `therapy_settings`: add `note_1_visible`, `note_2_visible`, `note_3_visible` booleans (default `true`) for explicit per-note field visibility on treatment forms. |
 | 096 | `096_therapy_receipts_kind_and_net_amount.sql` (2026-04-24) | ALTER | Add enum `therapy_receipt_kind` (`regular`, `salary_fictitious`) and columns `therapy_receipts.receipt_kind` + `net_amount` (`DECIMAL(15,2)`); backfill net from `total_amount`. |
 | 095 | `095_private_clinic_receipts_import_currency_defaults.sql` (2026-04-22) | ALTER/UPDATE | `users`: add optional `default_currency` (backfilled from `households.primary_currency`); `therapy_settings`: add optional `usual_treatment_cost_currency_for_import` (backfilled from household currency) for receipt-import amount/currency defaults. |

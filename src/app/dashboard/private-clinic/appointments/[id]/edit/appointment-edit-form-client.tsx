@@ -19,6 +19,7 @@ type Props = {
   initialStatus: string;
   initialCancellationReason: string;
   initialEndAt: string;
+  initialDurationMinutes: string;
   labels: {
     client: string;
     programOptional: string;
@@ -138,6 +139,15 @@ export function AppointmentEditFormClient(props: Props) {
         name="end_at"
         type="datetime-local"
         defaultValue={props.initialEndAt}
+        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+      />
+      <input
+        name="duration_minutes"
+        type="number"
+        min={1}
+        step={1}
+        defaultValue={props.initialDurationMinutes}
+        placeholder="Duration (minutes)"
         className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
       />
       <button

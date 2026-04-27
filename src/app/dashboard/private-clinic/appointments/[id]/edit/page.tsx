@@ -158,6 +158,7 @@ export default async function EditAppointmentPage({ params }: PageProps) {
         initialStatus={apt.status}
         initialCancellationReason={apt.cancellation_reason ?? ""}
         initialEndAt={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
+        initialDurationMinutes={apt.duration_minutes ? String(apt.duration_minutes) : ""}
         labels={{
           client: c.client,
           programOptional: ap.programOptional,

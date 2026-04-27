@@ -485,6 +485,7 @@ model jobs {
   employer_tax_number  String?
   employer_address     String?
   external_reporting_system String?
+  default_session_length_minutes Int?
   notes                String?
   is_active            Boolean           @default(true)
   is_private_clinic    Boolean           @default(true)
@@ -1285,6 +1286,14 @@ model users {
   is_active            Boolean  @default(true)
   /// When false, dashboard useful-links blocks are hidden for this user (super-admin only).
   show_useful_links    Boolean  @default(true)
+  google_calendar_enabled Boolean @default(false)
+  google_gmail_address String?
+  google_calendar_access_token_encrypted String?
+  google_calendar_refresh_token_encrypted String?
+  google_calendar_token_expires_at DateTime?
+  google_calendar_token_scope String?
+  google_calendar_sync_error String?
+  google_calendar_sync_error_at DateTime?
   created_at           DateTime @default(now())
   last_login_at        DateTime?
   must_change_password Boolean  @default(false)
@@ -1577,6 +1586,7 @@ model therapy_settings {
   usual_treatment_cost_for_import Decimal? @db.Decimal(15, 2)
   /// Optional currency for private-clinic receipt import default amount.
   usual_treatment_cost_currency_for_import String?
+  default_session_length_minutes Int?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
@@ -1604,11 +1614,14 @@ model therapy_service_programs {
   household_id String
   job_id       String
   name         String
+  start_date   DateTime? @db.Date
   description  String?
   sort_order   Int      @default(0)
   is_active    Boolean  @default(true)
+  supported_visit_types TherapyVisitType[] @default([clinic, home, phone, video])
   visits_per_period_count Int?
   visits_per_period_weeks Int?
+  default_session_length_minutes Int?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
@@ -2029,7 +2042,12 @@ model therapy_appointments {
   visit_type   TherapyVisitType
   start_at     DateTime
   end_at       DateTime?
+  duration_minutes Int?
   status       TherapyAppointmentStatus @default(scheduled)
+  google_calendar_event_id String?
+  google_calendar_last_synced_at DateTime?
+  google_calendar_last_error String?
+  google_calendar_last_error_at DateTime?
   treatment_id String?
   reschedule_reason String?
   cancellation_reason String?

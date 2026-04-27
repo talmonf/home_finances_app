@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentUiLanguage,
+  getAuthSession,
 } from "@/lib/auth";
 import {
   ensureDefaultConsultationTypes,
@@ -22,6 +23,7 @@ import {
 import { privateClinicCommon, privateClinicSettings } from "@/lib/private-clinic-i18n";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { updateMyGoogleCalendarSettings } from "@/app/dashboard/user-preferences-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,8 @@ export default async function PrivateClinicSettingsPage({
   const sp = searchParams ? await searchParams : {};
   const modalMode = sp.modal;
 
-  const [settings, consultationTypes, expenseCategories] = await Promise.all([
+  const session = await getAuthSession();
+  const [settings, consultationTypes, expenseCategories, currentUser] = await Promise.all([
     prisma.therapy_settings.findUnique({
       where: { household_id: householdId },
       select: {
@@ -68,10 +71,29 @@ export default async function PrivateClinicSettingsPage({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
     }),
+    session?.user?.id
+      ? prisma.users.findFirst({
+          where: { id: session.user.id, household_id: householdId },
+          select: {
+            email: true,
+            google_calendar_enabled: true,
+            google_gmail_address: true,
+            google_calendar_refresh_token_encrypted: true,
+          },
+        })
+      : null,
   ]);
+  const gmailFromLoginEmail =
+    currentUser?.email?.toLowerCase().endsWith("@gmail.com") ? currentUser.email : "";
+  const defaultGoogleGmailAddress = currentUser?.google_gmail_address ?? gmailFromLoginEmail;
+  const googleConnected = Boolean(currentUser?.google_calendar_refresh_token_encrypted);
 
   const flash =
-    sp.error === "cat"
+    sp.error === "google-gmail"
+      ? ({ kind: "err" as const, text: "Please enter a valid Gmail address to enable integration." })
+      : sp.error === "google-oauth" || sp.error === "google-oauth-state"
+        ? ({ kind: "err" as const, text: "Google connection failed. Please try connecting again." })
+      : sp.error === "cat"
       ? ({ kind: "err" as const, text: st.errGeneric })
       : sp.error === "cat-in-use"
         ? ({ kind: "err" as const, text: st.errCatInUse })
@@ -79,7 +101,11 @@ export default async function PrivateClinicSettingsPage({
           ? ({ kind: "err" as const, text: st.errGeneric })
           : sp.error === "ctype-in-use"
             ? ({ kind: "err" as const, text: st.errCtypeInUse })
-            : sp.saved === "1"
+            : sp.saved === "google-connected"
+              ? ({ kind: "ok" as const, text: "Google account connected successfully." })
+              : sp.saved === "google"
+              ? ({ kind: "ok" as const, text: "Google Calendar settings saved." })
+              : sp.saved === "1"
               ? ({ kind: "ok" as const, text: c.saved })
               : sp.saved === "cat"
                 ? ({ kind: "ok" as const, text: st.savedExpenseCat })
@@ -100,6 +126,51 @@ export default async function PrivateClinicSettingsPage({
           {flash.text}
         </p>
       ) : null}
+
+      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
+        <h2 className="text-lg font-medium text-slate-200">Google Calendar</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Enable one-way sync so appointment create, reschedule, and cancel actions update your Google Calendar.
+        </p>
+        <form action={updateMyGoogleCalendarSettings} className="mt-4 space-y-3">
+          <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              name="google_calendar_enabled"
+              defaultChecked={currentUser?.google_calendar_enabled ?? false}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500"
+            />
+            Enable Google Calendar integration
+          </label>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Gmail address</label>
+            <input
+              name="google_gmail_address"
+              type="email"
+              defaultValue={defaultGoogleGmailAddress}
+              placeholder="name@gmail.com"
+              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+            >
+              Save Google settings
+            </button>
+            <a
+              href="/api/integrations/google/calendar/connect?returnTo=/dashboard/private-clinic/settings"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-100 hover:bg-slate-800"
+            >
+              {googleConnected ? "Reconnect Google account" : "Connect Google account"}
+            </a>
+            <span className="text-xs text-slate-500">
+              {googleConnected ? "Google account connected." : "Google account not connected yet."}
+            </span>
+          </div>
+        </form>
+      </section>
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.pageTitle}</h2>
