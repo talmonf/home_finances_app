@@ -38,8 +38,12 @@ export default async function PrivateClinicOverviewPage({
 
   const [jobsCount, clients, treatments, receipts, expenses, appointments, consultations, travel, upcomingVisitsData] =
     await Promise.all([
-      prisma.therapy_jobs.count({
-        where: { household_id: householdId },
+      prisma.jobs.count({
+        where: {
+          household_id: householdId,
+          is_active: true,
+          ...jobScope,
+        },
       }),
       prisma.therapy_clients.count({
         where: {
