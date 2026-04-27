@@ -91,6 +91,8 @@ export default async function PrivateClinicSettingsPage({
   const flash =
     sp.error === "google-gmail"
       ? ({ kind: "err" as const, text: "Please enter a valid Gmail address to enable integration." })
+      : sp.error === "google-not-connected"
+        ? ({ kind: "err" as const, text: "Connect your Google account before enabling integration." })
       : sp.error === "google-oauth" || sp.error === "google-oauth-state"
         ? ({ kind: "err" as const, text: "Google connection failed. Please try connecting again." })
       : sp.error === "cat"
@@ -133,11 +135,17 @@ export default async function PrivateClinicSettingsPage({
           Enable one-way sync so appointment create, reschedule, and cancel actions update your Google Calendar.
         </p>
         <form action={updateMyGoogleCalendarSettings} className="mt-4 space-y-3">
+          {!googleConnected ? (
+            <p className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
+              Connect your Google account first. The integration toggle is disabled until a Google account is connected.
+            </p>
+          ) : null}
           <label className="inline-flex items-center gap-2 text-sm text-slate-200">
             <input
               type="checkbox"
               name="google_calendar_enabled"
               defaultChecked={currentUser?.google_calendar_enabled ?? false}
+              disabled={!googleConnected}
               className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500"
             />
             Enable Google Calendar integration

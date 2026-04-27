@@ -42,6 +42,14 @@ export async function updateMyGoogleCalendarSettings(formData: FormData) {
     redirect("/dashboard/private-clinic/settings?error=google-gmail");
   }
 
+  const currentUser = await prisma.users.findUnique({
+    where: { id: session.user.id },
+    select: { google_calendar_refresh_token_encrypted: true },
+  });
+  if (enabled && !currentUser?.google_calendar_refresh_token_encrypted) {
+    redirect("/dashboard/private-clinic/settings?error=google-not-connected");
+  }
+
   await prisma.users.update({
     where: { id: session.user.id },
     data: {
