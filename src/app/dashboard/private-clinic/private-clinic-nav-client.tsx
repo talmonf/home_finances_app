@@ -32,6 +32,7 @@ export default function PrivateClinicNavClient({
   const pathname = usePathname();
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
   const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
@@ -58,6 +59,7 @@ export default function PrivateClinicNavClient({
         href={item.href}
         aria-current={isActive ? "page" : undefined}
         onClick={() => {
+          setIsMoreOpen(false);
           if (!isActive) setPendingHref(item.href);
         }}
         className={linkClassName(isActive, isPending)}
@@ -88,20 +90,25 @@ export default function PrivateClinicNavClient({
     >
       {primaryItems.map((item) => renderItemLink(item))}
       {moreItems.length > 0 ? (
-        <details className="relative">
-          <summary
+        <div className="relative">
+          <button
+            type="button"
+            aria-expanded={isMoreOpen}
             className={
               hasActiveMoreItem
                 ? "inline-flex cursor-pointer list-none items-center rounded-lg bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100 ring-1 ring-sky-400/60"
                 : "inline-flex cursor-pointer list-none items-center rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800"
             }
+            onClick={() => setIsMoreOpen((prev) => !prev)}
           >
             {moreMenuLabel}
-          </summary>
-          <div className="absolute z-30 mt-2 flex min-w-52 flex-col gap-2 rounded-xl border border-slate-700 bg-slate-900/95 p-2 shadow-xl">
-            {moreItems.map((item) => renderItemLink(item))}
-          </div>
-        </details>
+          </button>
+          {isMoreOpen ? (
+            <div className="absolute z-30 mt-2 flex min-w-52 flex-col gap-2 rounded-xl border border-slate-700 bg-slate-900/95 p-2 shadow-xl">
+              {moreItems.map((item) => renderItemLink(item))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </nav>
   );

@@ -94,9 +94,14 @@ export function privateClinicOverviewCardLabel(id: PrivateClinicOverviewStatId, 
 export function privateClinicOverviewStrings(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
-    quickLinksTitle: p("Quick links", "קישורים מהירים"),
     overdueCount: (count: number) =>
       p(`${count} overdue`, `${count} באיחור`),
+    noJobsTitle: p("Set up your first clinic job", "הגדירו תחילה משרת קליניקה"),
+    noJobsDescription: p(
+      "No clinic jobs are defined yet. Start by creating a job, then return to the overview.",
+      "עדיין לא הוגדרו משרות קליניקה. התחילו ביצירת משרה, ולאחר מכן חזרו למסך הסקירה.",
+    ),
+    goToJobs: p("Go to Jobs", "מעבר למשרות"),
   };
 }
 

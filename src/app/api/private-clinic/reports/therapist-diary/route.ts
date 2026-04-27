@@ -1,7 +1,10 @@
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { privateClinicReports } from "@/lib/private-clinic-i18n";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { PDFDocument, type PDFFont } from "pdf-lib";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +64,43 @@ function formatIsoDateTime(value?: string | null): string {
 function compactText(value: string, maxLen: number): string {
   if (value.length <= maxLen) return value;
   return `${value.slice(0, Math.max(0, maxLen - 1))}…`;
+}
+
+const regularFontPath = path.join(
+  process.cwd(),
+  "node_modules",
+  "@ibm",
+  "plex-sans-hebrew",
+  "fonts",
+  "complete",
+  "woff2",
+  "IBMPlexSansHebrew-Regular.woff2",
+);
+const boldFontPath = path.join(
+  process.cwd(),
+  "node_modules",
+  "@ibm",
+  "plex-sans-hebrew",
+  "fonts",
+  "complete",
+  "woff2",
+  "IBMPlexSansHebrew-Bold.woff2",
+);
+
+async function embedDiaryFonts(pdf: PDFDocument): Promise<{
+  font: PDFFont;
+  fontBold: PDFFont;
+}> {
+  pdf.registerFontkit(fontkit);
+  const [regularBytes, boldBytes] = await Promise.all([
+    readFile(regularFontPath),
+    readFile(boldFontPath),
+  ]);
+  const [font, fontBold] = await Promise.all([
+    pdf.embedFont(regularBytes),
+    pdf.embedFont(boldBytes),
+  ]);
+  return { font, fontBold };
 }
 
 export async function GET() {
@@ -145,8 +185,7 @@ export async function GET() {
   });
 
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const { font, fontBold } = await embedDiaryFonts(pdf);
 
   const width = 842;
   const height = 595;
@@ -165,7 +204,12 @@ export async function GET() {
   let y = height - margin;
 
   const drawHeader = () => {
-    page.drawText(pdfStrings.title, { x: margin, y, size: 14, font: fontBold });
+    page.drawText(pdfStrings.title, {
+      x: margin,
+      y,
+      size: 14,
+      font: fontBold,
+    });
     y -= 18;
     page.drawText(`${pdfStrings.generated}: ${formatIsoDateTime(new Date().toISOString())}`, {
       x: margin,
@@ -195,14 +239,24 @@ export async function GET() {
     let x = margin;
     columns.forEach((col) => {
       const value = String(row[col.key] ?? "");
-      page.drawText(compactText(value, col.maxLen), { x, y, size: 8, font });
+      page.drawText(compactText(value, col.maxLen), {
+        x,
+        y,
+        size: 8,
+        font,
+      });
       x += col.width;
     });
     y -= rowHeight;
   }
 
   if (exportRows.length === 0) {
-    page.drawText(pdfStrings.empty, { x: margin, y, size: 10, font });
+    page.drawText(pdfStrings.empty, {
+      x: margin,
+      y,
+      size: 10,
+      font,
+    });
   }
 
   const buf = Buffer.from(await pdf.save());

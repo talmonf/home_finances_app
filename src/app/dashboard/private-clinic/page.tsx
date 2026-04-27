@@ -2,7 +2,6 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLang
 import {
   privateClinicOverviewCardLabel,
   privateClinicOverviewStrings,
-  privateClinicNavLabel,
 } from "@/lib/private-clinic-i18n";
 import {
   jobWherePrivateClinicScoped,
@@ -10,7 +9,6 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
@@ -38,8 +36,11 @@ export default async function PrivateClinicOverviewPage({
   const uiLanguage = await getCurrentUiLanguage();
   const overviewCopy = privateClinicOverviewStrings(uiLanguage);
 
-  const [clients, treatments, receipts, expenses, appointments, consultations, travel, upcomingVisitsData] =
+  const [jobsCount, clients, treatments, receipts, expenses, appointments, consultations, travel, upcomingVisitsData] =
     await Promise.all([
+      prisma.therapy_jobs.count({
+        where: { household_id: householdId },
+      }),
       prisma.therapy_clients.count({
         where: {
           household_id: householdId,
@@ -143,19 +144,6 @@ export default async function PrivateClinicOverviewPage({
     { id: "travel" as const, value: travel },
   ];
 
-  const quickLinkKeys = [
-    "clients",
-    "appointments",
-    "upcomingVisits",
-    "treatments",
-    "receipts",
-    "expenses",
-    "reminders",
-  ] as const;
-  const quickLinks = quickLinkKeys
-    .map((key) => PRIVATE_CLINIC_NAV_ITEMS.find((item) => item.key === key))
-    .filter((item): item is (typeof PRIVATE_CLINIC_NAV_ITEMS)[number] => Boolean(item));
-
   const passwordBanner = passwordJustUpdated ? (
     <p
       className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200"
@@ -168,6 +156,21 @@ export default async function PrivateClinicOverviewPage({
   return (
     <>
       {passwordBanner}
+      {jobsCount === 0 ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-amber-100">
+          <h2 className="text-base font-semibold">{overviewCopy.noJobsTitle}</h2>
+          <p className="mt-1 text-sm text-amber-100/90">{overviewCopy.noJobsDescription}</p>
+          <div className="mt-3">
+            <Link
+              href="/dashboard/private-clinic/jobs"
+              className="inline-flex items-center rounded-lg border border-amber-300/40 bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-100 hover:bg-amber-500/30"
+            >
+              {overviewCopy.goToJobs}
+            </Link>
+          </div>
+        </div>
+      ) : null}
+      {jobsCount > 0 ? (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
         <div
@@ -186,20 +189,7 @@ export default async function PrivateClinicOverviewPage({
         </div>
       ))}
       </div>
-      <section className="mt-6 space-y-3">
-        <h2 className="text-sm font-medium text-slate-300">{overviewCopy.quickLinksTitle}</h2>
-        <div className="flex flex-wrap gap-2">
-          {quickLinks.map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
-            >
-              {privateClinicNavLabel(item.key, uiLanguage)}
-            </Link>
-          ))}
-        </div>
-      </section>
+      ) : null}
     </>
   );
 }
