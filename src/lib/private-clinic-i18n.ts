@@ -421,7 +421,12 @@ export function privateClinicClients(lang: UiLanguage) {
     colKupatHolim: p("Kupat Holim", "קופת חולים"),
     colFamily: p("Family", "משפחה"),
     colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
-    colNextVisitDue: p("Next visit due", "ביקור הבא (משוער)"),
+    colNextVisitDue: p("Next visit", "הביקור הבא"),
+    nextVisitScheduledLabel: p("Scheduled", "מתוזמן"),
+    nextVisitEstimatedLabel: p("Estimated", "משוער"),
+    nextVisitScheduledTitle: (dateText: string) => p(`Scheduled appointment: ${dateText}`, `תור מתוזמן: ${dateText}`),
+    nextVisitEstimatedTitle: (dateText: string) =>
+      p(`Estimated from frequency and last visit: ${dateText}`, `משוער לפי תדירות והביקור האחרון: ${dateText}`),
     nextVisitNoTreatments: p("No treatments logged", "אין טיפולים רשומים"),
     nextVisitNoFrequency: p("Set visit frequency", "הגדירו תדירות ביקורים"),
     colStart: p("Start", "התחלה"),

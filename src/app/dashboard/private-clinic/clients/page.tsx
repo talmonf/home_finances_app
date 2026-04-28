@@ -11,11 +11,12 @@ import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
 type ListFilterQs = {
   q: string;
@@ -50,6 +51,7 @@ type SortKey =
   | "last_name"
   | "start_date"
   | "end_date"
+  | "treatments_count"
   | "job"
   | "kupat_holim"
   | "next_visit_due"
@@ -63,6 +65,7 @@ function parseSortKey(s: string | undefined): SortKey {
     "last_name",
     "start_date",
     "end_date",
+    "treatments_count",
     "job",
     "kupat_holim",
     "next_visit_due",
@@ -95,6 +98,9 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ start_date: dir }, { id: dir }];
     case "end_date":
       return [{ end_date: dir }, { id: dir }];
+    case "treatments_count":
+      // This column is derived from grouped treatment history and is sorted in-memory below.
+      return [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }];
     case "job":
       return [{ default_job: { job_title: dir } }, { id: dir }];
     case "kupat_holim":
@@ -332,6 +338,27 @@ export default async function ClientsPage({
     lastTreatmentByClientId.map((row) => [row.client_id, row._max.occurred_at]),
   );
 
+  const today = startOfTodayLocal();
+  const scheduledAppointments =
+    clients.length > 0
+      ? await prisma.therapy_appointments.findMany({
+          where: {
+            household_id: householdId,
+            client_id: { in: clients.map((c) => c.id) },
+            status: "scheduled",
+            start_at: { gte: today },
+          },
+          orderBy: [{ start_at: "asc" }],
+          select: { client_id: true, start_at: true },
+        })
+      : [];
+  const nextScheduledAppointmentByClientId = new Map<string, Date>();
+  for (const appointment of scheduledAppointments) {
+    if (!nextScheduledAppointmentByClientId.has(appointment.client_id)) {
+      nextScheduledAppointmentByClientId.set(appointment.client_id, appointment.start_at);
+    }
+  }
+
   const nextVisitDueByClientId = new Map<string, Date | null>();
   for (const client of clients) {
     const vc = client.visits_per_period_count;
@@ -343,12 +370,21 @@ export default async function ClientsPage({
     }
     nextVisitDueByClientId.set(client.id, nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw));
   }
+  const nextVisitSortAtByClientId = new Map<string, Date | null>();
+  for (const client of clients) {
+    const nextScheduled = nextScheduledAppointmentByClientId.get(client.id) ?? null;
+    if (nextScheduled) {
+      nextVisitSortAtByClientId.set(client.id, nextScheduled);
+      continue;
+    }
+    nextVisitSortAtByClientId.set(client.id, nextVisitDueByClientId.get(client.id) ?? null);
+  }
 
   const sortedClients =
     sort === "next_visit_due"
       ? [...clients].sort((a, b) => {
-          const aDue = nextVisitDueByClientId.get(a.id) ?? null;
-          const bDue = nextVisitDueByClientId.get(b.id) ?? null;
+          const aDue = nextVisitSortAtByClientId.get(a.id) ?? null;
+          const bDue = nextVisitSortAtByClientId.get(b.id) ?? null;
           if (aDue && bDue) {
             const diff = aDue.getTime() - bDue.getTime();
             if (diff !== 0) return dir === "asc" ? diff : -diff;
@@ -363,6 +399,18 @@ export default async function ClientsPage({
           if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
           return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
         })
+      : sort === "treatments_count"
+        ? [...clients].sort((a, b) => {
+            const aCount = treatmentCountByClientId.get(a.id) ?? 0;
+            const bCount = treatmentCountByClientId.get(b.id) ?? 0;
+            const countDiff = aCount - bCount;
+            if (countDiff !== 0) return dir === "asc" ? countDiff : -countDiff;
+            const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
+            const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
+            const nameCmp = aName.localeCompare(bName);
+            if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
+            return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+          })
       : sort === "kupat_holim"
         ? [...clients].sort((a, b) => {
             const aLabel = kupatHolimLabel(a.kupat_holim, cl, c);
@@ -610,9 +658,15 @@ export default async function ClientsPage({
                     sortHintDesc={cl.sortHintDesc}
                   />
                 ) : null}
-                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {cl.colTreatmentsCount}
-                </th>
+                <SortHeader
+                  column="treatments_count"
+                  label={cl.colTreatmentsCount}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
                 <SortHeader
                   column="next_visit_due"
                   label={cl.colNextVisitDue}
@@ -663,9 +717,14 @@ export default async function ClientsPage({
                 const lastVisitAt = lastVisitAtByClientId.get(row.id);
                 const vc = row.visits_per_period_count;
                 const vw = row.visits_per_period_weeks;
+                const nextScheduledAppointment = nextScheduledAppointmentByClientId.get(row.id) ?? null;
                 let nextVisitDisp: string;
                 let nextVisitTitle: string | undefined;
-                if (vc == null || vw == null) {
+                if (nextScheduledAppointment) {
+                  const apptText = formatHouseholdDateUtcWithTime(nextScheduledAppointment, dateDisplayFormat);
+                  nextVisitDisp = `${cl.nextVisitScheduledLabel}: ${apptText}`;
+                  nextVisitTitle = cl.nextVisitScheduledTitle(apptText);
+                } else if (vc == null || vw == null) {
                   nextVisitDisp = "—";
                   nextVisitTitle = cl.nextVisitNoFrequency;
                 } else if (!lastVisitAt) {
@@ -673,8 +732,9 @@ export default async function ClientsPage({
                   nextVisitTitle = cl.nextVisitNoTreatments;
                 } else {
                   const due = nextVisitDueByClientId.get(row.id) ?? nextVisitDueDateAfterLastTreatment(lastVisitAt, vc, vw);
-                  nextVisitDisp = formatHouseholdDate(due, dateDisplayFormat);
-                  nextVisitTitle = undefined;
+                  const dueText = formatHouseholdDate(due, dateDisplayFormat);
+                  nextVisitDisp = `${cl.nextVisitEstimatedLabel}: ${dueText}`;
+                  nextVisitTitle = cl.nextVisitEstimatedTitle(dueText);
                 }
                 const startDisp = row.start_date
                   ? formatHouseholdDate(row.start_date, dateDisplayFormat)
