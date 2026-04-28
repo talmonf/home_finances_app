@@ -11,6 +11,7 @@ import { HouseholdPreferencesProvider } from "@/components/household-preferences
 import { DashboardUserToolbar } from "@/components/dashboard-user-toolbar";
 import { UsefulLinksActionFlash } from "@/components/useful-links-action-flash";
 import { UsefulLinksBanner } from "@/components/useful-links-banner";
+import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
 import {
   htmlLangForDateDisplayFormat,
 } from "@/lib/household-date-format";
@@ -62,6 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       uiLanguage={uiLanguage}
       obfuscateSensitive={obfuscateSensitive}
     >
+      <GlobalFormSubmitFeedback />
       <div lang={lang} dir={dir} className="contents">
         {session?.user?.householdId && !session.user.isSuperAdmin ? (
           <div

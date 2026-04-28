@@ -19,6 +19,7 @@ export function PendingSubmitButton({
       type="submit"
       disabled={pending}
       aria-busy={pending}
+      data-pending-label={pendingLabel}
       className={className}
     >
       {pending ? pendingLabel : label}
