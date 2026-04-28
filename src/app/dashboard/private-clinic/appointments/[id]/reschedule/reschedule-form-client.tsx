@@ -163,7 +163,7 @@ export function RescheduleFormClient({
         </button>
         <Link
           href={cancelHref}
-          className="w-fit rounded-lg border border-rose-500/60 px-4 py-2 text-sm font-semibold text-rose-300 hover:bg-rose-950/50"
+          className="inline-flex items-center text-sm font-medium text-rose-300 underline-offset-2 hover:text-rose-200 hover:underline"
         >
           {labels.cancelAppointment}
         </Link>

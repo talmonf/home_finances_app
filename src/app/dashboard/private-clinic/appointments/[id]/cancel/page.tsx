@@ -78,7 +78,7 @@ export default async function CancelAppointmentPage({
           type="submit"
           className="w-fit rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-400"
         >
-          {ap.cancel}
+          {ap.cancelTitle}
         </button>
       </form>
     </DashboardModal>

@@ -59,7 +59,7 @@ export default function PrivateClinicNavClient({
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span
-            className="inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600/90 px-1 text-[10px] font-semibold text-white tabular-nums"
+            className="inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-slate-600/70 px-1 text-[10px] font-semibold text-slate-100 tabular-nums"
             aria-label={item.reminderBadgeAriaLabel}
           >
             {item.reminderBadgeCount > 99 ? "99+" : item.reminderBadgeCount}
