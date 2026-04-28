@@ -48,6 +48,7 @@ import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 
 const BASE = "/dashboard/private-clinic";
 const ADMIN_HOUSEHOLDS = "/admin/households";
+const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
 
 function endOfUtcDayForReceipt(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
@@ -211,6 +212,58 @@ function parseDate(raw: string | null | undefined): Date | null {
   if (!raw?.trim()) return null;
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getTimeZoneOffsetMinutes(atUtcInstant: Date, timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(atUtcInstant);
+  const map = new Map(parts.map((part) => [part.type, part.value]));
+  const asIfUtc = Date.UTC(
+    Number(map.get("year")),
+    Number(map.get("month")) - 1,
+    Number(map.get("day")),
+    Number(map.get("hour")),
+    Number(map.get("minute")),
+    Number(map.get("second")),
+  );
+  return (asIfUtc - atUtcInstant.getTime()) / 60000;
+}
+
+function parseDatetimeLocalInTimeZone(
+  raw: string | null | undefined,
+  timeZone: string,
+): Date | null {
+  if (!raw?.trim()) return null;
+  const match = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+  if (!match) return null;
+  const [, y, m, d, hh, mm, ss] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+  const hour = Number(hh);
+  const minute = Number(mm);
+  const second = Number(ss ?? "0");
+
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+  const offset1 = getTimeZoneOffsetMinutes(new Date(utcGuess), timeZone);
+  let adjustedUtc = utcGuess - offset1 * 60_000;
+  const offset2 = getTimeZoneOffsetMinutes(new Date(adjustedUtc), timeZone);
+  if (offset2 !== offset1) {
+    adjustedUtc = utcGuess - offset2 * 60_000;
+  }
+  const result = new Date(adjustedUtc);
+  return Number.isNaN(result.getTime()) ? null : result;
 }
 
 function parsePositiveInt(raw: string | null | undefined): number | null {
@@ -2889,8 +2942,8 @@ export async function createTherapyAppointment(formData: FormData) {
   }
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/appointments?error=job`);
 
-  const start_at = new Date(start_at_raw);
-  if (Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
+  const start_at = parseDatetimeLocalInTimeZone(start_at_raw, APPOINTMENT_TIME_ZONE);
+  if (!start_at || Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
 
   let programIdOrNull: string | null = program_id || null;
   if (programIdOrNull) {
@@ -2909,7 +2962,10 @@ export async function createTherapyAppointment(formData: FormData) {
     programId: programIdOrNull,
     appointmentDurationMinutes: appointmentDurationMinutesInput,
   });
-  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const explicitEndAt = parseDatetimeLocalInTimeZone(
+    (formData.get("end_at") as string) || null,
+    APPOINTMENT_TIME_ZONE,
+  );
   const resolvedEndAt =
     explicitEndAt ??
     (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
@@ -3087,8 +3143,8 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
     redirect(`${BASE}/appointments?error=job`);
   }
 
-  const start_at = new Date(start_at_raw);
-  if (Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
+  const start_at = parseDatetimeLocalInTimeZone(start_at_raw, APPOINTMENT_TIME_ZONE);
+  if (!start_at || Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
     jobId: before.job_id,
@@ -3096,7 +3152,10 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
     appointmentDurationMinutes:
       appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
   });
-  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const explicitEndAt = parseDatetimeLocalInTimeZone(
+    (formData.get("end_at") as string) || null,
+    APPOINTMENT_TIME_ZONE,
+  );
   const end_at =
     explicitEndAt ??
     (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
@@ -3212,7 +3271,10 @@ export async function updateTherapyAppointment(formData: FormData) {
     appointmentDurationMinutes:
       appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
   });
-  const explicitEndAt = parseDate((formData.get("end_at") as string) || null);
+  const explicitEndAt = parseDatetimeLocalInTimeZone(
+    (formData.get("end_at") as string) || null,
+    APPOINTMENT_TIME_ZONE,
+  );
   const resolvedEndAt =
     explicitEndAt ??
     (resolvedDurationMinutes ? new Date(before.start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);

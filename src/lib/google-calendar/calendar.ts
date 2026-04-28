@@ -2,6 +2,8 @@ import { prisma } from "@/lib/auth";
 import { decryptGoogleToken, getGoogleOAuthClient } from "@/lib/google-calendar/oauth";
 import { google } from "googleapis";
 
+const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
+
 export type GoogleCalendarUserConfig = {
   id: string;
   household_id: string;
@@ -50,8 +52,8 @@ export async function upsertGoogleCalendarEvent(params: {
   const eventBody = {
     summary: params.summary,
     description: params.description,
-    start: { dateTime: params.startIsoUtc },
-    end: { dateTime: params.endIsoUtc },
+    start: { dateTime: params.startIsoUtc, timeZone: APPOINTMENT_TIME_ZONE },
+    end: { dateTime: params.endIsoUtc, timeZone: APPOINTMENT_TIME_ZONE },
   };
 
   if (params.existingEventId) {
