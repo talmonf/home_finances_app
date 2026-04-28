@@ -769,6 +769,7 @@ export async function createTherapyJob(formData: FormData) {
 
   revalidatePath(`${BASE}/jobs`);
   revalidatePath(`${BASE}/programs`);
+  revalidatePath(`${BASE}/getting-started`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/jobs?created=1`);
 }
 

@@ -7,6 +7,15 @@ export type EnabledSection = {
   enabled: boolean;
 };
 
+/** Matches dashboard visibility: if a section id has no row in stored prefs, it defaults to enabled. */
+export function isEffectiveDashboardSectionEnabled(
+  sections: EnabledSection[],
+  sectionId: string,
+): boolean {
+  const row = sections.find((s) => s.sectionId === sectionId);
+  return row?.enabled ?? true;
+}
+
 export async function getHouseholdEnabledSections(
   householdId: string,
 ): Promise<EnabledSection[]> {

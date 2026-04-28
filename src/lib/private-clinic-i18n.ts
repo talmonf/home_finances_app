@@ -22,6 +22,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   reminders: "תזכורות",
   settings: "הגדרות",
   importExport: "יבוא / ייצוא",
+  gettingStarted: "התחלה",
 };
 
 /** Bilingual helper for Clinic UI */
@@ -1217,6 +1218,75 @@ export function privateClinicReminders(lang: UiLanguage) {
       "Add at least one person in the household before creating manual reminders.",
       "יש להוסיף לפחות אדם אחד בבית לפני יצירת תזכורות ידניות.",
     ),
+  };
+}
+
+export function privateClinicGettingStarted(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  return {
+    pageTitle: p("Getting started", "התחלה"),
+    welcomeTitle: p("Welcome to the Clinic", "ברוכים הבאים לקליניקה"),
+    welcomeBody: p(
+      "This short guide shows how to set up your work and your clients, and how the main workflows fit together. You can open it any time from **More → Getting started**.",
+      "מדריך קצר שמסביר איך להגדיר את המשרה והלקוחות, ואיך זרימות העבודה מתחברות. אפשר לחזור לכאן בכל עת דרך **עוד → התחלה**.",
+    ),
+    step1Lead: p("To get started, define your", "כדי להתחיל, הגדירו את"),
+    step1JobsLink: p("Job(s)", "משרה/ות"),
+    step1After: p(
+      "— the employment context the clinic module uses (for example your private practice role).",
+      "— ההקשר המקצועי שמולו מנוהלת הקליניקה (למשל תפקיד הפרקטיקה).",
+    ),
+    step2: p(
+      "If you have more than one program for a job, define them under **Programs** (for example different service lines or price rules).",
+      "אם יש לכם יותר מתוכנית אחת למשרה, הגדירו אותן תחת **תוכניות** (למשל קווי שירות או תמחור שונים).",
+    ),
+    step3: p(
+      "Then add your **Clients** so you can schedule visits and record treatments.",
+      "לאחר מכן הוסיפו **לקוחות** כדי לקבוע מפגשים ולרשום טיפולים.",
+    ),
+    twoWaysTitle: p("Two ways to work (you can combine them)", "שתי דרכי עבודה (אפשר לשלב)"),
+    wayAppointments: p(
+      "**Appointments** — Schedule a session for a specific date and time. After it happens, record the treatment and session details.",
+      "**תורים** — קביעת מפגש לתאריך ושעה. לאחר הביקור, רישום הטיפול ופרטי המפגש.",
+    ),
+    wayCadence: p(
+      "**Planned cadence** — Set a treatment schedule for a client (for example once a week). After each visit, the next expected date appears on **Upcoming visits**.",
+      "**קצב מתוכנן** — הגדרת לוח טיפולים ללקוח (למשל פעם בשבוע). לאחר כל ביקור, התאריך הבא הצפוי מופיע תחת **ביקורים קרובים**.",
+    ),
+    googleTitle: p("Google Calendar (optional)", "Google Calendar (אופציונלי)"),
+    googleBody: p(
+      "Appointments can be pushed to your Google Calendar (**one-way**: from this app to Google). When you schedule an appointment you can add it to your calendar; when you **reschedule** or **cancel**, the change is sent to Google as well. Connect and enable the integration under Clinic **Settings**.",
+      "אפשר לדחוף תורים ל־Google Calendar (**חד־כיווני**: מהאפליקציה ל־Google). בעת קביעת תור אפשר להוסיף אותו ליומן; בעת **שינוי מועד** או **ביטול**, העדכון נשלח ל־Google. חיבור והפעלה בהגדרות הקליניקה.",
+    ),
+    advancedSummary: p("Advanced topics", "נושאים מתקדמים"),
+    advCalendar: p(
+      "**Calendar sync** — Same as above: connect Gmail/Google under **Settings**, then appointment creates/updates sync outward.",
+      "**סנכרון יומן** — כנ״ל: חיבור Gmail/Google תחת **הגדרות**, ואז יצירה/עדכון תורים נדחף החוצה.",
+    ),
+    advData: p(
+      "**Import / Export** — Download a full clinic workbook or import structured spreadsheets (for analysis or migration).",
+      "**יבוא / ייצוא** — הורדת חוברת קליניקה מלאה או ייבוא גיליונות מובנים (לניתוח או מעבר מערכת).",
+    ),
+    advOps: p(
+      "**Reports**, **Reminders**, **Consultations**, **Travel**, **Petrol**, **Clinic insurance**, **Work subscriptions** — Use these areas as your practice grows for reporting, reminders, non-session services, mileage and vehicle costs, and professional overheads.",
+      "**דוחות**, **תזכורות**, **ייעוצים**, **נסיעות**, **דלק**, **ביטוח קליניקה**, **מנויים מקצועיים** — לשימוש ככל שהפרקטיקה גדלה — דיווח, תזכורות, שירותים מחוץ למפגש, נסיעות ורכב, והוצאות מקצועיות.",
+    ),
+    advProductivity: p(
+      "**Treatments** — After saving a treatment you can attach files. **Audio** attachments can be **transcribed** (English or Hebrew), which is handy between back-to-back sessions: record a quick verbal summary while it is fresh, then review the text before using it in notes (third-party processing—see the in-app notice). Under **Settings** you can rename the three client note fields and hide unused ones.",
+      "**טיפולים** — אחרי שמירת טיפול אפשר לצרף קבצים. קבצי **אודיו** ניתן **לתמלל** (אנגלית או עברית) — שימושי בין מפגשים צפופים: הקלטת סיכום קצר כשהוא טרי, ואז מעבר על הטקסט לפני שימוש בערות (עיבוד צד שלישי — ראו הודעה במערכת). תחת **הגדרות** אפשר לשנות שמות לשלושת שדות הערות בכרטיס לקוח ולהסתיר שדות שלא בשימוש.",
+    ),
+    familiesWhenEnabledTitle: p("Families", "משפחות"),
+    familiesWhenEnabledBody: p(
+      "Use **Families** to group related clients: give the family a name, pick the **job**, optional **start/end** dates, optional **family-level billing** (or leave billing on each client), and **notes**. On **Add family**, you build **everyone on one screen**: use **Add member** to create **new clients** (name, family role, main contact), or **Existing clients** to multi-select people already in your client list—you can mix both before **Save family**. Then use the Families list to edit the group.",
+      "ב**משפחות** מאגדים לקוחות קשורים: שם משפחה, **משרה**, **תאריכי התחלה/סיום** אופציונליים, **חיוב ברמת משפחה** (או השארת חיוב בכל לקוח), ו**הערות**. ב**הוספת משפחה** בונים **הכול במסך אחד**: **הוספת חבר משפחה** יוצרת **לקוחות חדשים** (שם, תפקיד במשפחה, איש קשר ראשי), או **לקוחות קיימים** לבחירה מרובה מאלה שכבר במערכת—אפשר לשלב לפני **שמירת משפחה**. לאחר מכן עורכים מהרשימה.",
+    ),
+    familiesWhenDisabled: p(
+      "This product supports an optional **Families** workflow for grouping related clients. It is **not** enabled for your account. To discuss turning it on, contact your **system administrator**.",
+      "המערכת תומכת באופציה של **משפחות** לקיבוץ לקוחות קשורים. האופציה **אינה** מופעלת אצלכם. לשיחה על הפעלה, פנו ל**מנהל המערכת**.",
+    ),
+    continueBtn: p("Continue to Clinic overview", "המשך לסקירת הקליניקה"),
+    jobSavedToast: p("Job saved.", "המשרה נשמרה."),
+    moreMenuHint: p("Tip: open this guide again from **More → Getting started**.", "טיפ: אפשר לחזור למדריך דרך **עוד → התחלה**."),
   };
 }
 

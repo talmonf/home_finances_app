@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { getEffectiveEnabledSections, isEffectiveDashboardSectionEnabled } from "@/lib/household-sections";
 import { validatePassword } from "@/lib/password-policy";
 import bcrypt from "bcryptjs";
 
@@ -84,6 +85,7 @@ export async function changePasswordAction(
     if (!valid) {
       return { error: he ? "הסיסמה הנוכחית שגויה." : "Current password is incorrect." };
     }
+    const hadMandatoryPasswordChange = row.must_change_password;
     const password_hash = await bcrypt.hash(newPassword, 12);
     await prisma.users.update({
       where: { id: userId },
@@ -93,6 +95,18 @@ export async function changePasswordAction(
         password_changed_at: now,
       },
     });
+
+    let callbackPath = "/?passwordUpdated=1";
+    if (hadMandatoryPasswordChange) {
+      const sections = await getEffectiveEnabledSections({
+        householdId: row.household_id,
+        userId: row.id,
+      });
+      if (isEffectiveDashboardSectionEnabled(sections, "privateClinic")) {
+        callbackPath = "/dashboard/private-clinic/getting-started?welcome=1";
+      }
+    }
+    return { redirectTo: `/api/auth/sync-session?callbackUrl=${encodeURIComponent(callbackPath)}` };
   }
 
   const homeWithNotice = encodeURIComponent("/?passwordUpdated=1");

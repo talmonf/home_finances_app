@@ -41,6 +41,12 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
     placement: "more",
   },
   { key: "reports", href: "/dashboard/private-clinic/reports", label: "Reports", placement: "more" },
+  {
+    key: "gettingStarted",
+    href: "/dashboard/private-clinic/getting-started",
+    label: "Getting started",
+    placement: "more",
+  },
   { key: "settings", href: "/dashboard/private-clinic/settings", label: "Settings", placement: "more" },
   { key: "importExport", href: "/dashboard/private-clinic/import-export", label: "Import / Export", placement: "more" },
 ] as const;

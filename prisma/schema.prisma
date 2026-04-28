@@ -1298,6 +1298,8 @@ model users {
   last_login_at        DateTime?
   must_change_password Boolean  @default(false)
   password_changed_at  DateTime @default(now())
+  /// When set, the user completed or dismissed the Private Clinic getting-started guide (auto-prompt once).
+  private_clinic_getting_started_completed_at DateTime?
 
   household            households     @relation(fields: [household_id], references: [id])
   family_member        family_members? @relation(fields: [family_member_id], references: [id])

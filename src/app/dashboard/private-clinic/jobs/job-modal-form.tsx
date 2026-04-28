@@ -1,3 +1,5 @@
+"use client";
+
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import type { UiLanguage } from "@/lib/ui-language";
 
@@ -16,6 +18,8 @@ export function JobModalForm({
   c,
   j,
   uiLanguage,
+  onCancel,
+  overlayZIndexClassName,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   householdMembers: HouseholdMemberOption[];
@@ -26,15 +30,39 @@ export function JobModalForm({
   c: ReturnType<typeof privateClinicCommon>;
   j: ReturnType<typeof privateClinicJobs>;
   uiLanguage: UiLanguage;
+  /** When set, Cancel navigates in-page instead of following closeHref (e.g. Getting started overlay). */
+  onCancel?: () => void;
+  /** Tailwind z-index class for the backdrop (default z-40). */
+  overlayZIndexClassName?: string;
 }) {
+  const zOverlay = overlayZIndexClassName ?? "z-40";
+  const cancelHeader = onCancel ? (
+    <button type="button" onClick={onCancel} className="text-sm text-sky-400 hover:text-sky-300">
+      {c.cancel}
+    </button>
+  ) : (
+    <a href={closeHref} className="text-sm text-sky-400 hover:text-sky-300">
+      {c.cancel}
+    </a>
+  );
+  const cancelFooter = onCancel ? (
+    <button type="button" onClick={onCancel} className="text-sm text-slate-300 hover:text-slate-100">
+      {c.cancel}
+    </button>
+  ) : (
+    <a href={closeHref} className="text-sm text-slate-300 hover:text-slate-100">
+      {c.cancel}
+    </a>
+  );
+
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
+    <div
+      className={`fixed inset-0 ${zOverlay} flex items-start justify-center bg-slate-950/70 p-4 sm:p-8`}
+    >
       <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium text-slate-100">{j.addJobTitle}</h2>
-          <a href={closeHref} className="text-sm text-sky-400 hover:text-sky-300">
-            {c.cancel}
-          </a>
+          {cancelHeader}
         </div>
         <form action={action} className="grid gap-3 rounded-xl border border-slate-700/80 bg-slate-900/60 p-4 md:grid-cols-3">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
@@ -159,9 +187,7 @@ export function JobModalForm({
             <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
               {j.addJobBtn}
             </button>
-            <a href={closeHref} className="text-sm text-slate-300 hover:text-slate-100">
-              {c.cancel}
-            </a>
+            {cancelFooter}
           </div>
         </form>
       </div>

@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 104_users_private_clinic_getting_started_completed_at.sql (2026-04-27)
 - [x] 103_therapy_clients_kupat_holim_and_clear_billing_defaults.sql (2026-04-27)
 - [x] 102_therapy_program_end_date.sql (2026-04-27)
 - [x] 101_therapy_program_start_date_supported_visit_types.sql (2026-04-27)
@@ -126,6 +127,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 104 | `104_users_private_clinic_getting_started_completed_at.sql` (2026-04-27) | ALTER | `users`: add nullable `private_clinic_getting_started_completed_at` for one-time Clinic onboarding completion. |
 | 103 | `103_therapy_clients_kupat_holim_and_clear_billing_defaults.sql` (2026-04-27) | ALTER/UPDATE | `therapy_clients`: add nullable enum `kupat_holim` (`clalit`, `maccabi`, `meuhedet`, `leumit`) and clear existing client-level `billing_basis`/`billing_timing` values to enforce no default selection in the client form. |
 | 102 | `102_therapy_program_end_date.sql` (2026-04-27) | ALTER | `therapy_service_programs`: add optional `end_date` (`DATE`) for program lifecycle tracking and automatic active-state behavior in app logic. |
 | 101 | `101_therapy_program_start_date_supported_visit_types.sql` (2026-04-27) | ALTER | `therapy_service_programs`: add optional `start_date` and required `supported_visit_types` enum-array (default all visit types: clinic/home/phone/video) so each program can declare allowed visit modes. |
