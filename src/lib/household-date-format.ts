@@ -28,6 +28,35 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+const ISRAEL_TIME_ZONE = "Asia/Jerusalem";
+
+function getDateTimePartsInIsraelTime(d: Date): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+} {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ISRAEL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? "0");
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+}
+
 export function formatYmdParts(
   year: number,
   month: number,
@@ -75,15 +104,16 @@ export function formatIsoDateStringForHousehold(
   return formatYmdParts(y, mo, d, format);
 }
 
-/** Date + time (UTC), e.g. for clinic timestamps previously shown as ISO slice. */
+/** Date + time rendered in Israel timezone (Asia/Jerusalem). */
 export function formatHouseholdDateUtcWithTime(
   d: Date | null | undefined,
   format: HouseholdDateDisplayFormat,
 ): string {
   if (!d || Number.isNaN(d.getTime())) return "—";
-  const datePart = formatHouseholdDate(d, format);
-  const hh = pad2(d.getUTCHours());
-  const mm = pad2(d.getUTCMinutes());
+  const parts = getDateTimePartsInIsraelTime(d);
+  const datePart = formatYmdParts(parts.year, parts.month, parts.day, format);
+  const hh = pad2(parts.hour);
+  const mm = pad2(parts.minute);
   return `${datePart} ${hh}:${mm}`;
 }
 

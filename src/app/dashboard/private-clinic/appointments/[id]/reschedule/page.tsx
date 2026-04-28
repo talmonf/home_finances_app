@@ -91,6 +91,7 @@ export default async function RescheduleAppointmentPage({
           patientRescheduled: ap.patientRescheduled,
           other: ap.other,
           save: ap.save,
+          saving: uiLanguage === "he" ? "שומר..." : "Saving...",
           cancelAppointment: ap.cancelTitle,
           close: ap.cancel,
         }}

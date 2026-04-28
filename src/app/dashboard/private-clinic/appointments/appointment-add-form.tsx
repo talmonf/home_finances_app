@@ -5,6 +5,7 @@ import {
   createTherapyAppointment,
   createTherapyAppointmentSeries,
 } from "../actions";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 type JobOption = { id: string; label: string; defaultDurationMinutes: number | null };
 type ProgramOption = { id: string; jobId: string; label: string; defaultDurationMinutes: number | null };
 type ClientOption = {
@@ -36,6 +37,7 @@ type Props = {
     seriesEndDateOptionalLabel: string;
     schedule: string;
     createSeriesGenerate: string;
+    savingLabel: string;
     weekly: string;
     biweekly: string;
   };
@@ -295,12 +297,11 @@ export function AppointmentAddForm({
               />
             </div>
           </label>
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {copy.schedule}
-          </button>
+          <PendingSubmitButton
+            label={copy.schedule}
+            pendingLabel={copy.savingLabel}
+            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+          />
         </form>
       ) : allowRecurring ? (
         <form
@@ -439,12 +440,11 @@ export function AppointmentAddForm({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </label>
-          <button
-            type="submit"
-            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {copy.createSeriesGenerate}
-          </button>
+          <PendingSubmitButton
+            label={copy.createSeriesGenerate}
+            pendingLabel={copy.savingLabel}
+            className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+          />
         </form>
       ) : null}
     </div>

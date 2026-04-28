@@ -135,6 +135,7 @@ export default async function NewAppointmentPage({
           seriesEndDateOptionalLabel: ap.seriesEndDateOptional,
           schedule: ap.schedule,
           createSeriesGenerate: ap.createSeriesGenerate,
+          savingLabel: uiLanguage === "he" ? "שומר..." : "Saving...",
           weekly: ap.weekly,
           biweekly: ap.biweekly,
         }}

@@ -10,6 +10,7 @@ import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { cancelTherapyAppointment } from "../../../actions";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -74,12 +75,11 @@ export default async function CancelAppointmentPage({
             { value: "other", label: ap.other },
           ]}
         />
-        <button
-          type="submit"
-          className="w-fit rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-400"
-        >
-          {ap.cancelTitle}
-        </button>
+        <PendingSubmitButton
+          label={ap.cancelTitle}
+          pendingLabel={uiLanguage === "he" ? "מבטל..." : "Cancelling..."}
+          className="w-fit rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-70"
+        />
       </form>
     </DashboardModal>
   );
