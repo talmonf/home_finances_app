@@ -1,8 +1,9 @@
 "use client";
 
+import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -29,9 +30,16 @@ export default function PrivateClinicNavClient({
   moreMenuLabel,
   items,
 }: PrivateClinicNavClientProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [normalizedPathname]);
 
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
   const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
@@ -47,15 +55,28 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
+    const isPending = pendingHref === normalizedHref;
 
     return (
       <Link
         key={item.href}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        onClick={() => setIsMoreOpen(false)}
+        aria-busy={isPending}
+        onClick={(event) => {
+          setIsMoreOpen(false);
+          if (isActive || isPending || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+            return;
+          }
+          event.preventDefault();
+          setPendingHref(normalizedHref);
+          startTransition(() => {
+            router.push(item.href);
+          });
+        }}
         className={linkClassName(isActive)}
       >
+        {isPending ? <LoadingSpinner /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span

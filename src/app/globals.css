@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+button.hf-pending-submit {
+  cursor: progress;
+}
+
+button.hf-pending-submit::before {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-inline-end: 0.45em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 9999px;
+  vertical-align: -0.125em;
+  animation: hf-pending-spin 0.8s linear infinite;
+}
+
+@keyframes hf-pending-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

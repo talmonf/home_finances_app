@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { useRef, useState } from "react";
 
 type ServerFormAction = (formData: FormData) => void | Promise<void>;
@@ -48,8 +49,10 @@ export function DeleteFamilyForm({
         type="button"
         onClick={() => setConfirmOpen(true)}
         disabled={isSubmitting}
-        className="rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50"
+        aria-busy={isSubmitting}
+        className="inline-flex items-center rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50 disabled:opacity-60"
       >
+        {isSubmitting ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
         {isSubmitting ? deletingLabel : buttonLabel}
       </button>
       {confirmOpen ? (
@@ -68,8 +71,10 @@ export function DeleteFamilyForm({
                   submitDelete(false);
                 }}
                 disabled={isSubmitting}
-                className="rounded-lg border border-amber-700 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-950/40"
+                aria-busy={isSubmitting}
+                className="inline-flex items-center rounded-lg border border-amber-700 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-950/40 disabled:opacity-60"
               >
+                {isSubmitting ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
                 {confirmDeleteFamilyOnly}
               </button>
               <button
@@ -79,8 +84,10 @@ export function DeleteFamilyForm({
                   submitDelete(true);
                 }}
                 disabled={isSubmitting}
-                className="rounded-lg border border-rose-700 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40"
+                aria-busy={isSubmitting}
+                className="inline-flex items-center rounded-lg border border-rose-700 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 disabled:opacity-60"
               >
+                {isSubmitting ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
                 {confirmDeleteFamilyAndClients}
               </button>
               <button

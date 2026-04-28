@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { useRef, useState } from "react";
 
 type ServerFormAction = (formData: FormData) => void | Promise<void>;
@@ -23,13 +24,15 @@ export function DeleteClientForm({ action, clientId, confirmMessage, buttonLabel
       <button
         type="button"
         disabled={isSubmitting}
+        aria-busy={isSubmitting}
         onClick={() => {
           if (!window.confirm(confirmMessage)) return;
           setIsSubmitting(true);
           formRef.current?.requestSubmit();
         }}
-        className="rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50 disabled:cursor-not-allowed disabled:opacity-60"
       >
+        {isSubmitting ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
         {isSubmitting ? deletingLabel : buttonLabel}
       </button>
     </form>

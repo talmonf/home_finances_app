@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { useEffect, useMemo, useState } from "react";
 import type { TipulimImportProfile } from "@/lib/therapy/import-tipulim";
 import { FileUploadField } from "@/components/file-upload-field";
@@ -540,8 +541,10 @@ export function TherapyTreatmentsImportForm({
           type="button"
           onClick={() => post("preview")}
           disabled={busy || !file || !jobId || receiptCostMissing}
-          className="rounded bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
+          aria-busy={busy && busyMode === "preview"}
+          className="inline-flex items-center rounded bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
         >
+          {busy && busyMode === "preview" ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
           {labels.analyze}
         </button>
         <button
@@ -556,8 +559,10 @@ export function TherapyTreatmentsImportForm({
             !jobId ||
             receiptCostMissing
           }
-          className="rounded bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
+          aria-busy={busy && busyMode === "commit"}
+          className="inline-flex items-center rounded bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
         >
+          {busy && busyMode === "commit" ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
           {labels.confirm}
         </button>
         <button

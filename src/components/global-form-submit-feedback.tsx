@@ -30,10 +30,12 @@ export function GlobalFormSubmitFeedback() {
       if (submitter && "textContent" in submitter && submitter.textContent !== null) {
         submitter.setAttribute("data-original-label", submitter.textContent);
         submitter.textContent = pendingLabel;
+        submitter.classList.add("hf-pending-submit");
       }
       if (submitter instanceof HTMLInputElement) {
         submitter.setAttribute("data-original-label", submitter.value);
         submitter.value = pendingLabel;
+        submitter.classList.add("hf-pending-submit");
       }
     };
 
