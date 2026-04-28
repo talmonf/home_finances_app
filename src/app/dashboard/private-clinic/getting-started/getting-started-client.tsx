@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { privateClinicGettingStarted } from "@/lib/private-clinic-i18n";
-import { privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
+import { useCallback, useMemo, useState } from "react";
+import {
+  privateClinicCommon,
+  privateClinicGettingStarted,
+  privateClinicJobs,
+} from "@/lib/private-clinic-i18n";
 import type { UiLanguage } from "@/lib/ui-language";
 import { JobModalForm } from "../jobs/job-modal-form";
 import { completePrivateClinicGettingStartedAction } from "./actions";
@@ -57,16 +60,9 @@ export function GettingStartedClient({
   const c = privateClinicCommon(uiLanguage);
   const j = privateClinicJobs(uiLanguage);
 
-  const [jobModalOpen, setJobModalOpen] = useState(false);
-
   const jobError = searchParams.get("error");
   const jobSaved = searchParams.get("jobSaved") === "1";
-
-  useEffect(() => {
-    if (jobError) {
-      setJobModalOpen(true);
-    }
-  }, [jobError]);
+  const [jobModalOpen, setJobModalOpen] = useState(Boolean(jobError));
 
   const closeJobModal = useCallback(() => {
     setJobModalOpen(false);
