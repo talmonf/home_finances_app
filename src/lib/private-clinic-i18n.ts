@@ -909,6 +909,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     startTime: p("Start time", "שעת התחלה"),
     endDateTime: p("End date & time", "תאריך ושעת סיום"),
     durationMinutes: p("Duration (minutes)", "משך (דקות)"),
+    durationMinutesOptional: p("Duration (minutes, optional)", "משך (דקות, אופציונלי)"),
     timeOfDay: p("Time of day", "שעת התחלה"),
     seriesStartDate: p("Series start date", "תאריך התחלת סדרה"),
     seriesEndDateOptional: p("Series end date (optional)", "תאריך סיום סדרה (אופציונלי)"),

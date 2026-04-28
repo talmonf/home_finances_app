@@ -10,7 +10,7 @@ import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { rescheduleTherapyAppointment } from "../../../actions";
 import { dateToDatetimeLocalValue } from "@/lib/household-date-format";
 import { DashboardModal } from "@/components/dashboard-modal";
-import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
+import { RescheduleFormClient } from "./reschedule-form-client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,16 @@ const LIST = "/dashboard/private-clinic/appointments";
 
 type PageProps = { params: Promise<{ id: string }> };
 
-export default async function RescheduleAppointmentPage({ params }: PageProps) {
+const UPCOMING_VISITS = "/dashboard/private-clinic/upcoming-visits";
+
+export default async function RescheduleAppointmentPage({
+  params,
+  searchParams,
+}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string }> }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const sp = searchParams ? await searchParams : {};
 
   const { id } = await params;
   const user = await prisma.users.findFirst({
@@ -45,74 +51,57 @@ export default async function RescheduleAppointmentPage({ params }: PageProps) {
 
   if (!apt) notFound();
 
-  const redirectOnSuccess = LIST;
+  const fromUpcoming = sp.fromUpcoming === "1";
+  const redirectOnSuccess = fromUpcoming ? UPCOMING_VISITS : LIST;
+  const startAtLocal = dateToDatetimeLocalValue(apt.start_at);
+  const endAtLocal = apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : "";
+  const startDate = startAtLocal.slice(0, 10);
+  const startTime = startAtLocal.slice(11, 16);
+  const endDate = endAtLocal ? endAtLocal.slice(0, 10) : startDate;
+  const endTime = endAtLocal ? endAtLocal.slice(11, 16) : "";
+  const cancelHref = fromUpcoming
+    ? `${LIST}/${apt.id}/cancel?fromUpcoming=1`
+    : `${LIST}/${apt.id}/cancel`;
 
   return (
     <DashboardModal
       title={ap.rescheduleTitle}
-      closeHref={LIST}
-      closeLabel={ap.backToAppointments}
+      closeHref={redirectOnSuccess}
+      closeLabel={fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments}
       maxWidthClassName="max-w-xl"
     >
       <p className="mb-4 text-sm text-slate-400">
           {apt.client.first_name} {apt.client.last_name ?? ""}
       </p>
-      <form
+      <RescheduleFormClient
         action={rescheduleTherapyAppointment}
-        className="grid gap-3"
-      >
-        <input type="hidden" name="id" value={apt.id} />
-        <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
-        <label className="text-sm text-slate-300">
-          {ap.startCol}
-          <input
-            name="start_at"
-            type="datetime-local"
-            required
-            defaultValue={dateToDatetimeLocalValue(apt.start_at)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </label>
-        <label className="text-sm text-slate-300">
-          {ap.endOptional}
-          <input
-            name="end_at"
-            type="datetime-local"
-            defaultValue={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </label>
-        <label className="text-sm text-slate-300">
-          Duration (minutes, optional)
-          <input
-            name="duration_minutes"
-            type="number"
-            min={1}
-            step={1}
-            defaultValue={apt.duration_minutes ?? ""}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </label>
-        <AppointmentChangeReasonFields
-          reasonFieldName="reschedule_reason"
-          notesFieldName="reschedule_notes"
-          reasonLabel={ap.reason}
-          notesLabel={ap.notes}
-          otherValue="other"
-          notesRequiredMessage={ap.notesRequiredForOther}
-          options={[
-            { value: "Therapist rescheduled", label: ap.therapistRescheduled },
-            { value: "Patient rescheduled", label: ap.patientRescheduled },
-            { value: "other", label: ap.other },
-          ]}
-        />
-        <button
-          type="submit"
-          className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-        >
-          {ap.save}
-        </button>
-      </form>
+        id={apt.id}
+        redirectOnSuccess={redirectOnSuccess}
+        cancelHref={cancelHref}
+        labels={{
+          start: ap.startCol,
+          endOptional: ap.endOptional,
+          startDate: ap.startDate,
+          startTime: ap.startTime,
+          durationMinutes: ap.durationMinutesOptional,
+          reason: ap.reason,
+          notes: ap.notes,
+          notesRequiredForOther: ap.notesRequiredForOther,
+          therapistRescheduled: ap.therapistRescheduled,
+          patientRescheduled: ap.patientRescheduled,
+          other: ap.other,
+          save: ap.save,
+          cancelAppointment: ap.cancelTitle,
+          close: ap.cancel,
+        }}
+        defaults={{
+          startDate,
+          startTime,
+          endDate,
+          endTime,
+          durationMinutes: apt.duration_minutes ? String(apt.duration_minutes) : "",
+        }}
+      />
     </DashboardModal>
   );
 }

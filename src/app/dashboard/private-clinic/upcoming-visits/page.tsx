@@ -347,7 +347,7 @@ export default async function UpcomingVisitsPage({
                           {" · "}
                           {r.nextAppointment ? (
                             <Link
-                              href={`/dashboard/private-clinic/appointments/${encodeURIComponent(r.nextAppointment.id)}/reschedule`}
+                              href={`/dashboard/private-clinic/appointments/${encodeURIComponent(r.nextAppointment.id)}/reschedule?fromUpcoming=1`}
                               className="font-medium text-sky-400 hover:text-sky-300"
                             >
                               {uv.scheduledOn(
@@ -393,7 +393,7 @@ export default async function UpcomingVisitsPage({
                       {" · "}
                       {nextAppointment ? (
                         <Link
-                          href={`/dashboard/private-clinic/appointments/${encodeURIComponent(nextAppointment.id)}/reschedule`}
+                          href={`/dashboard/private-clinic/appointments/${encodeURIComponent(nextAppointment.id)}/reschedule?fromUpcoming=1`}
                           className="text-sky-400 hover:text-sky-300"
                         >
                           {uv.scheduledOn(

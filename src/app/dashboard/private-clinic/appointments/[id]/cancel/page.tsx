@@ -14,13 +14,18 @@ import { AppointmentChangeReasonFields } from "../../appointment-change-reason-f
 export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/appointments";
+const UPCOMING_VISITS = "/dashboard/private-clinic/upcoming-visits";
 
 type PageProps = { params: Promise<{ id: string }> };
 
-export default async function CancelAppointmentPage({ params }: PageProps) {
+export default async function CancelAppointmentPage({
+  params,
+  searchParams,
+}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string }> }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const sp = searchParams ? await searchParams : {};
 
   const { id } = await params;
   const user = await prisma.users.findFirst({
@@ -43,15 +48,19 @@ export default async function CancelAppointmentPage({ params }: PageProps) {
   });
 
   if (!apt) notFound();
+  const fromUpcoming = sp.fromUpcoming === "1";
+  const redirectOnSuccess = fromUpcoming ? `${UPCOMING_VISITS}?updated=1` : `${LIST}?updated=1`;
+  const closeHref = fromUpcoming ? UPCOMING_VISITS : LIST;
+  const closeLabel = fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments;
 
   return (
-    <DashboardModal title={ap.cancelTitle} closeHref={LIST} closeLabel={ap.backToAppointments} maxWidthClassName="max-w-xl">
+    <DashboardModal title={ap.cancelTitle} closeHref={closeHref} closeLabel={closeLabel} maxWidthClassName="max-w-xl">
       <p className="mb-4 text-sm text-slate-400">
         {apt.client.first_name} {apt.client.last_name ?? ""}
       </p>
       <form action={cancelTherapyAppointment} className="grid gap-3">
         <input type="hidden" name="id" value={apt.id} />
-        <input type="hidden" name="redirect_on_success" value={`${LIST}?updated=1`} />
+        <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
         <AppointmentChangeReasonFields
           reasonFieldName="cancellation_reason"
           notesFieldName="cancellation_notes"
