@@ -33,14 +33,18 @@ export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/appointments";
 
-type PageProps = { params: Promise<{ id: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string; saved?: string }>;
+};
 
-export default async function EditAppointmentPage({ params }: PageProps) {
+export default async function EditAppointmentPage({ params, searchParams }: PageProps) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
   const { id } = await params;
+  const query = (await searchParams) ?? {};
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
     select: { family_member_id: true },
@@ -65,6 +69,7 @@ export default async function EditAppointmentPage({ params }: PageProps) {
       program: true,
       series: true,
       participants: true,
+      treatment: true,
     },
   });
 
@@ -146,6 +151,18 @@ export default async function EditAppointmentPage({ params }: PageProps) {
         </div>
       ) : null}
 
+      {query.saved === "1" ? (
+        <div className="rounded-xl border border-emerald-700/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100/90">
+          {ap.reportTreatmentSaved}
+        </div>
+      ) : null}
+
+      {query.error === "linked" ? (
+        <div className="rounded-xl border border-rose-700/50 bg-rose-950/30 px-4 py-3 text-sm text-rose-100/90">
+          {ap.reportTreatmentBlocked}
+        </div>
+      ) : null}
+
       <AppointmentEditFormClient
         action={updateTherapyAppointment}
         id={apt.id}
@@ -184,38 +201,66 @@ export default async function EditAppointmentPage({ params }: PageProps) {
         </Link>
       </p>
 
-      <form
-        action={reportTreatmentFromAppointment}
-        className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
+      <section
+        id="report-treatment"
+        className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
       >
-        <input type="hidden" name="appointment_id" value={apt.id} />
-        <h3 className="md:col-span-2 text-sm font-semibold text-slate-200">Report treatment from appointment</h3>
-        <input
-          name="amount"
-          placeholder="Amount"
-          required
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-        <input
-          name="currency"
-          defaultValue="ILS"
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-        <textarea name="note_1" placeholder="Note 1" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2" />
-        <select name="additional_participant_ids" multiple className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2">
-          {clients.map((cl) => (
-            <option key={cl.id} value={cl.id}>
-              {cl.first_name} {cl.last_name ?? ""}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-        >
-          Report Treatment
-        </button>
-      </form>
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold text-slate-200">{ap.reportTreatmentTitle}</h3>
+          <p className="text-xs text-slate-400">{ap.reportTreatmentHint}</p>
+        </div>
+        {apt.treatment_id ? (
+          <div className="mt-3 rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-3 text-sm text-amber-100/90">
+            <p>{ap.reportTreatmentAlreadyLinked}</p>
+            {apt.treatment ? (
+              <Link
+                href={`/dashboard/private-clinic/treatments?edit=${apt.treatment.id}`}
+                className="mt-2 inline-flex text-xs text-amber-200 underline-offset-2 hover:underline"
+              >
+                {ap.viewLinkedTreatment}
+              </Link>
+            ) : null}
+          </div>
+        ) : (
+          <form action={reportTreatmentFromAppointment} className="mt-3 grid gap-3 md:grid-cols-2">
+            <input type="hidden" name="appointment_id" value={apt.id} />
+            <input
+              name="amount"
+              placeholder={c.amount}
+              required
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <input
+              name="currency"
+              defaultValue="ILS"
+              placeholder={c.currency}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <textarea
+              name="note_1"
+              placeholder="Note 1"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
+            />
+            <select
+              name="additional_participant_ids"
+              multiple
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
+            >
+              {clients.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.first_name} {cl.last_name ?? ""}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+            >
+              {ap.reportTreatmentSubmit}
+            </button>
+          </form>
+        )}
+      </section>
     </div>
   );
 }

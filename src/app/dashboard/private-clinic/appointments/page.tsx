@@ -94,6 +94,24 @@ export default async function AppointmentsPage() {
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
+                        href={`${LIST}/${a.id}/edit`}
+                        className="inline-flex items-center text-xs leading-none text-slate-300 hover:text-slate-100"
+                      >
+                        {ap.edit}
+                      </Link>
+                      {a.treatment_id ? (
+                        <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
+                          {ap.logTreatment}
+                        </span>
+                      ) : (
+                        <Link
+                          href={`${LIST}/${a.id}/edit#report-treatment`}
+                          className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
+                        >
+                          {ap.logTreatment}
+                        </Link>
+                      )}
+                      <Link
                         href={`${LIST}/${a.id}/reschedule`}
                         className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
                       >

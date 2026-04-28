@@ -886,6 +886,26 @@ export function privateClinicAppointments(lang: UiLanguage) {
     cancel: p("Cancel", "ביטול"),
     reschedule: p("Reschedule", "עריכה"),
     edit: p("Edit", "עריכה"),
+    logTreatment: p("Log treatment", "דיווח טיפול"),
+    reportTreatmentTitle: p("Report treatment from appointment", "דיווח טיפול מתוך תור"),
+    reportTreatmentSubmit: p("Report treatment", "דווח טיפול"),
+    reportTreatmentAlreadyLinked: p(
+      "A treatment is already linked to this appointment.",
+      "כבר מקושר טיפול לתור הזה.",
+    ),
+    reportTreatmentSaved: p(
+      "Treatment reported and appointment marked complete.",
+      "הטיפול דווח והתור סומן כהושלם.",
+    ),
+    reportTreatmentBlocked: p(
+      "This appointment already has a linked treatment, so duplicate reporting is blocked.",
+      "לתור הזה כבר מקושר טיפול, לכן נחסם דיווח כפול.",
+    ),
+    reportTreatmentHint: p(
+      "Use this form when the treatment should complete and link this appointment.",
+      "השתמשו בטופס הזה כאשר הטיפול צריך להשלים ולקשר את התור הזה.",
+    ),
+    viewLinkedTreatment: p("View linked treatment", "צפייה בטיפול מקושר"),
     cancelTitle: p("Cancel appointment", "ביטול תור"),
     cancelConfirm: p(
       "Mark this appointment as cancelled?",

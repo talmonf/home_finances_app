@@ -3349,25 +3349,56 @@ export async function updateTherapyAppointment(formData: FormData) {
 
 export async function reportTreatmentFromAppointment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/");
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const appointmentId = (formData.get("appointment_id") as string | null)?.trim() || "";
   if (!appointmentId) redirect(`${BASE}/appointments?error=missing`);
   const appointment = await prisma.therapy_appointments.findFirst({
     where: { id: appointmentId, household_id: householdId },
     include: {
-      participants: true,
+      client: true,
+      job: true,
+      program: true,
+      participants: {
+        include: {
+          client: true,
+        },
+      },
     },
   });
   if (!appointment) redirect(`${BASE}/appointments?error=notfound`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, appointment.job_id))) {
     redirect(`${BASE}/appointments?error=job`);
   }
+  if (appointment.treatment_id) {
+    redirect(`${BASE}/appointments/${appointmentId}/edit?error=linked`);
+  }
   const amountStr = parseMoney(formData.get("amount") as string);
   if (!amountStr) redirect(`${BASE}/appointments/${appointmentId}/edit?error=amount`);
+  const additionalParticipantIds = parseUniqueIds(formData.getAll("additional_participant_ids"));
+  for (const participantId of additionalParticipantIds) {
+    if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
+      redirect(`${BASE}/appointments?error=client`);
+    }
+  }
 
   const treatmentId = crypto.randomUUID();
-  await prisma.$transaction(async (tx) => {
-    await tx.therapy_treatments.create({
+  try {
+    await prisma.$transaction(async (tx) => {
+      const latestAppointment = await tx.therapy_appointments.findFirst({
+        where: { id: appointmentId, household_id: householdId },
+        select: { treatment_id: true },
+      });
+      if (!latestAppointment) {
+        throw new Error("APPOINTMENT_NOT_FOUND");
+      }
+      if (latestAppointment.treatment_id) {
+        throw new Error("APPOINTMENT_ALREADY_LINKED");
+      }
+
+      await tx.therapy_treatments.create({
       data: {
         id: treatmentId,
         household_id: householdId,
@@ -3384,29 +3415,60 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
         note_3: (formData.get("note_3") as string | null)?.trim() || null,
       },
     });
-    const participantIds = new Set<string>([
-      appointment.client_id,
-      ...appointment.participants.map((p) => p.client_id),
-      ...parseUniqueIds(formData.getAll("additional_participant_ids")),
-    ]);
-    for (const clientId of participantIds) {
-      await tx.therapy_treatment_participants.create({
-        data: {
-          id: crypto.randomUUID(),
-          household_id: householdId,
-          treatment_id: treatmentId,
-          client_id: clientId,
-        },
+      const participantIds = new Set<string>([
+        appointment.client_id,
+        ...appointment.participants.map((p) => p.client_id),
+        ...additionalParticipantIds,
+      ]);
+      for (const clientId of participantIds) {
+        await tx.therapy_treatment_participants.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: householdId,
+            treatment_id: treatmentId,
+            client_id: clientId,
+          },
+        });
+      }
+      const updated = await tx.therapy_appointments.updateMany({
+        where: { id: appointmentId, household_id: householdId, treatment_id: null },
+        data: { treatment_id: treatmentId, status: "completed" },
       });
-    }
-    await tx.therapy_appointments.update({
-      where: { id: appointmentId },
-      data: { treatment_id: treatmentId, status: "completed" },
+      if (updated.count !== 1) {
+        throw new Error("APPOINTMENT_ALREADY_LINKED");
+      }
     });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === "APPOINTMENT_ALREADY_LINKED" || error.message === "APPOINTMENT_NOT_FOUND")
+    ) {
+      redirect(`${BASE}/appointments/${appointmentId}/edit?error=linked`);
+    }
+    throw error;
+  }
+
+  const after = await prisma.therapy_appointments.findFirst({
+    where: { id: appointmentId, household_id: householdId },
+    include: APPOINTMENT_AUDIT_INCLUDE,
   });
+  if (after) {
+    await logTherapyAppointmentAudit({
+      householdId,
+      userId,
+      appointmentId,
+      action: TherapyAppointmentAuditAction.report_complete,
+      metadata: {
+        before: appointmentToSnapshot(appointment),
+        after: appointmentToSnapshot(after),
+        treatment_id: treatmentId,
+      },
+    });
+  }
 
   revalidatePath(`${BASE}/appointments`);
   revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/reports`);
   redirect(`${BASE}/appointments/${appointmentId}/edit?saved=1`);
 }
 
