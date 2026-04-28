@@ -73,6 +73,18 @@ function parseSortKey(s: string | undefined): SortKey {
   return allowed.includes(s as SortKey) ? (s as SortKey) : "first_name";
 }
 
+function kupatHolimLabel(
+  kupatHolim: "clalit" | "maccabi" | "meuhedet" | "leumit" | null | undefined,
+  cl: ReturnType<typeof privateClinicClients>,
+  c: ReturnType<typeof privateClinicCommon>,
+): string {
+  if (kupatHolim === "clalit") return cl.kupatClalit;
+  if (kupatHolim === "maccabi") return cl.kupatMaccabi;
+  if (kupatHolim === "meuhedet") return cl.kupatMeuhedet;
+  if (kupatHolim === "leumit") return cl.kupatLeumit;
+  return c.none;
+}
+
 function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_clientsOrderByWithRelationInput[] {
   switch (sort) {
     case "first_name":
@@ -351,6 +363,21 @@ export default async function ClientsPage({
           if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
           return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
         })
+      : sort === "kupat_holim"
+        ? [...clients].sort((a, b) => {
+            const aLabel = kupatHolimLabel(a.kupat_holim, cl, c);
+            const bLabel = kupatHolimLabel(b.kupat_holim, cl, c);
+            const aIsNone = a.kupat_holim == null;
+            const bIsNone = b.kupat_holim == null;
+            if (aIsNone !== bIsNone) return aIsNone ? 1 : -1;
+            const cmp = aLabel.localeCompare(bLabel, uiLanguage);
+            if (cmp !== 0) return dir === "asc" ? cmp : -cmp;
+            const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
+            const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
+            const nameCmp = aName.localeCompare(bName);
+            if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
+            return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+          })
       : clients;
 
   const hasActiveFilters =
@@ -631,16 +658,7 @@ export default async function ClientsPage({
               {sortedClients.map((row) => {
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
-                const kupatHolimLabel =
-                  row.kupat_holim === "clalit"
-                    ? cl.kupatClalit
-                    : row.kupat_holim === "maccabi"
-                      ? cl.kupatMaccabi
-                      : row.kupat_holim === "meuhedet"
-                        ? cl.kupatMeuhedet
-                        : row.kupat_holim === "leumit"
-                          ? cl.kupatLeumit
-                          : c.none;
+                const kupatHolimLabelText = kupatHolimLabel(row.kupat_holim, cl, c);
                 const treatmentsCount = treatmentCountByClientId.get(row.id) ?? 0;
                 const lastVisitAt = lastVisitAtByClientId.get(row.id);
                 const vc = row.visits_per_period_count;
@@ -677,8 +695,8 @@ export default async function ClientsPage({
                     <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={programLabel}>
                       {programLabel}
                     </td>
-                    <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={kupatHolimLabel}>
-                      {kupatHolimLabel}
+                    <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={kupatHolimLabelText}>
+                      {kupatHolimLabelText}
                     </td>
                     {familyTherapyEnabled ? (
                       <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={row.family?.name ?? "—"}>

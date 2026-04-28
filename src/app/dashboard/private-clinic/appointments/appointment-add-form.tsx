@@ -114,6 +114,8 @@ export function AppointmentAddForm({
     const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 16);
   }, [singleDurationMinutes, startAtValue]);
+  const endDateValue = endAtValue ? endAtValue.slice(0, 10) : "";
+  const endTimeValue = endAtValue ? endAtValue.slice(11, 16) : "";
 
   return (
     <div className="space-y-4">
@@ -238,14 +240,14 @@ export function AppointmentAddForm({
           </label>
           <div className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.startDateTimeLabel}</span>
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem_5.5rem]">
+            <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem_5.5rem]">
               <input
                 name="start_date"
                 type="date"
                 value={singleStartDate}
                 onChange={(e) => setSingleStartDate(e.target.value)}
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startDateLabel}
               />
               <input
@@ -254,7 +256,7 @@ export function AppointmentAddForm({
                 value={singleStartTime}
                 onChange={(e) => setSingleStartTime(e.target.value)}
                 required
-                className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full max-w-36 self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startTimeLabel}
               />
               <label className="space-y-1">
@@ -275,13 +277,23 @@ export function AppointmentAddForm({
           </div>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.endDateTimeLabel}</span>
-            <input
-              name="end_at"
-              type="datetime-local"
-              value={endAtValue}
-              readOnly
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <input type="hidden" name="end_at" value={endAtValue} />
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
+              <input
+                type="date"
+                value={endDateValue}
+                readOnly
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.startDateLabel}
+              />
+              <input
+                type="time"
+                value={endTimeValue}
+                readOnly
+                className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.startTimeLabel}
+              />
+            </div>
           </label>
           <button
             type="submit"
