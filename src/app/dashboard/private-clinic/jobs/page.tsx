@@ -161,8 +161,6 @@ export default async function PrivateClinicJobsPage({
           closeHref={JOBS_BASE}
           redirectOnSuccess={`${JOBS_BASE}?created=1`}
           redirectOnError={`${JOBS_BASE}?modal=new`}
-          c={c}
-          j={j}
           uiLanguage={uiLanguage}
         />
       ) : null}

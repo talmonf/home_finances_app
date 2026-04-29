@@ -15,8 +15,6 @@ export function JobModalForm({
   closeHref,
   redirectOnSuccess,
   redirectOnError,
-  c,
-  j,
   uiLanguage,
   onCancel,
   overlayZIndexClassName,
@@ -27,8 +25,6 @@ export function JobModalForm({
   closeHref: string;
   redirectOnSuccess: string;
   redirectOnError: string;
-  c: ReturnType<typeof privateClinicCommon>;
-  j: ReturnType<typeof privateClinicJobs>;
   uiLanguage: UiLanguage;
   /** When set, Cancel navigates in-page instead of following closeHref (e.g. Getting started overlay). */
   onCancel?: () => void;
@@ -36,6 +32,8 @@ export function JobModalForm({
   overlayZIndexClassName?: string;
 }) {
   const zOverlay = overlayZIndexClassName ?? "z-40";
+  const c = privateClinicCommon(uiLanguage);
+  const j = privateClinicJobs(uiLanguage);
   const cancelHeader = onCancel ? (
     <button type="button" onClick={onCancel} className="text-sm text-sky-400 hover:text-sky-300">
       {c.cancel}

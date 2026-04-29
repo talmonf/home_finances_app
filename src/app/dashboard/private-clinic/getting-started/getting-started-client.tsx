@@ -238,8 +238,6 @@ export function GettingStartedClient({
           closeHref={GS_BASE}
           redirectOnSuccess={redirectOnSuccess}
           redirectOnError={redirectOnError}
-          c={c}
-          j={j}
           uiLanguage={uiLanguage}
           onCancel={closeJobModal}
           overlayZIndexClassName="z-[50]"

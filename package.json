@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:tipulim-import": "tsx --test src/lib/therapy/import-tipulim.private-profile.regression.test.ts src/lib/therapy/import-tipulim.receipts-only.test.ts",
+    "test:e2e:navigation": "playwright test tests/e2e/private-clinic-navigation.spec.ts",
     "db:check": "npx tsx prisma/check-db.ts"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
