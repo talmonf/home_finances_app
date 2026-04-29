@@ -1264,6 +1264,14 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "Then add your **Clients** so you can schedule visits and record treatments.",
       "לאחר מכן הוסיפו **לקוחות** כדי לקבוע מפגשים ולרשום טיפולים.",
     ),
+    step4: p(
+      "**Treatments** — Log each session and attach files. Audio attachments can be transcribed (English/Hebrew), which is useful between back-to-back clients: quickly record a spoken summary while details are fresh, then review the transcript before using it in clinical notes.",
+      "**טיפולים** — תעדו כל מפגש וצרפו קבצים. ניתן לתמלל קבצי אודיו (אנגלית/עברית), וזה שימושי בין לקוחות רצופים: הקלטת סיכום קצר כשהפרטים טריים, ואז מעבר על התמליל לפני שימוש בהערות טיפול.",
+    ),
+    uiLanguageBody: p(
+      "The Clinic interface is available in **English** and **Hebrew** (change language from user preferences).",
+      "ממשק הקליניקה זמין ב**אנגלית** וב**עברית** (שינוי שפה דרך העדפות המשתמש).",
+    ),
     twoWaysTitle: p("Two ways to work (you can combine them)", "שתי דרכי עבודה (אפשר לשלב)"),
     wayAppointments: p(
       "**Appointments** — Schedule a session for a specific date and time. After it happens, record the treatment and session details.",
@@ -1287,13 +1295,21 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "**Import / Export** — Download a full clinic workbook or import structured spreadsheets (for analysis or migration).",
       "**יבוא / ייצוא** — הורדת חוברת קליניקה מלאה או ייבוא גיליונות מובנים (לניתוח או מעבר מערכת).",
     ),
+    advBulkImport: p(
+      "**Bulk migration import** — You can import **treatments** and/or **receipts** in bulk when migrating to the system. Use the import flows to review and validate data before finalizing.",
+      "**ייבוא מרוכז למעבר מערכת** — אפשר לייבא **טיפולים** ו/או **קבלות** בכמות גדולה בעת מעבר למערכת. מומלץ להשתמש בזרימות הייבוא כדי לבדוק ולאמת נתונים לפני אישור סופי.",
+    ),
     advOps: p(
       "**Reports**, **Reminders**, **Consultations**, **Travel**, **Petrol**, **Clinic insurance**, **Work subscriptions** — Use these areas as your practice grows for reporting, reminders, non-session services, mileage and vehicle costs, and professional overheads.",
       "**דוחות**, **תזכורות**, **ייעוצים**, **נסיעות**, **דלק**, **ביטוח קליניקה**, **מנויים מקצועיים** — לשימוש ככל שהפרקטיקה גדלה — דיווח, תזכורות, שירותים מחוץ למפגש, נסיעות ורכב, והוצאות מקצועיות.",
     ),
-    advProductivity: p(
-      "**Treatments** — After saving a treatment you can attach files. **Audio** attachments can be **transcribed** (English or Hebrew), which is handy between back-to-back sessions: record a quick verbal summary while it is fresh, then review the text before using it in notes (third-party processing—see the in-app notice). Under **Settings** you can rename the three client note fields and hide unused ones.",
-      "**טיפולים** — אחרי שמירת טיפול אפשר לצרף קבצים. קבצי **אודיו** ניתן **לתמלל** (אנגלית או עברית) — שימושי בין מפגשים צפופים: הקלטת סיכום קצר כשהוא טרי, ואז מעבר על הטקסט לפני שימוש בערות (עיבוד צד שלישי — ראו הודעה במערכת). תחת **הגדרות** אפשר לשנות שמות לשלושת שדות הערות בכרטיס לקוח ולהסתיר שדות שלא בשימוש.",
+    advReceiptsTreatments: p(
+      "**Receipts and treatments linkage** — Treatments represent clinical work; receipts represent collected payments. You can report payment status on treatments, link treatments to receipts, and manage allocations from the receipts side so reporting and bookkeeping stay aligned.",
+      "**קשר בין קבלות לטיפולים** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. אפשר לדווח סטטוס תשלום בטיפולים, לקשר טיפולים לקבלות, ולנהל שיוכים מצד הקבלות כדי לשמור התאמה בין דיווח להנהלת חשבונות.",
+    ),
+    advDemoPrivacy: p(
+      "**Demo privacy mode** — Use **Hide client names & amounts (demo)** in the top toolbar when you need to demo the system to others or share screens with the system administrator. It masks client names and monetary amounts during your session to reduce data exposure.",
+      "**מצב פרטיות להדגמה** — השתמשו באפשרות **הסתרת שמות לקוחות וסכומים (הדגמה)** בסרגל העליון כשצריך להדגים את המערכת לאחרים או לשתף מסך עם מנהל המערכת. האפשרות מטשטשת שמות לקוחות וסכומים במהלך הסשן כדי להפחית חשיפת מידע.",
     ),
     familiesWhenEnabledTitle: p("Families", "משפחות"),
     familiesWhenEnabledBody: p(
@@ -1304,7 +1320,6 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "This product supports an optional **Families** workflow for grouping related clients. It is **not** enabled for your account. To discuss turning it on, contact your **system administrator**.",
       "המערכת תומכת באופציה של **משפחות** לקיבוץ לקוחות קשורים. האופציה **אינה** מופעלת אצלכם. לשיחה על הפעלה, פנו ל**מנהל המערכת**.",
     ),
-    continueBtn: p("Continue to Clinic overview", "המשך לסקירת הקליניקה"),
     jobSavedToast: p("Job saved.", "המשרה נשמרה."),
     moreMenuHint: p("Tip: open this guide again from **More → Getting started**.", "טיפ: אפשר לחזור למדריך דרך **עוד → התחלה**."),
   };

@@ -10,7 +10,6 @@ import {
 } from "@/lib/private-clinic-i18n";
 import type { UiLanguage } from "@/lib/ui-language";
 import { JobModalForm } from "../jobs/job-modal-form";
-import { completePrivateClinicGettingStartedAction } from "./actions";
 
 const GS_BASE = "/dashboard/private-clinic/getting-started";
 
@@ -141,7 +140,18 @@ export function GettingStartedClient({
               </Link>
             </div>
           </li>
+          <li>
+            <BoldInline text={gs.step4} />
+            <div className="mt-2">
+              <Link href="/dashboard/private-clinic/treatments" className="text-sky-400 hover:text-sky-300">
+                {uiLanguage === "he" ? "טיפולים" : "Treatments"}
+              </Link>
+            </div>
+          </li>
         </ol>
+        <p className="text-sm leading-relaxed text-slate-400">
+          <BoldInline text={gs.uiLanguageBody} />
+        </p>
       </section>
 
       <section className="space-y-3">
@@ -188,10 +198,16 @@ export function GettingStartedClient({
             <BoldInline text={gs.advData} />
           </p>
           <p>
+            <BoldInline text={gs.advBulkImport} />
+          </p>
+          <p>
+            <BoldInline text={gs.advReceiptsTreatments} />
+          </p>
+          <p>
             <BoldInline text={gs.advOps} />
           </p>
           <p>
-            <BoldInline text={gs.advProductivity} />
+            <BoldInline text={gs.advDemoPrivacy} />
           </p>
 
           {familyTherapyEnabled ? (
@@ -213,15 +229,6 @@ export function GettingStartedClient({
           )}
         </div>
       </details>
-
-      <form action={completePrivateClinicGettingStartedAction} className="pt-2">
-        <button
-          type="submit"
-          className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-        >
-          {gs.continueBtn}
-        </button>
-      </form>
 
       {jobModalOpen && canAddJob ? (
         <JobModalForm

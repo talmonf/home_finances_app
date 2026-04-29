@@ -39,6 +39,7 @@ export default async function PrivateClinicGettingStartedPage({
     prisma.users.findFirst({
       where: { id: session.user.id, household_id: householdId, is_active: true },
       select: {
+        id: true,
         family_member_id: true,
         private_clinic_getting_started_completed_at: true,
       },
@@ -56,6 +57,12 @@ export default async function PrivateClinicGettingStartedPage({
   const showWelcomeBanner =
     resolved?.welcome === "1" && !user?.private_clinic_getting_started_completed_at;
   const showJobSetupHint = !canAddJob;
+  if (showWelcomeBanner && user?.id) {
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { private_clinic_getting_started_completed_at: new Date() },
+    });
+  }
 
   return (
     <div className="space-y-8">
