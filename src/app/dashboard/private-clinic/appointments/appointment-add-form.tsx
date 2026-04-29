@@ -79,8 +79,11 @@ export function AppointmentAddForm({
   const [singleVisitType, setSingleVisitType] = useState(prefill?.visitType ?? "");
   const [seriesVisitType, setSeriesVisitType] = useState(prefill?.visitType ?? "");
   const [singleStartDate, setSingleStartDate] = useState(prefill?.startDate ?? "");
-  const [singleStartTime, setSingleStartTime] = useState("");
+  const [singleStartHour, setSingleStartHour] = useState("");
+  const [singleStartMinute, setSingleStartMinute] = useState("");
   const [singleDurationMinutes, setSingleDurationMinutes] = useState(prefill?.durationMinutes ?? "");
+  const [seriesTimeHour, setSeriesTimeHour] = useState("");
+  const [seriesTimeMinute, setSeriesTimeMinute] = useState("");
 
   const clientById = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -97,6 +100,22 @@ export function AppointmentAddForm({
   );
   const programById = useMemo(() => new Map(programs.map((program) => [program.id, program])), [programs]);
   const jobById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
+  const hourOptions = useMemo(
+    () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
+    [],
+  );
+  const minuteOptions = useMemo(
+    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
+    [],
+  );
+  const singleStartTime = useMemo(() => {
+    if (!singleStartHour || !singleStartMinute) return "";
+    return `${singleStartHour}:${singleStartMinute}`;
+  }, [singleStartHour, singleStartMinute]);
+  const seriesTimeOfDay = useMemo(() => {
+    if (!seriesTimeHour || !seriesTimeMinute) return "";
+    return `${seriesTimeHour}:${seriesTimeMinute}`;
+  }, [seriesTimeHour, seriesTimeMinute]);
   const selectedJobDefaultDuration = singleJobId
     ? jobById.get(singleJobId)?.defaultDurationMinutes ?? null
     : null;
@@ -242,7 +261,7 @@ export function AppointmentAddForm({
           </label>
           <div className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.startDateTimeLabel}</span>
-            <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem_5.5rem]">
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
               <input
                 name="start_date"
                 type="date"
@@ -252,29 +271,36 @@ export function AppointmentAddForm({
                 className="w-full self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startDateLabel}
               />
-              <input
-                name="start_time"
-                type="time"
-                value={singleStartTime}
-                onChange={(e) => setSingleStartTime(e.target.value)}
-                required
-                className="w-full max-w-36 self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label={copy.startTimeLabel}
-              />
-              <label className="space-y-1">
-                <span className="block text-xs text-slate-300">{copy.durationMinutesLabel}</span>
-                <input
-                  name="duration_minutes"
-                  type="number"
-                  min={1}
-                  max={999}
-                  step={1}
+              <div className="grid grid-cols-2 gap-2">
+                <select
                   required
-                  value={singleDurationMinutes}
-                  onChange={(e) => setSingleDurationMinutes(e.target.value)}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-              </label>
+                  value={singleStartHour}
+                  onChange={(e) => setSingleStartHour(e.target.value)}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                  aria-label={`${copy.startTimeLabel} hour`}
+                >
+                  <option value="">--</option>
+                  {hourOptions.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  required
+                  value={singleStartMinute}
+                  onChange={(e) => setSingleStartMinute(e.target.value)}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                  aria-label={`${copy.startTimeLabel} minute`}
+                >
+                  <option value="">--</option>
+                  {minuteOptions.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <label className="space-y-1">
@@ -296,6 +322,20 @@ export function AppointmentAddForm({
                 aria-label={copy.startTimeLabel}
               />
             </div>
+          </label>
+          <label className="space-y-1">
+            <span className="block text-xs text-slate-300">{copy.durationMinutesLabel}</span>
+            <input
+              name="duration_minutes"
+              type="number"
+              min={1}
+              max={999}
+              step={1}
+              required
+              value={singleDurationMinutes}
+              onChange={(e) => setSingleDurationMinutes(e.target.value)}
+              className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
           </label>
           <PendingSubmitButton
             label={copy.schedule}
@@ -416,12 +456,37 @@ export function AppointmentAddForm({
           </label>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.timeOfDayLabel}</span>
-            <input
-              name="time_of_day"
-              type="time"
-              required
-              className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <input type="hidden" name="time_of_day" value={seriesTimeOfDay} />
+            <div className="grid max-w-36 grid-cols-2 gap-2">
+              <select
+                required
+                value={seriesTimeHour}
+                onChange={(e) => setSeriesTimeHour(e.target.value)}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                aria-label={`${copy.timeOfDayLabel} hour`}
+              >
+                <option value="">--</option>
+                {hourOptions.map((hour) => (
+                  <option key={hour} value={hour}>
+                    {hour}
+                  </option>
+                ))}
+              </select>
+              <select
+                required
+                value={seriesTimeMinute}
+                onChange={(e) => setSeriesTimeMinute(e.target.value)}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                aria-label={`${copy.timeOfDayLabel} minute`}
+              >
+                <option value="">--</option>
+                {minuteOptions.map((minute) => (
+                  <option key={minute} value={minute}>
+                    {minute}
+                  </option>
+                ))}
+              </select>
+            </div>
           </label>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.seriesStartDateLabel}</span>
