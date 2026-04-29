@@ -3,6 +3,7 @@ import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
+import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 type CommonStrings = ReturnType<typeof privateClinicCommon>;
@@ -62,6 +63,7 @@ export function TherapyClientForm({
   cl,
   c,
   redirectOnError,
+  pendingLabel,
   client,
 }: {
   mode: "create" | "edit";
@@ -72,6 +74,7 @@ export function TherapyClientForm({
   cl: ClStrings;
   c: CommonStrings;
   redirectOnError: string;
+  pendingLabel: string;
   client?: TherapyClientFormEditRow;
 }) {
   const action = mode === "create" ? createTherapyClient : updateTherapyClient;
@@ -495,13 +498,12 @@ export function TherapyClientForm({
         </label>
       ) : null}
 
-      <button
-        type="submit"
+      <PendingSubmitButtonWithSpinner
         disabled={jobs.length === 0}
         className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {mode === "create" ? cl.addClientBtn : cl.saveClient}
-      </button>
+        label={mode === "create" ? cl.addClientBtn : cl.saveClient}
+        pendingLabel={pendingLabel}
+      />
     </form>
   );
 }
