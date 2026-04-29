@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 
@@ -44,6 +44,9 @@ export function RescheduleFormClient({
   labels,
   defaults,
 }: Props) {
+  const router = useRouter();
+  const [isNavigating, startNavigation] = useTransition();
+  const [navTarget, setNavTarget] = useState<"cancel" | "close" | null>(null);
   const [startHour, startMinute] = (defaults.startTime || "00:00").split(":");
   const [endHour, endMinute] = (defaults.endTime || "00:00").split(":");
   const [startDate, setStartDate] = useState(defaults.startDate);
@@ -76,6 +79,12 @@ export function RescheduleFormClient({
     setStartDate(nextDate);
     setEndDate(nextDate);
   };
+  const navigateWithPending = (href: string, target: "cancel" | "close") => {
+    setNavTarget(target);
+    startNavigation(() => {
+      router.push(href);
+    });
+  };
 
   useEffect(() => {
     if (!startDate || !startTimeHour || !startTimeMinute) return;
@@ -101,7 +110,7 @@ export function RescheduleFormClient({
 
       <div className="space-y-1">
         <span className="block text-sm text-slate-300">{labels.start}</span>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
           <input
             type="date"
             value={startDate}
@@ -110,7 +119,7 @@ export function RescheduleFormClient({
             className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             aria-label={labels.startDate}
           />
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <select
               value={startTimeHour}
               onChange={(e) => setStartTimeHour(e.target.value)}
@@ -137,8 +146,8 @@ export function RescheduleFormClient({
               ))}
             </select>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-            <span>{labels.durationMinutes}</span>
+          <label className="grid gap-1 text-sm text-slate-300 sm:ms-2 sm:min-w-[8rem]">
+            <span className="text-xs leading-tight">{labels.durationMinutes}</span>
             <input
               name="duration_minutes"
               type="number"
@@ -213,18 +222,22 @@ export function RescheduleFormClient({
           pendingLabel={labels.saving}
           className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
         />
-        <Link
-          href={cancelHref}
+        <button
+          type="button"
+          onClick={() => navigateWithPending(cancelHref, "cancel")}
+          disabled={isNavigating}
           className="inline-flex items-center text-sm font-medium text-rose-300 underline-offset-2 hover:text-rose-200 hover:underline"
         >
-          {labels.cancelAppointment}
-        </Link>
-        <Link
-          href={redirectOnSuccess}
-          className="w-fit rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+          {isNavigating && navTarget === "cancel" ? `${labels.cancelAppointment}...` : labels.cancelAppointment}
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateWithPending(redirectOnSuccess, "close")}
+          disabled={isNavigating}
+          className="w-fit rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {labels.close}
-        </Link>
+          {isNavigating && navTarget === "close" ? `${labels.close}...` : labels.close}
+        </button>
       </div>
     </form>
   );
