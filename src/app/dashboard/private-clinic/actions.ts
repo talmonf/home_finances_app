@@ -3236,12 +3236,15 @@ export async function updateTherapyAppointment(formData: FormData) {
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
   const status = parseAppointmentStatus((formData.get("status") as string)?.trim() || null);
   const additionalClientIds = parseUniqueIds(formData.getAll("additional_client_ids"));
+  const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
   const appointmentDurationMinutesInput = parsePositiveInt(
     (formData.get("duration_minutes") as string | null) ?? null,
   );
-  if (!id || !client_id || !job_id || !visit_type || !status) {
+  if (!id || !client_id || !job_id || !visit_type || !status || !start_at_raw) {
     redirect(`${BASE}/appointments?error=missing`);
   }
+  const start_at = parseDatetimeLocalInTimeZone(start_at_raw, APPOINTMENT_TIME_ZONE);
+  if (!start_at || Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
 
   const before = await prisma.therapy_appointments.findFirst({
     where: { id, household_id: householdId },
@@ -3285,7 +3288,7 @@ export async function updateTherapyAppointment(formData: FormData) {
   );
   const resolvedEndAt =
     explicitEndAt ??
-    (resolvedDurationMinutes ? new Date(before.start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
+    (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
 
   await prisma.therapy_appointments.updateMany({
     where: { id, household_id: householdId },
@@ -3296,6 +3299,7 @@ export async function updateTherapyAppointment(formData: FormData) {
       program_id: programIdOrNull,
       visit_type,
       status,
+      start_at,
       end_at: resolvedEndAt,
       duration_minutes: appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
       cancellation_reason:

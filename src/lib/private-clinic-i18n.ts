@@ -906,6 +906,8 @@ export function privateClinicAppointments(lang: UiLanguage) {
       "Use this form when the treatment should complete and link this appointment.",
       "השתמשו בטופס הזה כאשר הטיפול צריך להשלים ולקשר את התור הזה.",
     ),
+    additionalClients: p("Additional clients", "לקוחות נוספים"),
+    addAdditionalClient: p("Add additional client", "הוספת לקוח נוסף"),
     viewLinkedTreatment: p("View linked treatment", "צפייה בטיפול מקושר"),
     cancelTitle: p("Cancel appointment", "ביטול תור"),
     cancelConfirm: p(

@@ -28,6 +28,7 @@ import {
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { dateToDatetimeLocalValue, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { AppointmentEditFormClient } from "./appointment-edit-form-client";
+import { ReportTreatmentFormClient } from "./report-treatment-form-client";
 
 export const dynamic = "force-dynamic";
 
@@ -174,18 +175,26 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         initialVisitType={apt.visit_type}
         initialStatus={apt.status}
         initialCancellationReason={apt.cancellation_reason ?? ""}
+        initialStartAt={dateToDatetimeLocalValue(apt.start_at)}
         initialEndAt={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
         initialDurationMinutes={apt.duration_minutes ? String(apt.duration_minutes) : ""}
         labels={{
           client: c.client,
+          additionalClients: ap.additionalClients,
+          addAdditionalClient: ap.addAdditionalClient,
+          remove: c.remove,
           programOptional: ap.programOptional,
+          start: ap.startCol,
+          endOptional: ap.endOptional,
+          startDate: ap.startDate,
+          startTime: ap.startTime,
+          durationMinutes: ap.durationMinutes,
+          cancellationReason: ap.cancel,
           statusScheduled: ap.statusScheduled,
           statusCompleted: ap.statusCompleted,
           statusCancelled: ap.statusCancelled,
-          cancel: ap.cancel,
           save: ap.save,
         }}
-        uiLanguage={uiLanguage}
         jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
         programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
         clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}
@@ -223,43 +232,21 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
             ) : null}
           </div>
         ) : (
-          <form action={reportTreatmentFromAppointment} className="mt-3 grid gap-3 md:grid-cols-2">
-            <input type="hidden" name="appointment_id" value={apt.id} />
-            <input
-              name="amount"
-              placeholder={c.amount}
-              required
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="currency"
-              defaultValue="ILS"
-              placeholder={c.currency}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <textarea
-              name="note_1"
-              placeholder="Note 1"
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
-            />
-            <select
-              name="additional_participant_ids"
-              multiple
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 md:col-span-2"
-            >
-              {clients.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.first_name} {cl.last_name ?? ""}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-            >
-              {ap.reportTreatmentSubmit}
-            </button>
-          </form>
+          <ReportTreatmentFormClient
+            action={reportTreatmentFromAppointment}
+            appointmentId={apt.id}
+            clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}
+            labels={{
+              amount: c.amount,
+              currency: c.currency,
+              note1: "Note 1",
+              client: c.client,
+              additionalClients: ap.additionalClients,
+              addAdditionalClient: ap.addAdditionalClient,
+              remove: c.remove,
+              submit: ap.reportTreatmentSubmit,
+            }}
+          />
         )}
       </section>
     </div>
