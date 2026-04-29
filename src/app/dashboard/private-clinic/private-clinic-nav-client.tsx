@@ -3,7 +3,7 @@
 import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -35,11 +35,38 @@ export default function PrivateClinicNavClient({
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
     setPendingHref(null);
   }, [normalizedPathname]);
+
+  useEffect(() => {
+    if (!isMoreOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const targetNode = event.target as Node | null;
+      if (!targetNode) return;
+      if (!moreMenuContainerRef.current?.contains(targetNode)) {
+        setIsMoreOpen(false);
+      }
+    };
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMoreOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [isMoreOpen]);
 
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
   const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
@@ -97,7 +124,7 @@ export default function PrivateClinicNavClient({
     >
       {primaryItems.map((item) => renderItemLink(item))}
       {moreItems.length > 0 ? (
-        <div className="relative">
+        <div ref={moreMenuContainerRef} className="relative">
           <button
             type="button"
             aria-expanded={isMoreOpen}

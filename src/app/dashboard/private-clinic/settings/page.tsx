@@ -24,6 +24,7 @@ import { privateClinicCommon, privateClinicSettings } from "@/lib/private-clinic
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { updateMyGoogleCalendarSettings } from "@/app/dashboard/user-preferences-actions";
+import { GoogleCalendarConnectionControls } from "./google-calendar-connection-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -152,12 +153,9 @@ export default async function PrivateClinicSettingsPage({
           </label>
           <div>
             <label className="mb-1 block text-xs text-slate-400">Gmail address</label>
-            <input
-              name="google_gmail_address"
-              type="email"
-              defaultValue={defaultGoogleGmailAddress}
-              placeholder="name@gmail.com"
-              className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            <GoogleCalendarConnectionControls
+              googleConnected={googleConnected}
+              initialGmailAddress={defaultGoogleGmailAddress}
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -167,15 +165,6 @@ export default async function PrivateClinicSettingsPage({
             >
               Save Google settings
             </button>
-            <a
-              href="/api/integrations/google/calendar/connect?returnTo=/dashboard/private-clinic/settings"
-              className="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-100 hover:bg-slate-800"
-            >
-              {googleConnected ? "Reconnect Google account" : "Connect Google account"}
-            </a>
-            <span className="text-xs text-slate-500">
-              {googleConnected ? "Google account connected." : "Google account not connected yet."}
-            </span>
           </div>
         </form>
       </section>
