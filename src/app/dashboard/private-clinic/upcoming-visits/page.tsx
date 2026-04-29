@@ -123,7 +123,7 @@ export default async function UpcomingVisitsPage({
     programId: string | null;
     programLabel: string;
     kupatHolimLabel: string;
-    lastVisit: Date;
+    lastVisit: Date | null;
     nextDue: Date;
     isOverdue: boolean;
     isDueToday: boolean;
@@ -140,7 +140,39 @@ export default async function UpcomingVisitsPage({
 
     const lastAt = lastVisitAtByClientId.get(row.id);
     if (!lastAt) {
-      needsFirstVisit.push(row);
+      if (!row.start_date) {
+        needsFirstVisit.push(row);
+        continue;
+      }
+
+      const nextDue = dateOnlyLocal(row.start_date);
+      const nextDay = dateOnlyLocal(nextDue);
+      const isOverdue = nextDay.getTime() < today.getTime();
+      const isDueToday = nextDay.getTime() === today.getTime();
+
+      const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
+      scheduled.push({
+        clientId: row.id,
+        name,
+        jobLabel: formatJobDisplayLabel(row.default_job),
+        programId: row.default_program_id,
+        programLabel: row.default_program?.name ?? c.none,
+        kupatHolimLabel:
+          row.kupat_holim === "clalit"
+            ? cl.kupatClalit
+            : row.kupat_holim === "maccabi"
+              ? cl.kupatMaccabi
+              : row.kupat_holim === "meuhedet"
+                ? cl.kupatMeuhedet
+                : row.kupat_holim === "leumit"
+                  ? cl.kupatLeumit
+                  : c.none,
+        lastVisit: null,
+        nextDue,
+        isOverdue,
+        isDueToday,
+        nextAppointment: nextAppointmentByClientId.get(row.id) ?? null,
+      });
       continue;
     }
 

@@ -78,6 +78,17 @@ export function ClientJobProgramFields({
   const [programId, setProgramId] = useState(defaultProgramId ?? "");
   const [checkedJobs, setCheckedJobs] = useState<Set<string>>(new Set(defaultCheckedJobIds ?? []));
 
+  const kupatHolimOptions = useMemo(() => {
+    // Keep UI ordering aligned with the displayed labels (works for both English and Hebrew).
+    const opts = [
+      { value: "clalit" as const, label: labels.kupatClalit },
+      { value: "maccabi" as const, label: labels.kupatMaccabi },
+      { value: "meuhedet" as const, label: labels.kupatMeuhedet },
+      { value: "leumit" as const, label: labels.kupatLeumit },
+    ];
+    return opts.sort((a, b) => a.label.localeCompare(b.label));
+  }, [labels]);
+
   const filteredPrograms = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
     [programs, jobId],
@@ -191,10 +202,11 @@ export function ClientJobProgramFields({
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="">{labels.none}</option>
-          <option value="clalit">{labels.kupatClalit}</option>
-          <option value="maccabi">{labels.kupatMaccabi}</option>
-          <option value="meuhedet">{labels.kupatMeuhedet}</option>
-          <option value="leumit">{labels.kupatLeumit}</option>
+          {kupatHolimOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
       </div>
 

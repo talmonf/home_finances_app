@@ -89,6 +89,7 @@ export default async function PrivateClinicOverviewPage({
           },
           select: {
             id: true,
+            start_date: true,
             visits_per_period_count: true,
             visits_per_period_weeks: true,
           },
@@ -118,12 +119,16 @@ export default async function PrivateClinicOverviewPage({
         let overdue = 0;
         for (const row of clientsWithFrequency) {
           const lastVisitAt = lastVisitByClientId.get(row.id);
-          if (!lastVisitAt) continue;
-          const nextDue = nextVisitDueDateAfterLastTreatment(
-            lastVisitAt,
-            row.visits_per_period_count ?? 1,
-            row.visits_per_period_weeks ?? 1,
-          );
+          const nextDue = lastVisitAt
+            ? nextVisitDueDateAfterLastTreatment(
+                lastVisitAt,
+                row.visits_per_period_count ?? 1,
+                row.visits_per_period_weeks ?? 1,
+              )
+            : row.start_date
+              ? dateOnlyLocal(row.start_date)
+              : null;
+          if (!nextDue) continue;
           total += 1;
           if (dateOnlyLocal(nextDue).getTime() < today.getTime()) {
             overdue += 1;
