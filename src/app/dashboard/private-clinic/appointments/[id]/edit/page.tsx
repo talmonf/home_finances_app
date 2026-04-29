@@ -182,7 +182,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           client: c.client,
           additionalClients: ap.additionalClients,
           addAdditionalClient: ap.addAdditionalClient,
-          remove: c.remove,
+          remove: ap.remove,
           programOptional: ap.programOptional,
           start: ap.startCol,
           endOptional: ap.endOptional,
@@ -243,7 +243,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
               client: c.client,
               additionalClients: ap.additionalClients,
               addAdditionalClient: ap.addAdditionalClient,
-              remove: c.remove,
+              remove: ap.remove,
               submit: ap.reportTreatmentSubmit,
             }}
           />
