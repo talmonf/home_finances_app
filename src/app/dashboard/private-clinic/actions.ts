@@ -2786,7 +2786,14 @@ async function syncAppointmentParticipants(params: {
 function appointmentsSuccessRedirect(formData: FormData, fallback: string): never {
   let path = (formData.get("redirect_on_success") as string | null)?.trim() || fallback;
   if (!path.startsWith(`${BASE}/`)) path = fallback;
-  redirect(path);
+  const redirectUrl = new URL(path, "http://localhost");
+  const fallbackUrl = new URL(fallback, "http://localhost");
+  for (const [key, value] of fallbackUrl.searchParams.entries()) {
+    if (!redirectUrl.searchParams.has(key)) {
+      redirectUrl.searchParams.set(key, value);
+    }
+  }
+  redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
 }
 
 async function getGoogleCalendarUserForSync(

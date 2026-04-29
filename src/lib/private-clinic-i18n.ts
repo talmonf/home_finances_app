@@ -868,6 +868,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     recurringRules: p("Recurring rules", "כללים חוזרים"),
     noneShort: p("None.", "אין."),
     upcoming: p("Upcoming appointments", "תורים קרובים"),
+    pastScheduled: p("Past scheduled appointments", "ביקורים מתוזמנים שעבר זמנם"),
     noUpcoming: p("No upcoming appointments.", "אין תורים קרובים."),
     programOptional: p("Program (optional)", "תכנית (אופציונלי)"),
     schedule: p("Schedule", "תזמון"),

@@ -140,11 +140,12 @@ export function utcDateToHtmlDateInputValue(d: Date | null | undefined): string 
   return d.toISOString().slice(0, 10);
 }
 
-/** Local date+time for `<input type="datetime-local">`; empty if invalid. */
+/** Israel date+time for `<input type="datetime-local">`; empty if invalid. */
 export function dateToDatetimeLocalValue(d: Date | null | undefined): string {
   if (!d || Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const parts = getDateTimePartsInIsraelTime(d);
+  const datePart = formatYmdParts(parts.year, parts.month, parts.day, "YMD");
+  return `${datePart}T${pad2(parts.hour)}:${pad2(parts.minute)}`;
 }
 
 export const HOUSEHOLD_DATE_FORMAT_LABELS: Record<HouseholdDateDisplayFormat, string> = {

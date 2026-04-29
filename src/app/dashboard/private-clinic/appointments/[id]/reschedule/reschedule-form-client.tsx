@@ -137,6 +137,19 @@ export function RescheduleFormClient({
               ))}
             </select>
           </div>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+            <span>{labels.durationMinutes}</span>
+            <input
+              name="duration_minutes"
+              type="number"
+              min={1}
+              max={999}
+              step={1}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value)}
+              className="w-[7rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </label>
         </div>
       </div>
 
@@ -179,20 +192,6 @@ export function RescheduleFormClient({
           </div>
         </div>
       </div>
-
-      <label className="inline-block text-sm text-slate-300">
-        {labels.durationMinutes}
-        <input
-          name="duration_minutes"
-          type="number"
-          min={1}
-          max={999}
-          step={1}
-          value={durationMinutes}
-          onChange={(e) => setDurationMinutes(e.target.value)}
-          className="mt-1 w-[7rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-      </label>
 
       <AppointmentChangeReasonFields
         reasonFieldName="reschedule_reason"

@@ -39,18 +39,85 @@ export default async function AppointmentsPage() {
   const c = privateClinicCommon(uiLanguage);
   const ap = privateClinicAppointments(uiLanguage);
   const now = new Date();
-
   const upcoming = await prisma.therapy_appointments.findMany({
     where: {
       household_id: householdId,
       job: jobScope,
-      start_at: { gte: now },
       status: "scheduled",
     },
     orderBy: { start_at: "asc" },
     take: 100,
     include: { client: true, job: true },
   });
+  const futureAppointments = upcoming.filter((a) => a.start_at >= now);
+  const pastAppointments = upcoming
+    .filter((a) => a.start_at < now)
+    .sort((a, b) => b.start_at.getTime() - a.start_at.getTime());
+  const renderAppointmentsTable = (appointments: typeof upcoming) => (
+    <div className="overflow-x-auto rounded-xl border border-slate-700">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-slate-700 bg-slate-800/80">
+            <th className="px-3 py-2 text-slate-300">{ap.startCol}</th>
+            <th className="px-3 py-2 text-slate-300">{c.client}</th>
+            <th className="px-3 py-2 text-slate-300">{c.job}</th>
+            <th className="px-3 py-2 text-slate-300">{ap.visitTypeCol}</th>
+            <th className="px-3 py-2 text-slate-300">{ap.actionsCol}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {appointments.map((a) => (
+            <tr key={a.id} className="border-b border-slate-700/80">
+              <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
+                {formatHouseholdDateUtcWithTime(a.start_at, dateDisplayFormat)}
+              </td>
+              <td className="px-3 py-2 text-slate-100">
+                {formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)}
+              </td>
+              <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(a.job)}</td>
+              <td className="px-3 py-2 text-slate-400">
+                {therapyVisitTypeLabel(uiLanguage, a.visit_type)}
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`${LIST}/${a.id}/edit`}
+                    className="inline-flex items-center text-xs leading-none text-slate-300 hover:text-slate-100"
+                  >
+                    {ap.edit}
+                  </Link>
+                  {a.treatment_id ? (
+                    <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
+                      {ap.logTreatment}
+                    </span>
+                  ) : (
+                    <Link
+                      href={`${LIST}/${a.id}/edit#report-treatment`}
+                      className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
+                    >
+                      {ap.logTreatment}
+                    </Link>
+                  )}
+                  <Link
+                    href={`${LIST}/${a.id}/reschedule`}
+                    className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
+                  >
+                    {ap.reschedule}
+                  </Link>
+                  <Link
+                    href={`${LIST}/${a.id}/cancel`}
+                    className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
+                  >
+                    {ap.cancel}
+                  </Link>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="space-y-8">
@@ -67,68 +134,20 @@ export default async function AppointmentsPage() {
       {upcoming.length === 0 ? (
         <p className="text-sm text-slate-500">{ap.noUpcoming}</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-700">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-700 bg-slate-800/80">
-                <th className="px-3 py-2 text-slate-300">{ap.startCol}</th>
-                <th className="px-3 py-2 text-slate-300">{c.client}</th>
-                <th className="px-3 py-2 text-slate-300">{c.job}</th>
-                <th className="px-3 py-2 text-slate-300">{ap.visitTypeCol}</th>
-                <th className="px-3 py-2 text-slate-300">{ap.actionsCol}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {upcoming.map((a) => (
-                <tr key={a.id} className="border-b border-slate-700/80">
-                  <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                    {formatHouseholdDateUtcWithTime(a.start_at, dateDisplayFormat)}
-                  </td>
-                  <td className="px-3 py-2 text-slate-100">
-                    {formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)}
-                  </td>
-                  <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(a.job)}</td>
-                  <td className="px-3 py-2 text-slate-400">
-                    {therapyVisitTypeLabel(uiLanguage, a.visit_type)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`${LIST}/${a.id}/edit`}
-                        className="inline-flex items-center text-xs leading-none text-slate-300 hover:text-slate-100"
-                      >
-                        {ap.edit}
-                      </Link>
-                      {a.treatment_id ? (
-                        <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
-                          {ap.logTreatment}
-                        </span>
-                      ) : (
-                        <Link
-                          href={`${LIST}/${a.id}/edit#report-treatment`}
-                          className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
-                        >
-                          {ap.logTreatment}
-                        </Link>
-                      )}
-                      <Link
-                        href={`${LIST}/${a.id}/reschedule`}
-                        className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
-                      >
-                        {ap.reschedule}
-                      </Link>
-                      <Link
-                        href={`${LIST}/${a.id}/cancel`}
-                        className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
-                      >
-                        {ap.cancel}
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {futureAppointments.length > 0 ? (
+            <section className="space-y-2">
+              <h3 className="text-sm font-medium text-slate-300">{ap.upcoming}</h3>
+              {renderAppointmentsTable(futureAppointments)}
+            </section>
+          ) : null}
+
+          {pastAppointments.length > 0 ? (
+            <section className="space-y-2">
+              <h3 className="text-sm font-medium text-slate-300">{ap.pastScheduled}</h3>
+              {renderAppointmentsTable(pastAppointments)}
+            </section>
+          ) : null}
         </div>
       )}
     </div>
