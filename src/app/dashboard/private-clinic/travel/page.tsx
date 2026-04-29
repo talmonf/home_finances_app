@@ -24,6 +24,7 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { SplitDateTimeField } from "@/components/split-datetime-field";
 
 export const dynamic = "force-dynamic";
 const TRAVEL_BASE = "/dashboard/private-clinic/travel";
@@ -329,13 +330,10 @@ export default async function TravelPage({
                         </option>
                       ))}
                     </select>
-                    <input
+                    <SplitDateTimeField
                       name="occurred_at"
-                      type="datetime-local"
-                      defaultValue={
-                        e.occurred_at ? e.occurred_at.toISOString().slice(0, 16) : ""
-                      }
-                      className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
+                      initialValue={e.occurred_at ? e.occurred_at.toISOString().slice(0, 16) : ""}
+                      uiLanguage={uiLanguage}
                     />
                     <div className="flex gap-1">
                       <input
@@ -425,11 +423,7 @@ export default async function TravelPage({
                   </option>
                 ))}
               </select>
-              <input
-                name="occurred_at"
-                type="datetime-local"
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
+              <SplitDateTimeField name="occurred_at" uiLanguage={uiLanguage} />
               <div className="flex gap-2">
                 <input
                   name="amount"

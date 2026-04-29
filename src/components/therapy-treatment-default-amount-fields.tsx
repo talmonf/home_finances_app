@@ -100,6 +100,23 @@ export function TherapyTreatmentDefaultAmountFields(props: {
       ? defaultValues.currency
       : (initialResolved?.currency ?? "ILS"),
   );
+  const [initialHour = "", initialMinute = ""] = (defaultValues?.occurred_time ?? "").slice(0, 5).split(":");
+  const [occurredHour, setOccurredHour] = useState(initialHour);
+  const [occurredMinute, setOccurredMinute] = useState(initialMinute);
+  const occurredTimeValue = useMemo(() => {
+    if (!occurredHour || !occurredMinute) return "";
+    return `${occurredHour}:${occurredMinute}`;
+  }, [occurredHour, occurredMinute]);
+  const hourOptions = useMemo(
+    () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
+    [],
+  );
+  const minuteOptions = useMemo(
+    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
+    [],
+  );
+  const hourSuffix = uiLanguage === "he" ? "שעה" : "hour";
+  const minuteSuffix = uiLanguage === "he" ? "דקות" : "minute";
 
   const programsForJob = useMemo(() => programs.filter((p) => p.job_id === jobId), [programs, jobId]);
 
@@ -199,13 +216,35 @@ export function TherapyTreatmentDefaultAmountFields(props: {
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.timeOptional}</label>
-        <input
-          name="occurred_time"
-          type="time"
-          step={60}
-          defaultValue={defaultValues?.occurred_time ?? ""}
-          className="mt-1 w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
+        <input type="hidden" name="occurred_time" value={occurredTimeValue} />
+        <div className="mt-1 grid max-w-36 grid-cols-2 gap-2">
+          <select
+            value={occurredHour}
+            onChange={(e) => setOccurredHour(e.target.value)}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            aria-label={`${labels.timeOptional} ${hourSuffix}`}
+          >
+            <option value="">--</option>
+            {hourOptions.map((hour) => (
+              <option key={hour} value={hour}>
+                {hour}
+              </option>
+            ))}
+          </select>
+          <select
+            value={occurredMinute}
+            onChange={(e) => setOccurredMinute(e.target.value)}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            aria-label={`${labels.timeOptional} ${minuteSuffix}`}
+          >
+            <option value="">--</option>
+            {minuteOptions.map((minute) => (
+              <option key={minute} value={minute}>
+                {minute}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.amount}</label>

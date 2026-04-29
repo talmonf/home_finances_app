@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { SplitDateTimeField } from "@/components/split-datetime-field";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -29,6 +30,7 @@ type Props = {
     cancel: string;
     save: string;
   };
+  uiLanguage: "en" | "he";
   jobs: JobOption[];
   programs: ProgramOption[];
   clients: ClientOption[];
@@ -135,11 +137,10 @@ export function AppointmentEditFormClient(props: Props) {
         defaultValue={props.initialCancellationReason}
         className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
       />
-      <input
+      <SplitDateTimeField
         name="end_at"
-        type="datetime-local"
-        defaultValue={props.initialEndAt}
-        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        initialValue={props.initialEndAt}
+        uiLanguage={props.uiLanguage}
       />
       <input
         name="duration_minutes"

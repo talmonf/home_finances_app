@@ -185,6 +185,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           cancel: ap.cancel,
           save: ap.save,
         }}
+        uiLanguage={uiLanguage}
         jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
         programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
         clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}

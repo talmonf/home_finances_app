@@ -19,6 +19,7 @@ import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } f
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
+import { SplitDateTimeField } from "@/components/split-datetime-field";
 
 export const dynamic = "force-dynamic";
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
@@ -248,12 +249,11 @@ export default async function ConsultationsPage({
                       </option>
                     ))}
                   </select>
-                  <input
+                  <SplitDateTimeField
                     name="occurred_at"
-                    type="datetime-local"
-                    defaultValue={r.occurred_at.toISOString().slice(0, 16)}
+                    initialValue={r.occurred_at.toISOString().slice(0, 16)}
                     required
-                    className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
+                    uiLanguage={uiLanguage}
                   />
                   <div className="flex gap-1">
                     <input
@@ -356,12 +356,9 @@ export default async function ConsultationsPage({
               </select>
               <div>
                 <label className="block text-xs text-slate-400">{co.dateTime}</label>
-                <input
-                  name="occurred_at"
-                  type="datetime-local"
-                  required
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
+                <div className="mt-1">
+                  <SplitDateTimeField name="occurred_at" required uiLanguage={uiLanguage} />
+                </div>
               </div>
               <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
                 <div>

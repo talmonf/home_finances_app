@@ -44,6 +44,8 @@ export function RescheduleFormClient({
   labels,
   defaults,
 }: Props) {
+  const timeHourSuffix = labels.startTime.includes("שעה") ? "שעה" : "hour";
+  const timeMinuteSuffix = labels.startTime.includes("שעה") ? "דקות" : "minute";
   const router = useRouter();
   const [isNavigating, startNavigation] = useTransition();
   const [navTarget, setNavTarget] = useState<"cancel" | "close" | null>(null);
@@ -124,7 +126,7 @@ export function RescheduleFormClient({
               value={startTimeHour}
               onChange={(e) => setStartTimeHour(e.target.value)}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${labels.startTime} hour`}
+              aria-label={`${labels.startTime} ${timeHourSuffix}`}
             >
               {timeHourOptions.map((hour) => (
                 <option key={hour} value={hour}>
@@ -137,7 +139,7 @@ export function RescheduleFormClient({
               value={startTimeMinute}
               onChange={(e) => setStartTimeMinute(e.target.value)}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${labels.startTime} minute`}
+              aria-label={`${labels.startTime} ${timeMinuteSuffix}`}
             >
               {timeMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
@@ -177,7 +179,7 @@ export function RescheduleFormClient({
               value={endTimeHour}
               onChange={(e) => setEndTimeHour(e.target.value)}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${labels.startTime} hour`}
+              aria-label={`${labels.startTime} ${timeHourSuffix}`}
             >
               {timeHourOptions.map((hour) => (
                 <option key={hour} value={hour}>
@@ -190,7 +192,7 @@ export function RescheduleFormClient({
               value={endTimeMinute}
               onChange={(e) => setEndTimeMinute(e.target.value)}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${labels.startTime} minute`}
+              aria-label={`${labels.startTime} ${timeMinuteSuffix}`}
             >
               {timeMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>

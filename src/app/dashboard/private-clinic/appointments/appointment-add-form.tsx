@@ -69,6 +69,9 @@ export function AppointmentAddForm({
   prefill,
   allowRecurring = true,
 }: Props) {
+  const timeHourSuffix = copy.startTimeLabel.includes("שעה") || copy.timeOfDayLabel.includes("שעה") ? "שעה" : "hour";
+  const timeMinuteSuffix =
+    copy.startTimeLabel.includes("שעה") || copy.timeOfDayLabel.includes("שעה") ? "דקות" : "minute";
   const [recurring, setRecurring] = useState(false);
   const [singleClientId, setSingleClientId] = useState(prefill?.clientId ?? "");
   const [seriesClientId, setSeriesClientId] = useState(prefill?.clientId ?? "");
@@ -277,7 +280,7 @@ export function AppointmentAddForm({
                   value={singleStartHour}
                   onChange={(e) => setSingleStartHour(e.target.value)}
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                  aria-label={`${copy.startTimeLabel} hour`}
+                  aria-label={`${copy.startTimeLabel} ${timeHourSuffix}`}
                 >
                   <option value="">--</option>
                   {hourOptions.map((hour) => (
@@ -291,7 +294,7 @@ export function AppointmentAddForm({
                   value={singleStartMinute}
                   onChange={(e) => setSingleStartMinute(e.target.value)}
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                  aria-label={`${copy.startTimeLabel} minute`}
+                  aria-label={`${copy.startTimeLabel} ${timeMinuteSuffix}`}
                 >
                   <option value="">--</option>
                   {minuteOptions.map((minute) => (
@@ -315,9 +318,10 @@ export function AppointmentAddForm({
                 aria-label={copy.startDateLabel}
               />
               <input
-                type="time"
+                type="text"
                 value={endTimeValue}
                 readOnly
+                inputMode="numeric"
                 className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startTimeLabel}
               />
@@ -463,7 +467,7 @@ export function AppointmentAddForm({
                 value={seriesTimeHour}
                 onChange={(e) => setSeriesTimeHour(e.target.value)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                aria-label={`${copy.timeOfDayLabel} hour`}
+                aria-label={`${copy.timeOfDayLabel} ${timeHourSuffix}`}
               >
                 <option value="">--</option>
                 {hourOptions.map((hour) => (
@@ -477,7 +481,7 @@ export function AppointmentAddForm({
                 value={seriesTimeMinute}
                 onChange={(e) => setSeriesTimeMinute(e.target.value)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                aria-label={`${copy.timeOfDayLabel} minute`}
+                aria-label={`${copy.timeOfDayLabel} ${timeMinuteSuffix}`}
               >
                 <option value="">--</option>
                 {minuteOptions.map((minute) => (
