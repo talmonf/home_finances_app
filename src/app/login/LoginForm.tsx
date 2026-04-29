@@ -56,12 +56,13 @@ export function LoginForm({
 
       if (result?.error) {
         setError("Invalid email or password");
+        setLoading(false);
         return;
       }
 
       // Full navigation so the server sees the new session and renders the right layout
       window.location.href = result?.url ?? "/";
-    } finally {
+    } catch {
       setLoading(false);
     }
 
