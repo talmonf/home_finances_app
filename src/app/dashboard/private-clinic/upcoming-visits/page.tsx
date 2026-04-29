@@ -322,11 +322,11 @@ export default async function UpcomingVisitsPage({
                             {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
                           </span>
                           {r.isOverdue ? (
-                            <span className="ml-2 rounded bg-rose-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
+                            <span className="ms-2 rounded bg-rose-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
                               {uv.overdue}
                             </span>
                           ) : r.isDueToday ? (
-                            <span className="ml-2 rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-950">
+                            <span className="ms-2 rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-950">
                               {uv.dueToday}
                             </span>
                           ) : null}

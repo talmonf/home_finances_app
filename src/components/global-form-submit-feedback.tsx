@@ -15,6 +15,13 @@ export function GlobalFormSubmitFeedback() {
       if (!form) return;
 
       const submitter = submitEvent.submitter as HTMLButtonElement | HTMLInputElement | null;
+      if (
+        form.hasAttribute("data-skip-global-submit-feedback") ||
+        submitter?.hasAttribute("data-skip-global-submit-feedback") ||
+        form.querySelector('input[name="ui_language"]')
+      ) {
+        return;
+      }
       const pendingLabel = submitter?.getAttribute("data-pending-label") || defaultPendingLabel();
       const submitButtons = Array.from(
         form.querySelectorAll<HTMLButtonElement | HTMLInputElement>(

@@ -34,10 +34,11 @@ export async function DashboardUserToolbar({
       <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-1.5">
           <span className="text-slate-500">{isHebrew ? "שפה" : "Language"}</span>
-          <form action={setMyUiLanguage} className="inline">
+          <form action={setMyUiLanguage} className="inline" data-skip-global-submit-feedback>
             <input type="hidden" name="ui_language" value="en" />
             <button
               type="submit"
+              data-skip-global-submit-feedback
               className={
                 uiLanguage === "en"
                   ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
@@ -47,10 +48,11 @@ export async function DashboardUserToolbar({
               EN
             </button>
           </form>
-          <form action={setMyUiLanguage} className="inline">
+          <form action={setMyUiLanguage} className="inline" data-skip-global-submit-feedback>
             <input type="hidden" name="ui_language" value="he" />
             <button
               type="submit"
+              data-skip-global-submit-feedback
               className={
                 uiLanguage === "he"
                   ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"

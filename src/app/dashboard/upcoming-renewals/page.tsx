@@ -563,7 +563,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                     >
                       {formatHouseholdDate(row.renewalDate, dateDisplayFormat)}
                       {overdue ? (
-                        <span className="ml-2 text-xs font-medium text-rose-400/90">
+                        <span className="ms-2 text-xs font-medium text-rose-400/90">
                           {isDonation ? "Passed" : "Overdue"}
                         </span>
                       ) : null}
