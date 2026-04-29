@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import type { SectionId } from "@/lib/dashboard-sections";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
@@ -42,6 +44,17 @@ function matchesSearch(queryLower: string, title: string, description: string) {
   return haystack.includes(queryLower);
 }
 
+function normalizePathname(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
+  return pathname;
+}
+
+function normalizeHrefPath(href: string): string {
+  // `usePathname()` omits querystring/hash, so we normalize the link target down to its path.
+  const pathOnly = href.split("?")[0]?.split("#")[0] ?? href;
+  return normalizePathname(pathOnly);
+}
+
 const FREQUENT_LINK_BUTTON_CLASSES: Record<HomeFrequentLinkItem["key"], string> = {
   privateClinic:
     "border-cyan-400/50 bg-gradient-to-r from-cyan-500/25 via-sky-500/20 to-blue-500/25 hover:border-cyan-300/70",
@@ -69,7 +82,15 @@ export function HouseholdDashboardPanel({
   setupTiles,
   ongoingTiles,
 }: HouseholdDashboardPanelProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const normalizedPathname = useMemo(
+    () => normalizePathname(pathname ?? ""),
+    [pathname],
+  );
   const [query, setQuery] = useState("");
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const queryLower = query.trim().toLowerCase();
 
@@ -120,15 +141,44 @@ export function HouseholdDashboardPanel({
         <section className="mb-6">
           <h2 className="mb-3 text-sm font-semibold text-slate-200">{frequentLinksTitle}</h2>
           <div className="flex flex-wrap gap-2">
-            {frequentLinks.map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                className={`inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium text-slate-50 shadow-sm shadow-slate-950/40 transition hover:-translate-y-0.5 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 ${FREQUENT_LINK_BUTTON_CLASSES[link.key]}`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {frequentLinks.map((link) => {
+              const normalizedHref = normalizeHrefPath(link.href);
+              const isActive = normalizedPathname === normalizedHref;
+              const isPending = pendingHref === normalizedHref && !isActive;
+
+              return (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-busy={isPending}
+                  onClick={(event) => {
+                    if (
+                      isActive ||
+                      isPending ||
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey ||
+                      event.button !== 0
+                    ) {
+                      return;
+                    }
+
+                    // Allow the UI to show a loader immediately before navigation.
+                    event.preventDefault();
+                    setPendingHref(normalizedHref);
+                    startTransition(() => {
+                      router.push(link.href);
+                    });
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-slate-50 shadow-sm shadow-slate-950/40 transition hover:-translate-y-0.5 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 ${FREQUENT_LINK_BUTTON_CLASSES[link.key]}`}
+                >
+                  {isPending ? <LoadingSpinner /> : null}
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       ) : null}

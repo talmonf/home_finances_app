@@ -22,7 +22,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   reminders: "תזכורות",
   settings: "הגדרות",
   importExport: "יבוא / ייצוא",
-  gettingStarted: "התחלה",
+  gettingStarted: "מדריך למשתמש",
 };
 
 /** Bilingual helper for Clinic UI */
@@ -1244,11 +1244,11 @@ export function privateClinicReminders(lang: UiLanguage) {
 export function privateClinicGettingStarted(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
-    pageTitle: p("Getting started", "התחלה"),
+    pageTitle: p("Getting started", "מדריך למשתמש"),
     welcomeTitle: p("Welcome to the Clinic", "ברוכים הבאים לקליניקה"),
     welcomeBody: p(
       "This short guide shows how to set up your work and your clients, and how the main workflows fit together. You can open it any time from **More → Getting started**.",
-      "מדריך קצר שמסביר איך להגדיר את המשרה והלקוחות, ואיך זרימות העבודה מתחברות. אפשר לחזור לכאן בכל עת דרך **עוד → התחלה**.",
+      "מדריך קצר שמסביר איך להגדיר את המשרה והלקוחות, ואיך זרימות העבודה מתחברות. אפשר לחזור לכאן בכל עת דרך **עוד ← מדריך למשתמש**.",
     ),
     step1Lead: p("To get started, define your", "כדי להתחיל, הגדירו את"),
     step1JobsLink: p("Job(s)", "משרה/ות"),
@@ -1321,7 +1321,10 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "המערכת תומכת באופציה של **משפחות** לקיבוץ לקוחות קשורים. האופציה **אינה** מופעלת אצלכם. לשיחה על הפעלה, פנו ל**מנהל המערכת**.",
     ),
     jobSavedToast: p("Job saved.", "המשרה נשמרה."),
-    moreMenuHint: p("Tip: open this guide again from **More → Getting started**.", "טיפ: אפשר לחזור למדריך דרך **עוד → התחלה**."),
+    moreMenuHint: p(
+      "Tip: open this guide again from **More → Getting started**.",
+      "טיפ: אפשר לחזור למדריך דרך **עוד ← מדריך למשתמש**.",
+    ),
   };
 }
 
