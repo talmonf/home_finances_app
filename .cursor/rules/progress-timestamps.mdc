@@ -1,0 +1,15 @@
+---
+description: Require local-time timestamps in agent progress updates
+alwaysApply: true
+---
+
+# Timestamped Progress Updates
+
+- Include a local-time timestamp prefix in every progress update message sent while working.
+- Use this format:
+  - `[HH:MM:SS] Started: <step>`
+  - `[HH:MM:SS] Update: <status>`
+  - `[HH:MM:SS] Completed: <step> (elapsed: <duration>)`
+- For long-running commands or waits, post periodic updates with elapsed time, for example:
+  - `[HH:MM:SS] Still running: <step> (elapsed: <duration>)`
+- Keep final answers concise, but include timestamps in intermediary execution updates.
