@@ -26,6 +26,12 @@ type HomeProps = {
   searchParams?: Promise<{ passwordUpdated?: string }>;
 };
 
+function getFirstName(displayName: string) {
+  const normalized = displayName.trim();
+  if (!normalized) return displayName;
+  return normalized.split(/\s+/)[0] ?? displayName;
+}
+
 export default async function Home({ searchParams }: HomeProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const passwordJustUpdated = resolvedSearchParams?.passwordUpdated === "1";
@@ -57,6 +63,8 @@ export default async function Home({ searchParams }: HomeProps) {
   const uiLanguage = isSuperAdmin ? "en" : await getCurrentUiLanguage();
   const householdId = session.user.householdId ?? null;
   const userId = session.user.id;
+  const displayName = session.user.name ?? (uiLanguage === "he" ? "משתמש" : "user");
+  const firstName = getFirstName(displayName);
 
   const householdFrequentLinksRow =
     !isSuperAdmin && householdId
@@ -205,9 +213,10 @@ export default async function Home({ searchParams }: HomeProps) {
       ? "קיצורי דרך, משימות להשלמת ההקמה, וכלים שוטפים לניהול כספי משק הבית."
       : "Your shortcuts, setup checklist, and ongoing finance tools for this household.";
 
-  const displayName = session.user.name ?? (uiLanguage === "he" ? "משתמש" : "user");
   const welcomeTitleNonAdmin =
     uiLanguage === "he" ? `ברוך שובך, ${displayName}` : `Welcome back, ${displayName}`;
+  const welcomeTitleMobileNonAdmin =
+    uiLanguage === "he" ? `ברוך שובך, ${firstName}` : `Welcome ${firstName}`;
 
   const passwordUpdatedBanner =
     passwordJustUpdated && uiLanguage === "he" ? (
@@ -229,9 +238,10 @@ export default async function Home({ searchParams }: HomeProps) {
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-semibold text-slate-50">
-                  Welcome back, {session.user.name ?? "user"}
+                  <span className="md:hidden">Welcome {firstName}</span>
+                  <span className="hidden md:inline">Welcome back, {displayName}</span>
                 </h1>
-                <p className="text-sm text-slate-400">
+                <p className="hidden text-sm text-slate-400 md:block">
                   Use the super admin tools to manage households and platform users.
                 </p>
               </div>
@@ -350,6 +360,7 @@ export default async function Home({ searchParams }: HomeProps) {
         ) : (
           <HouseholdDashboardPanel
             welcomeTitle={welcomeTitleNonAdmin}
+            welcomeTitleMobile={welcomeTitleMobileNonAdmin}
             welcomeSubtitle={welcomeSubtitleNonAdmin}
             frequentLinksTitle={homeFrequentLinksSectionTitle(uiLanguage)}
             frequentLinks={frequentHomeLinks}

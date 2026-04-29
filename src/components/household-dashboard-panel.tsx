@@ -27,6 +27,7 @@ export type DashboardOngoingTileProps = {
 
 type HouseholdDashboardPanelProps = {
   welcomeTitle: string;
+  welcomeTitleMobile: string;
   welcomeSubtitle: string;
   frequentLinksTitle: string;
   frequentLinks: HomeFrequentLinkItem[];
@@ -60,6 +61,7 @@ const FREQUENT_LINK_BUTTON_CLASSES: Record<HomeFrequentLinkItem["key"], string> 
 
 export function HouseholdDashboardPanel({
   welcomeTitle,
+  welcomeTitleMobile,
   welcomeSubtitle,
   frequentLinksTitle,
   frequentLinks,
@@ -92,8 +94,11 @@ export function HouseholdDashboardPanel({
     <>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50">{welcomeTitle}</h1>
-          <p className="text-sm text-slate-400">{welcomeSubtitle}</p>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            <span className="md:hidden">{welcomeTitleMobile}</span>
+            <span className="hidden md:inline">{welcomeTitle}</span>
+          </h1>
+          <p className="hidden text-sm text-slate-400 md:block">{welcomeSubtitle}</p>
         </div>
         <div className="w-full max-w-[220px] shrink-0">
           <label htmlFor="dashboard-search" className="mb-1 block text-xs text-slate-400">
