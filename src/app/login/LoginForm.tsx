@@ -16,27 +16,55 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl: callbackUrl ?? "/",
-    });
+    // Android autofill can populate the input value before React state updates.
+    // Read from the form controls to avoid submitting a stale/empty value.
+    const formData = new FormData(e.currentTarget);
+    const emailValue = formData.get("email");
+    const passwordValue = formData.get("password");
 
-    setLoading(false);
+    const emailToSubmit =
+      (typeof emailValue === "string"
+        ? emailValue
+        : String(emailValue ?? "")
+      ).trim();
+    const passwordToSubmit =
+      typeof passwordValue === "string"
+        ? passwordValue
+        : String(passwordValue ?? "");
 
-    if (result?.error) {
+    if (!emailToSubmit || !passwordToSubmit) {
       setError("Invalid email or password");
       return;
     }
 
-    // Full navigation so the server sees the new session and renders the right layout
-    window.location.href = result?.url ?? "/";
+    // Keep controlled inputs in sync with what the browser actually submitted.
+    setEmail(emailToSubmit);
+    setPassword(passwordToSubmit);
+
+    setLoading(true);
+    try {
+      const result = await signIn("credentials", {
+        email: emailToSubmit,
+        password: passwordToSubmit,
+        redirect: false,
+        callbackUrl: callbackUrl ?? "/",
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password");
+        return;
+      }
+
+      // Full navigation so the server sees the new session and renders the right layout
+      window.location.href = result?.url ?? "/";
+    } finally {
+      setLoading(false);
+    }
+
   }
 
   return (
@@ -60,6 +88,8 @@ export function LoginForm({
             </label>
             <input
               type="email"
+              name="email"
+              autoComplete="username"
               className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -71,6 +101,7 @@ export function LoginForm({
               Password
             </label>
             <PasswordInputWithToggle
+              name="password"
               className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
