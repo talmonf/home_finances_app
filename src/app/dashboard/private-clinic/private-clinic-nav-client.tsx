@@ -103,7 +103,7 @@ export default function PrivateClinicNavClient({
         }}
         className={linkClassName(isActive)}
       >
-        {isPending ? <LoadingSpinner /> : null}
+        {isPending ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span
