@@ -112,6 +112,13 @@ export async function loadConsultationsRows(params: {
             select: {
               id: true,
               receipt_number: true,
+              client: {
+                select: {
+                  id: true,
+                  first_name: true,
+                  last_name: true,
+                },
+              },
             },
           },
         },
@@ -132,7 +139,22 @@ export async function loadConsultationsRows(params: {
     },
   });
 
-  return rows.map((row) => ({
+  return rows.map((row) => {
+    const participantClients = row.participants.map((p) => ({
+      id: p.client.id,
+      name: `${p.client.first_name} ${p.client.last_name ?? ""}`.trim(),
+      name_he: null,
+    }));
+    const fallbackReceiptClient = row.receipt_allocations[0]?.receipt.client
+      ? [
+          {
+            id: row.receipt_allocations[0].receipt.client.id,
+            name: `${row.receipt_allocations[0].receipt.client.first_name} ${row.receipt_allocations[0].receipt.client.last_name ?? ""}`.trim(),
+            name_he: null,
+          },
+        ]
+      : [];
+    return {
     id: row.id,
     job_id: row.job_id,
     job_label: formatJobDisplayLabel(row.job),
@@ -145,11 +167,8 @@ export async function loadConsultationsRows(params: {
     linked_transaction_id: row.linked_transaction_id ?? row.linked_income_transaction_id ?? row.linked_cost_transaction_id,
     linked_receipt_id: row.receipt_allocations[0]?.receipt_id ?? null,
     linked_receipt_number: row.receipt_allocations[0]?.receipt.receipt_number ?? null,
-    clients: row.participants.map((p) => ({
-      id: p.client.id,
-      name: `${p.client.first_name} ${p.client.last_name ?? ""}`.trim(),
-      name_he: null,
-    })),
+    clients: participantClients.length > 0 ? participantClients : fallbackReceiptClient,
     notes: row.notes,
-  }));
+  };
+  });
 }

@@ -109,6 +109,7 @@ type PendingConsultation = {
   amount: string;
   note: string | null;
   typeName: string;
+  clientRef: ClientRef | null;
 };
 
 type PendingOrgPaymentRow = {
@@ -1513,6 +1514,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         amount,
         note: s(row["הערות"]) || null,
         typeName: v || "other",
+        clientRef,
       });
       const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
       const consultArr = consultationKeysByMonth.get(month) ?? [];
@@ -2094,6 +2096,12 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       income_currency: string;
       notes: string | null;
     }> = [];
+    const consultationParticipantRows: Array<{
+      id: string;
+      household_id: string;
+      consultation_id: string;
+      client_id: string;
+    }> = [];
     for (const ct of consultationTypes) {
       consultationTypeIdByName.set(norm(ct.name_he || ct.name), ct.id);
       consultationTypeIdByName.set(norm(ct.name), ct.id);
@@ -2131,12 +2139,32 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         notes: c.note,
       });
       consultationIdByKey.set(c.key, consultationId);
+      const consultationClientId =
+        c.clientRef?.kind === "existing"
+          ? c.clientRef.id
+          : c.clientRef?.kind === "new"
+            ? clientIdByKey.get(c.clientRef.tempKey) ?? null
+            : null;
+      if (consultationClientId) {
+        consultationParticipantRows.push({
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          consultation_id: consultationId,
+          client_id: consultationClientId,
+        });
+      }
     }
     if (consultationRows.length > 0) {
       await tx.therapy_consultations.createMany({
         data: consultationRows.map(({ key: _key, ...row }) => row),
       });
       createdCount.consultations += consultationRows.length;
+    }
+    if (consultationParticipantRows.length > 0) {
+      await tx.therapy_consultation_participants.createMany({
+        data: consultationParticipantRows,
+        skipDuplicates: true,
+      });
     }
 
     const travelIdByKey = new Map<string, string>();

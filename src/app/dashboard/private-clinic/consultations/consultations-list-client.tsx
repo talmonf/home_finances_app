@@ -19,7 +19,6 @@ type Labels = {
   clients: string;
   amount: string;
   receipt: string;
-  transaction: string;
   edit: string;
   linked: string;
   unlinked: string;
@@ -136,7 +135,6 @@ export function ConsultationsListClient({
               </button>
             </th>
             <th className="px-3 py-2 text-slate-300">{labels.receipt}</th>
-            <th className="px-3 py-2 text-slate-300">{labels.transaction}</th>
             <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
           </tr>
         </thead>
@@ -173,7 +171,6 @@ export function ConsultationsListClient({
                   labels.unlinked
                 )}
               </td>
-              <td className="px-3 py-2 text-slate-400">{row.linked_transaction_id ? labels.linked : labels.unlinked}</td>
               <td className="px-3 py-2">
                 <Link
                   href={`${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(row.id)}`}
