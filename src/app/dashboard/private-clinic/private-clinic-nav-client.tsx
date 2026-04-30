@@ -36,15 +36,11 @@ export default function PrivateClinicNavClient({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isNavigating, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!pendingHref) return;
-    if (isNavigating) return;
-    if (normalizePathname(pendingHref) === normalizedPathname) {
-      setPendingHref(null);
-    }
-  }, [isNavigating, normalizedPathname, pendingHref]);
+    setPendingHref(null);
+  }, [normalizedPathname]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -86,7 +82,7 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isTargetPendingNavigation = pendingHref === normalizedHref && (!isActive || isNavigating);
+    const isTargetPendingNavigation = pendingHref === normalizedHref && !isActive;
     const showNavSpinner = isTargetPendingNavigation;
 
     return (
