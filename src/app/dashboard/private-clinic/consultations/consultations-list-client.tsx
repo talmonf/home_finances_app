@@ -4,21 +4,22 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { ConsultationListRowDto } from "./consultations-list-data";
 
-type ColumnSortKey = "occurred_at" | "type" | "job" | "income_amount" | "cost_amount";
+type ColumnSortKey = "occurred_at" | "type" | "job" | "amount";
 type SortDir = "asc" | "desc";
 
 type Labels = {
   when: string;
   type: string;
   job: string;
-  income: string;
-  cost: string;
-  linkedIncome: string;
-  linkedCost: string;
+  clients: string;
+  amount: string;
+  receipt: string;
+  transaction: string;
   edit: string;
   linked: string;
   unlinked: string;
@@ -36,12 +37,14 @@ export function ConsultationsListClient({
   labels,
   uiLanguage,
   dateDisplayFormat,
+  obfuscate,
 }: {
   rows: ConsultationListRowDto[];
   listBaseHref: string;
   labels: Labels;
   uiLanguage: UiLanguage;
   dateDisplayFormat: HouseholdDateDisplayFormat;
+  obfuscate: boolean;
 }) {
   const [sortKey, setSortKey] = useState<ColumnSortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -85,12 +88,12 @@ export function ConsultationsListClient({
       } else if (sortKey === "job") {
         aValue = a.job_label.toLocaleLowerCase();
         bValue = b.job_label.toLocaleLowerCase();
-      } else if (sortKey === "income_amount") {
-        aValue = amountValue(a.income_amount);
-        bValue = amountValue(b.income_amount);
+      } else if (sortKey === "amount") {
+        aValue = amountValue(a.amount);
+        bValue = amountValue(b.amount);
       } else {
-        aValue = amountValue(a.cost_amount);
-        bValue = amountValue(b.cost_amount);
+        aValue = amountValue(a.amount);
+        bValue = amountValue(b.amount);
       }
 
       if (typeof aValue === "number" && typeof bValue === "number") {
@@ -124,19 +127,16 @@ export function ConsultationsListClient({
               </button>
             </th>
             <th className="px-3 py-2 text-slate-300">
-              <button type="button" onClick={() => onSort("income_amount")} className="hover:text-slate-100">
-                {labels.income}
-                {sortArrow("income_amount")}
-              </button>
+              {labels.clients}
             </th>
             <th className="px-3 py-2 text-slate-300">
-              <button type="button" onClick={() => onSort("cost_amount")} className="hover:text-slate-100">
-                {labels.cost}
-                {sortArrow("cost_amount")}
+              <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
+                {labels.amount}
+                {sortArrow("amount")}
               </button>
             </th>
-            <th className="px-3 py-2 text-slate-300">{labels.linkedIncome}</th>
-            <th className="px-3 py-2 text-slate-300">{labels.linkedCost}</th>
+            <th className="px-3 py-2 text-slate-300">{labels.receipt}</th>
+            <th className="px-3 py-2 text-slate-300">{labels.transaction}</th>
             <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
           </tr>
         </thead>
@@ -153,12 +153,27 @@ export function ConsultationsListClient({
                 )}
               </td>
               <td className="px-3 py-2 text-slate-400">{row.job_label}</td>
-              <td className="px-3 py-2 text-slate-300">{row.income_amount ? `${row.income_amount} ${row.income_currency}` : "—"}</td>
-              <td className="px-3 py-2 text-slate-300">{row.cost_amount ? `${row.cost_amount} ${row.cost_currency}` : "—"}</td>
               <td className="px-3 py-2 text-slate-400">
-                {row.linked_income_transaction_id ? labels.linked : labels.unlinked}
+                {row.clients.length > 0
+                  ? row.clients.map((client) => formatClientNameForDisplay(obfuscate, client.name, null)).join(", ")
+                  : "—"}
               </td>
-              <td className="px-3 py-2 text-slate-400">{row.linked_cost_transaction_id ? labels.linked : labels.unlinked}</td>
+              <td className="px-3 py-2 text-slate-300">
+                {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
+              </td>
+              <td className="px-3 py-2 text-slate-400">
+                {row.linked_receipt_id && row.linked_receipt_number ? (
+                  <Link
+                    href={`/dashboard/private-clinic/receipts?receipt=${encodeURIComponent(row.linked_receipt_id)}`}
+                    className="text-sky-400 hover:underline"
+                  >
+                    #{row.linked_receipt_number}
+                  </Link>
+                ) : (
+                  labels.unlinked
+                )}
+              </td>
+              <td className="px-3 py-2 text-slate-400">{row.linked_transaction_id ? labels.linked : labels.unlinked}</td>
               <td className="px-3 py-2">
                 <Link
                   href={`${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(row.id)}`}

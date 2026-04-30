@@ -2088,6 +2088,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       job_id: string;
       consultation_type_id: string;
       occurred_at: Date;
+      amount: string | number;
+      currency: string;
       income_amount: string | number;
       income_currency: string;
       notes: string | null;
@@ -2122,6 +2124,8 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         job_id: params.jobId,
         consultation_type_id: typeId,
         occurred_at: c.occurredAt,
+        amount: c.amount,
+        currency: "ILS",
         income_amount: c.amount,
         income_currency: "ILS",
         notes: c.note,

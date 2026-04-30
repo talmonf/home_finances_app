@@ -800,25 +800,23 @@ export function privateClinicConsultations(lang: UiLanguage) {
   return {
     dateTime: c.dateTime,
     intro: p(
-      "Log meetings and consultations: expected income, costs, type, and job. Manage custom types under Settings. Link bank lines separately for money in vs money out.",
-      "רישום פגישות וייעוצים: הכנסה צפויה, עלויות, סוג ומשרה. ניהול סוגים מותאמים תחת הגדרות. קישור תנועות בנק בנפרד להכנסה מול הוצאה.",
+      "Log meetings and consultations with one payable amount, type, and job. Link receipts and (optionally) a bank transaction for paid status tracking.",
+      "רישום פגישות וייעוצים עם סכום לתשלום, סוג ומשרה. קישור לקבלות ולתנועת בנק (אופציונלי) למעקב מצב תשלום.",
     ),
     addTitle: p("Add consultation / meeting", "הוספת ייעוץ / פגישה"),
-    incomeLabel: p("Amount to receive (income)", "סכום לקבלה (הכנסה)"),
-    costLabel: p("Amount it cost you", "סכום שעלה לכם"),
-    linkIncome: p("Link transaction — clinic income", "קישור לתנועה — הכנסה מהקליניקה"),
-    linkIncomeHint: p("Usually a credit (incoming) on your bank statement.", "בדרך כלל זכות (נכנס) בדף חשבון הבנק."),
-    linkCost: p("Link transaction — cost / expense", "קישור לתנועה — עלות / הוצאה"),
-    linkCostHint: p("Usually a debit (payment) for this meeting.", "בדרך כלל חיוב (תשלום) עבור הפגישה."),
+    amountLabel: p("Amount to be paid", "סכום לתשלום"),
+    linkTx: p("Linked bank transaction", "תנועת בנק מקושרת"),
     recent: p("Recent", "אחרונים"),
     filters: p("Filters", "סינון"),
-    filterIncomeBank: p("Income in bank", "הכנסה בבנק"),
-    incomeBankAll: p("All", "הכל"),
-    incomeBankLinked: p("Linked (received)", "מקושר (התקבל)"),
-    incomeBankUnlinked: p("Not linked", "לא מקושר"),
+    filterReceivedPayment: p("Received payment", "תשלום התקבל"),
+    receivedAll: p("All", "הכל"),
+    receivedLinked: p("Linked to receipt", "מקושר לקבלה"),
+    receivedUnlinked: p("Not linked to receipt", "לא מקושר לקבלה"),
     consultationsCount: (n: number) => p(`Consultations (${n})`, `ייעוצים (${n})`),
-    incomeTx: p("Income transaction", "תנועת הכנסה"),
-    costTx: p("Cost transaction", "תנועת עלות"),
+    receipt: p("Receipt", "קבלה"),
+    transaction: p("Transaction", "תנועה"),
+    clients: p("Clients", "לקוחות"),
+    addAdditionalClient: p("Add client", "הוספת לקוח"),
   };
 }
 
@@ -826,8 +824,8 @@ export function privateClinicTravel(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
     intro: p(
-      "Record travel tied to a specific session or to a job in general. Optionally link a bank transaction (typically a debit) for reimbursement or mileage costs.",
-      "רישום נסיעה המקושרת למפגש מסוים או למשרה באופן כללי. אופציונלי: קישור לתנועת בנק (בדרך כלל חיוב) להחזר או עלות נסיעה.",
+      "Record travel with one payable amount, optional treatment/job linkage, and receipt/transaction links for payment tracking.",
+      "רישום נסיעות עם סכום לתשלום, קישור אופציונלי לטיפול/משרה, וקישור לקבלה/תנועה למעקב תשלום.",
     ),
     addTravel: p("Add travel", "הוספת נסיעה"),
     relatedJob: p("Related to a job", "קשור למשרה"),

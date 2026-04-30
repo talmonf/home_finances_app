@@ -3,16 +3,16 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import type { Prisma } from "@/generated/prisma/client";
 
-export type ConsultationsSortKey = "occurred_at" | "type" | "job" | "income_amount" | "cost_amount";
+export type ConsultationsSortKey = "occurred_at" | "type" | "job" | "amount";
 export type ConsultationsSortDir = "asc" | "desc";
-export type ConsultationsIncomeBankFilter = "all" | "linked" | "unlinked";
+export type ConsultationsReceivedFilter = "all" | "linked" | "unlinked";
 
 export type ConsultationsListFilters = {
   job: string;
   receipt: string;
   from: string;
   to: string;
-  incomeBank: ConsultationsIncomeBankFilter;
+  received: ConsultationsReceivedFilter;
   sort: ConsultationsSortKey;
   dir: ConsultationsSortDir;
 };
@@ -25,17 +25,17 @@ export type ConsultationListRowDto = {
   consultation_type_name: string;
   consultation_type_name_he: string | null;
   occurred_at_iso: string;
-  income_amount: string | null;
-  income_currency: string;
-  cost_amount: string | null;
-  cost_currency: string;
-  linked_income_transaction_id: string | null;
-  linked_cost_transaction_id: string | null;
+  amount: string | null;
+  currency: string;
+  linked_transaction_id: string | null;
+  linked_receipt_id: string | null;
+  linked_receipt_number: string | null;
+  clients: Array<{ id: string; name: string; name_he: string | null }>;
   notes: string | null;
 };
 
 export function parseConsultationsSortKey(raw: string | undefined): ConsultationsSortKey {
-  if (raw === "type" || raw === "job" || raw === "income_amount" || raw === "cost_amount") return raw;
+  if (raw === "type" || raw === "job" || raw === "amount") return raw;
   return "occurred_at";
 }
 
@@ -43,7 +43,7 @@ export function parseConsultationsSortDir(raw: string | undefined): Consultation
   return raw === "asc" ? "asc" : "desc";
 }
 
-export function parseConsultationsIncomeBankFilter(raw: string | undefined): ConsultationsIncomeBankFilter {
+export function parseConsultationsReceivedFilter(raw: string | undefined): ConsultationsReceivedFilter {
   if (raw === "linked" || raw === "unlinked") return raw;
   return "all";
 }
@@ -62,8 +62,7 @@ function orderByForConsultations(
 ): Prisma.therapy_consultationsOrderByWithRelationInput[] {
   if (sort === "type") return [{ consultation_type: { sort_order: dir } }, { occurred_at: "desc" }, { id: "desc" }];
   if (sort === "job") return [{ job: { job_title: dir } }, { occurred_at: "desc" }, { id: "desc" }];
-  if (sort === "income_amount") return [{ income_amount: dir }, { occurred_at: "desc" }, { id: "desc" }];
-  if (sort === "cost_amount") return [{ cost_amount: dir }, { occurred_at: "desc" }, { id: "desc" }];
+  if (sort === "amount") return [{ amount: dir }, { occurred_at: "desc" }, { id: "desc" }];
   return [{ occurred_at: dir }, { id: dir }];
 }
 
@@ -99,14 +98,37 @@ export async function loadConsultationsRows(params: {
             },
           }
         : {}),
-      ...(filters.incomeBank === "linked" ? { linked_income_transaction_id: { not: null } } : {}),
-      ...(filters.incomeBank === "unlinked" ? { linked_income_transaction_id: null } : {}),
+      ...(filters.received === "linked" ? { receipt_allocations: { some: {} } } : {}),
+      ...(filters.received === "unlinked" ? { receipt_allocations: { none: {} } } : {}),
     },
     orderBy: orderByForConsultations(filters.sort, filters.dir),
     take,
     include: {
       job: true,
       consultation_type: true,
+      receipt_allocations: {
+        include: {
+          receipt: {
+            select: {
+              id: true,
+              receipt_number: true,
+            },
+          },
+        },
+        take: 1,
+        orderBy: { created_at: "desc" },
+      },
+      participants: {
+        include: {
+          client: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -118,12 +140,16 @@ export async function loadConsultationsRows(params: {
     consultation_type_name: row.consultation_type.name,
     consultation_type_name_he: row.consultation_type.name_he,
     occurred_at_iso: row.occurred_at.toISOString(),
-    income_amount: row.income_amount?.toString() ?? null,
-    income_currency: row.income_currency,
-    cost_amount: row.cost_amount?.toString() ?? null,
-    cost_currency: row.cost_currency,
-    linked_income_transaction_id: row.linked_income_transaction_id,
-    linked_cost_transaction_id: row.linked_cost_transaction_id,
+    amount: row.amount?.toString() ?? row.income_amount?.toString() ?? row.cost_amount?.toString() ?? null,
+    currency: row.currency || row.income_currency || row.cost_currency,
+    linked_transaction_id: row.linked_transaction_id ?? row.linked_income_transaction_id ?? row.linked_cost_transaction_id,
+    linked_receipt_id: row.receipt_allocations[0]?.receipt_id ?? null,
+    linked_receipt_number: row.receipt_allocations[0]?.receipt.receipt_number ?? null,
+    clients: row.participants.map((p) => ({
+      id: p.client.id,
+      name: `${p.client.first_name} ${p.client.last_name ?? ""}`.trim(),
+      name_he: null,
+    })),
     notes: row.notes,
   }));
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
@@ -5,6 +7,7 @@ import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-butt
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
+import { useMemo, useState } from "react";
 
 type JobOption = { id: string; label: string };
 type TypeOption = { id: string; name: string; name_he: string | null };
@@ -14,12 +17,10 @@ type InitialConsultation = {
   job_id: string;
   consultation_type_id: string;
   occurred_at: string;
-  income_amount: string;
-  income_currency: string;
-  cost_amount: string;
-  cost_currency: string;
-  linked_income_transaction_id: string;
-  linked_cost_transaction_id: string;
+  amount: string;
+  currency: string;
+  linked_transaction_id: string;
+  participant_ids: string[];
   notes: string;
 };
 
@@ -33,10 +34,11 @@ type Labels = {
   job: string;
   type: string;
   dateTime: string;
-  incomeLabel: string;
-  costLabel: string;
-  incomeTx: string;
-  costTx: string;
+  amountLabel: string;
+  linkedTx: string;
+  clients: string;
+  addAdditionalClient: string;
+  remove: string;
   notes: string;
   txNoneLinked: string;
 };
@@ -64,10 +66,19 @@ export function ConsultationModalForm({
   uiLanguage: "en" | "he";
   jobs: JobOption[];
   types: TypeOption[];
+  clients: Array<{ id: string; label: string }>;
   transactionOptions: TherapyTransactionOption[];
   labels: Labels;
   initial?: InitialConsultation;
 }) {
+  const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>(
+    initial?.participant_ids ?? [],
+  );
+  const selectedAdditionalIds = useMemo(
+    () => new Set(additionalParticipantIds.filter(Boolean)),
+    [additionalParticipantIds],
+  );
+
   return (
     <DashboardModal title={labels.title} closeHref={closeHref} closeLabel={labels.cancel} maxWidthClassName="max-w-3xl">
       <GlobalFormSubmitFeedback />
@@ -115,56 +126,70 @@ export function ConsultationModalForm({
           </div>
         </div>
         <div>
-          <label className="block text-xs text-slate-400">{labels.incomeLabel}</label>
+          <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
           <div className="mt-1 flex gap-2">
             <input
-              name="income_amount"
-              defaultValue={initial?.income_amount ?? ""}
+              name="amount"
+              defaultValue={initial?.amount ?? ""}
               placeholder="0.00"
               className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
             <input
-              name="income_currency"
-              defaultValue={initial?.income_currency ?? "ILS"}
-              className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs text-slate-400">{labels.costLabel}</label>
-          <div className="mt-1 flex gap-2">
-            <input
-              name="cost_amount"
-              defaultValue={initial?.cost_amount ?? ""}
-              placeholder="0.00"
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="cost_currency"
-              defaultValue={initial?.cost_currency ?? "ILS"}
+              name="currency"
+              defaultValue={initial?.currency ?? "ILS"}
               className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
             />
           </div>
         </div>
         <div className="md:col-span-2">
           <TherapyTransactionLinkSelect
-            name="linked_income_transaction_id"
+            name="linked_transaction_id"
             householdId={householdId}
-            currentId={initial?.linked_income_transaction_id || null}
-            label={labels.incomeTx}
+            currentId={initial?.linked_transaction_id || null}
+            label={labels.linkedTx}
             noneOptionLabel={labels.txNoneLinked}
             transactionOptions={transactionOptions}
           />
         </div>
         <div className="md:col-span-2">
-          <TherapyTransactionLinkSelect
-            name="linked_cost_transaction_id"
-            householdId={householdId}
-            currentId={initial?.linked_cost_transaction_id || null}
-            label={labels.costTx}
-            noneOptionLabel={labels.txNoneLinked}
-            transactionOptions={transactionOptions}
-          />
+          <span className="block text-xs text-slate-400">{labels.clients}</span>
+          <div className="mt-2 space-y-2">
+            {additionalParticipantIds.map((clientId, index) => (
+              <div key={`consultation-client-${index}`} className="flex items-center gap-2">
+                <select
+                  name="additional_participant_ids"
+                  value={clientId}
+                  onChange={(e) => {
+                    const next = [...additionalParticipantIds];
+                    next[index] = e.target.value;
+                    setAdditionalParticipantIds(next);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">{labels.clients}</option>
+                  {clients.map((cl) => (
+                    <option key={cl.id} value={cl.id} disabled={selectedAdditionalIds.has(cl.id) && cl.id !== clientId}>
+                      {cl.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setAdditionalParticipantIds((prev) => prev.filter((_, rowIndex) => rowIndex !== index))}
+                  className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
+                >
+                  {labels.remove}
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAdditionalParticipantIds((prev) => [...prev, ""])}
+              className="text-sm text-sky-400 underline-offset-2 hover:text-sky-300 hover:underline"
+            >
+              {labels.addAdditionalClient}
+            </button>
+          </div>
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs text-slate-400">{labels.notes}</label>

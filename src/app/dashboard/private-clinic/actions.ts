@@ -3775,33 +3775,49 @@ export async function createTherapyConsultation(formData: FormData) {
   const occurred_at = new Date(occurred_at_raw);
   if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
-  const incomeStr = parseMoney((formData.get("income_amount") as string) || null);
-  const costStr = parseMoney((formData.get("cost_amount") as string) || null);
-
-  const linked_income_transaction_id = await resolveTransactionLink(
+  const amountStr = parseMoney((formData.get("amount") as string) || null);
+  const linked_transaction_id = await resolveTransactionLink(
     householdId,
-    formData.get("linked_income_transaction_id") as string,
+    formData.get("linked_transaction_id") as string,
   );
-  const linked_cost_transaction_id = await resolveTransactionLink(
-    householdId,
-    formData.get("linked_cost_transaction_id") as string,
-  );
+  const additionalParticipantIds = parseUniqueIds(formData.getAll("additional_participant_ids"));
+  for (const participantId of additionalParticipantIds) {
+    if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackError, "client");
+    }
+  }
 
-  await prisma.therapy_consultations.create({
-    data: {
-      id: crypto.randomUUID(),
-      household_id: householdId,
-      job_id,
-      consultation_type_id,
-      occurred_at,
-      income_amount: incomeStr,
-      income_currency: (formData.get("income_currency") as string)?.trim() || "ILS",
-      cost_amount: costStr,
-      cost_currency: (formData.get("cost_currency") as string)?.trim() || "ILS",
-      notes: (formData.get("notes") as string)?.trim() || null,
-      linked_income_transaction_id,
-      linked_cost_transaction_id,
-    },
+  const consultationId = crypto.randomUUID();
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_consultations.create({
+      data: {
+        id: consultationId,
+        household_id: householdId,
+        job_id,
+        consultation_type_id,
+        occurred_at,
+        amount: amountStr,
+        currency: (formData.get("currency") as string)?.trim() || "ILS",
+        income_amount: amountStr,
+        income_currency: (formData.get("currency") as string)?.trim() || "ILS",
+        cost_amount: null,
+        cost_currency: (formData.get("currency") as string)?.trim() || "ILS",
+        notes: (formData.get("notes") as string)?.trim() || null,
+        linked_transaction_id,
+        linked_income_transaction_id: linked_transaction_id,
+        linked_cost_transaction_id: null,
+      },
+    });
+    for (const clientId of additionalParticipantIds) {
+      await tx.therapy_consultation_participants.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          consultation_id: consultationId,
+          client_id: clientId,
+        },
+      });
+    }
   });
 
   revalidatePath(`${BASE}/consultations`);
@@ -3838,32 +3854,50 @@ export async function updateTherapyConsultation(formData: FormData) {
   const occurred_at = new Date(occurred_at_raw);
   if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
-  const incomeStr = parseMoney((formData.get("income_amount") as string) || null);
-  const costStr = parseMoney((formData.get("cost_amount") as string) || null);
-
-  const linked_income_transaction_id = await resolveTransactionLink(
+  const amountStr = parseMoney((formData.get("amount") as string) || null);
+  const linked_transaction_id = await resolveTransactionLink(
     householdId,
-    formData.get("linked_income_transaction_id") as string,
+    formData.get("linked_transaction_id") as string,
   );
-  const linked_cost_transaction_id = await resolveTransactionLink(
-    householdId,
-    formData.get("linked_cost_transaction_id") as string,
-  );
+  const additionalParticipantIds = parseUniqueIds(formData.getAll("additional_participant_ids"));
+  for (const participantId of additionalParticipantIds) {
+    if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackError, "client");
+    }
+  }
 
-  await prisma.therapy_consultations.update({
-    where: { id },
-    data: {
-      job_id,
-      consultation_type_id,
-      occurred_at,
-      income_amount: incomeStr ?? null,
-      income_currency: (formData.get("income_currency") as string)?.trim() || "ILS",
-      cost_amount: costStr ?? null,
-      cost_currency: (formData.get("cost_currency") as string)?.trim() || "ILS",
-      notes: (formData.get("notes") as string)?.trim() || null,
-      linked_income_transaction_id,
-      linked_cost_transaction_id,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_consultations.update({
+      where: { id },
+      data: {
+        job_id,
+        consultation_type_id,
+        occurred_at,
+        amount: amountStr ?? null,
+        currency: (formData.get("currency") as string)?.trim() || "ILS",
+        income_amount: amountStr ?? null,
+        income_currency: (formData.get("currency") as string)?.trim() || "ILS",
+        cost_amount: null,
+        cost_currency: (formData.get("currency") as string)?.trim() || "ILS",
+        notes: (formData.get("notes") as string)?.trim() || null,
+        linked_transaction_id,
+        linked_income_transaction_id: linked_transaction_id,
+        linked_cost_transaction_id: null,
+      },
+    });
+    await tx.therapy_consultation_participants.deleteMany({
+      where: { household_id: householdId, consultation_id: id },
+    });
+    for (const clientId of additionalParticipantIds) {
+      await tx.therapy_consultation_participants.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          consultation_id: id,
+          client_id: clientId,
+        },
+      });
+    }
   });
 
   revalidatePath(`${BASE}/consultations`);

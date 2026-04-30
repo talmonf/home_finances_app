@@ -25,6 +25,8 @@ import {
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import { SplitDateTimeField } from "@/components/split-datetime-field";
+import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
+import { TravelAddButton } from "./travel-add-button";
 
 export const dynamic = "force-dynamic";
 const TRAVEL_BASE = "/dashboard/private-clinic/travel";
@@ -41,7 +43,7 @@ export default async function TravelPage({
     receipt?: string;
     from?: string;
     to?: string;
-    bank?: string;
+    received?: string;
     modal?: string;
   }>;
 }) {
@@ -68,14 +70,14 @@ export default async function TravelPage({
   const receiptFilter = sp.receipt || "";
   const from = sp.from ? new Date(sp.from) : null;
   const to = sp.to ? new Date(sp.to) : null;
-  const bankFilter = sp.bank || "all";
+  const receivedFilter = sp.received || "all";
   const listParams = new URLSearchParams();
   if (jobFilter) listParams.set("job", jobFilter);
   if (clientFilter) listParams.set("client", clientFilter);
   if (receiptFilter) listParams.set("receipt", receiptFilter);
   if (sp.from) listParams.set("from", sp.from);
   if (sp.to) listParams.set("to", sp.to);
-  if (bankFilter && bankFilter !== "all") listParams.set("bank", bankFilter);
+  if (receivedFilter && receivedFilter !== "all") listParams.set("received", receivedFilter);
   const baseListHref = listParams.size > 0 ? `${TRAVEL_BASE}?${listParams.toString()}` : TRAVEL_BASE;
 
   const [jobs, clients, treatments, entries] = await Promise.all([
@@ -133,8 +135,8 @@ export default async function TravelPage({
                 },
               ]
             : []),
-          ...(bankFilter === "linked" ? [{ linked_transaction_id: { not: null } }] : []),
-          ...(bankFilter === "unlinked" ? [{ linked_transaction_id: null }] : []),
+          ...(receivedFilter === "linked" ? [{ receipt_allocations: { some: {} } }] : []),
+          ...(receivedFilter === "unlinked" ? [{ receipt_allocations: { none: {} } }] : []),
         ],
       },
       orderBy: { created_at: "desc" },
@@ -212,8 +214,8 @@ export default async function TravelPage({
           <div>
             <label className="block text-xs text-slate-400">{tv.filterBankLink}</label>
             <select
-              name="bank"
-              defaultValue={bankFilter}
+              name="received"
+              defaultValue={receivedFilter}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="all">{tv.bankLinkAll}</option>
@@ -251,12 +253,7 @@ export default async function TravelPage({
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-medium text-slate-200">{tv.entriesCount(entries.length)}</h2>
-          <Link
-            href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`}
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {tv.addTravel}
-          </Link>
+          <TravelAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={tv.addTravel} />
         </div>
         {entries.length === 0 ? (
           <p className="text-sm text-slate-500">{c.travelEmpty}</p>
@@ -361,9 +358,11 @@ export default async function TravelPage({
                       defaultValue={e.notes ?? ""}
                       className="md:col-span-2 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs"
                     />
-                    <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white">
-                      {c.save}
-                    </button>
+                    <PendingSubmitButtonWithSpinner
+                      label={c.save}
+                      pendingLabel={uiLanguage === "he" ? "שומר..." : "Saving..."}
+                      className="rounded bg-sky-600 px-2 py-1 text-xs text-white"
+                    />
                   </form>
                   <ConfirmDeleteForm action={deleteTherapyTravelEntry} className="mt-2">
                     <input type="hidden" name="id" value={e.id} />
@@ -451,12 +450,11 @@ export default async function TravelPage({
                 className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
               <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
+                <PendingSubmitButtonWithSpinner
+                  label={c.save}
+                  pendingLabel={uiLanguage === "he" ? "שומר..." : "Saving..."}
                   className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-                >
-                  {c.save}
-                </button>
+                />
                 <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
                   {c.cancel}
                 </Link>

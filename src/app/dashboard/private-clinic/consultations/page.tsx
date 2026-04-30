@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import Link from "next/link";
@@ -17,7 +18,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import {
   loadConsultationsRows,
-  parseConsultationsIncomeBankFilter,
+  parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
   type ConsultationsListFilters,
@@ -40,7 +41,7 @@ export default async function ConsultationsPage({
     receipt?: string;
     from?: string;
     to?: string;
-    income_bank?: string;
+    received?: string;
     sort?: string;
     dir?: string;
     modal?: string;
@@ -60,6 +61,7 @@ export default async function ConsultationsPage({
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const co = privateClinicConsultations(uiLanguage);
   const sp = searchParams ? await searchParams : {};
@@ -69,7 +71,7 @@ export default async function ConsultationsPage({
     receipt: sp.receipt?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
-    incomeBank: parseConsultationsIncomeBankFilter(sp.income_bank),
+    received: parseConsultationsReceivedFilter(sp.received),
     sort: parseConsultationsSortKey(sp.sort),
     dir: parseConsultationsSortDir(sp.dir),
   };
@@ -79,12 +81,12 @@ export default async function ConsultationsPage({
   if (filters.receipt) listParams.set("receipt", filters.receipt);
   if (filters.from) listParams.set("from", filters.from);
   if (filters.to) listParams.set("to", filters.to);
-  if (filters.incomeBank !== "all") listParams.set("income_bank", filters.incomeBank);
+  if (filters.received !== "all") listParams.set("received", filters.received);
   if (filters.sort !== "occurred_at") listParams.set("sort", filters.sort);
   if (filters.dir !== "desc") listParams.set("dir", filters.dir);
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
 
-  const [jobs, types, rows, transactionOptions] = await Promise.all([
+  const [jobs, types, clients, rows, transactionOptions] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -92,6 +94,11 @@ export default async function ConsultationsPage({
     prisma.therapy_consultation_types.findMany({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+    }),
+    prisma.therapy_clients.findMany({
+      where: { household_id: householdId, OR: [{ is_active: true }, { consultation_participations: { some: {} } }] },
+      orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
+      select: { id: true, first_name: true, last_name: true, is_active: true },
     }),
     loadConsultationsRows({
       householdId,
@@ -123,6 +130,7 @@ export default async function ConsultationsPage({
     modalMode === "edit" && editId
       ? await prisma.therapy_consultations.findFirst({
           where: { id: editId, household_id: householdId, job: jobScope },
+          include: { participants: true },
         })
       : null;
 
@@ -174,18 +182,18 @@ export default async function ConsultationsPage({
             </select>
           </div>
           <div>
-            <label htmlFor="consultations-filter-income-bank" className="block text-xs text-slate-400">
-              {co.filterIncomeBank}
+            <label htmlFor="consultations-filter-received" className="block text-xs text-slate-400">
+              {co.filterReceivedPayment}
             </label>
             <select
-              id="consultations-filter-income-bank"
-              name="income_bank"
-              defaultValue={filters.incomeBank}
+              id="consultations-filter-received"
+              name="received"
+              defaultValue={filters.received}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">{co.incomeBankAll}</option>
-              <option value="linked">{co.incomeBankLinked}</option>
-              <option value="unlinked">{co.incomeBankUnlinked}</option>
+              <option value="all">{co.receivedAll}</option>
+              <option value="linked">{co.receivedLinked}</option>
+              <option value="unlinked">{co.receivedUnlinked}</option>
             </select>
           </div>
           <div>
@@ -232,14 +240,15 @@ export default async function ConsultationsPage({
               when: c.when,
               type: c.type,
               job: c.job,
-              income: co.incomeLabel,
-              cost: co.costLabel,
-              linkedIncome: co.incomeTx,
-              linkedCost: co.costTx,
+              clients: co.clients,
+              amount: co.amountLabel,
+              receipt: co.receipt,
+              transaction: co.transaction,
               edit: c.edit,
-              linked: co.incomeBankLinked,
-              unlinked: co.incomeBankUnlinked,
+              linked: co.receivedLinked,
+              unlinked: co.receivedUnlinked,
             }}
+            obfuscate={obfuscate}
           />
         )}
       </section>
@@ -254,6 +263,10 @@ export default async function ConsultationsPage({
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
           types={types.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          clients={clients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
+          }))}
           transactionOptions={transactionOptions.map((t) => ({
             id: t.id,
             transaction_date: t.transaction_date,
@@ -271,10 +284,11 @@ export default async function ConsultationsPage({
             job: c.job,
             type: c.type,
             dateTime: co.dateTime,
-            incomeLabel: co.incomeLabel,
-            costLabel: co.costLabel,
-            incomeTx: co.linkIncome,
-            costTx: co.linkCost,
+            amountLabel: co.amountLabel,
+            linkedTx: co.linkTx,
+            clients: co.clients,
+            addAdditionalClient: co.addAdditionalClient,
+            remove: c.remove,
             notes: c.notes,
             txNoneLinked: c.txNoneLinked,
           }}
@@ -291,6 +305,10 @@ export default async function ConsultationsPage({
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
           types={types.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          clients={clients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
+          }))}
           transactionOptions={transactionOptions.map((t) => ({
             id: t.id,
             transaction_date: t.transaction_date,
@@ -303,12 +321,14 @@ export default async function ConsultationsPage({
             job_id: editConsultation.job_id,
             consultation_type_id: editConsultation.consultation_type_id,
             occurred_at: editConsultation.occurred_at.toISOString().slice(0, 16),
-            income_amount: editConsultation.income_amount?.toString() ?? "",
-            income_currency: editConsultation.income_currency,
-            cost_amount: editConsultation.cost_amount?.toString() ?? "",
-            cost_currency: editConsultation.cost_currency,
-            linked_income_transaction_id: editConsultation.linked_income_transaction_id ?? "",
-            linked_cost_transaction_id: editConsultation.linked_cost_transaction_id ?? "",
+            amount: editConsultation.amount?.toString() ?? editConsultation.income_amount?.toString() ?? "",
+            currency: editConsultation.currency ?? editConsultation.income_currency,
+            linked_transaction_id:
+              editConsultation.linked_transaction_id ??
+              editConsultation.linked_income_transaction_id ??
+              editConsultation.linked_cost_transaction_id ??
+              "",
+            participant_ids: editConsultation.participants.map((p) => p.client_id),
             notes: editConsultation.notes ?? "",
           }}
           labels={{
@@ -321,10 +341,11 @@ export default async function ConsultationsPage({
             job: c.job,
             type: c.type,
             dateTime: co.dateTime,
-            incomeLabel: co.incomeLabel,
-            costLabel: co.costLabel,
-            incomeTx: co.linkIncome,
-            costTx: co.linkCost,
+            amountLabel: co.amountLabel,
+            linkedTx: co.linkTx,
+            clients: co.clients,
+            addAdditionalClient: co.addAdditionalClient,
+            remove: c.remove,
             notes: c.notes,
             txNoneLinked: c.txNoneLinked,
           }}

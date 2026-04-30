@@ -20,7 +20,7 @@ export function formatMoneyLineForDisplay(
   if (obfuscate) return OBFUSCATED;
   const normalizedCurrency = currency.trim().toUpperCase();
   const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currency;
-  return `${amount} ${currencyLabel}`;
+  return uiLanguage === "he" ? `${currencyLabel} ${amount}` : `${amount} ${currencyLabel}`;
 }
 
 export function formatDecimalAmountForDisplay(
@@ -32,5 +32,7 @@ export function formatDecimalAmountForDisplay(
   if (obfuscate) return OBFUSCATED;
   const normalizedCurrency = currency.trim().toUpperCase();
   const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currency;
-  return `${amount.toString()} ${currencyLabel}`;
+  return uiLanguage === "he"
+    ? `${currencyLabel} ${amount.toString()}`
+    : `${amount.toString()} ${currencyLabel}`;
 }

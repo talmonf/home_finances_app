@@ -9,7 +9,11 @@ export function therapyLocalizedCategoryName(
     const h = row.name_he?.trim();
     if (h) return h;
   }
-  return row.name;
+  return row.name
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 /** Treatment note field titles: English is canonical; Hebrew optional for Hebrew UI. */
