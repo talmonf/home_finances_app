@@ -4,7 +4,6 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { flushSync } from "react-dom";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -106,13 +105,12 @@ export default function PrivateClinicNavClient({
             return;
           }
           event.preventDefault();
-          // Next can update pathname before a batched re-render clears this; flushing ensures the
-          // pending state paints at least once (standard in-app spinner in the pill).
-          flushSync(() => {
-            setPendingHref(normalizedHref);
-          });
-          startTransition(() => {
-            router.push(item.href);
+          setPendingHref(normalizedHref);
+          // Defer navigation one frame so the spinner reliably paints in the tab before route transition.
+          requestAnimationFrame(() => {
+            startTransition(() => {
+              router.push(item.href);
+            });
           });
         }}
         className={linkClassName(isActive)}
