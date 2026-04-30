@@ -1,5 +1,3 @@
-"use client";
-
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
@@ -7,7 +5,7 @@ import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-butt
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
-import { useMemo, useState } from "react";
+import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
 
 type JobOption = { id: string; label: string };
 type TypeOption = { id: string; name: string; name_he: string | null };
@@ -53,6 +51,7 @@ export function ConsultationModalForm({
   uiLanguage,
   jobs,
   types,
+  clients,
   transactionOptions,
   labels,
   initial,
@@ -71,14 +70,6 @@ export function ConsultationModalForm({
   labels: Labels;
   initial?: InitialConsultation;
 }) {
-  const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>(
-    initial?.participant_ids ?? [],
-  );
-  const selectedAdditionalIds = useMemo(
-    () => new Set(additionalParticipantIds.filter(Boolean)),
-    [additionalParticipantIds],
-  );
-
   return (
     <DashboardModal title={labels.title} closeHref={closeHref} closeLabel={labels.cancel} maxWidthClassName="max-w-3xl">
       <GlobalFormSubmitFeedback />
@@ -151,46 +142,15 @@ export function ConsultationModalForm({
             transactionOptions={transactionOptions}
           />
         </div>
-        <div className="md:col-span-2">
-          <span className="block text-xs text-slate-400">{labels.clients}</span>
-          <div className="mt-2 space-y-2">
-            {additionalParticipantIds.map((clientId, index) => (
-              <div key={`consultation-client-${index}`} className="flex items-center gap-2">
-                <select
-                  name="additional_participant_ids"
-                  value={clientId}
-                  onChange={(e) => {
-                    const next = [...additionalParticipantIds];
-                    next[index] = e.target.value;
-                    setAdditionalParticipantIds(next);
-                  }}
-                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">{labels.clients}</option>
-                  {clients.map((cl) => (
-                    <option key={cl.id} value={cl.id} disabled={selectedAdditionalIds.has(cl.id) && cl.id !== clientId}>
-                      {cl.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setAdditionalParticipantIds((prev) => prev.filter((_, rowIndex) => rowIndex !== index))}
-                  className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
-                >
-                  {labels.remove}
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setAdditionalParticipantIds((prev) => [...prev, ""])}
-              className="text-sm text-sky-400 underline-offset-2 hover:text-sky-300 hover:underline"
-            >
-              {labels.addAdditionalClient}
-            </button>
-          </div>
-        </div>
+        <ConsultationModalParticipantsPicker
+          clients={clients}
+          initialParticipantIds={initial?.participant_ids ?? []}
+          labels={{
+            clients: labels.clients,
+            addAdditionalClient: labels.addAdditionalClient,
+            remove: labels.remove,
+          }}
+        />
         <div className="md:col-span-2">
           <label className="block text-xs text-slate-400">{labels.notes}</label>
           <textarea

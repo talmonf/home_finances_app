@@ -133,6 +133,7 @@ export function privateClinicCommon(lang: UiLanguage) {
     delete: p("Delete", "מחיקה"),
     edit: p("Edit", "עריכה"),
     cancel: p("Cancel", "ביטול"),
+    remove: p("Remove", "הסרה"),
     add: p("Add", "הוספה"),
     yes: p("Yes", "כן"),
     no: p("No", "לא"),
