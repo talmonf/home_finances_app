@@ -149,7 +149,7 @@ export function TravelListClient({
               </td>
               <td className="px-3 py-2 text-slate-300">
                 {row.scope === "treatment"
-                  ? `${labels.scopeTreatment} ${formatClientNameForDisplay(obfuscate, row.client_first_name, row.client_last_name)}`
+                  ? `${labels.scopeTreatment} ${formatClientNameForDisplay(obfuscate, row.client_first_name ?? "", row.client_last_name)}`
                   : labels.scopeJob}
               </td>
               <td className="px-3 py-2 text-slate-400">{row.job_label ?? "—"}</td>
