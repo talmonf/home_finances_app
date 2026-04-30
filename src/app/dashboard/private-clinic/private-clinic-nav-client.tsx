@@ -2,8 +2,8 @@
 
 import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -30,15 +30,22 @@ export default function PrivateClinicNavClient({
   moreMenuLabel,
   items,
 }: PrivateClinicNavClientProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isNavigating, startTransition] = useTransition();
 
   useEffect(() => {
-    setPendingHref(null);
-  }, [normalizedPathname]);
+    if (!pendingHref) return;
+    // Keep spinner visible until transition actually settles on the destination.
+    if (isNavigating) return;
+    if (normalizePathname(pendingHref) === normalizedPathname) {
+      setPendingHref(null);
+    }
+  }, [isNavigating, normalizedPathname, pendingHref]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -80,7 +87,7 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isTargetPendingNavigation = pendingHref === normalizedHref;
+    const isTargetPendingNavigation = pendingHref === normalizedHref && !isActive;
     const showNavSpinner = isTargetPendingNavigation;
 
     return (
@@ -89,20 +96,6 @@ export default function PrivateClinicNavClient({
         href={item.href}
         aria-current={isActive ? "page" : undefined}
         aria-busy={showNavSpinner}
-        onPointerDown={(event) => {
-          if (
-            isActive ||
-            isTargetPendingNavigation ||
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.altKey ||
-            event.button !== 0
-          ) {
-            return;
-          }
-          setPendingHref(normalizedHref);
-        }}
         onClick={(event) => {
           setIsMoreOpen(false);
           if (
@@ -116,7 +109,13 @@ export default function PrivateClinicNavClient({
           ) {
             return;
           }
+
+          // Match the same click->pending->push flow used by other working nav buttons.
+          event.preventDefault();
           setPendingHref(normalizedHref);
+          startTransition(() => {
+            router.push(item.href);
+          });
         }}
         className={linkClassName(isActive)}
       >
