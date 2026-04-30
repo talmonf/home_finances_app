@@ -853,8 +853,10 @@ export function privateClinicTravel(lang: UiLanguage) {
     receivedLinked: p("Yes", "כן"),
     receivedUnlinked: p("No", "לא"),
     entriesCount: (n: number) => p(`Entries (${n})`, `רשומות (${n})`),
+    travelReports: p("Travel Reports", "דוחות נסיעות"),
+    scope: p("Scope", "שיוך"),
     scopeTreatment: p("Treatment:", "טיפול:"),
-    scopeJob: p("Job:", "משרה:"),
+    scopeJob: p("Job", "משרה"),
     receipt: p("Receipt", "קבלה"),
     linkedTx: p("Linked transaction", "תנועה מקושרת"),
   };

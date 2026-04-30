@@ -97,9 +97,11 @@ type PendingTravelAllocation = {
 
 type PendingTravel = {
   key: string;
+  rowNumber: number;
   occurredAt: Date | null;
   amount: string | null;
   note: string | null;
+  clientRef: ClientRef | null;
   treatmentKey: string | null;
 };
 
@@ -208,6 +210,13 @@ export type TipulimAnalyzeResult = {
       markPaidMissingTreatmentKey: number;
       missingTreatmentKeysSample: string[];
     };
+    travelLinkDiagnosticsSample?: Array<{
+      rowNumber: number;
+      client: string;
+      date: string;
+      linkedToTreatment: boolean;
+      source: "pending_import" | "existing_db" | "none";
+    }>;
   };
 };
 
@@ -759,7 +768,94 @@ type AnalyzeScratch = {
     matchedConsultationsAmount?: string;
     matchedTravelAmount?: string;
   }>;
+  travelLinkDiagnostics: Array<{
+    rowNumber: number;
+    client: string;
+    date: string;
+    linkedToTreatment: boolean;
+    source: "pending_import" | "existing_db" | "none";
+  }>;
 };
+
+async function buildTravelLinkDiagnostics(
+  params: { householdId: string; jobId: string },
+  scratch: AnalyzeScratch,
+): Promise<AnalyzeScratch["travelLinkDiagnostics"]> {
+  const diagnostics: AnalyzeScratch["travelLinkDiagnostics"] = [];
+  const existingClientIds = new Set<string>();
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
+  for (const tr of scratch.pendingTravel) {
+    if (!tr.clientRef || !tr.occurredAt) continue;
+    if (tr.clientRef.kind === "existing") {
+      existingClientIds.add(tr.clientRef.id);
+      if (!minDate || tr.occurredAt < minDate) minDate = tr.occurredAt;
+      if (!maxDate || tr.occurredAt > maxDate) maxDate = tr.occurredAt;
+    }
+  }
+
+  const existingByClientDay = new Set<string>();
+  if (existingClientIds.size > 0 && minDate && maxDate) {
+    const dbRows = await prisma.therapy_treatments.findMany({
+      where: {
+        household_id: params.householdId,
+        job_id: params.jobId,
+        client_id: { in: [...existingClientIds] },
+        occurred_at: {
+          gte: new Date(Date.UTC(minDate.getUTCFullYear(), minDate.getUTCMonth(), minDate.getUTCDate(), 0, 0, 0)),
+          lte: new Date(Date.UTC(maxDate.getUTCFullYear(), maxDate.getUTCMonth(), maxDate.getUTCDate(), 23, 59, 59, 999)),
+        },
+      },
+      select: { client_id: true, occurred_at: true },
+    });
+    for (const row of dbRows) {
+      existingByClientDay.add(`${row.client_id}|${utcDayKey(row.occurred_at)}`);
+    }
+  }
+
+  const pendingByDisplayDay = new Set<string>();
+  for (const treatment of scratch.pendingTreatments.values()) {
+    pendingByDisplayDay.add(`${treatment.clientRef.displayName}|${utcDayKey(treatment.occurredAt)}`);
+  }
+
+  for (const tr of scratch.pendingTravel) {
+    if (!tr.clientRef || !tr.occurredAt) continue;
+    const date = utcDayKey(tr.occurredAt);
+    let source: "pending_import" | "existing_db" | "none" = "none";
+    if (pendingByDisplayDay.has(`${tr.clientRef.displayName}|${date}`)) {
+      source = "pending_import";
+    } else if (tr.clientRef.kind === "existing" && existingByClientDay.has(`${tr.clientRef.id}|${date}`)) {
+      source = "existing_db";
+    }
+    diagnostics.push({
+      rowNumber: tr.rowNumber,
+      client: tr.clientRef.displayName,
+      date,
+      linkedToTreatment: source !== "none",
+      source,
+    });
+  }
+  return diagnostics;
+}
+
+function appendTravelLinkWarnings(scratch: AnalyzeScratch): void {
+  if (scratch.travelLinkDiagnostics.length === 0) return;
+  let shown = 0;
+  for (const item of scratch.travelLinkDiagnostics) {
+    if (shown >= 30) break;
+    scratch.warnings.push(
+      item.linkedToTreatment
+        ? `Row ${item.rowNumber}: travel for ${item.client} on ${item.date} linked to a treatment (${item.source === "pending_import" ? "from file" : "from database"}).`
+        : `Row ${item.rowNumber}: travel for ${item.client} on ${item.date} is not linked to a treatment.`,
+    );
+    shown += 1;
+  }
+  if (scratch.travelLinkDiagnostics.length > shown) {
+    scratch.warnings.push(
+      `Travel linkage diagnostics truncated: showing ${shown} of ${scratch.travelLinkDiagnostics.length} client-linked travel rows.`,
+    );
+  }
+}
 
 async function resolveClientRef(
   rawClient: string,
@@ -883,6 +979,7 @@ async function analyzeReceiptOnlyProfile(
     pendingTravel: [],
     pendingConsultations: [],
     orgPaymentDiagnostics: [],
+    travelLinkDiagnostics: [],
   };
   const defaultReceiptKind = defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType);
 
@@ -1065,6 +1162,11 @@ async function analyzeReceiptOnlyProfile(
     }
   }
 
+  scratch.travelLinkDiagnostics = await buildTravelLinkDiagnostics(
+    { householdId: params.householdId, jobId: params.jobId },
+    scratch,
+  );
+  appendTravelLinkWarnings(scratch);
   return scratch;
 }
 
@@ -1110,6 +1212,7 @@ async function analyzePrivateProfile(
     pendingTravel: [],
     pendingConsultations: [],
     orgPaymentDiagnostics: [],
+    travelLinkDiagnostics: [],
   };
   const pendingAllocByReceipt = new Map<string, PendingAllocation[]>();
   const defaultReceiptKind = defaultReceiptKindForJobEmploymentType(ctx.jobEmploymentType);
@@ -1327,6 +1430,11 @@ async function analyzePrivateProfile(
       }
     }
   }
+  scratch.travelLinkDiagnostics = await buildTravelLinkDiagnostics(
+    { householdId: params.householdId, jobId: params.jobId },
+    scratch,
+  );
+  appendTravelLinkWarnings(scratch);
   return scratch;
 }
 
@@ -1369,6 +1477,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     pendingTravel: [],
     pendingConsultations: [],
     orgPaymentDiagnostics: [],
+    travelLinkDiagnostics: [],
   };
   const existingProgramNames = new Set(
     ctx.programsByJob.filter((p) => p.job_id === params.jobId).map((p) => norm(p.name)),
@@ -1488,14 +1597,18 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     if (v === "נסיעה") {
       let linkedTreatmentKey: string | null = null;
       if (clientRef && occurredAt) {
+        // Prefer same-row direct key match when available; if it misses, we fall back later
+        // to same-client + same-date treatment linkage.
         linkedTreatmentKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|home`;
       }
       const travelKey = `travel:${rowNumber}`;
       scratch.pendingTravel.push({
         key: travelKey,
+        rowNumber,
         occurredAt,
         amount,
         note: s(row["הערות"]) || null,
+        clientRef,
         treatmentKey: linkedTreatmentKey,
       });
       const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -1677,6 +1790,11 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
       treatmentDigitalMethodId: resolvedIds.digitalId,
     });
   }
+  scratch.travelLinkDiagnostics = await buildTravelLinkDiagnostics(
+    { householdId: params.householdId, jobId: params.jobId },
+    scratch,
+  );
+  appendTravelLinkWarnings(scratch);
   return scratch;
 }
 
@@ -1751,6 +1869,7 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
         .slice(0, 5)
         .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
       orgPaymentDiagnosticsSample: scratch.orgPaymentDiagnostics.slice(0, 10),
+      travelLinkDiagnosticsSample: scratch.travelLinkDiagnostics.slice(0, 50),
     },
   };
 }
@@ -2168,6 +2287,45 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     }
 
     const travelIdByKey = new Map<string, string>();
+    const travelClientDateNeeds: Array<{ clientId: string; occurredAt: Date }> = [];
+    for (const tr of scratch.pendingTravel) {
+      if (!tr.clientRef || !tr.occurredAt) continue;
+      const clientId =
+        tr.clientRef.kind === "existing" ? tr.clientRef.id : clientIdByKey.get(tr.clientRef.tempKey) ?? null;
+      if (!clientId) continue;
+      travelClientDateNeeds.push({ clientId, occurredAt: tr.occurredAt });
+    }
+    const treatmentRowsByClientDate = new Map<
+      string,
+      Array<{ id: string; visit_type: "clinic" | "home" | "phone" | "video" }>
+    >();
+    if (travelClientDateNeeds.length > 0) {
+      const uniqueClientIds = [...new Set(travelClientDateNeeds.map((n) => n.clientId))];
+      let minOccurredAt = travelClientDateNeeds[0].occurredAt;
+      let maxOccurredAt = travelClientDateNeeds[0].occurredAt;
+      for (const need of travelClientDateNeeds) {
+        if (need.occurredAt < minOccurredAt) minOccurredAt = need.occurredAt;
+        if (need.occurredAt > maxOccurredAt) maxOccurredAt = need.occurredAt;
+      }
+      const dbTreatmentRows = await tx.therapy_treatments.findMany({
+        where: {
+          household_id: params.householdId,
+          job_id: params.jobId,
+          client_id: { in: uniqueClientIds },
+          occurred_at: {
+            gte: new Date(Date.UTC(minOccurredAt.getUTCFullYear(), minOccurredAt.getUTCMonth(), minOccurredAt.getUTCDate(), 0, 0, 0)),
+            lte: new Date(Date.UTC(maxOccurredAt.getUTCFullYear(), maxOccurredAt.getUTCMonth(), maxOccurredAt.getUTCDate(), 23, 59, 59, 999)),
+          },
+        },
+        select: { id: true, client_id: true, occurred_at: true, visit_type: true },
+      });
+      for (const tr of dbTreatmentRows) {
+        const key = `${tr.client_id}|${monthKey(tr.occurred_at)}`;
+        const arr = treatmentRowsByClientDate.get(key) ?? [];
+        arr.push({ id: tr.id, visit_type: tr.visit_type });
+        treatmentRowsByClientDate.set(key, arr);
+      }
+    }
     const travelRows: Array<{
       id: string;
       key: string;
@@ -2182,13 +2340,25 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     for (const tr of scratch.pendingTravel) {
       if (!tr.occurredAt) continue;
       if (tr.amount == null) continue;
+      let treatmentId: string | null = tr.treatmentKey ? treatmentIdByKey.get(tr.treatmentKey) ?? null : null;
+      if (!treatmentId && tr.clientRef) {
+        const clientId =
+          tr.clientRef.kind === "existing" ? tr.clientRef.id : clientIdByKey.get(tr.clientRef.tempKey) ?? null;
+        if (clientId) {
+          const candidates = treatmentRowsByClientDate.get(`${clientId}|${monthKey(tr.occurredAt)}`) ?? [];
+          if (candidates.length > 0) {
+            const preferred = candidates.find((c) => c.visit_type === "home") ?? candidates[0];
+            treatmentId = preferred?.id ?? null;
+          }
+        }
+      }
       const travelId = crypto.randomUUID();
       travelRows.push({
         id: travelId,
         key: tr.key,
         household_id: params.householdId,
         job_id: params.jobId,
-        treatment_id: tr.treatmentKey ? treatmentIdByKey.get(tr.treatmentKey) ?? null : null,
+        treatment_id: treatmentId,
         occurred_at: tr.occurredAt,
         amount: tr.amount,
         currency: "ILS",

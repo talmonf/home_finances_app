@@ -20,6 +20,7 @@ export type TravelListRowDto = {
   amount: string | null;
   currency: string;
   linked_receipt_id: string | null;
+  linked_receipt_number: string | null;
 };
 
 type Labels = {
@@ -156,7 +157,18 @@ export function TravelListClient({
               <td className="px-3 py-2 text-slate-300">
                 {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
               </td>
-              <td className="px-3 py-2 text-slate-400">{row.linked_receipt_id ? labels.linked : labels.unlinked}</td>
+              <td className="px-3 py-2 text-slate-400">
+                {row.linked_receipt_id && row.linked_receipt_number ? (
+                  <Link
+                    href={`/dashboard/private-clinic/receipts?receipt=${encodeURIComponent(row.linked_receipt_id)}`}
+                    className="text-sky-400 hover:underline"
+                  >
+                    #{row.linked_receipt_number}
+                  </Link>
+                ) : (
+                  labels.unlinked
+                )}
+              </td>
               <td className="px-3 py-2">
                 <Link
                   href={`${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(row.id)}`}

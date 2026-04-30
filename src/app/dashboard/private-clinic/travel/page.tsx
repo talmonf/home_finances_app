@@ -232,7 +232,7 @@ export default async function TravelPage({
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{tv.entriesCount(rows.length)}</h2>
+          <h2 className="text-lg font-medium text-slate-200">{tv.travelReports}</h2>
           <TravelAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={tv.addTravel} />
         </div>
         {rows.length === 0 ? (
@@ -246,7 +246,7 @@ export default async function TravelPage({
             obfuscate={obfuscate}
             labels={{
               when: c.when,
-              type: c.type,
+              type: tv.scope,
               job: c.job,
               amount: c.amount,
               receipt: tv.receipt,
