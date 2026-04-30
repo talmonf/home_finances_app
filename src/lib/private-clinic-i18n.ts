@@ -848,13 +848,14 @@ export function privateClinicTravel(lang: UiLanguage) {
     ),
     entries: p("Entries", "רשומות"),
     filters: p("Filters", "סינון"),
-    filterBankLink: p("Bank transaction", "תנועת בנק"),
-    bankLinkAll: p("All", "הכל"),
-    bankLinkLinked: p("Linked", "מקושר"),
-    bankLinkUnlinked: p("Not linked", "לא מקושר"),
+    filterBankLink: p("Linked to receipt", "מקושר לקבלה"),
+    receivedAll: p("All", "הכל"),
+    receivedLinked: p("Yes", "כן"),
+    receivedUnlinked: p("No", "לא"),
     entriesCount: (n: number) => p(`Entries (${n})`, `רשומות (${n})`),
     scopeTreatment: p("Treatment:", "טיפול:"),
     scopeJob: p("Job:", "משרה:"),
+    receipt: p("Receipt", "קבלה"),
     linkedTx: p("Linked transaction", "תנועה מקושרת"),
   };
 }

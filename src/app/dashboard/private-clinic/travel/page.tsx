@@ -198,9 +198,9 @@ export default async function TravelPage({
               defaultValue={filters.received}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">{tv.bankLinkAll}</option>
-              <option value="linked">{tv.bankLinkLinked}</option>
-              <option value="unlinked">{tv.bankLinkUnlinked}</option>
+              <option value="all">{tv.receivedAll}</option>
+              <option value="linked">{tv.receivedLinked}</option>
+              <option value="unlinked">{tv.receivedUnlinked}</option>
             </select>
           </div>
           <div>
@@ -249,12 +249,12 @@ export default async function TravelPage({
               type: c.type,
               job: c.job,
               amount: c.amount,
-              linkedTx: tv.linkedTx,
+              receipt: tv.receipt,
               edit: c.edit,
               scopeTreatment: tv.scopeTreatment,
               scopeJob: tv.scopeJob,
-              linked: tv.bankLinkLinked,
-              unlinked: tv.bankLinkUnlinked,
+              linked: tv.receivedLinked,
+              unlinked: tv.receivedUnlinked,
               noDate: c.noDate,
             }}
           />

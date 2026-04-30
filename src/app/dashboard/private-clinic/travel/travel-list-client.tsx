@@ -19,7 +19,7 @@ export type TravelListRowDto = {
   job_label: string | null;
   amount: string | null;
   currency: string;
-  linked_transaction_id: string | null;
+  linked_receipt_id: string | null;
 };
 
 type Labels = {
@@ -27,7 +27,7 @@ type Labels = {
   type: string;
   job: string;
   amount: string;
-  linkedTx: string;
+  receipt: string;
   edit: string;
   scopeTreatment: string;
   scopeJob: string;
@@ -135,7 +135,7 @@ export function TravelListClient({
                 {sortArrow("amount")}
               </button>
             </th>
-            <th className="px-3 py-2 text-slate-300">{labels.linkedTx}</th>
+            <th className="px-3 py-2 text-slate-300">{labels.receipt}</th>
             <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
           </tr>
         </thead>
@@ -156,7 +156,7 @@ export function TravelListClient({
               <td className="px-3 py-2 text-slate-300">
                 {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
               </td>
-              <td className="px-3 py-2 text-slate-400">{row.linked_transaction_id ? labels.linked : labels.unlinked}</td>
+              <td className="px-3 py-2 text-slate-400">{row.linked_receipt_id ? labels.linked : labels.unlinked}</td>
               <td className="px-3 py-2">
                 <Link
                   href={`${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(row.id)}`}

@@ -80,7 +80,15 @@ export async function loadTravelRows(params: {
     },
     orderBy: { created_at: "desc" },
     take,
-    include: { job: true, treatment: { include: { client: true, job: true } } },
+    include: {
+      job: true,
+      treatment: { include: { client: true, job: true } },
+      receipt_allocations: {
+        select: { receipt_id: true },
+        take: 1,
+        orderBy: { created_at: "desc" },
+      },
+    },
   });
 
   return entries.map((entry) => ({
@@ -96,6 +104,6 @@ export async function loadTravelRows(params: {
         : null,
     amount: entry.amount?.toString() ?? null,
     currency: entry.currency,
-    linked_transaction_id: entry.linked_transaction_id ?? null,
+    linked_receipt_id: entry.receipt_allocations[0]?.receipt_id ?? null,
   }));
 }
