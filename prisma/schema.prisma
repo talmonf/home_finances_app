@@ -93,6 +93,7 @@ model households {
   therapy_appointment_participants  therapy_appointment_participants[]
   therapy_consultation_types        therapy_consultation_types[]
   therapy_consultations             therapy_consultations[]
+  therapy_consultation_participants  therapy_consultation_participants[]
   therapy_travel_entries            therapy_travel_entries[]
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
   therapy_treatment_attachments      therapy_treatment_attachments[]

@@ -4,6 +4,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -82,28 +83,41 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isPending = pendingHref === normalizedHref;
+    const isTargetPendingNavigation = pendingHref === normalizedHref;
+    const showNavSpinner = isTargetPendingNavigation;
 
     return (
       <Link
         key={item.href}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        aria-busy={isPending}
+        aria-busy={showNavSpinner}
         onClick={(event) => {
           setIsMoreOpen(false);
-          if (isActive || isPending || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+          if (
+            isActive ||
+            isTargetPendingNavigation ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey ||
+            event.button !== 0
+          ) {
             return;
           }
           event.preventDefault();
-          setPendingHref(normalizedHref);
+          // Next can update pathname before a batched re-render clears this; flushing ensures the
+          // pending state paints at least once (standard in-app spinner in the pill).
+          flushSync(() => {
+            setPendingHref(normalizedHref);
+          });
           startTransition(() => {
             router.push(item.href);
           });
         }}
         className={linkClassName(isActive)}
       >
-        {isPending ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}
+        {showNavSpinner ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5 shrink-0 text-current" /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span
