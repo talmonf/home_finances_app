@@ -82,7 +82,7 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isTargetPendingNavigation = pendingHref === normalizedHref && !isActive;
+    const isTargetPendingNavigation = pendingHref === normalizedHref;
     const showNavSpinner = isTargetPendingNavigation;
 
     return (
