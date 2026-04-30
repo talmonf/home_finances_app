@@ -36,21 +36,11 @@ export default function PrivateClinicNavClient({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
-  const navDelayTimerRef = useRef<number | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
     setPendingHref(null);
   }, [normalizedPathname]);
-
-  useEffect(
-    () => () => {
-      if (navDelayTimerRef.current != null) {
-        window.clearTimeout(navDelayTimerRef.current);
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -116,15 +106,9 @@ export default function PrivateClinicNavClient({
           }
           event.preventDefault();
           setPendingHref(normalizedHref);
-          if (navDelayTimerRef.current != null) {
-            window.clearTimeout(navDelayTimerRef.current);
-          }
-          // Keep spinner visible briefly so it is perceptible before the route transition.
-          navDelayTimerRef.current = window.setTimeout(() => {
-            startTransition(() => {
-              router.push(item.href);
-            });
-          }, 180);
+          startTransition(() => {
+            router.push(item.href);
+          });
         }}
         className={linkClassName(isActive)}
       >

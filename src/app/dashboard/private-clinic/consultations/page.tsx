@@ -86,7 +86,7 @@ export default async function ConsultationsPage({
   if (filters.dir !== "desc") listParams.set("dir", filters.dir);
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
 
-  const [jobs, types, clients, rows, transactionOptions] = await Promise.all([
+  const [jobs, types, clients, rows] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -106,19 +106,22 @@ export default async function ConsultationsPage({
       filters,
       take: 150,
     }),
-    prisma.transactions.findMany({
-      where: { household_id: householdId },
-      orderBy: { transaction_date: "desc" },
-      take: 200,
-      select: {
-        id: true,
-        transaction_date: true,
-        amount: true,
-        description: true,
-        transaction_direction: true,
-      },
-    }),
   ]);
+  const transactionOptions =
+    modalMode === "new" || modalMode === "edit"
+      ? await prisma.transactions.findMany({
+          where: { household_id: householdId },
+          orderBy: { transaction_date: "desc" },
+          take: 200,
+          select: {
+            id: true,
+            transaction_date: true,
+            amount: true,
+            description: true,
+            transaction_direction: true,
+          },
+        })
+      : [];
   const filteredReceipt = filters.receipt
     ? await prisma.therapy_receipts.findFirst({
         where: { id: filters.receipt, household_id: householdId, job: jobScope },
