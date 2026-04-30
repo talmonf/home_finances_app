@@ -3811,26 +3811,32 @@ export async function createTherapyConsultation(formData: FormData) {
 export async function updateTherapyConsultation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?updated=1`;
+  const fallbackError = `${BASE}/consultations`;
   const id = (formData.get("id") as string)?.trim() || "";
   const row = await prisma.therapy_consultations.findFirst({
     where: { id, household_id: householdId },
   });
-  if (!row) redirect(`${BASE}/consultations?error=notfound`);
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) redirect(`${BASE}/consultations?error=notfound`);
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  }
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const consultation_type_id = (formData.get("consultation_type_id") as string)?.trim() || "";
   const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
   if (!job_id || !consultation_type_id || !occurred_at_raw) {
-    redirect(`${BASE}/consultations?error=missing`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
   }
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/consultations?error=job`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
   if (!(await assertConsultationType(householdId, consultation_type_id))) {
-    redirect(`${BASE}/consultations?error=type`);
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
   }
 
   const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirect(`${BASE}/consultations?error=date`);
+  if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
   const incomeStr = parseMoney((formData.get("income_amount") as string) || null);
   const costStr = parseMoney((formData.get("cost_amount") as string) || null);
@@ -3861,12 +3867,13 @@ export async function updateTherapyConsultation(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/consultations?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 export async function deleteTherapyConsultation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?updated=1`;
   const id = (formData.get("id") as string)?.trim() || "";
   if (!id) return;
   const row = await prisma.therapy_consultations.findFirst({
@@ -3879,7 +3886,7 @@ export async function deleteTherapyConsultation(formData: FormData) {
     where: { id, household_id: householdId },
   });
   revalidatePath(`${BASE}/consultations`);
-  redirect(`${BASE}/consultations?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
 // --- Travel ---

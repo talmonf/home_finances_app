@@ -1,5 +1,14 @@
 import { getCurrentHouseholdDateDisplayFormat, prisma } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+
+export type TherapyTransactionOption = {
+  id: string;
+  transaction_date: Date;
+  amount: string;
+  description: string | null;
+  transaction_direction: "credit" | "debit";
+};
 
 export async function TherapyTransactionLinkSelect({
   name,
@@ -8,6 +17,8 @@ export async function TherapyTransactionLinkSelect({
   label,
   hint,
   noneOptionLabel,
+  transactionOptions,
+  dateDisplayFormat,
 }: {
   name: string;
   householdId: string;
@@ -18,20 +29,26 @@ export async function TherapyTransactionLinkSelect({
   hint?: string;
   /** Override first `<option>` text (e.g. Hebrew) */
   noneOptionLabel?: string;
+  /** Optional preloaded transaction options to avoid repeated DB queries. */
+  transactionOptions?: TherapyTransactionOption[];
+  /** Optional preloaded household date format to avoid repeated lookups. */
+  dateDisplayFormat?: HouseholdDateDisplayFormat;
 }) {
-  const dateFmt = await getCurrentHouseholdDateDisplayFormat();
-  const txs = await prisma.transactions.findMany({
-    where: { household_id: householdId },
-    orderBy: { transaction_date: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      transaction_date: true,
-      amount: true,
-      description: true,
-      transaction_direction: true,
-    },
-  });
+  const dateFmt = dateDisplayFormat ?? (await getCurrentHouseholdDateDisplayFormat());
+  const txs =
+    transactionOptions ??
+    (await prisma.transactions.findMany({
+      where: { household_id: householdId },
+      orderBy: { transaction_date: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        transaction_date: true,
+        amount: true,
+        description: true,
+        transaction_direction: true,
+      },
+    }));
 
   return (
     <div className="space-y-1">
