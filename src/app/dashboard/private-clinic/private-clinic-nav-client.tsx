@@ -39,15 +39,6 @@ export default function PrivateClinicNavClient({
   const [isNavigating, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!pendingHref) return;
-    // Keep spinner visible until transition actually settles on the destination.
-    if (isNavigating) return;
-    if (normalizePathname(pendingHref) === normalizedPathname) {
-      setPendingHref(null);
-    }
-  }, [isNavigating, normalizedPathname, pendingHref]);
-
-  useEffect(() => {
     if (!isMoreOpen) return;
 
     const onPointerDown = (event: PointerEvent) => {
@@ -78,6 +69,10 @@ export default function PrivateClinicNavClient({
   const hasActiveMoreItem = moreItems.some(
     (item) => normalizedPathname === normalizePathname(item.href),
   );
+  const consultationsHref = normalizePathname("/dashboard/private-clinic/consultations");
+  const consultationsPending = pendingHref === consultationsHref;
+  const consultationsActive = normalizedPathname === consultationsHref;
+  const consultationsSpinner = consultationsPending && !consultationsActive;
 
   const linkClassName = (isActive: boolean) =>
     isActive
@@ -160,6 +155,11 @@ export default function PrivateClinicNavClient({
           ) : null}
         </div>
       ) : null}
+      <div className="w-full pt-1 text-[10px] text-amber-300/90">
+        DEBUG nav: path={normalizedPathname} | pendingHref={pendingHref ?? "null"} | consultationsActive=
+        {String(consultationsActive)} | consultationsPending={String(consultationsPending)} | consultationsSpinner=
+        {String(consultationsSpinner)}
+      </div>
     </nav>
   );
 }
