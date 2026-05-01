@@ -3,6 +3,7 @@
 import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type PrivateClinicNavClientItem = {
@@ -107,7 +108,11 @@ export default function PrivateClinicNavClient({
           }
 
           event.preventDefault();
-          setPendingHref(normalizedHref);
+          // Same pending logic as other nav links; consultations needs a synchronous paint here
+          // because pathname can catch up before a batched `setPendingHref` renders.
+          flushSync(() => {
+            setPendingHref(normalizedHref);
+          });
           startTransition(() => {
             router.push(item.href);
           });
