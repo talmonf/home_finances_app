@@ -13,6 +13,7 @@ import {
   deleteTherapyConsultation,
   updateTherapyConsultation,
 } from "../actions";
+import type { TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import {
@@ -28,6 +29,11 @@ import { ConsultationsAddButton } from "./consultations-add-button";
 
 export const dynamic = "force-dynamic";
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
+
+/** Prisma row before serializing `amount` to string for `TherapyTransactionOption`. */
+type ConsultationModalTxnRow = Omit<TherapyTransactionOption, "amount"> & {
+  amount: { toString(): string };
+};
 
 export default async function ConsultationsPage({
   searchParams,
@@ -105,13 +111,7 @@ export default async function ConsultationsPage({
   let consultationTypes: Array<{ id: string; name: string; name_he: string | null }> = [];
   let modalClients: Array<{ id: string; first_name: string; last_name: string | null; is_active: boolean }> = [];
   /** Modal-only pick list (narrow shape — not full `transactions` rows). */
-  let transactionOptions: Array<{
-    id: string;
-    transaction_date: Date;
-    amount: { toString(): string };
-    description: string | null;
-    transaction_direction: string;
-  }> = [];
+  let transactionOptions: ConsultationModalTxnRow[] = [];
   if (modalMode === "new" || modalMode === "edit") {
     const [typesR, clientsR, txRows] = await Promise.all([
       prisma.therapy_consultation_types.findMany({
@@ -141,7 +141,7 @@ export default async function ConsultationsPage({
     ]);
     consultationTypes = typesR;
     modalClients = clientsR;
-    transactionOptions = txRows as typeof transactionOptions;
+    transactionOptions = txRows as ConsultationModalTxnRow[];
   }
   const filteredReceipt = filters.receipt
     ? await prisma.therapy_receipts.findFirst({
