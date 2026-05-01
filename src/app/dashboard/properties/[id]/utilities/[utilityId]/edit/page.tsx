@@ -119,17 +119,6 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
           </div>
 
           <div>
-            <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">Renewal date</label>
-            <input
-              id="renewal_date"
-              name="renewal_date"
-              type="date"
-              defaultValue={utility.renewal_date ? utility.renewal_date.toISOString().slice(0, 10) : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-
-          <div>
             <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
               Start date (optional)
             </label>
@@ -138,6 +127,17 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
               name="start_date"
               type="date"
               defaultValue={utility.start_date ? utility.start_date.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">Renewal date</label>
+            <input
+              id="renewal_date"
+              name="renewal_date"
+              type="date"
+              defaultValue={utility.renewal_date ? utility.renewal_date.toISOString().slice(0, 10) : ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

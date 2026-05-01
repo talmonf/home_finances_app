@@ -39,6 +39,15 @@ function normalizeExternalUrl(raw: string | null | undefined): string | null {
   return `https://${t}`;
 }
 
+function websiteTableLabel(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  const withoutProtocol = t.replace(/^https?:\/\//i, "");
+  const normalized = withoutProtocol.replace(/\/+$/, "");
+  if (!normalized) return null;
+  return normalized.length < 30 ? normalized : null;
+}
+
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ error?: string; updated?: string; created?: string; modal?: string }>;
@@ -240,11 +249,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סוג" : "Type"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "ספק" : "Provider"}</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "התחלה" : "Start"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אתר" : "Website"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "טלפון" : "Phone"}</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אימייל" : "Email"}</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Facebook</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "הערות" : "Notes"}</th>
@@ -254,16 +260,13 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                 <tbody>
                   {property.utilities.map((u) => {
                     const webHref = normalizeExternalUrl(u.website_url);
-                    const fbHref = normalizeExternalUrl(u.facebook_url);
+                    const webLabel = websiteTableLabel(u.website_url);
                     return (
                       <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                         <td className="px-4 py-3 text-slate-300">
                           {utilityLabels[u.utility_type] ?? u.utility_type}
                         </td>
                         <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
-                        <td className="px-4 py-3 text-slate-300">
-                          {u.start_date ? formatHouseholdDate(u.start_date, dateDisplayFormat) : "—"}
-                        </td>
                         <td className="px-4 py-3 text-slate-300">
                           {webHref ? (
                             <a
@@ -272,7 +275,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                               rel="noopener noreferrer"
                               className="font-medium text-sky-400 hover:text-sky-300"
                             >
-                              {isHebrew ? "קישור" : "Link"}
+                              {webLabel ?? (isHebrew ? "קישור" : "Link")}
                             </a>
                           ) : (
                             "—"
@@ -282,29 +285,6 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                           {u.contact_phone ? (
                             <a href={`tel:${u.contact_phone.replace(/\s/g, "")}`} className="text-sky-400 hover:text-sky-300">
                               {u.contact_phone}
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-300">
-                          {u.contact_email ? (
-                            <a href={`mailto:${u.contact_email}`} className="text-sky-400 hover:text-sky-300">
-                              {u.contact_email}
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-300">
-                          {fbHref ? (
-                            <a
-                              href={fbHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {isHebrew ? "קישור" : "Link"}
                             </a>
                           ) : (
                             "—"
