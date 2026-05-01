@@ -45,18 +45,20 @@ export default function PrivateClinicNavClient({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
-  const [, startTransition] = useTransition();
+  const [isTransitionPending, startTransition] = useTransition();
 
+  /** Clear pending when we've arrived, or when pathname can't still be heading to `pendingHref` (abort / other nav). */
   useEffect(() => {
     if (!pendingHref) return;
     const pendingNorm = normalizeHrefPath(pendingHref);
-    if (pendingNorm !== normalizedPathname) {
+    if (pendingNorm === normalizedPathname) {
+      if (pendingNorm === CONSULTATIONS_NAV_PATH) return;
       queueMicrotask(() => setPendingHref(null));
       return;
     }
-    if (pendingNorm === CONSULTATIONS_NAV_PATH) return;
+    if (isTransitionPending) return;
     queueMicrotask(() => setPendingHref(null));
-  }, [normalizedPathname, pendingHref]);
+  }, [normalizedPathname, pendingHref, isTransitionPending]);
 
   useEffect(() => {
     const onConsultationsReady = () => {
