@@ -25,6 +25,12 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
+/** Same as HouseholdDashboardPanel: pathname omits querystring/hash — normalize links to path-only. */
+function normalizeHrefPath(href: string): string {
+  const pathOnly = href.split("?")[0]?.split("#")[0] ?? href;
+  return normalizePathname(pathOnly);
+}
+
 export default function PrivateClinicNavClient({
   navAriaLabel,
   moreMenuLabel,
@@ -37,14 +43,6 @@ export default function PrivateClinicNavClient({
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    if (!pendingHref) return;
-    // URL caught up with the tab we navigated to — stop showing the pending spinner.
-    if (normalizePathname(pendingHref) === normalizedPathname) {
-      setPendingHref(null);
-    }
-  }, [normalizedPathname, pendingHref]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -75,7 +73,7 @@ export default function PrivateClinicNavClient({
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
   const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
   const hasActiveMoreItem = moreItems.some(
-    (item) => normalizedPathname === normalizePathname(item.href),
+    (item) => normalizedPathname === normalizeHrefPath(item.href),
   );
 
   const linkClassName = (isActive: boolean) =>
@@ -84,22 +82,21 @@ export default function PrivateClinicNavClient({
       : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
 
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
-    const normalizedHref = normalizePathname(item.href);
+    const normalizedHref = normalizeHrefPath(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isTargetPendingNavigation = pendingHref === normalizedHref;
-    const showNavSpinner = isTargetPendingNavigation;
+    const isPending = pendingHref === normalizedHref && !isActive;
 
     return (
       <Link
         key={item.href}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        aria-busy={showNavSpinner}
+        aria-busy={isPending}
         onClick={(event) => {
           setIsMoreOpen(false);
           if (
             isActive ||
-            isTargetPendingNavigation ||
+            isPending ||
             event.metaKey ||
             event.ctrlKey ||
             event.shiftKey ||
@@ -109,7 +106,6 @@ export default function PrivateClinicNavClient({
             return;
           }
 
-          // Match the same click->pending->push flow used by other working nav buttons.
           event.preventDefault();
           setPendingHref(normalizedHref);
           startTransition(() => {
@@ -118,7 +114,7 @@ export default function PrivateClinicNavClient({
         }}
         className={linkClassName(isActive)}
       >
-        {showNavSpinner ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5 shrink-0 text-current" /> : null}
+        {isPending ? <LoadingSpinner /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span
