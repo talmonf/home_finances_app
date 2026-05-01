@@ -47,12 +47,12 @@ export default function PrivateClinicNavClient({
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTransitionPending, startTransition] = useTransition();
 
-  /** Clear pending when we've arrived, or when pathname can't still be heading to `pendingHref` (abort / other nav). */
+  /** Keep pill spinner until transition settles; consultations still clears on ready event. */
   useEffect(() => {
     if (!pendingHref) return;
     const pendingNorm = normalizeHrefPath(pendingHref);
     if (pendingNorm === normalizedPathname) {
-      if (pendingNorm === CONSULTATIONS_NAV_PATH) return;
+      if (pendingNorm === CONSULTATIONS_NAV_PATH || isTransitionPending) return;
       queueMicrotask(() => setPendingHref(null));
       return;
     }
@@ -119,11 +119,7 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizeHrefPath(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isPending = pendingHref === normalizedHref && !isActive;
-    const showTabSpinner =
-      item.key === "consultations"
-        ? pendingHref === normalizedHref
-        : pendingHref === normalizedHref && !isActive;
+    const showTabSpinner = pendingHref === normalizedHref;
 
     return (
       <Link
@@ -135,7 +131,7 @@ export default function PrivateClinicNavClient({
           setIsMoreOpen(false);
           if (
             isActive ||
-            isPending ||
+            showTabSpinner ||
             event.metaKey ||
             event.ctrlKey ||
             event.shiftKey ||
