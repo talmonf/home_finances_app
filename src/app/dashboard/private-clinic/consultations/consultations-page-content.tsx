@@ -26,6 +26,7 @@ import {
 import { ConsultationsListClient } from "./consultations-list-client";
 import { ConsultationModalForm } from "./consultation-modal-form";
 import { ConsultationsAddButton } from "./consultations-add-button";
+import { ConsultationsNavReadyReporter } from "./consultations-nav-ready-reporter";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
 
@@ -379,6 +380,7 @@ export async function ConsultationsPageContent({
           }}
         />
       ) : null}
+      <ConsultationsNavReadyReporter />
     </div>
   );
 }

@@ -1,9 +1,5 @@
 import { Suspense } from "react";
-import ConsultationsLoadingFallback from "./consultations-loading-fallback";
-import {
-  ConsultationsPageContent,
-  type ConsultationsPageSearchParams,
-} from "./consultations-page-content";
+import { ConsultationsPageContent, type ConsultationsPageSearchParams } from "./consultations-page-content";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +9,7 @@ export default function ConsultationsPage({
   searchParams?: ConsultationsPageSearchParams;
 }) {
   return (
-    <Suspense fallback={<ConsultationsLoadingFallback />}>
+    <Suspense fallback={null}>
       <ConsultationsPageContent searchParams={searchParams} />
     </Suspense>
   );

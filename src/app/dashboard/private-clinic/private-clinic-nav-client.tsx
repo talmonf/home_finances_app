@@ -1,6 +1,7 @@
 "use client";
 
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT } from "./consultations/consultations-nav-ready-event";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -31,6 +32,8 @@ function normalizeHrefPath(href: string): string {
   return normalizePathname(pathOnly);
 }
 
+const CONSULTATIONS_NAV_PATH = normalizeHrefPath("/dashboard/private-clinic/consultations");
+
 export default function PrivateClinicNavClient({
   navAriaLabel,
   moreMenuLabel,
@@ -46,10 +49,33 @@ export default function PrivateClinicNavClient({
 
   useEffect(() => {
     if (!pendingHref) return;
-    if (normalizeHrefPath(pendingHref) === normalizedPathname) {
-      setPendingHref(null);
+    const pendingNorm = normalizeHrefPath(pendingHref);
+    if (pendingNorm !== normalizedPathname) {
+      queueMicrotask(() => setPendingHref(null));
+      return;
     }
+    if (pendingNorm === CONSULTATIONS_NAV_PATH) return;
+    queueMicrotask(() => setPendingHref(null));
   }, [normalizedPathname, pendingHref]);
+
+  useEffect(() => {
+    const onConsultationsReady = () => {
+      setPendingHref((prev) => {
+        if (prev != null && normalizeHrefPath(prev) === CONSULTATIONS_NAV_PATH) return null;
+        return prev;
+      });
+    };
+    window.addEventListener(PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT, onConsultationsReady);
+    return () => {
+      window.removeEventListener(PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT, onConsultationsReady);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingHref || normalizeHrefPath(pendingHref) !== CONSULTATIONS_NAV_PATH) return;
+    const id = window.setTimeout(() => setPendingHref(null), 120_000);
+    return () => window.clearTimeout(id);
+  }, [pendingHref]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -92,13 +118,17 @@ export default function PrivateClinicNavClient({
     const normalizedHref = normalizeHrefPath(item.href);
     const isActive = normalizedPathname === normalizedHref;
     const isPending = pendingHref === normalizedHref && !isActive;
+    const showTabSpinner =
+      item.key === "consultations"
+        ? pendingHref === normalizedHref
+        : pendingHref === normalizedHref && !isActive;
 
     return (
       <Link
         key={item.href}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        aria-busy={isPending}
+        aria-busy={showTabSpinner}
         onClick={(event) => {
           setIsMoreOpen(false);
           if (
@@ -121,7 +151,7 @@ export default function PrivateClinicNavClient({
         }}
         className={linkClassName(isActive)}
       >
-        {isPending ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5 shrink-0 text-current" /> : null}
+        {showTabSpinner ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5 shrink-0 text-current" /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span
