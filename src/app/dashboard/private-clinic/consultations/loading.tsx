@@ -1,16 +1,20 @@
+import { getCurrentUiLanguage } from "@/lib/auth";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
-/** Visible fallback while the consultations server page resolves (nav tab spinner hides as soon as the URL matches). */
-export default function ConsultationsLoading() {
+export const dynamic = "force-dynamic";
+
+/** Top-aligned like the real page intro — avoids a lone spinner in the middle of the viewport. */
+export default async function ConsultationsLoading() {
+  const uiLanguage = await getCurrentUiLanguage();
+  const message = uiLanguage === "he" ? "טוען ייעוצים…" : "Loading consultations…";
+  const aria = uiLanguage === "he" ? "טוען ייעוצים" : "Loading consultations";
+
   return (
-    <div
-      className="flex min-h-[40vh] items-center justify-center text-slate-400"
-      role="status"
-      aria-live="polite"
-      aria-label="Loading consultations"
-    >
-      <LoadingSpinner className="h-8 w-8 text-sky-400" />
-      <span className="sr-only">Loading consultations…</span>
+    <div className="space-y-6 sm:space-y-8" role="status" aria-live="polite" aria-label={aria}>
+      <p className="flex items-center gap-2 text-sm text-slate-400">
+        <LoadingSpinner className="h-4 w-4 shrink-0 text-sky-400" />
+        <span>{message}</span>
+      </p>
     </div>
   );
 }
