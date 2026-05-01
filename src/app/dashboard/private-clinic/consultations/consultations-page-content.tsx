@@ -26,7 +26,7 @@ import {
 import { ConsultationsListClient } from "./consultations-list-client";
 import { ConsultationModalForm } from "./consultation-modal-form";
 import { ConsultationsAddButton } from "./consultations-add-button";
-import { ConsultationsNavReadyReporter } from "./consultations-nav-ready-reporter";
+import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
 
@@ -380,7 +380,7 @@ export async function ConsultationsPageContent({
           }}
         />
       ) : null}
-      <ConsultationsNavReadyReporter />
+      <PrivateClinicNavSegmentReporter path="/dashboard/private-clinic/consultations" />
     </div>
   );
 }

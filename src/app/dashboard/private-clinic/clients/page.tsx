@@ -1,3 +1,4 @@
+import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
 import Link from "next/link";
 import {
   prisma,
@@ -795,6 +796,7 @@ export default async function ClientsPage({
         </div>
       )}
 
+      <PrivateClinicNavSegmentReporter path={CLIENTS_BASE} />
     </div>
   );
 }

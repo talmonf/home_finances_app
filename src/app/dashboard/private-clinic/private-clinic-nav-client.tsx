@@ -1,7 +1,10 @@
 "use client";
 
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT } from "./consultations/consultations-nav-ready-event";
+import {
+  PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT,
+  type PrivateClinicNavSegmentReadyDetail,
+} from "@/lib/private-clinic-nav-segment-ready";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -32,7 +35,11 @@ function normalizeHrefPath(href: string): string {
   return normalizePathname(pathOnly);
 }
 
-const CONSULTATIONS_NAV_PATH = normalizeHrefPath("/dashboard/private-clinic/consultations");
+/** Tab targets where `useTransition` ends before slow RSC has finished — clear pending via segment-ready only. */
+const NAV_CLEAR_PENDING_AFTER_SEGMENT_READY = new Set([
+  normalizeHrefPath("/dashboard/private-clinic/consultations"),
+  normalizeHrefPath("/dashboard/private-clinic/clients"),
+]);
 
 export default function PrivateClinicNavClient({
   navAriaLabel,
@@ -47,12 +54,11 @@ export default function PrivateClinicNavClient({
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTransitionPending, startTransition] = useTransition();
 
-  /** Keep pill spinner until transition settles; consultations still clears on ready event. */
   useEffect(() => {
     if (!pendingHref) return;
     const pendingNorm = normalizeHrefPath(pendingHref);
     if (pendingNorm === normalizedPathname) {
-      if (pendingNorm === CONSULTATIONS_NAV_PATH || isTransitionPending) return;
+      if (NAV_CLEAR_PENDING_AFTER_SEGMENT_READY.has(pendingNorm)) return;
       queueMicrotask(() => setPendingHref(null));
       return;
     }
@@ -61,20 +67,23 @@ export default function PrivateClinicNavClient({
   }, [normalizedPathname, pendingHref, isTransitionPending]);
 
   useEffect(() => {
-    const onConsultationsReady = () => {
+    const onSegmentReady = (e: Event) => {
+      const detail = (e as CustomEvent<PrivateClinicNavSegmentReadyDetail>).detail;
+      if (!detail?.path) return;
+      const arrivedNorm = normalizeHrefPath(detail.path);
       setPendingHref((prev) => {
-        if (prev != null && normalizeHrefPath(prev) === CONSULTATIONS_NAV_PATH) return null;
+        if (prev != null && normalizeHrefPath(prev) === arrivedNorm) return null;
         return prev;
       });
     };
-    window.addEventListener(PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT, onConsultationsReady);
-    return () => {
-      window.removeEventListener(PRIVATE_CLINIC_CONSULTATIONS_NAV_READY_EVENT, onConsultationsReady);
-    };
+    window.addEventListener(PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT, onSegmentReady);
+    return () => window.removeEventListener(PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT, onSegmentReady);
   }, []);
 
   useEffect(() => {
-    if (!pendingHref || normalizeHrefPath(pendingHref) !== CONSULTATIONS_NAV_PATH) return;
+    if (!pendingHref) return;
+    const pn = normalizeHrefPath(pendingHref);
+    if (!NAV_CLEAR_PENDING_AFTER_SEGMENT_READY.has(pn)) return;
     const id = window.setTimeout(() => setPendingHref(null), 120_000);
     return () => window.clearTimeout(id);
   }, [pendingHref]);
