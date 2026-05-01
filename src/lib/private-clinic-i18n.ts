@@ -577,8 +577,8 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importDownloadExample: p("Download example CSV (headers only)", "הורדת קובץ לדוגמה (כותרות בלבד)"),
     importTitle: p("Import treatments workbook", "ייבוא קובץ טיפולים"),
     importInstructions: p(
-      "Upload a workbook, review the preview, then confirm to import. You can cancel, fix the file, and analyze again.",
-      "העלו קובץ, בדקו את התצוגה המקדימה, ואז אשרו לייבוא. אפשר לבטל, לתקן קובץ ולנתח שוב.",
+      "Upload a workbook, review the preview, then confirm to import. Treatment date cells can include time, or you can use a separate time column (e.g. שעה). Naive date-times are interpreted in Asia/Jerusalem.",
+      "העלו קובץ, בדקו את התצוגה המקדימה, ואז אשרו לייבוא. תאי תאריך טיפול יכולים לכלול שעה, או להשתמש בעמודת שעה נפרדת (למשל שעה). תאריך-שעה ללא אזור זמן מפורש מפורש לפי Asia/Jerusalem.",
     ),
     importProfile: p("Import profile", "פרופיל ייבוא"),
     importProfilePrivate: p("Clinic (Tipulim)", "קליניקה (טיפולים)"),
@@ -626,6 +626,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importCreatedCountsTitle: p("Created", "נוצרו"),
     importCreatedClients: p("clients", "לקוחות"),
     importCreatedTreatments: p("treatments", "טיפולים"),
+    importCreatedAppointments: p("appointments", "תורים"),
     importCreatedReceipts: p("receipts", "קבלות"),
     importCreatedAllocations: p("allocations", "שיוכים"),
     importCreatedConsultations: p("consultations", "ייעוצים"),
@@ -650,6 +651,10 @@ export function privateClinicTreatments(lang: UiLanguage) {
     importDebugCommitLinkTitle: p("Commit link diagnostics", "דיאגנוסטיקת קישור בשמירה"),
     importDebugMissingAllocationLinks: p("Missing allocation links", "שיוכי הקצאה חסרים"),
     importDebugMissingMarkPaidLinks: p("Missing mark-paid links", "עדכוני סימון-שולם חסרים"),
+    createCompletedAppointmentsLabel: p(
+      "Also create completed appointments for imported treatments",
+      "ליצור גם תורים שהושלמו עבור הטיפולים המיובאים",
+    ),
   };
 }
 
@@ -765,8 +770,8 @@ export function privateClinicReceipts(lang: UiLanguage) {
     importBackToReceipts: p("Back to receipts", "חזרה לקבלות"),
     importTitleReceipts: p("Import receipts", "ייבוא קבלות"),
     importInstructionsReceipts: p(
-      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Optional columns treatmentDate01, treatmentDate02, … set each session’s treatment date (otherwise the payment date is used). If several treatment dates are filled on one row, the amount is split evenly across those sessions. Enter your usual session fee; if a row amount is at most 10% above that fee (or lower), treatments are created and linked. Larger amounts import the receipt only — create treatments manually afterward.",
-      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. עמודות אופציונליות treatmentDate01, treatmentDate02, … מגדירות את תאריך כל טיפול (אחרת משתמשים בתאריך התשלום). אם ממלאים כמה תאריכי טיפול באותה שורה, הסכום מתחלק שווה בין המפגשים. הזינו את דמי הסשן המקובלים; אם סכום השורה לכל היותר 10% מעל העלות (או נמוך יותר), ייווצרו טיפולים ויקושרו. סכומים גבוהים יותר יייבאו קבלה בלבד — יש ליצור טיפולים ידנית.",
+      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Optional columns treatmentDate01, treatmentDate02, … set each session’s treatment date, and treatmentTime01, treatmentTime02, … set each session’s time. Date cells may include time directly. Naive date-times are interpreted in Asia/Jerusalem. If several treatment dates are filled on one row, the amount is split evenly across those sessions.",
+      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. עמודות אופציונליות treatmentDate01, treatmentDate02, … מגדירות את תאריך כל טיפול, ועמודות treatmentTime01, treatmentTime02, … מגדירות את השעה לכל טיפול. תאי תאריך יכולים לכלול שעה ישירות. תאריך-שעה ללא אזור זמן מפורש מפורש לפי Asia/Jerusalem. אם ממלאים כמה תאריכי טיפול באותה שורה, הסכום מתחלק שווה בין המפגשים.",
     ),
     usualTreatmentCostLabel: p("Usual treatment cost (per session)", "עלות טיפול מקובלת (למפגש)"),
     usualTreatmentCostHint: p(
@@ -774,6 +779,11 @@ export function privateClinicReceipts(lang: UiLanguage) {
       "מושווה לסכום כל קבלה: ייווצר טיפול אוטומטית כאשר הסכום ≤ ערך זה × 110%.",
     ),
     saveUsualTreatmentCostDefault: p("Save as household default for next time", "שמירה כברירת מחדל לבית"),
+    importCreatedAppointments: p("appointments", "תורים"),
+    createCompletedAppointmentsLabel: p(
+      "Also create completed appointments for imported treatments",
+      "ליצור גם תורים שהושלמו עבור הטיפולים המיובאים",
+    ),
     importReceiptsNeedingManualTreatment: p(
       "Receipts without auto-treatment (add treatments manually)",
       "קבלות ללא טיפול אוטומטי (הוסיפו טיפולים ידנית)",

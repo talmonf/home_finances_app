@@ -99,6 +99,87 @@ test("receipts-only import splits amount across treatmentDate01 and treatmentDat
   assert.ok(Math.abs(sum - 100.01) < 0.001);
 });
 
+test("receipts-only import supports treatmentTime01 and datetime text in treatment dates", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  const rows = [
+    {
+      "Payment Date": "2026-04-01 10:15",
+      Client: "Dana C",
+      Amount: "120.00",
+      "Receipt #": "R-2B",
+      Notes: "",
+      "Payment method": "cash",
+      treatmentDate01: "2026-04-02",
+      treatmentTime01: "14:30",
+      treatmentDate02: "2026-04-03 16:45",
+    },
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Sheet1");
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "home",
+      usualTreatmentCost: "120.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingTreatments.size, 2);
+  const occurredAtHours = [...scratch.pendingTreatments.values()]
+    .map((x) => x.occurredAt.getUTCHours())
+    .sort((a, b) => a - b);
+  assert.deepEqual(occurredAtHours, [11, 13]);
+  assert.equal(scratch.pendingReceipts[0]?.allocations.length, 2);
+});
+
+test("receipts-only import keeps time from Excel serial fractions", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  const rows = [
+    {
+      "Payment Date": 46000.5,
+      Client: "Dana C",
+      Amount: "90.00",
+      "Receipt #": "R-serial-time",
+      Notes: "",
+      "Payment method": "cash",
+      treatmentDate01: 46001.75,
+    },
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Sheet1");
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "90.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  const treatment = [...scratch.pendingTreatments.values()][0]!;
+  assert.equal(treatment.occurredAt.getUTCHours(), 18);
+  assert.equal(scratch.pendingReceipts[0]?.issuedAt.getUTCHours(), 12);
+});
+
 test("receipts-only import blocks ambiguous text date when date format preference is auto", async () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
   const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");

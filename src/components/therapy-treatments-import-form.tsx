@@ -38,6 +38,7 @@ type PreviewData = {
   created?: {
     clients: number;
     treatments: number;
+    appointments: number;
     receipts: number;
     allocations: number;
     travel: number;
@@ -156,6 +157,7 @@ export function TherapyTreatmentsImportForm({
     importCreatedClients: string;
     importCreatedAllocations: string;
     importCreatedTreatments: string;
+    importCreatedAppointments?: string;
     importCreatedReceipts: string;
     importCreatedConsultations: string;
     importCreatedTravel: string;
@@ -178,6 +180,7 @@ export function TherapyTreatmentsImportForm({
     usualTreatmentCostHint?: string;
     saveUsualTreatmentCostDefault?: string;
     importReceiptsNeedingManualTreatment?: string;
+    createCompletedAppointmentsLabel?: string;
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -204,6 +207,7 @@ export function TherapyTreatmentsImportForm({
     () => defaultUsualTreatmentCostCurrency?.trim().toUpperCase() ?? "ILS",
   );
   const [saveUsualTreatmentCostDefault, setSaveUsualTreatmentCostDefault] = useState(false);
+  const [createCompletedAppointments, setCreateCompletedAppointments] = useState(false);
 
   function formatDuration(ms: number): string {
     if (!Number.isFinite(ms) || ms < 0) return "0s";
@@ -297,6 +301,9 @@ export function TherapyTreatmentsImportForm({
         fd.append("save_usual_treatment_cost_default", "1");
       }
     }
+    if (createCompletedAppointments) {
+      fd.append("create_completed_appointments", "1");
+    }
     try {
       const res = await fetch("/api/private-clinic/import/tipulim", {
         method: "POST",
@@ -332,7 +339,7 @@ export function TherapyTreatmentsImportForm({
           const created = data.created;
           const durationPart = typeof data.durationMs === "number" ? formatDuration(data.durationMs) : "n/a";
           const details = created
-            ? `${labels.importDetailedMessagePrefix} ${durationPart}. ${labels.importDetailedMessageCreated} ${labels.importCreatedClients}=${created.clients}, ${labels.importCreatedTreatments}=${created.treatments}, ${labels.importCreatedReceipts}=${created.receipts}, ${labels.importCreatedAllocations}=${created.allocations}, ${labels.importCreatedConsultations}=${created.consultations}, ${labels.importCreatedTravel}=${created.travel}, ${labels.importCreatedPrograms}=${created.programs}, consultation allocations=${created.consultationAllocations}, travel allocations=${created.travelAllocations}.`
+            ? `${labels.importDetailedMessagePrefix} ${durationPart}. ${labels.importDetailedMessageCreated} ${labels.importCreatedClients}=${created.clients}, ${labels.importCreatedTreatments}=${created.treatments}, ${(labels.importCreatedAppointments ?? "appointments")}=${created.appointments}, ${labels.importCreatedReceipts}=${created.receipts}, ${labels.importCreatedAllocations}=${created.allocations}, ${labels.importCreatedConsultations}=${created.consultations}, ${labels.importCreatedTravel}=${created.travel}, ${labels.importCreatedPrograms}=${created.programs}, consultation allocations=${created.consultationAllocations}, travel allocations=${created.travelAllocations}.`
             : labels.applyNote;
           setMsg(details);
         }
@@ -535,6 +542,16 @@ export function TherapyTreatmentsImportForm({
             ) : null}
           </>
         ) : null}
+        {labels.createCompletedAppointmentsLabel ? (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-200 md:col-span-2">
+            <input
+              type="checkbox"
+              checked={createCompletedAppointments}
+              onChange={(e) => setCreateCompletedAppointments(e.target.checked)}
+            />
+            {labels.createCompletedAppointmentsLabel}
+          </label>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <button
@@ -692,8 +709,10 @@ export function TherapyTreatmentsImportForm({
               {preview.created && (
                 <p>
                   {labels.importCreatedCountsTitle}: {labels.importCreatedClients}={preview.created.clients},{" "}
-                  {labels.importCreatedTreatments}={preview.created.treatments}, {labels.importCreatedReceipts}=
-                  {preview.created.receipts}, {labels.importCreatedAllocations}={preview.created.allocations},{" "}
+                  {labels.importCreatedTreatments}={preview.created.treatments},{" "}
+                  {(labels.importCreatedAppointments ?? "appointments")}={preview.created.appointments},{" "}
+                  {labels.importCreatedReceipts}={preview.created.receipts}, {labels.importCreatedAllocations}=
+                  {preview.created.allocations},{" "}
                   {labels.importCreatedConsultations}={preview.created.consultations}, {labels.importCreatedTravel}=
                   {preview.created.travel}, {labels.importCreatedPrograms}={preview.created.programs}
                 </p>

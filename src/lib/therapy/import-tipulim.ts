@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/auth";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { getSystemDefaultSessionMinutes, resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
 import * as XLSX from "xlsx";
 
 export type TipulimImportProfile = "tipulim_private" | "tipulim_org_monthly" | "tipulim_receipts_only";
@@ -14,6 +15,7 @@ const RECEIPTS_IMPORT_HEADERS = [
   "Notes",
   "Payment method",
   "treatmentDate01",
+  "treatmentTime01",
 ] as const;
 
 const TIPULIM_PRIVATE_HEADERS = [
@@ -23,6 +25,7 @@ const TIPULIM_PRIVATE_HEADERS = [
   "סכום",
   "מטופל",
   "תאריך",
+  "שעה",
   "סוג ביקור",
   "הערות",
   "דרך תשלום",
@@ -34,6 +37,7 @@ const TIPULIM_ORG_MONTHLY_HEADERS = [
   "מטופל",
   "סכום",
   "תאריך",
+  "שעה",
   "קבלה",
   "תאריך תשלום",
   "דרך תשלום",
@@ -224,6 +228,7 @@ export type TipulimCommitResult = TipulimAnalyzeResult & {
   created: {
     clients: number;
     treatments: number;
+    appointments: number;
     receipts: number;
     allocations: number;
     consultationAllocations: number;
@@ -247,6 +252,8 @@ export type TipulimAnalyzeParams = {
   usualTreatmentCost?: string | null;
   /** Date parsing preference for ambiguous numeric text dates (receipt import). */
   dateFormatPreference?: TipulimDateFormatPreference | null;
+  /** Create completed appointments linked to newly created imported treatments. */
+  createCompletedAppointments?: boolean;
 };
 
 function sheetRows(workbook: XLSX.WorkBook, sheetName?: string | null): Row[] {
@@ -339,12 +346,36 @@ function collectReceiptTreatmentDateColumnEntries(
   return entries;
 }
 
+/** Ordered treatment-time columns: `treatmentTime01`, `Treatment Time 02`, `treatment_time_3`, etc. */
+function collectReceiptTreatmentTimeColumnEntries(
+  row: Row,
+): Array<{ order: number; label: string; cell: unknown }> {
+  const entries: Array<{ order: number; label: string; cell: unknown }> = [];
+  for (const k of Object.keys(row)) {
+    const compact = norm(String(k))
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/_/g, "");
+    const m = compact.match(/^treatmenttime(\d+)$/);
+    if (!m) continue;
+    const order = parseInt(m[1]!, 10);
+    if (!Number.isFinite(order) || order < 1) continue;
+    const cell = row[k];
+    if (cell === undefined || cell === null || String(cell).trim() === "") continue;
+    const label = `treatmentTime${String(order).padStart(2, "0")}`;
+    entries.push({ order, label, cell });
+  }
+  entries.sort((a, b) => a.order - b.order);
+  return entries;
+}
+
 /** Excel 1900 date system (SheetJS / Excel): whole days since 1899-12-30 → UTC midnight for that calendar day. */
 function excelSerialToUtcDate(serial: number): Date | null {
   if (!Number.isFinite(serial)) return null;
   const whole = Math.floor(serial);
   if (whole < 1 || whole > 1000000) return null;
-  const ms = (whole - 25569) * 86400 * 1000;
+  const fraction = serial - whole;
+  const ms = (whole - 25569) * 86400 * 1000 + Math.round(fraction * 86400 * 1000);
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return null;
   const y = d.getUTCFullYear();
@@ -352,25 +383,159 @@ function excelSerialToUtcDate(serial: number): Date | null {
   return d;
 }
 
+const IMPORT_TIME_ZONE = "Asia/Jerusalem";
+
+function parseHms(raw: string): { hour: number; minute: number; second: number } | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const hour = Number(m[1]);
+  const minute = Number(m[2]);
+  const second = Number(m[3] ?? "0");
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    !Number.isInteger(second) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+  return { hour, minute, second };
+}
+
+function timePartsFromExcelFraction(serial: number): { hour: number; minute: number; second: number } | null {
+  if (!Number.isFinite(serial)) return null;
+  const frac = serial - Math.floor(serial);
+  if (frac < 0 || frac >= 1) return null;
+  const totalSeconds = Math.round(frac * 86400);
+  const normalized = ((totalSeconds % 86400) + 86400) % 86400;
+  const hour = Math.floor(normalized / 3600);
+  const minute = Math.floor((normalized % 3600) / 60);
+  const second = normalized % 60;
+  return { hour, minute, second };
+}
+
+function getTzDateParts(date: Date, timeZone: string): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+} {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const map = new Map(parts.map((p) => [p.type, p.value]));
+  return {
+    year: Number(map.get("year")),
+    month: Number(map.get("month")),
+    day: Number(map.get("day")),
+    hour: Number(map.get("hour")),
+    minute: Number(map.get("minute")),
+    second: Number(map.get("second")),
+  };
+}
+
+function zonedTimeToUtcDate(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timeZone: string,
+): Date | null {
+  if (
+    year < 1980 ||
+    year > 2100 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+  const targetUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guessMs = targetUtcMs;
+  for (let i = 0; i < 2; i += 1) {
+    const guess = new Date(guessMs);
+    const parts = getTzDateParts(guess, timeZone);
+    const asUtcMs = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+    const offsetMs = asUtcMs - guessMs;
+    guessMs = targetUtcMs - offsetMs;
+  }
+  const out = new Date(guessMs);
+  return Number.isNaN(out.getTime()) ? null : out;
+}
+
 function parseDate(raw: string): Date | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
+  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?:[ T]+(\d{1,2}:\d{2}(?::\d{2})?))?$/);
   if (m) {
     const day = parseInt(m[1]!, 10);
     const month = parseInt(m[2]!, 10) - 1;
     let year = parseInt(m[3]!, 10);
     if (year < 100) year += year >= 70 ? 1900 : 2000;
-    const dt = new Date(Date.UTC(year, month, day));
-    if (!Number.isNaN(dt.getTime())) return dt;
+    if (!m[4]) {
+      const dt = new Date(Date.UTC(year, month, day));
+      if (!Number.isNaN(dt.getTime())) return dt;
+    } else {
+      const time = parseHms(m[4]);
+      if (!time) return null;
+      const dt = zonedTimeToUtcDate(year, month + 1, day, time.hour, time.minute, time.second, IMPORT_TIME_ZONE);
+      if (dt && !Number.isNaN(dt.getTime())) return dt;
+    }
   }
-  const d = new Date(trimmed);
-  if (!Number.isNaN(d.getTime())) return d;
+  const isoWithTime = trimmed.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (isoWithTime) {
+    const year = Number(isoWithTime[1]);
+    const month = Number(isoWithTime[2]);
+    const day = Number(isoWithTime[3]);
+    if (!isoWithTime[4]) {
+      const dt = new Date(Date.UTC(year, month - 1, day));
+      if (!Number.isNaN(dt.getTime())) return dt;
+    } else {
+      const hour = Number(isoWithTime[4]);
+      const minute = Number(isoWithTime[5]);
+      const second = Number(isoWithTime[6] ?? "0");
+      const dt = zonedTimeToUtcDate(year, month, day, hour, minute, second, IMPORT_TIME_ZONE);
+      if (dt) return dt;
+    }
+  }
+  const isoWithZone = trimmed.match(/([zZ]|[+\-]\d{2}:?\d{2})$/);
+  if (isoWithZone) {
+    const d = new Date(trimmed);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
   // CSV sometimes stores Excel serials as plain digits (e.g. "45321").
   if (/^\d{5,7}(\.\d+)?$/.test(trimmed.replace(/,/g, ""))) {
     const n = Number(trimmed.replace(/,/g, ""));
     if (Number.isFinite(n)) {
-      const fromExcel = excelSerialToUtcDate(Math.floor(n));
+      const fromExcel = excelSerialToUtcDate(n);
       if (fromExcel) return fromExcel;
     }
   }
@@ -383,7 +548,7 @@ function parseDateWithPreference(
 ): { date: Date | null; ambiguous: boolean } {
   const trimmed = raw.trim();
   if (!trimmed) return { date: null, ambiguous: false };
-  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
+  const m = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?:[ T]+(\d{1,2}:\d{2}(?::\d{2})?))?$/);
   if (m) {
     const a = parseInt(m[1]!, 10);
     const b = parseInt(m[2]!, 10);
@@ -396,18 +561,32 @@ function parseDateWithPreference(
     if (useDmy || useMdy) {
       const day = useDmy ? a : b;
       const month = (useDmy ? b : a) - 1;
-      const dt = new Date(Date.UTC(year, month, day));
-      if (!Number.isNaN(dt.getTime())) return { date: dt, ambiguous: false };
+      if (!m[4]) {
+        const dt = new Date(Date.UTC(year, month, day));
+        if (!Number.isNaN(dt.getTime())) return { date: dt, ambiguous: false };
+      } else {
+        const time = parseHms(m[4]);
+        if (!time) return { date: null, ambiguous: false };
+        const dt = zonedTimeToUtcDate(year, month + 1, day, time.hour, time.minute, time.second, IMPORT_TIME_ZONE);
+        if (dt && !Number.isNaN(dt.getTime())) return { date: dt, ambiguous: false };
+      }
       return { date: null, ambiguous: false };
     }
   }
-  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (iso) {
     const year = parseInt(iso[1]!, 10);
-    const month = parseInt(iso[2]!, 10) - 1;
+    const month = parseInt(iso[2]!, 10);
     const day = parseInt(iso[3]!, 10);
-    const dt = new Date(Date.UTC(year, month, day));
-    return { date: Number.isNaN(dt.getTime()) ? null : dt, ambiguous: false };
+    if (!iso[4]) {
+      const dt = new Date(Date.UTC(year, month - 1, day));
+      return { date: Number.isNaN(dt.getTime()) ? null : dt, ambiguous: false };
+    }
+    const hour = parseInt(iso[4], 10);
+    const minute = parseInt(iso[5], 10);
+    const second = parseInt(iso[6] ?? "0", 10);
+    const dt = zonedTimeToUtcDate(year, month, day, hour, minute, second, IMPORT_TIME_ZONE);
+    return { date: dt && !Number.isNaN(dt.getTime()) ? dt : null, ambiguous: false };
   }
   return { date: parseDate(trimmed), ambiguous: false };
 }
@@ -423,7 +602,7 @@ function parseReceiptDateCell(
   if (typeof cell === "number" && Number.isFinite(cell)) {
     const whole = Math.floor(cell);
     if (whole >= 20000 && whole < 1000000) {
-      return { date: excelSerialToUtcDate(whole), ambiguous: false };
+      return { date: excelSerialToUtcDate(cell), ambiguous: false };
     }
     return { date: null, ambiguous: false };
   }
@@ -431,26 +610,87 @@ function parseReceiptDateCell(
   if (/^\d{5,7}(\.\d+)?$/.test(txt.trim().replace(/,/g, ""))) {
     const n = Number(txt.trim().replace(/,/g, ""));
     if (Number.isFinite(n)) {
-      return { date: excelSerialToUtcDate(Math.floor(n)), ambiguous: false };
+      return { date: excelSerialToUtcDate(n), ambiguous: false };
     }
   }
   return parseDateWithPreference(txt, preference);
 }
 
 /** Use for date columns: Excel serial numbers, Date cells, and locale date strings. */
-function parseDateFromCell(v: unknown): Date | null {
+function parseDateFromCell(v: unknown, timeCell?: unknown): Date | null {
   if (v == null || v === "") return null;
   if (v instanceof Date) {
-    return Number.isNaN(v.getTime()) ? null : v;
+    if (Number.isNaN(v.getTime())) return null;
+    const parsedTime = parseTimeCell(timeCell);
+    if (!parsedTime) return v;
+    return mergeDateAndTime(v, parsedTime);
   }
   if (typeof v === "number" && Number.isFinite(v)) {
     const whole = Math.floor(v);
     if (whole >= 20000 && whole < 1000000) {
-      return excelSerialToUtcDate(whole);
+      const base = excelSerialToUtcDate(v);
+      if (!base) return null;
+      const parsedTime = parseTimeCell(timeCell);
+      if (!parsedTime) return base;
+      return mergeDateAndTime(base, parsedTime);
     }
     return null;
   }
-  return parseDate(String(v));
+  const parsed = parseDate(String(v));
+  if (!parsed) return null;
+  const parsedTime = parseTimeCell(timeCell);
+  if (!parsedTime) return parsed;
+  return mergeDateAndTime(parsed, parsedTime);
+}
+
+function parseTimeCell(v: unknown): { hour: number; minute: number; second: number } | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) {
+    if (Number.isNaN(v.getTime())) return null;
+    return {
+      hour: v.getUTCHours(),
+      minute: v.getUTCMinutes(),
+      second: v.getUTCSeconds(),
+    };
+  }
+  if (typeof v === "number" && Number.isFinite(v)) {
+    if (v > 0 && v < 1) return timePartsFromExcelFraction(v);
+    if (v >= 20000 && v < 1000000) return timePartsFromExcelFraction(v);
+    return null;
+  }
+  const text = String(v).trim();
+  if (!text) return null;
+  const plainTime = parseHms(text);
+  if (plainTime) return plainTime;
+  const dt = parseDate(text);
+  if (!dt) return null;
+  return {
+    hour: dt.getUTCHours(),
+    minute: dt.getUTCMinutes(),
+    second: dt.getUTCSeconds(),
+  };
+}
+
+function mergeDateAndTime(datePart: Date, timePart: { hour: number; minute: number; second: number }): Date | null {
+  return zonedTimeToUtcDate(
+    datePart.getUTCFullYear(),
+    datePart.getUTCMonth() + 1,
+    datePart.getUTCDate(),
+    timePart.hour,
+    timePart.minute,
+    timePart.second,
+    IMPORT_TIME_ZONE,
+  );
+}
+
+function treatmentTimeCell(row: Row): unknown {
+  const aliases = new Set(["שעה", "time", "treatment time", "treatmenttime"]);
+  for (const k of Object.keys(row)) {
+    const normalized = norm(String(k)).toLowerCase();
+    const compact = normalized.replace(/\s+/g, "");
+    if (aliases.has(normalized) || aliases.has(compact)) return row[k];
+  }
+  return null;
 }
 
 function parseCoveredMonth(raw: string): { start: Date; end: Date } | null {
@@ -1068,10 +1308,18 @@ async function analyzeReceiptOnlyProfile(
       const display = clientRef.displayName;
 
       const treatmentDateEntries = collectReceiptTreatmentDateColumnEntries(row);
+      const treatmentTimeEntries = new Map(
+        collectReceiptTreatmentTimeColumnEntries(row).map((entry) => [entry.order, entry]),
+      );
       const treatmentOccurredAt: Date[] = [];
       let treatmentDatesInvalid = false;
       for (const { label, cell } of treatmentDateEntries) {
-        const parsedTreatmentDate = parseReceiptDateCell(cell, datePreference);
+        const orderMatch = label.match(/(\d+)$/);
+        const order = orderMatch ? Number(orderMatch[1]) : null;
+        const timeEntry = order ? treatmentTimeEntries.get(order) : undefined;
+        const baseParsed = parseReceiptDateCell(cell, datePreference);
+        const merged = baseParsed.date ? parseDateFromCell(baseParsed.date, timeEntry?.cell) : null;
+        const parsedTreatmentDate = { date: merged, ambiguous: baseParsed.ambiguous };
         if (parsedTreatmentDate.ambiguous) {
           scratch.errors.push(
             `Row ${rowNumber}: ambiguous ${label} "${String(cell)}". Use YYYY-MM-DD or choose a date format.`,
@@ -1081,7 +1329,8 @@ async function analyzeReceiptOnlyProfile(
         }
         const od = parsedTreatmentDate.date;
         if (!od) {
-          scratch.errors.push(`Row ${rowNumber}: invalid ${label}.`);
+          const timeLabel = timeEntry?.label ? ` + ${timeEntry.label}` : "";
+          scratch.errors.push(`Row ${rowNumber}: invalid ${label}${timeLabel}.`);
           treatmentDatesInvalid = true;
           break;
         }
@@ -1098,8 +1347,9 @@ async function analyzeReceiptOnlyProfile(
       }
 
       const allocations: PendingAllocation[] = [];
+      const rowLevelTreatmentTime = treatmentTimeCell(row);
       for (let i = 0; i < sessionCount; i += 1) {
-        const occurredAt = treatmentOccurredAt[i] ?? issuedAt;
+        const occurredAt = treatmentOccurredAt[i] ?? parseDateFromCell(issuedAt, rowLevelTreatmentTime) ?? issuedAt;
         const partAmount = amountParts[i]!;
         const baseKey = `${display}|${monthKey(occurredAt)}|${partAmount}|${vt}|receipt:${receiptNum}|n:${i}`;
         const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
@@ -1250,7 +1500,7 @@ async function analyzePrivateProfile(
 
     if (receiptNum && !amount) continue;
 
-    const occurredAt = parseDateFromCell(dateCell);
+    const occurredAt = parseDateFromCell(dateCell, treatmentTimeCell(row));
     const hasDateCell =
       (dateRaw && dateRaw.length > 0) || dateCell instanceof Date || typeof dateCell === "number";
     if (amount && hasDateCell) {
@@ -1533,7 +1783,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     const hasOrgDate =
       (dateRaw && dateRaw.length > 0) || dateCell instanceof Date || typeof dateCell === "number";
     if (!amount || !hasOrgDate) continue;
-    const occurredAt = parseDateFromCell(dateCell);
+    const occurredAt = parseDateFromCell(dateCell, treatmentTimeCell(row));
     if (!occurredAt) continue;
     const clientRef = await resolveClientRef(
       clientRaw,
@@ -1955,6 +2205,50 @@ async function getOrCreateProgramId(
   return map;
 }
 
+async function resolveAppointmentDurationMinutesByProgram(
+  tx: PrismaClient,
+  params: { householdId: string; jobId: string; programIds: Array<string | null> },
+): Promise<{ defaultDuration: number; byProgram: Map<string, number> }> {
+  const [settings, job] = await Promise.all([
+    tx.therapy_settings.findUnique({
+      where: { household_id: params.householdId },
+      select: { default_session_length_minutes: true },
+    }),
+    tx.jobs.findFirst({
+      where: { id: params.jobId, household_id: params.householdId },
+      select: { default_session_length_minutes: true },
+    }),
+  ]);
+  const uniqueProgramIds = [...new Set(params.programIds.filter((v): v is string => Boolean(v)))];
+  const programRows = uniqueProgramIds.length
+    ? await tx.therapy_service_programs.findMany({
+        where: { household_id: params.householdId, id: { in: uniqueProgramIds } },
+        select: { id: true, default_session_length_minutes: true },
+      })
+    : [];
+  const byProgram = new Map<string, number>();
+  const defaultDuration =
+    resolveSessionDurationMinutes({
+      systemDefaultMinutes: getSystemDefaultSessionMinutes(),
+      therapySettingsDefaultMinutes: settings?.default_session_length_minutes ?? null,
+      jobDefaultMinutes: job?.default_session_length_minutes ?? null,
+      programDefaultMinutes: null,
+      appointmentDurationMinutes: null,
+    }) ?? getSystemDefaultSessionMinutes();
+  for (const row of programRows) {
+    const resolved =
+      resolveSessionDurationMinutes({
+        systemDefaultMinutes: getSystemDefaultSessionMinutes(),
+        therapySettingsDefaultMinutes: settings?.default_session_length_minutes ?? null,
+        jobDefaultMinutes: job?.default_session_length_minutes ?? null,
+        programDefaultMinutes: row.default_session_length_minutes ?? null,
+        appointmentDurationMinutes: null,
+      }) ?? defaultDuration;
+    byProgram.set(row.id, resolved);
+  }
+  return { defaultDuration, byProgram };
+}
+
 export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise<TipulimCommitResult> {
   const analysis = await analyzeTipulimImport(params);
   if (analysis.clientConflicts.length > 0 || analysis.blockingErrors.length > 0) {
@@ -1963,6 +2257,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       created: {
         clients: 0,
         treatments: 0,
+        appointments: 0,
         receipts: 0,
         allocations: 0,
         consultationAllocations: 0,
@@ -2069,6 +2364,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       created: {
         clients: 0,
         treatments: 0,
+        appointments: 0,
         receipts: 0,
         allocations: 0,
         consultationAllocations: 0,
@@ -2089,6 +2385,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
     const createdCount = {
       clients: 0,
       treatments: 0,
+      appointments: 0,
       receipts: 0,
       allocations: 0,
       consultationAllocations: 0,
@@ -2198,6 +2495,50 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         data: treatmentRows.map(({ key: _key, ...row }) => row),
       });
       createdCount.treatments += treatmentRows.length;
+    }
+    if (params.createCompletedAppointments && treatmentRows.length > 0) {
+      const durationDefaults = await resolveAppointmentDurationMinutesByProgram(tx as unknown as PrismaClient, {
+        householdId: params.householdId,
+        jobId: params.jobId,
+        programIds: treatmentRows.map((row) => row.program_id),
+      });
+      const uniqueClientIds = [...new Set(treatmentRows.map((row) => row.client_id))];
+      const clientRows = await tx.therapy_clients.findMany({
+        where: { household_id: params.householdId, id: { in: uniqueClientIds } },
+        select: { id: true, family_id: true },
+      });
+      const familyByClientId = new Map(clientRows.map((row) => [row.id, row.family_id] as const));
+      const appointmentRows = treatmentRows.map((row) => {
+        const duration =
+          (row.program_id ? durationDefaults.byProgram.get(row.program_id) : null) ?? durationDefaults.defaultDuration;
+        const endAt = new Date(row.occurred_at.getTime() + duration * 60 * 1000);
+        return {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          client_id: row.client_id,
+          family_id: familyByClientId.get(row.client_id) ?? null,
+          job_id: params.jobId,
+          program_id: row.program_id,
+          visit_type: row.visit_type,
+          start_at: row.occurred_at,
+          end_at: endAt,
+          duration_minutes: duration,
+          status: "completed" as const,
+          treatment_id: row.id,
+        };
+      });
+      await tx.therapy_appointments.createMany({ data: appointmentRows });
+      const appointmentParticipantRows = appointmentRows.map((row) => ({
+        id: crypto.randomUUID(),
+        household_id: params.householdId,
+        appointment_id: row.id,
+        client_id: row.client_id,
+      }));
+      await tx.therapy_appointment_participants.createMany({
+        data: appointmentParticipantRows,
+        skipDuplicates: true,
+      });
+      createdCount.appointments += appointmentRows.length;
     }
 
     const consultationTypeIdByName = new Map<string, string>();

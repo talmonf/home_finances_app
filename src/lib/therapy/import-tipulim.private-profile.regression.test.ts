@@ -50,7 +50,7 @@ test("private profile links receipt allocations despite receipt formatting diffe
     digitalMethods: [{ id: "dm-1", name: "ביט" }],
   });
 
-  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
   assert.equal(scratch.pendingReceipts.length, 1);
 
   const receipt = scratch.pendingReceipts[0];
@@ -112,7 +112,7 @@ test("private profile links receipt allocations when treatment receipt has apost
     digitalMethods: [{ id: "dm-1", name: "ביט" }],
   });
 
-  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
   assert.equal(scratch.pendingReceipts.length, 1);
   assert.equal(scratch.pendingReceipts[0]?.allocations.length, 1);
   const treatment = Array.from(scratch.pendingTreatments.values())[0];
@@ -167,7 +167,7 @@ test("private profile links receipt allocations with hidden RTL markers and spac
     digitalMethods: [{ id: "dm-1", name: "ביט" }],
   });
 
-  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
   assert.equal(scratch.pendingReceipts.length, 1);
   assert.equal(scratch.pendingReceipts[0]?.allocations.length, 1);
 });
@@ -231,7 +231,7 @@ test("private profile infers allocations when receipt number exists only on anch
     digitalMethods: [],
   });
 
-  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
   assert.equal(scratch.pendingReceipts.length, 1);
   assert.equal(scratch.pendingReceipts[0]?.allocations.length, 2);
   const treatments = Array.from(scratch.pendingTreatments.values());
