@@ -34,6 +34,50 @@ export type ConsultationListRowDto = {
   notes: string | null;
 };
 
+export type ConsultationsCursorPage = {
+  rows: ConsultationListRowDto[];
+  nextCursor: string | null;
+};
+
+const CONSULTATIONS_LIST_INCLUDE = {
+  job: true,
+  consultation_type: true,
+  receipt_allocations: {
+    include: {
+      receipt: {
+        select: {
+          id: true,
+          receipt_number: true,
+          client: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      },
+    },
+    take: 1,
+    orderBy: { created_at: "desc" as const },
+  },
+  participants: {
+    include: {
+      client: {
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.therapy_consultationsInclude;
+
+type ConsultationListPrismaRow = Prisma.therapy_consultationsGetPayload<{
+  include: typeof CONSULTATIONS_LIST_INCLUDE;
+}>;
+
 export function parseConsultationsSortKey(raw: string | undefined): ConsultationsSortKey {
   if (raw === "type" || raw === "job" || raw === "amount") return raw;
   return "occurred_at";
@@ -66,95 +110,24 @@ function orderByForConsultations(
   return [{ occurred_at: dir }, { id: dir }];
 }
 
-export async function loadConsultationsRows(params: {
-  householdId: string;
-  familyMemberId?: string | null;
-  filters: ConsultationsListFilters;
-  take?: number;
-}): Promise<ConsultationListRowDto[]> {
-  const { householdId, familyMemberId, filters, take = 150 } = params;
-  const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
-
-  const rows = await prisma.therapy_consultations.findMany({
-    where: {
-      household_id: householdId,
-      job: jobWherePrivateClinicScoped(familyMemberId),
-      ...(filters.job ? { job_id: filters.job } : {}),
-      ...(filters.receipt
-        ? {
-            receipt_allocations: {
-              some: {
-                receipt_id: filters.receipt,
-              },
-            },
-          }
-        : {}),
-      ...(from || to
-        ? {
-            occurred_at: {
-              ...(from ? { gte: from } : {}),
-              ...(to ? { lte: to } : {}),
-            },
-          }
-        : {}),
-      ...(filters.received === "linked" ? { receipt_allocations: { some: {} } } : {}),
-      ...(filters.received === "unlinked" ? { receipt_allocations: { none: {} } } : {}),
-    },
-    orderBy: orderByForConsultations(filters.sort, filters.dir),
-    take,
-    include: {
-      job: true,
-      consultation_type: true,
-      receipt_allocations: {
-        include: {
-          receipt: {
-            select: {
-              id: true,
-              receipt_number: true,
-              client: {
-                select: {
-                  id: true,
-                  first_name: true,
-                  last_name: true,
-                },
-              },
-            },
-          },
+function mapConsultationListRow(row: ConsultationListPrismaRow): ConsultationListRowDto {
+  const participantClients = row.participants.map((p) => ({
+    id: p.client.id,
+    name: `${p.client.first_name} ${p.client.last_name ?? ""}`.trim(),
+    name_he: null,
+  }));
+  const fallbackReceiptClient = row.receipt_allocations[0]?.receipt.client
+    ? [
+        {
+          id: row.receipt_allocations[0].receipt.client.id,
+          name:
+            `${row.receipt_allocations[0].receipt.client.first_name} ${row.receipt_allocations[0].receipt.client.last_name ?? ""}`.trim(),
+          name_he: null,
         },
-        take: 1,
-        orderBy: { created_at: "desc" },
-      },
-      participants: {
-        include: {
-          client: {
-            select: {
-              id: true,
-              first_name: true,
-              last_name: true,
-            },
-          },
-        },
-      },
-    },
-  });
+      ]
+    : [];
 
-  return rows.map((row) => {
-    const participantClients = row.participants.map((p) => ({
-      id: p.client.id,
-      name: `${p.client.first_name} ${p.client.last_name ?? ""}`.trim(),
-      name_he: null,
-    }));
-    const fallbackReceiptClient = row.receipt_allocations[0]?.receipt.client
-      ? [
-          {
-            id: row.receipt_allocations[0].receipt.client.id,
-            name: `${row.receipt_allocations[0].receipt.client.first_name} ${row.receipt_allocations[0].receipt.client.last_name ?? ""}`.trim(),
-            name_he: null,
-          },
-        ]
-      : [];
-    return {
+  return {
     id: row.id,
     job_id: row.job_id,
     job_label: formatJobDisplayLabel(row.job),
@@ -164,11 +137,69 @@ export async function loadConsultationsRows(params: {
     occurred_at_iso: row.occurred_at.toISOString(),
     amount: row.amount?.toString() ?? row.income_amount?.toString() ?? row.cost_amount?.toString() ?? null,
     currency: row.currency || row.income_currency || row.cost_currency,
-    linked_transaction_id: row.linked_transaction_id ?? row.linked_income_transaction_id ?? row.linked_cost_transaction_id,
+    linked_transaction_id:
+      row.linked_transaction_id ?? row.linked_income_transaction_id ?? row.linked_cost_transaction_id,
     linked_receipt_id: row.receipt_allocations[0]?.receipt_id ?? null,
     linked_receipt_number: row.receipt_allocations[0]?.receipt.receipt_number ?? null,
     clients: participantClients.length > 0 ? participantClients : fallbackReceiptClient,
     notes: row.notes,
   };
+}
+
+function whereForConsultationsList(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: ConsultationsListFilters;
+}): Prisma.therapy_consultationsWhereInput {
+  const { householdId, familyMemberId, filters } = params;
+  const from = parseDateFilter(filters.from);
+  const to = parseDateFilter(filters.to);
+
+  return {
+    household_id: householdId,
+    job: jobWherePrivateClinicScoped(familyMemberId),
+    ...(filters.job ? { job_id: filters.job } : {}),
+    ...(filters.receipt
+      ? {
+          receipt_allocations: {
+            some: {
+              receipt_id: filters.receipt,
+            },
+          },
+        }
+      : {}),
+    ...(from || to
+      ? {
+          occurred_at: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {}),
+    ...(filters.received === "linked" ? { receipt_allocations: { some: {} } } : {}),
+    ...(filters.received === "unlinked" ? { receipt_allocations: { none: {} } } : {}),
+  };
+}
+
+export async function loadConsultationsCursorPage(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: ConsultationsListFilters;
+  take: number;
+  cursorId?: string;
+}): Promise<ConsultationsCursorPage> {
+  const { householdId, familyMemberId, filters, take, cursorId } = params;
+  const where = whereForConsultationsList({ householdId, familyMemberId, filters });
+
+  const chunk = await prisma.therapy_consultations.findMany({
+    where,
+    orderBy: orderByForConsultations(filters.sort, filters.dir),
+    include: CONSULTATIONS_LIST_INCLUDE,
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    take,
   });
+
+  const rows = chunk.map(mapConsultationListRow);
+  const nextCursor = chunk.length === take ? (chunk[chunk.length - 1]?.id ?? null) : null;
+  return { rows, nextCursor };
 }

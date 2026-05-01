@@ -3,7 +3,6 @@
 import { LoadingSpinner } from "@/components/loading-spinner";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { flushSync } from "react-dom";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type PrivateClinicNavClientItem = {
@@ -26,7 +25,7 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
-/** Same as HouseholdDashboardPanel: pathname omits querystring/hash — normalize links to path-only. */
+/** `usePathname()` omits query/hash — normalize link targets to path-only. */
 function normalizeHrefPath(href: string): string {
   const pathOnly = href.split("?")[0]?.split("#")[0] ?? href;
   return normalizePathname(pathOnly);
@@ -44,6 +43,13 @@ export default function PrivateClinicNavClient({
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!pendingHref) return;
+    if (normalizeHrefPath(pendingHref) === normalizedPathname) {
+      setPendingHref(null);
+    }
+  }, [normalizedPathname, pendingHref]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -108,18 +114,14 @@ export default function PrivateClinicNavClient({
           }
 
           event.preventDefault();
-          // Same pending logic as other nav links; consultations needs a synchronous paint here
-          // because pathname can catch up before a batched `setPendingHref` renders.
-          flushSync(() => {
-            setPendingHref(normalizedHref);
-          });
+          setPendingHref(normalizedHref);
           startTransition(() => {
             router.push(item.href);
           });
         }}
         className={linkClassName(isActive)}
       >
-        {isPending ? <LoadingSpinner /> : null}
+        {isPending ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5 shrink-0 text-current" /> : null}
         <span>{item.label}</span>
         {item.key === "reminders" && item.reminderBadgeCount != null && item.reminderBadgeCount > 0 ? (
           <span

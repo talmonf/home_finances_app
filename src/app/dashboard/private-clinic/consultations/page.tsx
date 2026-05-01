@@ -6,7 +6,6 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import Link from "next/link";
 import { privateClinicCommon, privateClinicConsultations } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
@@ -17,7 +16,7 @@ import {
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import {
-  loadConsultationsRows,
+  loadConsultationsCursorPage,
   parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
@@ -86,42 +85,64 @@ export default async function ConsultationsPage({
   if (filters.dir !== "desc") listParams.set("dir", filters.dir);
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
 
-  const [jobs, types, clients, rows] = await Promise.all([
+  const apiListParams = new URLSearchParams(listParams);
+  apiListParams.set("take", "50");
+  const apiHrefBase = `/api/private-clinic/consultations?${apiListParams.toString()}`;
+
+  const [jobs, firstPage] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
     }),
-    prisma.therapy_consultation_types.findMany({
-      where: { household_id: householdId },
-      orderBy: [{ sort_order: "asc" }, { name: "asc" }],
-    }),
-    prisma.therapy_clients.findMany({
-      where: { household_id: householdId, OR: [{ is_active: true }, { consultation_participations: { some: {} } }] },
-      orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
-      select: { id: true, first_name: true, last_name: true, is_active: true },
-    }),
-    loadConsultationsRows({
+    loadConsultationsCursorPage({
       householdId,
       familyMemberId,
       filters,
-      take: 150,
+      take: 50,
     }),
   ]);
-  const transactionOptions =
-    modalMode === "new" || modalMode === "edit"
-      ? await prisma.transactions.findMany({
-          where: { household_id: householdId },
-          orderBy: { transaction_date: "desc" },
-          take: 200,
-          select: {
-            id: true,
-            transaction_date: true,
-            amount: true,
-            description: true,
-            transaction_direction: true,
-          },
-        })
-      : [];
+
+  let consultationTypes: Array<{ id: string; name: string; name_he: string | null }> = [];
+  let modalClients: Array<{ id: string; first_name: string; last_name: string | null; is_active: boolean }> = [];
+  /** Modal-only pick list (narrow shape — not full `transactions` rows). */
+  let transactionOptions: Array<{
+    id: string;
+    transaction_date: Date;
+    amount: { toString(): string };
+    description: string | null;
+    transaction_direction: string;
+  }> = [];
+  if (modalMode === "new" || modalMode === "edit") {
+    const [typesR, clientsR, txRows] = await Promise.all([
+      prisma.therapy_consultation_types.findMany({
+        where: { household_id: householdId },
+        orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      }),
+      prisma.therapy_clients.findMany({
+        where: {
+          household_id: householdId,
+          OR: [{ is_active: true }, { consultation_participations: { some: {} } }],
+        },
+        orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
+        select: { id: true, first_name: true, last_name: true, is_active: true },
+      }),
+      prisma.transactions.findMany({
+        where: { household_id: householdId },
+        orderBy: { transaction_date: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          transaction_date: true,
+          amount: true,
+          description: true,
+          transaction_direction: true,
+        },
+      }),
+    ]);
+    consultationTypes = typesR;
+    modalClients = clientsR;
+    transactionOptions = txRows as typeof transactionOptions;
+  }
   const filteredReceipt = filters.receipt
     ? await prisma.therapy_receipts.findFirst({
         where: { id: filters.receipt, household_id: householdId, job: jobScope },
@@ -228,14 +249,16 @@ export default async function ConsultationsPage({
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{co.consultationsCount(rows.length)}</h2>
+          <h2 className="text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
           <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
         </div>
-        {rows.length === 0 ? (
+        {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
         ) : (
           <ConsultationsListClient
-            rows={rows}
+            initialRows={firstPage.rows}
+            initialCursor={firstPage.nextCursor}
+            apiHrefBase={apiHrefBase}
             listBaseHref={baseListHref}
             uiLanguage={uiLanguage}
             dateDisplayFormat={dateDisplayFormat}
@@ -249,6 +272,9 @@ export default async function ConsultationsPage({
               edit: c.edit,
               linked: co.receivedLinked,
               unlinked: co.receivedUnlinked,
+              loadingMore: co.loadingMore,
+              noMoreRows: co.noMoreRows,
+              loadMore: co.loadMore,
             }}
             obfuscate={obfuscate}
           />
@@ -264,8 +290,8 @@ export default async function ConsultationsPage({
           householdId={householdId}
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
-          types={types.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
-          clients={clients.map((cl) => ({
+          types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          clients={modalClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
           }))}
@@ -306,8 +332,8 @@ export default async function ConsultationsPage({
           householdId={householdId}
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
-          types={types.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
-          clients={clients.map((cl) => ({
+          types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          clients={modalClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
           }))}
