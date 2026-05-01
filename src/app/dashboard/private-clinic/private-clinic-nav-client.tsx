@@ -69,10 +69,6 @@ export default function PrivateClinicNavClient({
   const hasActiveMoreItem = moreItems.some(
     (item) => normalizedPathname === normalizePathname(item.href),
   );
-  const consultationsHref = normalizePathname("/dashboard/private-clinic/consultations");
-  const consultationsPending = pendingHref === consultationsHref;
-  const consultationsActive = normalizedPathname === consultationsHref;
-  const consultationsSpinner = consultationsPending && !consultationsActive;
 
   const linkClassName = (isActive: boolean) =>
     isActive
@@ -82,7 +78,7 @@ export default function PrivateClinicNavClient({
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
     const normalizedHref = normalizePathname(item.href);
     const isActive = normalizedPathname === normalizedHref;
-    const isTargetPendingNavigation = pendingHref === normalizedHref && !isActive;
+    const isTargetPendingNavigation = pendingHref === normalizedHref;
     const showNavSpinner = isTargetPendingNavigation;
 
     return (
@@ -155,11 +151,6 @@ export default function PrivateClinicNavClient({
           ) : null}
         </div>
       ) : null}
-      <div className="w-full pt-1 text-[10px] text-amber-300/90">
-        DEBUG nav: path={normalizedPathname} | pendingHref={pendingHref ?? "null"} | consultationsActive=
-        {String(consultationsActive)} | consultationsPending={String(consultationsPending)} | consultationsSpinner=
-        {String(consultationsSpinner)}
-      </div>
     </nav>
   );
 }
