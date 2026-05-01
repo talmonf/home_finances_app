@@ -9,11 +9,8 @@ import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import {
-  updateProperty,
-  createUtility,
-  deleteUtility,
-} from "../actions";
+import { createUtility, updateProperty, deleteUtility } from "../actions";
+import { UtilityModalForm } from "../utility-modal-form";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +32,16 @@ const UTILITY_TYPE_LABELS_HE: Record<string, string> = {
   other: "אחר",
 };
 
+function normalizeExternalUrl(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string; updated?: string }>;
+  searchParams?: Promise<{ error?: string; updated?: string; created?: string; modal?: string }>;
 };
 
 export default async function PropertyDetailPage({ params, searchParams }: PageProps) {
@@ -51,12 +55,17 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   const utilityLabels = isHebrew ? UTILITY_TYPE_LABELS_HE : UTILITY_TYPE_LABELS_EN;
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const utilityModalMode = resolvedSearchParams?.modal === "utility-new" ? "utility-new" : null;
+  const propertyDetailBase = `/dashboard/properties/${id}`;
 
   const [property, payees] = await Promise.all([
     prisma.properties.findFirst({
       where: { id, household_id: householdId },
       include: {
-        utilities: { include: { payee: true } },
+        utilities: {
+          include: { payee: true },
+          orderBy: { provider_name: "asc" },
+        },
         rentals: {
           include: {
             tenants: {
@@ -105,7 +114,9 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               {isHebrew ? "פתיחת שכירויות" : "Open rentals"}
             </Link>
           </div>
-          {(resolvedSearchParams?.error || resolvedSearchParams?.updated) && (
+          {(resolvedSearchParams?.error ||
+            resolvedSearchParams?.updated ||
+            resolvedSearchParams?.created) && (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${
                 resolvedSearchParams.error
@@ -115,9 +126,17 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
             >
               {resolvedSearchParams.error
                 ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                : resolvedSearchParams.updated === "utility"
-                  ? isHebrew ? "התשתית עודכנה." : "Utility updated."
-                  : isHebrew ? "נשמר." : "Saved."}
+                : resolvedSearchParams.created === "utility"
+                  ? isHebrew
+                    ? "התשתית נוספה."
+                    : "Utility added."
+                  : resolvedSearchParams.updated === "utility"
+                    ? isHebrew
+                      ? "התשתית עודכנה."
+                      : "Utility updated."
+                    : isHebrew
+                      ? "נשמר."
+                      : "Saved."}
             </div>
           )}
         </header>
@@ -198,59 +217,21 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "חברות תשתית" : "Utility companies"}</h2>
-          <form action={createUtility} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <input type="hidden" name="property_id" value={property.id} />
-            <div>
-              <label htmlFor="utility_type_new" className="mb-1 block text-xs font-medium text-slate-400">{isHebrew ? "סוג" : "Type"}</label>
-              <select id="utility_type_new" name="utility_type" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                {Object.entries(utilityLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="provider_name_new" className="mb-1 block text-xs font-medium text-slate-400">{isHebrew ? "שם ספק" : "Provider name"}</label>
-              <input id="provider_name_new" name="provider_name" required placeholder="e.g. Bezeq" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="payee_id_new" className="mb-1 block text-xs font-medium text-slate-400">Link to payee (optional)</label>
-              <select id="payee_id_new" name="payee_id" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                <option value="">— None —</option>
-                {payees.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="account_number_new" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
-              <input id="account_number_new" name="account_number" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label htmlFor="renewal_date_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Renewal date (optional)
-              </label>
-              <input
-                id="renewal_date_new"
-                name="renewal_date"
-                type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="notes_new" className="mb-1 block text-xs font-medium text-slate-400">{isHebrew ? "הערות" : "Notes"}</label>
-              <input id="notes_new" name="notes" placeholder="Optional" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="flex items-end">
-              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
-                {isHebrew ? "הוספת תשתית" : "Add utility"}
-              </button>
-            </div>
-          </form>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "חברות תשתית" : "Utility companies"}</h2>
+            <Link
+              href={`${propertyDetailBase}?modal=utility-new`}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+            >
+              {isHebrew ? "הוספת תשתית" : "Add utility"}
+            </Link>
+          </div>
 
           {property.utilities.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין עדיין תשתיות. ניתן להוסיף למעלה (למשל חשמל, מים, אינטרנט)." : "No utilities yet. Add one above (e.g. electricity, water, internet)."}
+              {isHebrew
+                ? "אין עדיין תשתיות. לחצו על ״הוספת תשתית״ (למשל חשמל, מים, אינטרנט)."
+                : "No utilities yet. Use “Add utility” (e.g. electricity, water, internet)."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -259,6 +240,11 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                   <tr className="border-b border-slate-700 bg-slate-800/80">
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "סוג" : "Type"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "ספק" : "Provider"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "התחלה" : "Start"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אתר" : "Website"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "טלפון" : "Phone"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אימייל" : "Email"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Facebook</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "הערות" : "Notes"}</th>
@@ -266,38 +252,104 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                   </tr>
                 </thead>
                 <tbody>
-                  {property.utilities.map((u) => (
-                    <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-300">
-                        {utilityLabels[u.utility_type] ?? u.utility_type}
-                      </td>
-                      <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
-                      <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
-                      <td className="px-4 py-3 text-slate-300">
-                        {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{u.notes || "—"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={`/dashboard/properties/${property.id}/utilities/${u.id}/edit`}
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {isHebrew ? "עריכה" : "Edit"}
-                          </Link>
-                          <ConfirmDeleteForm action={deleteUtility.bind(null, u.id, property.id)} className="inline">
-                            <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">
-                              {isHebrew ? "מחיקה" : "Delete"}
-                            </button>
-                          </ConfirmDeleteForm>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {property.utilities.map((u) => {
+                    const webHref = normalizeExternalUrl(u.website_url);
+                    const fbHref = normalizeExternalUrl(u.facebook_url);
+                    return (
+                      <tr key={u.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                        <td className="px-4 py-3 text-slate-300">
+                          {utilityLabels[u.utility_type] ?? u.utility_type}
+                        </td>
+                        <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {u.start_date ? formatHouseholdDate(u.start_date, dateDisplayFormat) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {webHref ? (
+                            <a
+                              href={webHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {isHebrew ? "קישור" : "Link"}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {u.contact_phone ? (
+                            <a href={`tel:${u.contact_phone.replace(/\s/g, "")}`} className="text-sky-400 hover:text-sky-300">
+                              {u.contact_phone}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {u.contact_email ? (
+                            <a href={`mailto:${u.contact_email}`} className="text-sky-400 hover:text-sky-300">
+                              {u.contact_email}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {fbHref ? (
+                            <a
+                              href={fbHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {isHebrew ? "קישור" : "Link"}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400">{u.notes || "—"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Link
+                              href={`/dashboard/properties/${property.id}/utilities/${u.id}/edit`}
+                              className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {isHebrew ? "עריכה" : "Edit"}
+                            </Link>
+                            <ConfirmDeleteForm action={deleteUtility.bind(null, u.id, property.id)} className="inline">
+                              <button type="submit" className="text-xs font-medium text-rose-400 hover:text-rose-300">
+                                {isHebrew ? "מחיקה" : "Delete"}
+                              </button>
+                            </ConfirmDeleteForm>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
+
+          {utilityModalMode === "utility-new" ? (
+            <UtilityModalForm
+              action={createUtility}
+              propertyId={property.id}
+              payees={payees.map((p) => ({ id: p.id, name: p.name }))}
+              utilityTypeLabels={utilityLabels}
+              closeHref={propertyDetailBase}
+              redirectOnSuccess={`${propertyDetailBase}?created=utility`}
+              redirectOnError={`${propertyDetailBase}?modal=utility-new`}
+              isHebrew={isHebrew}
+            />
+          ) : null}
         </section>
       </div>
     </div>

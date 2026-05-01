@@ -129,6 +129,69 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
             />
           </div>
 
+          <div>
+            <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
+              Start date (optional)
+            </label>
+            <input
+              id="start_date"
+              name="start_date"
+              type="date"
+              defaultValue={utility.start_date ? utility.start_date.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
+              Utility website URL (optional)
+            </label>
+            <input
+              id="website_url"
+              name="website_url"
+              type="url"
+              inputMode="url"
+              defaultValue={utility.website_url ?? ""}
+              placeholder="https://"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">Phone (optional)</label>
+            <input
+              id="contact_phone"
+              name="contact_phone"
+              type="tel"
+              defaultValue={utility.contact_phone ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">Email (optional)</label>
+            <input
+              id="contact_email"
+              name="contact_email"
+              type="email"
+              defaultValue={utility.contact_email ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="facebook_url" className="mb-1 block text-xs font-medium text-slate-400">Facebook URL (optional)</label>
+            <input
+              id="facebook_url"
+              name="facebook_url"
+              type="url"
+              inputMode="url"
+              defaultValue={utility.facebook_url ?? ""}
+              placeholder="https://facebook.com/..."
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
           <div className="sm:col-span-2">
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
             <textarea

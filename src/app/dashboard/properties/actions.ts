@@ -4,10 +4,31 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+const PROPERTIES_PATH_PREFIX = "/dashboard/properties";
+
+function safePropertiesRedirectPath(raw: string | null | undefined, fallback: string): string {
+  const t = raw?.trim() || "";
+  if (!t.startsWith(PROPERTIES_PATH_PREFIX)) return fallback;
+  if (t.includes("\n") || t.includes("\r")) return fallback;
+  if (t.includes("//")) return fallback;
+  return t;
+}
+
+function redirectWithError(basePath: string, message: string): never {
+  const u = new URL(basePath, "http://local.invalid");
+  u.searchParams.set("error", message);
+  redirect(`${u.pathname}${u.search}`);
+}
+
 export async function createProperty(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) redirect("/dashboard/properties?error=No+household");
+  const defaultError = "/dashboard/properties?modal=new";
+  const redirectOnError = safePropertiesRedirectPath(
+    formData.get("redirect_on_error") as string | null,
+    defaultError,
+  );
+  if (!householdId) redirectWithError(redirectOnError, "No household");
 
   const name = (formData.get("name") as string | null)?.trim();
   const property_type = (formData.get("property_type") as string | null)?.trim() || null;
@@ -17,7 +38,7 @@ export async function createProperty(formData: FormData) {
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   if (!name) {
-    redirect("/dashboard/properties?error=Name+is+required");
+    redirectWithError(redirectOnError, "Name is required");
   }
 
   await prisma.properties.create({
@@ -35,7 +56,11 @@ export async function createProperty(formData: FormData) {
   });
 
   revalidatePath("/dashboard/properties");
-  redirect("/dashboard/properties?created=1");
+  const redirectOnSuccess = safePropertiesRedirectPath(
+    formData.get("redirect_on_success") as string | null,
+    "/dashboard/properties?created=1",
+  );
+  redirect(redirectOnSuccess);
 }
 
 export async function updateProperty(formData: FormData) {
@@ -87,37 +112,67 @@ function parseUtilityType(s: string | null): UtilityType {
   return "electricity";
 }
 
+function parseOptionalUtilityDate(raw: string | null): { value: Date | null; invalid: boolean } {
+  const t = raw?.trim() || "";
+  if (!t) return { value: null, invalid: false };
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return { value: null, invalid: true };
+  return { value: d, invalid: false };
+}
+
 export async function createUtility(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/dashboard/properties?error=No+household");
 
   const property_id = (formData.get("property_id") as string | null)?.trim();
-  if (!property_id) return;
+  const fallbackPropertyPath = property_id
+    ? `${PROPERTIES_PATH_PREFIX}/${property_id}`
+    : PROPERTIES_PATH_PREFIX;
+  const redirectOnError = safePropertiesRedirectPath(
+    formData.get("redirect_on_error") as string | null,
+    `${fallbackPropertyPath}?modal=utility-new`,
+  );
+  const redirectOnSuccess = safePropertiesRedirectPath(
+    formData.get("redirect_on_success") as string | null,
+    `${fallbackPropertyPath}?created=utility`,
+  );
+
+  if (!property_id) redirectWithError(redirectOnError, "Missing property");
 
   const prop = await prisma.properties.findFirst({
     where: { id: property_id, household_id: householdId },
   });
-  if (!prop) return;
+  if (!prop) redirectWithError(redirectOnError, "Not found");
 
   const utility_type = parseUtilityType((formData.get("utility_type") as string | null)?.trim() || null);
   const provider_name = (formData.get("provider_name") as string | null)?.trim();
-  if (!provider_name) return;
+  if (!provider_name) redirectWithError(redirectOnError, "Provider name is required");
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
+  const start_date_raw = (formData.get("start_date") as string | null)?.trim() || null;
+  const website_url = (formData.get("website_url") as string | null)?.trim() || null;
+  const contact_phone = (formData.get("contact_phone") as string | null)?.trim() || null;
+  const contact_email = (formData.get("contact_email") as string | null)?.trim() || null;
+  const facebook_url = (formData.get("facebook_url") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   if (payee_id) {
     const payee = await prisma.payees.findFirst({
       where: { id: payee_id, household_id: householdId },
     });
-    if (!payee) return;
+    if (!payee) redirectWithError(redirectOnError, "Invalid payee");
   }
 
   const renewal_date = renewal_date_raw ? new Date(renewal_date_raw) : null;
-  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) return;
+  if (renewal_date_raw && Number.isNaN(renewal_date?.getTime())) {
+    redirectWithError(redirectOnError, "Invalid renewal date");
+  }
+
+  const startParsed = parseOptionalUtilityDate(start_date_raw);
+  if (startParsed.invalid) redirectWithError(redirectOnError, "Invalid start date");
 
   await prisma.property_utilities.create({
     data: {
@@ -129,6 +184,11 @@ export async function createUtility(formData: FormData) {
       payee_id: payee_id || null,
       account_number,
       renewal_date,
+      start_date: startParsed.value,
+      website_url,
+      contact_phone,
+      contact_email,
+      facebook_url,
       notes,
     },
   });
@@ -136,6 +196,7 @@ export async function createUtility(formData: FormData) {
   revalidatePath("/dashboard/properties");
   revalidatePath(`/dashboard/properties/${property_id}`);
   revalidatePath(`/dashboard/properties/${property_id}/rentals`);
+  redirect(redirectOnSuccess);
 }
 
 export async function updateUtility(formData: FormData) {
@@ -159,6 +220,11 @@ export async function updateUtility(formData: FormData) {
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
+  const start_date_raw = (formData.get("start_date") as string | null)?.trim() || null;
+  const website_url = (formData.get("website_url") as string | null)?.trim() || null;
+  const contact_phone = (formData.get("contact_phone") as string | null)?.trim() || null;
+  const contact_email = (formData.get("contact_email") as string | null)?.trim() || null;
+  const facebook_url = (formData.get("facebook_url") as string | null)?.trim() || null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   let finalPayeeId: string | null = null;
@@ -175,6 +241,11 @@ export async function updateUtility(formData: FormData) {
     redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Invalid+renewal+date`);
   }
 
+  const startParsed = parseOptionalUtilityDate(start_date_raw);
+  if (startParsed.invalid) {
+    redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Invalid+start+date`);
+  }
+
   await prisma.property_utilities.updateMany({
     where: { id, household_id: householdId },
     data: {
@@ -183,6 +254,11 @@ export async function updateUtility(formData: FormData) {
       payee_id: finalPayeeId,
       account_number,
       renewal_date,
+      start_date: startParsed.value,
+      website_url,
+      contact_phone,
+      contact_email,
+      facebook_url,
       notes,
     },
   });

@@ -728,6 +728,11 @@ model property_utilities {
   credit_card_id  String?
   account_number String?
   renewal_date   DateTime?
+  start_date     DateTime?
+  website_url    String?
+  contact_phone  String?            @db.VarChar(128)
+  contact_email  String?            @db.VarChar(255)
+  facebook_url   String?
   notes          String?
   created_at     DateTime           @default(now())
   updated_at     DateTime           @updatedAt

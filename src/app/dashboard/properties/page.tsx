@@ -3,14 +3,18 @@ import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mar
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createProperty } from "./actions";
+import { PropertyModalForm } from "./property-modal-form";
 
 export const dynamic = "force-dynamic";
+
+const PROPERTIES_BASE = "/dashboard/properties";
 
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
     updated?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -22,6 +26,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const isHebrew = uiLanguage === "he";
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const properties = await prisma.properties.findMany({
     where: { household_id: householdId },
@@ -33,14 +38,8 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-5xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="properties"
-            redirectPath="/dashboard/properties"
-          />
-          <Link
-            href="/"
-            className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-          >
+          <SetupSectionMarkNotDoneBanner sectionId="properties" redirectPath="/dashboard/properties" />
+          <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
             {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Homes &amp; properties</h1>
@@ -67,101 +66,20 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createProperty}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <div>
-              <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">
-                Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Main home"
-              />
-            </div>
-            <div>
-              <label htmlFor="property_type" className="mb-1 block text-xs font-medium text-slate-400">
-                Type
-              </label>
-              <select
-                id="property_type"
-                name="property_type"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">—</option>
-                <option value="owned">Owned</option>
-                <option value="rental">Rental</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="landlord_name" className="mb-1 block text-xs font-medium text-slate-400">
-                In whose name
-              </label>
-              <input
-                id="landlord_name"
-                name="landlord_name"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="address" className="mb-1 block text-xs font-medium text-slate-400">
-                Address
-              </label>
-              <textarea
-                id="address"
-                name="address"
-                rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Full address"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="landlord_contact" className="mb-1 block text-xs font-medium text-slate-400">
-                Contact details (phone / email)
-              </label>
-              <textarea
-                id="landlord_contact"
-                name="landlord_contact"
-                rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
-                Notes
-              </label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div className="flex items-end sm:col-span-2">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת נכס" : "Add property"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "נכסים" : "Properties"}</h2>
+            <Link
+              href={`${PROPERTIES_BASE}?modal=new`}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+            >
+              {isHebrew ? "הוספת נכס" : "Add property"}
+            </Link>
+          </div>
           {properties.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No properties yet. Add one above, then open it to add utility companies.
+              {isHebrew
+                ? "אין עדיין נכסים. לחצו על ״הוספת נכס״ כדי להוסיף נכס, ואז פתחו אותו כדי להוסיף חברות תשתית."
+                : "No properties yet. Use “Add property” to add one, then open it to add utility companies."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -207,6 +125,16 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+
+        {modalMode === "new" ? (
+          <PropertyModalForm
+            action={createProperty}
+            closeHref={PROPERTIES_BASE}
+            redirectOnSuccess={`${PROPERTIES_BASE}?created=1`}
+            redirectOnError={`${PROPERTIES_BASE}?modal=new`}
+            isHebrew={isHebrew}
+          />
+        ) : null}
       </div>
     </div>
   );
