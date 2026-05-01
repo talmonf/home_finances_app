@@ -83,7 +83,6 @@ export default async function UpcomingVisitsPage({
             household_id: householdId,
             client_id: { in: clientIds },
             status: "scheduled",
-            start_at: { gte: today },
           },
           orderBy: [{ start_at: "asc" }],
           select: { id: true, client_id: true, start_at: true },
@@ -210,6 +209,8 @@ export default async function UpcomingVisitsPage({
 
   const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
+  const appointmentEditTreatmentHref = (appointmentId: string) =>
+    `/dashboard/private-clinic/appointments/${encodeURIComponent(appointmentId)}/edit#report-treatment`;
 
   const toDateLocalInput = (date: Date) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -371,7 +372,11 @@ export default async function UpcomingVisitsPage({
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
                           <Link
-                            href={`${treatmentsBase}?client=${encodeURIComponent(r.clientId)}&modal=new`}
+                            href={
+                              r.nextAppointment
+                                ? appointmentEditTreatmentHref(r.nextAppointment.id)
+                                : `${treatmentsBase}?client=${encodeURIComponent(r.clientId)}&modal=new`
+                            }
                             className="font-medium text-sky-400 hover:text-sky-300"
                           >
                             {uv.logTreatment}
@@ -417,7 +422,11 @@ export default async function UpcomingVisitsPage({
                       <span>{obfuscate ? OBFUSCATED : name}</span>
                       {" — "}
                       <Link
-                        href={`${treatmentsBase}?client=${encodeURIComponent(row.id)}&modal=new`}
+                        href={
+                          nextAppointment
+                            ? appointmentEditTreatmentHref(nextAppointment.id)
+                            : `${treatmentsBase}?client=${encodeURIComponent(row.id)}&modal=new`
+                        }
                         className="text-sky-400 hover:text-sky-300"
                       >
                         {uv.logTreatment}
