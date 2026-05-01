@@ -284,7 +284,10 @@ export function TreatmentsListClient({
                       <ul className="list-none space-y-1">
                         {t.receipt_allocations.map((a) => (
                           <li key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <Link href={`/dashboard/private-clinic/receipts/${a.receipt_id}`} className="text-sky-400 hover:underline">
+                            <Link
+                              href={`/dashboard/private-clinic/receipts/${encodeURIComponent(a.receipt_id)}`}
+                              className="text-sky-400 hover:underline"
+                            >
                               #{a.receipt_number}
                             </Link>
                             <form action={deleteReceiptAllocation} className="m-0">

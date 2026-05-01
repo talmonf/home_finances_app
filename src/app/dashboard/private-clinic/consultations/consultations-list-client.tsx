@@ -216,7 +216,7 @@ export function ConsultationsListClient({
                 <td className="px-3 py-2 text-slate-400">
                   {row.linked_receipt_id && row.linked_receipt_number ? (
                     <Link
-                      href={`/dashboard/private-clinic/receipts?receipt=${encodeURIComponent(row.linked_receipt_id)}`}
+                      href={`/dashboard/private-clinic/receipts/${encodeURIComponent(row.linked_receipt_id)}`}
                       className="text-sky-400 hover:underline"
                     >
                       #{row.linked_receipt_number}

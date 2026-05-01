@@ -518,7 +518,10 @@ export default async function TreatmentsPage({
               <ul className="list-none space-y-1 text-xs">
                 {editTreatment.receipt_allocations.map((a) => (
                   <li key={a.id} className="flex items-center gap-3">
-                    <Link href={`/dashboard/private-clinic/receipts/${a.receipt.id}`} className="text-sky-400 hover:underline">
+                    <Link
+                      href={`/dashboard/private-clinic/receipts/${encodeURIComponent(a.receipt.id)}`}
+                      className="text-sky-400 hover:underline"
+                    >
                       #{a.receipt.receipt_number}
                     </Link>
                     <form action={deleteReceiptAllocation}>
