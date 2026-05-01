@@ -362,6 +362,10 @@ export default async function ClientsPage({
 
   const nextVisitDueByClientId = new Map<string, Date | null>();
   for (const client of clients) {
+    if (!client.is_active) {
+      nextVisitDueByClientId.set(client.id, null);
+      continue;
+    }
     const vc = client.visits_per_period_count;
     const vw = client.visits_per_period_weeks;
     const lastVisitAt = lastVisitAtByClientId.get(client.id);
@@ -373,6 +377,10 @@ export default async function ClientsPage({
   }
   const nextVisitSortAtByClientId = new Map<string, Date | null>();
   for (const client of clients) {
+    if (!client.is_active) {
+      nextVisitSortAtByClientId.set(client.id, null);
+      continue;
+    }
     const nextScheduled = nextScheduledAppointmentByClientId.get(client.id) ?? null;
     if (nextScheduled) {
       nextVisitSortAtByClientId.set(client.id, nextScheduled);
@@ -466,7 +474,7 @@ export default async function ClientsPage({
         <form method="get" className="space-y-2">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="grid grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto_auto]">
+          <div className="grid grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto]">
             <div className="space-y-1 xl:min-w-0">
               <label htmlFor="clients_filter_q" className="block text-[11px] text-slate-400">
                 {cl.filterSearchLabel}
@@ -583,15 +591,14 @@ export default async function ClientsPage({
             >
               {c.apply}
             </button>
-            {hasActiveFilters ? (
-              <Link
-                href={clientsListHref({ sort, dir })}
-                className="text-sm text-sky-400 hover:text-sky-300 xl:self-end xl:pb-1"
-              >
+          </div>
+          {hasActiveFilters ? (
+            <div className="flex justify-end">
+              <Link href={clientsListHref({ sort, dir })} className="text-sm text-sky-400 hover:text-sky-300">
                 {c.cancel}
               </Link>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
           <p className="text-[11px] text-slate-500">{cl.filterDateRangeHelp}</p>
         </form>
       </section>
@@ -721,7 +728,10 @@ export default async function ClientsPage({
                 const nextScheduledAppointment = nextScheduledAppointmentByClientId.get(row.id) ?? null;
                 let nextVisitDisp: string;
                 let nextVisitTitle: string | undefined;
-                if (nextScheduledAppointment) {
+                if (!row.is_active) {
+                  nextVisitDisp = "—";
+                  nextVisitTitle = undefined;
+                } else if (nextScheduledAppointment) {
                   const apptText = formatHouseholdDateUtcWithTime(nextScheduledAppointment, dateDisplayFormat);
                   nextVisitDisp = `${cl.nextVisitScheduledLabel}: ${apptText}`;
                   nextVisitTitle = cl.nextVisitScheduledTitle(apptText);
