@@ -50,6 +50,7 @@ type Search = {
   dir?: string;
   modal?: string;
   edit_id?: string;
+  appointment?: string;
 };
 
 export default async function TreatmentsPage({
@@ -262,6 +263,8 @@ export default async function TreatmentsPage({
   const apiHrefBase = `/api/private-clinic/treatments?${queryParams.toString()}&take=50`;
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const appointmentId = (sp.appointment ?? "").trim();
+  const appointmentQuery = appointmentId ? `&appointment=${encodeURIComponent(appointmentId)}` : "";
   const showExternalReporting =
     filters.reported !== "all" ||
     jobs.some((j) => Boolean(j.external_reporting_system)) ||
@@ -437,9 +440,10 @@ export default async function TreatmentsPage({
           title={tr.addTreatmentBtn}
           closeHref={baseListHref}
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
-          redirectOnError={`${baseListHref}&modal=new`}
+          redirectOnError={`${baseListHref}&modal=new${appointmentQuery}`}
           householdId={householdId}
           uiLanguage={uiLanguage}
+          appointmentId={appointmentId || undefined}
           initial={newTreatmentInitial}
           clients={activeClients.map((cl) => ({
             id: cl.id,

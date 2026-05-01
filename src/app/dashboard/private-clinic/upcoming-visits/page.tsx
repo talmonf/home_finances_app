@@ -209,8 +209,14 @@ export default async function UpcomingVisitsPage({
 
   const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
-  const appointmentEditTreatmentHref = (appointmentId: string) =>
-    `/dashboard/private-clinic/appointments/${encodeURIComponent(appointmentId)}/edit#report-treatment`;
+  const treatmentLogHref = (clientId: string, appointmentId?: string | null) => {
+    const qp = new URLSearchParams({
+      client: clientId,
+      modal: "new",
+    });
+    if (appointmentId) qp.set("appointment", appointmentId);
+    return `${treatmentsBase}?${qp.toString()}`;
+  };
 
   const toDateLocalInput = (date: Date) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -372,11 +378,7 @@ export default async function UpcomingVisitsPage({
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
                           <Link
-                            href={
-                              r.nextAppointment
-                                ? appointmentEditTreatmentHref(r.nextAppointment.id)
-                                : `${treatmentsBase}?client=${encodeURIComponent(r.clientId)}&modal=new`
-                            }
+                            href={treatmentLogHref(r.clientId, r.nextAppointment?.id)}
                             className="font-medium text-sky-400 hover:text-sky-300"
                           >
                             {uv.logTreatment}
@@ -422,11 +424,7 @@ export default async function UpcomingVisitsPage({
                       <span>{obfuscate ? OBFUSCATED : name}</span>
                       {" — "}
                       <Link
-                        href={
-                          nextAppointment
-                            ? appointmentEditTreatmentHref(nextAppointment.id)
-                            : `${treatmentsBase}?client=${encodeURIComponent(row.id)}&modal=new`
-                        }
+                        href={treatmentLogHref(row.id, nextAppointment?.id)}
                         className="text-sky-400 hover:text-sky-300"
                       >
                         {uv.logTreatment}

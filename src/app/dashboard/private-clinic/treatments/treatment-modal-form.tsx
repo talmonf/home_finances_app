@@ -106,6 +106,7 @@ export function TreatmentModalForm({
   labels,
   initial,
   extraContent,
+  appointmentId,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -124,6 +125,7 @@ export function TreatmentModalForm({
   labels: Labels;
   initial?: TreatmentModalInitial;
   extraContent?: ReactNode;
+  appointmentId?: string;
 }) {
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
@@ -137,6 +139,9 @@ export function TreatmentModalForm({
         <form action={action} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
+          {mode === "create" && appointmentId ? (
+            <input type="hidden" name="appointment_id" value={appointmentId} />
+          ) : null}
           {mode === "edit" && initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
 
           <TreatmentClientDefaultsSection
