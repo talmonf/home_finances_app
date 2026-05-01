@@ -1,6 +1,7 @@
+import type { UiLanguage } from "@/lib/ui-language";
+
 /** Masked placeholder when the user enables demo / privacy display mode. */
 export const OBFUSCATED = "••••";
-import type { UiLanguage } from "@/lib/ui-language";
 
 export function formatClientNameForDisplay(
   obfuscate: boolean,
