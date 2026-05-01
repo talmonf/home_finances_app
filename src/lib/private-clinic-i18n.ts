@@ -439,6 +439,8 @@ export function privateClinicClients(lang: UiLanguage) {
     errProgram: p("Default program must belong to the default job.", "תכנית ברירת המחדל חייבת להשתייך למשרת ברירת המחדל."),
     errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
+    errRange: p("End date cannot be before start date.", "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה."),
+    errSaveFailed: p("Could not save the client. Please try again.", "לא ניתן היה לשמור את הלקוח. נסו שוב."),
     errHasTreatments: p("Client cannot be deleted because treatments are associated with them.", "אי אפשר למחוק לקוח כי משויכים אליו טיפולים."),
     deleteClient: p("Delete client", "מחיקת לקוח"),
     deletingClient: p("Deleting client…", "מוחק לקוח…"),

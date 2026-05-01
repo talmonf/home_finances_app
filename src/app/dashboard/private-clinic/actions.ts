@@ -1372,49 +1372,59 @@ export async function updateTherapyClient(formData: FormData) {
   const rehab_basket_status_raw = (formData.get("rehab_basket_status") as string)?.trim() || "";
   const disability_status = CLIENT_STATUS_OPTIONS.has(disability_status_raw) ? disability_status_raw : null;
   const rehab_basket_status = CLIENT_STATUS_OPTIONS.has(rehab_basket_status_raw) ? rehab_basket_status_raw : null;
+  const startDate = parseDate((formData.get("start_date") as string) || null);
+  const endDate = parseDate((formData.get("end_date") as string) || null);
+  if (startDate && endDate && endDate < startDate) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "range");
+  }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.therapy_clients.update({
-      where: { id },
-      data: {
-        first_name: (formData.get("first_name") as string)?.trim() || "",
-        last_name: (formData.get("last_name") as string)?.trim() || null,
-        id_number: (formData.get("id_number") as string)?.trim() || null,
-        start_date: parseDate((formData.get("start_date") as string) || null),
-        end_date: parseDate((formData.get("end_date") as string) || null),
-        notes: (formData.get("notes") as string)?.trim() || null,
-        default_job_id,
-        default_program_id,
-        default_visit_type,
-        kupat_holim,
-        family_id,
-        billing_basis,
-        billing_timing,
-        email: (formData.get("email") as string)?.trim() || null,
-        phones,
-        address: (formData.get("address") as string)?.trim() || null,
-        visits_per_period_count,
-        visits_per_period_weeks,
-        disability_status,
-        rehab_basket_status,
-        is_active: formData.has("is_active"),
-      },
-    });
-
-    await tx.therapy_clients_jobs.deleteMany({ where: { client_id: id, household_id: householdId } });
-    for (const jid of jobIds) {
-      if (!allowedJobIds.has(jid)) continue;
-      await tx.therapy_clients_jobs.create({
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.therapy_clients.update({
+        where: { id },
         data: {
-          id: crypto.randomUUID(),
-          household_id: householdId,
-          client_id: id,
-          job_id: jid,
-          is_primary: jid === default_job_id,
+          first_name: (formData.get("first_name") as string)?.trim() || "",
+          last_name: (formData.get("last_name") as string)?.trim() || null,
+          id_number: (formData.get("id_number") as string)?.trim() || null,
+          start_date: startDate,
+          end_date: endDate,
+          notes: (formData.get("notes") as string)?.trim() || null,
+          default_job_id,
+          default_program_id,
+          default_visit_type,
+          kupat_holim,
+          family_id,
+          billing_basis,
+          billing_timing,
+          email: (formData.get("email") as string)?.trim() || null,
+          phones,
+          address: (formData.get("address") as string)?.trim() || null,
+          visits_per_period_count,
+          visits_per_period_weeks,
+          disability_status,
+          rehab_basket_status,
+          is_active: formData.has("is_active"),
         },
       });
-    }
-  });
+
+      await tx.therapy_clients_jobs.deleteMany({ where: { client_id: id, household_id: householdId } });
+      for (const jid of jobIds) {
+        if (!allowedJobIds.has(jid)) continue;
+        await tx.therapy_clients_jobs.create({
+          data: {
+            id: crypto.randomUUID(),
+            household_id: householdId,
+            client_id: id,
+            job_id: jid,
+            is_primary: jid === default_job_id,
+          },
+        });
+      }
+    });
+  } catch (error) {
+    console.error("updateTherapyClient failed", { householdId, clientId: id, error });
+    redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "save-failed");
+  }
 
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/clients/${id}/edit`);
