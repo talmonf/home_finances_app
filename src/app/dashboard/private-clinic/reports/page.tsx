@@ -5,9 +5,11 @@ import {
   getCurrentHouseholdId,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicReports } from "@/lib/private-clinic-i18n";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
+import { MonthPayableReportClient } from "./month-payable-report-client";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +83,14 @@ export default async function PrivateClinicReportsPage() {
 
   const allowedJobs = await prisma.jobs.findMany({
     where: { household_id: householdId, ...jobScope },
-    select: { id: true },
+    select: { id: true, job_title: true, employer_name: true },
+    orderBy: [{ start_date: "desc" }],
   });
   const allowedJobIds = new Set(allowedJobs.map((j) => j.id));
+  const monthPayableJobOptions = allowedJobs.map((j) => ({
+    id: j.id,
+    label: formatJobDisplayLabel(j),
+  }));
 
   const audits = await prisma.therapy_appointment_audits.findMany({
     where: { household_id: householdId },
@@ -115,6 +122,18 @@ export default async function PrivateClinicReportsPage() {
         <h2 className="mt-2 text-lg font-medium text-slate-200">{r.title}</h2>
         <p className="text-sm text-slate-400">{r.intro}</p>
       </div>
+
+      <MonthPayableReportClient
+        jobs={monthPayableJobOptions}
+        labels={{
+          title: r.monthPayableTitle,
+          description: r.monthPayableDesc,
+          job: r.monthPayableJob,
+          month: r.monthPayableMonth,
+          download: r.download,
+          noJobs: r.monthPayableNoJobs,
+        }}
+      />
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">

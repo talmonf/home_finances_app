@@ -1002,6 +1002,17 @@ export function privateClinicReports(lang: UiLanguage) {
     tableAppointment: p("Appointment", "תור"),
     tableClient: p("Client", "לקוח"),
     tableDetails: p("Details", "פרטים"),
+    monthPayableTitle: p("Month payable (external job)", "תשלום חודשי (מעסיק חיצוני)"),
+    monthPayableDesc: p(
+      "Excel summary for one private-clinic job and calendar month: treatments, consultations, travel, receipts that overlap the month (by covered period or issue date), allocation sanity checks, and line-level sheets.",
+      "סיכום Excel לעבודה אחת ולחודש קלנדרי: טיפולים, ייעוצים, נסיעות, קבלות החופפות לחודש (לפי תקופה מכוסה או תאריך הנפקה), בדיקות הקצאה וגיליונות שורות.",
+    ),
+    monthPayableJob: p("Job", "עבודה"),
+    monthPayableMonth: p("Month", "חודש"),
+    monthPayableNoJobs: p(
+      "No private-clinic jobs are available for your account.",
+      "אין עבודות קליניקה זמינות לחשבון שלך.",
+    ),
   };
 }
 
