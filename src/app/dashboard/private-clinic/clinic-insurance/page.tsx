@@ -174,7 +174,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
 
       {modalMode === "new" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
-          <div className="w-full max-w-5xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+          <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-slate-100">{t.addTitle}</h3>
               <Link href="/dashboard/private-clinic/clinic-insurance" className="text-sm text-slate-400 hover:text-slate-200">

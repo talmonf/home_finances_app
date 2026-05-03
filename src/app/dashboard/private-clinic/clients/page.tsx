@@ -1,4 +1,5 @@
 import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import Link from "next/link";
 import {
   prisma,
@@ -477,9 +478,8 @@ export default async function ClientsPage({
         <form method="get" className="min-w-0 space-y-2">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="min-w-0 overflow-x-auto">
-            <div className="grid min-w-0 grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto]">
-            <div className="space-y-1 xl:min-w-0">
+          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
+            <div className="space-y-1 min-w-0">
               <label htmlFor="clients_filter_q" className="block text-[11px] text-slate-400">
                 {cl.filterSearchLabel}
               </label>
@@ -492,7 +492,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="space-y-1 xl:min-w-0">
+            <div className="space-y-1 min-w-0">
               <label htmlFor="clients_filter_job" className="block text-[11px] text-slate-400">
                 {cl.filterJobLabel}
               </label>
@@ -511,7 +511,7 @@ export default async function ClientsPage({
               </select>
             </div>
             {programs.length > 0 ? (
-              <div className="space-y-1 xl:min-w-0">
+              <div className="space-y-1 min-w-0">
                 <label htmlFor="clients_filter_program" className="block text-[11px] text-slate-400">
                   {cl.filterProgramLabel}
                 </label>
@@ -531,7 +531,7 @@ export default async function ClientsPage({
               </div>
             ) : null}
             {familyTherapyEnabled ? (
-              <div className="space-y-1 xl:min-w-0">
+              <div className="space-y-1 min-w-0">
                 <label htmlFor="clients_filter_family" className="block text-[11px] text-slate-400">
                   {cl.filterFamilyLabel}
                 </label>
@@ -550,7 +550,7 @@ export default async function ClientsPage({
                 </select>
               </div>
             ) : null}
-            <div className="space-y-1 xl:min-w-0">
+            <div className="space-y-1 min-w-0">
               <label htmlFor="clients_filter_status" className="block text-[11px] text-slate-400">
                 {cl.filterStatusLabel}
               </label>
@@ -565,7 +565,7 @@ export default async function ClientsPage({
                 <option value="inactive">{cl.filterStatusInactiveOnly}</option>
               </select>
             </div>
-            <div className="space-y-1 xl:min-w-0">
+            <div className="space-y-1 min-w-0">
               <label htmlFor="clients_filter_from" className="block text-[11px] text-slate-400">
                 {c.from}
               </label>
@@ -577,7 +577,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="space-y-1 xl:min-w-0">
+            <div className="space-y-1 min-w-0">
               <label htmlFor="clients_filter_to" className="block text-[11px] text-slate-400">
                 {c.to}
               </label>
@@ -589,7 +589,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="flex min-w-0 shrink-0 flex-wrap items-end justify-end gap-2 xl:self-end">
+            <div className="col-span-full flex min-w-0 flex-wrap items-end justify-end gap-2">
               <button
                 type="submit"
                 className="h-9 shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
@@ -597,15 +597,9 @@ export default async function ClientsPage({
                 {c.apply}
               </button>
               {hasActiveFilters ? (
-                <Link
-                  href={clientsListHref({ sort, dir })}
-                  className="shrink-0 text-xs text-sky-400 hover:text-sky-300 hover:underline"
-                >
-                  {c.filterReset}
-                </Link>
+                <PrivateClinicFilterResetButton href={clientsListHref({ sort, dir })} label={c.filterReset} />
               ) : null}
             </div>
-          </div>
           </div>
           <p className="text-[11px] text-slate-500">{cl.filterDateRangeHelp}</p>
         </form>

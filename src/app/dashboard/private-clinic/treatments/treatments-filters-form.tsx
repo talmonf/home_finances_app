@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 
 type Option = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -196,12 +197,7 @@ export function TreatmentsFiltersForm(props: Props) {
           {props.labels.apply}
         </button>
         {props.filterResetHref && props.filterResetLabel ? (
-          <a
-            href={props.filterResetHref}
-            className="whitespace-nowrap pb-0.5 text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
-          >
-            {props.filterResetLabel}
-          </a>
+          <PrivateClinicFilterResetButton href={props.filterResetHref} label={props.filterResetLabel} />
         ) : null}
       </div>
       </form>

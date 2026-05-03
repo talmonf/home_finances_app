@@ -106,7 +106,7 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
   const effectiveIsActive = program.is_active && !(program.end_date && program.end_date < todayStart);
 
   const pageContent = (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-50">{pr.editProgramPageTitle}</h1>
         <Link
@@ -341,7 +341,7 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
 
   return showModal ? (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+      <div className="max-h-[92vh] w-full max-w-screen-2xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
         {pageContent}
       </div>
     </div>

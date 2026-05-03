@@ -231,7 +231,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-6xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+      <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <Link
             href="/"

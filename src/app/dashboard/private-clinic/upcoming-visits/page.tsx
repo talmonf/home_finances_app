@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import {
   prisma,
   requireHouseholdMember,
@@ -250,12 +251,7 @@ export default async function UpcomingVisitsPage({
             {c.apply}
           </button>
           {familyFilter ? (
-            <Link
-              href="/dashboard/private-clinic/upcoming-visits"
-              className="text-xs text-sky-400 hover:text-sky-300 hover:underline"
-            >
-              {c.filterReset}
-            </Link>
+            <PrivateClinicFilterResetButton href="/dashboard/private-clinic/upcoming-visits" label={c.filterReset} />
           ) : null}
         </form>
       ) : null}

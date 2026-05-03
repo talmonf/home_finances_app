@@ -252,7 +252,7 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
 
       {modalMode === "new" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+          <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-slate-100">{t.addManual}</h3>
               <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">
@@ -325,7 +325,7 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
 
       {modalMode === "edit" && editingRow ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+          <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-slate-100">{t.editManual}</h3>
               <Link href={baseListHref} className="text-sm text-slate-400 hover:text-slate-200">

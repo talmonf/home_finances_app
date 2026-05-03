@@ -609,7 +609,7 @@ export function FamilyMembersFormSection({
           <div
             role="dialog"
             aria-modal="true"
-            className="h-[85vh] w-full max-w-6xl overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+            className="h-[85vh] w-full max-w-screen-2xl overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">

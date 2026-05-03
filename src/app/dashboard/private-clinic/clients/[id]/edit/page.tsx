@@ -81,7 +81,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
   const redirectSuffix = fromUpcoming ? "?fromUpcoming=1&modal=1" : "";
   const editRedirectPath = `${editPath}${redirectSuffix}`;
   const pageContent = (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-50">{cl.editClientPageTitle}</h1>
         <Link
@@ -136,7 +136,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
   return (
     showModal ? (
       <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
-        <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+        <div className="max-h-[92vh] w-full max-w-screen-2xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
           {pageContent}
         </div>
       </div>

@@ -70,7 +70,7 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
           : null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-50">{j.editJobPageTitle}</h1>
         <Link

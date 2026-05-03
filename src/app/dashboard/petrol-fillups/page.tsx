@@ -143,7 +143,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-dvh bg-slate-950 px-4 pb-28 pt-2 sm:pb-10">
-      <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="mx-auto w-full max-w-screen-2xl space-y-6">
         <p className="text-sm text-slate-400">
           Choose the car, then enter the pump readout. Δ km and km/L use the previous fill with a lower odometer.
         </p>

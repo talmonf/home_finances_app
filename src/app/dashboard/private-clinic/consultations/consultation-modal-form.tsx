@@ -71,7 +71,7 @@ export function ConsultationModalForm({
   initial?: InitialConsultation;
 }) {
   return (
-    <DashboardModal title={labels.title} closeHref={closeHref} closeLabel={labels.cancel} maxWidthClassName="max-w-3xl">
+    <DashboardModal title={labels.title} closeHref={closeHref} closeLabel={labels.cancel} maxWidthClassName="max-w-screen-2xl">
       <GlobalFormSubmitFeedback />
       <form action={action} className="grid gap-3 md:grid-cols-2">
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />

@@ -26,7 +26,7 @@ export function CreateHouseholdModal({
 
       {isOpen ? (
         <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-6">
+          <div className="max-h-[92vh] w-full max-w-screen-2xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-100">Create household</h2>
               <button

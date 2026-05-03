@@ -54,7 +54,7 @@ export default async function ImportPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div
         className={`w-full space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700 ${
-          format === "riseup" ? "max-w-[96rem]" : "max-w-5xl"
+          format === "riseup" ? "max-w-[96rem]" : "max-w-screen-2xl"
         }`}
       >
         <header>

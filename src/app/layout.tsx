@@ -29,7 +29,7 @@ export default async function RootLayout({
       <body className="antialiased bg-slate-950 text-slate-50">
         <div className="min-h-screen">
           <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
-            <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+            <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4">
               <Link href="/" className="font-semibold tracking-tight">
                 {h.appTitle}
               </Link>

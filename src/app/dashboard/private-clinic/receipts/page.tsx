@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
 import {
   prisma,
@@ -399,9 +400,7 @@ export default async function ReceiptsPage({
               {c.apply}
             </button>
             {hasReceiptListFilters ? (
-              <Link href={RECEIPTS_BASE} className="text-xs text-sky-400 hover:text-sky-300 hover:underline">
-                {c.filterReset}
-              </Link>
+              <PrivateClinicFilterResetButton href={RECEIPTS_BASE} label={c.filterReset} />
             ) : null}
           </div>
         </form>

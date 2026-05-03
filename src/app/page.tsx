@@ -231,7 +231,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
-      <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+      <div className="w-full max-w-screen-2xl rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         {passwordUpdatedBanner}
         {isSuperAdmin ? (
           <>

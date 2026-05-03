@@ -69,7 +69,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div
             className={`flex justify-center bg-slate-950 px-4 ${usefulSectionId ? "pt-2 pb-4" : "pt-2"}`}
           >
-            <div className="w-full max-w-6xl space-y-2">
+            <div className="w-full max-w-screen-2xl space-y-2">
               <Suspense fallback={null}>
                 <DashboardUserToolbar
                   showObfuscate={showObfuscateToggle}

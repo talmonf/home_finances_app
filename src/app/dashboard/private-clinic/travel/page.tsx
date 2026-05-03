@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import {
   prisma,
   requireHouseholdMember,
@@ -158,13 +159,15 @@ export default async function TravelPage({
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
-            <a href={TRAVEL_BASE} className="text-sky-400 hover:underline">
-              {c.filterReset}
-            </a>
+            <PrivateClinicFilterResetButton
+              href={TRAVEL_BASE}
+              label={c.filterReset}
+              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-xs font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
+            />
           </p>
         ) : null}
         <form
-          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4 lg:grid-cols-6"
+          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-3 sm:p-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]"
           method="get"
         >
           {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
@@ -229,18 +232,14 @@ export default async function TravelPage({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-6 sm:mt-auto">
+          <div className="col-span-full flex flex-wrap items-end justify-end gap-2 sm:mt-auto">
             <button
               type="submit"
               className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
             >
               {c.apply}
             </button>
-            {hasTravelListFilters ? (
-              <Link href={TRAVEL_BASE} className="text-xs text-sky-400 hover:text-sky-300 hover:underline">
-                {c.filterReset}
-              </Link>
-            ) : null}
+            {hasTravelListFilters ? <PrivateClinicFilterResetButton href={TRAVEL_BASE} label={c.filterReset} /> : null}
           </div>
         </form>
       </section>

@@ -14,7 +14,7 @@ export function DashboardModal({
   closeHref,
   closeLabel,
   children,
-  maxWidthClassName = "max-w-5xl",
+  maxWidthClassName = "max-w-screen-2xl",
 }: DashboardModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-8">

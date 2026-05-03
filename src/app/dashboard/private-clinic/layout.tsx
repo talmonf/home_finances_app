@@ -60,8 +60,8 @@ export default async function PrivateClinicLayout({
   }
 
   return (
-    <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-4 sm:py-4">
-      <div className="w-full min-w-0 max-w-6xl space-y-3 sm:space-y-4">
+    <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-5 sm:py-4 lg:px-8">
+      <div className="w-full min-w-0 max-w-screen-2xl space-y-3 sm:space-y-4">
         <PrivateClinicNavPendingProvider>
           <header className="space-y-2">
             <PrivateClinicNavClient

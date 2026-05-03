@@ -7,6 +7,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import Link from "next/link";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteReceiptAllocation, updateTherapyTreatment } from "../actions";
 import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
@@ -335,9 +336,11 @@ export default async function TreatmentsPage({
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
-            <Link href="/dashboard/private-clinic/treatments" className="text-sky-400 hover:underline">
-              {c.filterReset}
-            </Link>
+            <PrivateClinicFilterResetButton
+              href="/dashboard/private-clinic/treatments"
+              label={c.filterReset}
+              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-xs font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
+            />
           </p>
         ) : null}
         <TreatmentsFiltersForm
