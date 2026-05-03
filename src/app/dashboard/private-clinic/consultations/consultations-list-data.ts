@@ -9,6 +9,7 @@ export type ConsultationsReceivedFilter = "all" | "linked" | "unlinked";
 
 export type ConsultationsListFilters = {
   job: string;
+  consultation_type_id: string;
   receipt: string;
   from: string;
   to: string;
@@ -127,16 +128,19 @@ function mapConsultationListRow(row: ConsultationListPrismaRow): ConsultationLis
       ]
     : [];
 
+  const currencyRaw = row.currency ?? row.income_currency ?? row.cost_currency;
+  const currency = (typeof currencyRaw === "string" ? currencyRaw.trim() : "") || "ILS";
+
   return {
     id: row.id,
     job_id: row.job_id,
-    job_label: formatJobDisplayLabel(row.job),
+    job_label: row.job ? formatJobDisplayLabel(row.job) : "—",
     consultation_type_id: row.consultation_type_id,
-    consultation_type_name: row.consultation_type.name,
-    consultation_type_name_he: row.consultation_type.name_he,
+    consultation_type_name: row.consultation_type?.name ?? "",
+    consultation_type_name_he: row.consultation_type?.name_he ?? null,
     occurred_at_iso: row.occurred_at.toISOString(),
     amount: row.amount?.toString() ?? row.income_amount?.toString() ?? row.cost_amount?.toString() ?? null,
-    currency: row.currency || row.income_currency || row.cost_currency,
+    currency,
     linked_transaction_id:
       row.linked_transaction_id ?? row.linked_income_transaction_id ?? row.linked_cost_transaction_id,
     linked_receipt_id: row.receipt_allocations[0]?.receipt_id ?? null,
@@ -159,6 +163,7 @@ function whereForConsultationsList(params: {
     household_id: householdId,
     job: jobWherePrivateClinicScoped(familyMemberId),
     ...(filters.job ? { job_id: filters.job } : {}),
+    ...(filters.consultation_type_id ? { consultation_type_id: filters.consultation_type_id } : {}),
     ...(filters.receipt
       ? {
           receipt_allocations: {

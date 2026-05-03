@@ -34,12 +34,13 @@ function decimalStringWithGrouping(amountStr: string, uiLanguage: UiLanguage): s
 export function formatMoneyLineForDisplay(
   obfuscate: boolean,
   amount: string,
-  currency: string,
+  currency: string | null | undefined,
   uiLanguage: UiLanguage = "en",
 ): string {
   if (obfuscate) return OBFUSCATED;
-  const normalizedCurrency = currency.trim().toUpperCase();
-  const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currency;
+  const currencySafe = (currency ?? "").trim() || "ILS";
+  const normalizedCurrency = currencySafe.toUpperCase();
+  const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currencySafe;
   const grouped = decimalStringWithGrouping(amount, uiLanguage);
   return uiLanguage === "he" ? `${currencyLabel} ${grouped}` : `${grouped} ${currencyLabel}`;
 }
@@ -47,12 +48,13 @@ export function formatMoneyLineForDisplay(
 export function formatDecimalAmountForDisplay(
   obfuscate: boolean,
   amount: { toString(): string },
-  currency: string,
+  currency: string | null | undefined,
   uiLanguage: UiLanguage = "en",
 ): string {
   if (obfuscate) return OBFUSCATED;
-  const normalizedCurrency = currency.trim().toUpperCase();
-  const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currency;
+  const currencySafe = (currency ?? "").trim() || "ILS";
+  const normalizedCurrency = currencySafe.toUpperCase();
+  const currencyLabel = uiLanguage === "he" && normalizedCurrency === "ILS" ? 'ש"ח' : currencySafe;
   const grouped = decimalStringWithGrouping(amount.toString(), uiLanguage);
   return uiLanguage === "he" ? `${currencyLabel} ${grouped}` : `${grouped} ${currencyLabel}`;
 }

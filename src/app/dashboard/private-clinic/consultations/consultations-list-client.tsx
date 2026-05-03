@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
-import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
+import { OBFUSCATED, formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { ConsultationListRowDto } from "./consultations-list-data";
@@ -19,6 +19,7 @@ type Labels = {
   clients: string;
   amount: string;
   receipt: string;
+  notes: string;
   edit: string;
   linked: string;
   unlinked: string;
@@ -140,8 +141,8 @@ export function ConsultationsListClient({
           uiLanguage,
         ).toLocaleLowerCase();
       } else if (sortKey === "job") {
-        aValue = a.job_label.toLocaleLowerCase();
-        bValue = b.job_label.toLocaleLowerCase();
+        aValue = (a.job_label ?? "").toLocaleLowerCase();
+        bValue = (b.job_label ?? "").toLocaleLowerCase();
       } else if (sortKey === "amount") {
         aValue = amountValue(a.amount);
         bValue = amountValue(b.amount);
@@ -189,6 +190,7 @@ export function ConsultationsListClient({
                 </button>
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.receipt}</th>
+              <th className="px-3 py-2 text-slate-300">{labels.notes}</th>
               <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
             </tr>
           </thead>
@@ -223,6 +225,17 @@ export function ConsultationsListClient({
                     </Link>
                   ) : (
                     labels.unlinked
+                  )}
+                </td>
+                <td className="max-w-[14rem] px-3 py-2 text-slate-400">
+                  {obfuscate ? (
+                    OBFUSCATED
+                  ) : row.notes?.trim() ? (
+                    <span className="block max-w-[14rem] truncate" title={row.notes}>
+                      {row.notes}
+                    </span>
+                  ) : (
+                    "—"
                   )}
                 </td>
                 <td className="px-3 py-2">

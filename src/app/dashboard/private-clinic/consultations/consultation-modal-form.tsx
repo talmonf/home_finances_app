@@ -35,6 +35,7 @@ type Labels = {
   amountLabel: string;
   linkedTx: string;
   clients: string;
+  selectClientPlaceholder: string;
   addAdditionalClient: string;
   remove: string;
   notes: string;
@@ -113,7 +114,17 @@ export function ConsultationModalForm({
         <div className="md:col-span-2">
           <label className="block text-xs text-slate-400">{labels.dateTime}</label>
           <div className="mt-1">
-            <SplitDateTimeField name="occurred_at" required initialValue={initial?.occurred_at} uiLanguage={uiLanguage} />
+            <SplitDateTimeField
+              name="occurred_at"
+              required
+              timeOptional
+              initialValue={initial?.occurred_at}
+              uiLanguage={uiLanguage}
+              wrapperClassName="flex flex-wrap items-end gap-2"
+              dateInputClassName="h-[38px] w-[11.25rem] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
+              selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            />
           </div>
         </div>
         <div>
@@ -123,7 +134,7 @@ export function ConsultationModalForm({
               name="amount"
               defaultValue={initial?.amount ?? ""}
               placeholder="0.00"
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-28 max-w-[9rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
             <input
               name="currency"
@@ -147,6 +158,7 @@ export function ConsultationModalForm({
           initialParticipantIds={initial?.participant_ids ?? []}
           labels={{
             clients: labels.clients,
+            selectClientPlaceholder: labels.selectClientPlaceholder,
             addAdditionalClient: labels.addAdditionalClient,
             remove: labels.remove,
           }}

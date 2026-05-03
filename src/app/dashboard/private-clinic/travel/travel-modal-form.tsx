@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
-import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
 import type { UiLanguage } from "@/lib/ui-language";
+import { TravelScopeJobTreatmentOccurredFields, type TreatmentTravelOption } from "./travel-scope-job-treatment-occurred-client";
 
 type TravelOption = {
   id: string;
@@ -46,7 +46,7 @@ export function TravelModalForm({
   householdId: string;
   uiLanguage: UiLanguage;
   jobOptions: TravelOption[];
-  treatmentOptions: TravelOption[];
+  treatmentOptions: TreatmentTravelOption[];
   c: ReturnType<typeof privateClinicCommon>;
   tv: ReturnType<typeof privateClinicTravel>;
   initial?: TravelModalInitial;
@@ -64,41 +64,25 @@ export function TravelModalForm({
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
           {initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
-          <div className="md:col-span-2 flex flex-wrap gap-4 text-sm text-slate-300">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="link_scope" value="job" defaultChecked={initial?.link_scope !== "treatment"} />
-              {tv.relatedJob}
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="link_scope" value="treatment" defaultChecked={initial?.link_scope === "treatment"} />
-              {tv.relatedTreatment}
-            </label>
-          </div>
-          <select
-            name="job_id"
-            defaultValue={initial?.job_id ?? ""}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{tv.jobWhenScope}</option>
-            {jobOptions.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.label}
-              </option>
-            ))}
-          </select>
-          <select
-            name="treatment_id"
-            defaultValue={initial?.treatment_id ?? ""}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{tv.treatmentWhenScope}</option>
-            {treatmentOptions.map((treatment) => (
-              <option key={treatment.id} value={treatment.id}>
-                {treatment.label}
-              </option>
-            ))}
-          </select>
-          <SplitDateTimeField name="occurred_at" uiLanguage={uiLanguage} initialValue={initial?.occurred_at ?? ""} />
+          <TravelScopeJobTreatmentOccurredFields
+            jobOptions={jobOptions}
+            treatmentOptions={treatmentOptions}
+            uiLanguage={uiLanguage}
+            initial={
+              initial
+                ? {
+                    link_scope: initial.link_scope,
+                    job_id: initial.job_id,
+                    treatment_id: initial.treatment_id,
+                    occurred_at: initial.occurred_at,
+                  }
+                : undefined
+            }
+            relatedJobLabel={tv.relatedJob}
+            relatedTreatmentLabel={tv.relatedTreatment}
+            jobPlaceholder={tv.jobWhenScope}
+            treatmentPlaceholder={tv.treatmentWhenScope}
+          />
           <div className="flex gap-2">
             <input
               name="amount"

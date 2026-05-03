@@ -65,7 +65,7 @@ export function TreatmentsFiltersForm(props: Props) {
     <fieldset className="rounded-lg border border-slate-700 bg-slate-900/60 px-2 pb-2 pt-1">
       <legend className="px-1 text-xs font-medium text-slate-300">{props.labels.filters}</legend>
       <form
-        className="flex flex-wrap items-end gap-1.5"
+        className="flex flex-wrap items-end gap-x-2 gap-y-2"
         method={props.method ?? "get"}
         action={props.action}
       >
@@ -189,10 +189,10 @@ export function TreatmentsFiltersForm(props: Props) {
         />
       </div>
 
-      <div className="flex flex-none items-end gap-1.5">
+      <div className="flex flex-none shrink-0 items-end gap-2">
         <button
           type="submit"
-          className="w-auto rounded-md bg-slate-700 px-2.5 py-1 text-xs text-slate-100 hover:bg-slate-600"
+          className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
         >
           {props.labels.apply}
         </button>

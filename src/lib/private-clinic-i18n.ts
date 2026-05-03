@@ -841,7 +841,8 @@ export function privateClinicConsultations(lang: UiLanguage) {
     receipt: p("Receipt", "קבלה"),
     transaction: p("Transaction", "תנועה"),
     clients: p("Clients", "לקוחות"),
-    addAdditionalClient: p("Add client", "הוספת לקוח"),
+    selectClientPlaceholder: p("Select client…", "בחירת לקוח…"),
+    addAdditionalClient: p("Add another client", "הוספת לקוח נוסף"),
   };
 }
 

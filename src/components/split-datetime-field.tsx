@@ -5,7 +5,13 @@ import { useMemo, useState } from "react";
 type Props = {
   name: string;
   initialValue?: string;
+  /** When true, the calendar date is required (if `required` is true); hour/minute may be left unset. */
   required?: boolean;
+  /**
+   * When true, omitting time submits local midnight (`yyyy-mm-ddT00:00`) instead of an empty value.
+   * Hour/minute are not HTML-required; `required` applies to the date input only.
+   */
+  timeOptional?: boolean;
   uiLanguage?: "en" | "he";
   dateAriaLabel?: string;
   hourAriaLabel?: string;
@@ -20,6 +26,7 @@ export function SplitDateTimeField({
   name,
   initialValue = "",
   required = false,
+  timeOptional = false,
   uiLanguage = "en",
   dateAriaLabel,
   hourAriaLabel,
@@ -46,10 +53,16 @@ export function SplitDateTimeField({
     () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
     [],
   );
+  const timeRequired = required && !timeOptional;
   const value = useMemo(() => {
-    if (!date || !hour || !minute) return "";
+    if (!date) return "";
+    if (timeOptional) {
+      if (hour && minute) return `${date}T${hour}:${minute}`;
+      return `${date}T00:00`;
+    }
+    if (!hour || !minute) return "";
     return `${date}T${hour}:${minute}`;
-  }, [date, hour, minute]);
+  }, [date, hour, minute, timeOptional]);
 
   return (
     <div className={wrapperClassName}>
@@ -65,7 +78,7 @@ export function SplitDateTimeField({
       <div className={timeWrapperClassName}>
         <select
           value={hour}
-          required={required}
+          required={timeRequired}
           onChange={(e) => setHour(e.target.value)}
           className={selectClassName}
           aria-label={hourAriaLabel ?? defaultHourAriaLabel}
@@ -79,7 +92,7 @@ export function SplitDateTimeField({
         </select>
         <select
           value={minute}
-          required={required}
+          required={timeRequired}
           onChange={(e) => setMinute(e.target.value)}
           className={selectClassName}
           aria-label={minuteAriaLabel ?? defaultMinuteAriaLabel}

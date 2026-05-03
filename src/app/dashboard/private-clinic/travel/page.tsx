@@ -9,7 +9,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatClientNameForDisplay } from "@/lib/privacy-display";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
@@ -138,6 +138,7 @@ export default async function TravelPage({
   const treatmentOptions = treatments.map((t) => ({
     id: t.id,
     label: `${formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — ${formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — ${formatJobDisplayLabel(t.job)}`,
+    occurredAtYmd: utcDateToHtmlDateInputValue(t.occurred_at),
   }));
 
   return (
@@ -157,26 +158,26 @@ export default async function TravelPage({
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{tv.filters}</h2>
         {filteredReceipt ? (
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-normal text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <PrivateClinicFilterResetButton
               href={TRAVEL_BASE}
               label={c.filterReset}
-              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-xs font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
+              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
             />
           </p>
         ) : null}
         <form
-          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-3 sm:p-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]"
+          className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-x-3 sm:p-4"
           method="get"
         >
           {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
-          <div>
+          <div className="min-w-0 flex-1 basis-[11.5rem]">
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
               defaultValue={filters.job}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
             >
               <option value="">{c.any}</option>
               {jobs.map((j) => (
@@ -186,12 +187,12 @@ export default async function TravelPage({
               ))}
             </select>
           </div>
-          <div>
+          <div className="min-w-0 flex-1 basis-[11.5rem]">
             <label className="block text-xs text-slate-400">{c.client}</label>
             <select
               name="client"
               defaultValue={filters.client}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
             >
               <option value="">{c.any}</option>
               {clients.map((cl) => (
@@ -202,40 +203,40 @@ export default async function TravelPage({
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-[7.5rem] shrink-0">
             <label className="block text-xs text-slate-400">{tv.filterBankLink}</label>
             <select
               name="received"
               defaultValue={filters.received}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
             >
               <option value="all">{tv.receivedAll}</option>
               <option value="linked">{tv.receivedLinked}</option>
               <option value="unlinked">{tv.receivedUnlinked}</option>
             </select>
           </div>
-          <div>
+          <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.from}</label>
             <input
               name="from"
               type="date"
               defaultValue={filters.from}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
             />
           </div>
-          <div>
+          <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.to}</label>
             <input
               name="to"
               type="date"
               defaultValue={filters.to}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
             />
           </div>
-          <div className="col-span-full flex flex-wrap items-end justify-end gap-2 sm:mt-auto">
+          <div className="flex shrink-0 items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
             >
               {c.apply}
             </button>

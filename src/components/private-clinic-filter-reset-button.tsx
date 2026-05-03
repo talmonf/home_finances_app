@@ -29,7 +29,7 @@ export function PrivateClinicFilterResetButton({ href, label, className }: Props
       }}
       className={
         className ??
-        "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800/90 px-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
       }
     >
       {pending ? <LoadingSpinner className="h-3.5 w-3.5 shrink-0" /> : null}

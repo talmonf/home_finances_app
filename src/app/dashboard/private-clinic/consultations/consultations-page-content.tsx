@@ -15,6 +15,7 @@ import {
 } from "../actions";
 import type { TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import {
   loadConsultationsCursorPage,
@@ -47,6 +48,7 @@ export type ConsultationsPageSearchParams = Promise<{
   received?: string;
   sort?: string;
   dir?: string;
+  consultation_type_id?: string;
   modal?: string;
   edit_id?: string;
 }>;
@@ -76,6 +78,7 @@ export async function ConsultationsPageContent({
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
   const filters: ConsultationsListFilters = {
     job: sp.job?.trim() || "",
+    consultation_type_id: sp.consultation_type_id?.trim() || "",
     receipt: sp.receipt?.trim() || "",
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
@@ -86,6 +89,7 @@ export async function ConsultationsPageContent({
 
   const listParams = new URLSearchParams();
   if (filters.job) listParams.set("job", filters.job);
+  if (filters.consultation_type_id) listParams.set("consultation_type_id", filters.consultation_type_id);
   if (filters.receipt) listParams.set("receipt", filters.receipt);
   if (filters.from) listParams.set("from", filters.from);
   if (filters.to) listParams.set("to", filters.to);
@@ -95,6 +99,7 @@ export async function ConsultationsPageContent({
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
   const hasConsultationsListFilters =
     Boolean(filters.job) ||
+    Boolean(filters.consultation_type_id) ||
     Boolean(filters.receipt) ||
     Boolean(filters.from) ||
     Boolean(filters.to) ||
@@ -106,7 +111,7 @@ export async function ConsultationsPageContent({
   apiListParams.set("take", "50");
   const apiHrefBase = `/api/private-clinic/consultations?${apiListParams.toString()}`;
 
-  const [jobs, firstPage] = await Promise.all([
+  const [jobs, firstPage, consultationTypes] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -117,17 +122,17 @@ export async function ConsultationsPageContent({
       filters,
       take: 50,
     }),
+    prisma.therapy_consultation_types.findMany({
+      where: { household_id: householdId },
+      orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, name_he: true },
+    }),
   ]);
 
-  let consultationTypes: Array<{ id: string; name: string; name_he: string | null }> = [];
   let modalClients: Array<{ id: string; first_name: string; last_name: string | null; is_active: boolean }> = [];
   let transactionOptions: ConsultationModalTxnRow[] = [];
   if (modalMode === "new" || modalMode === "edit") {
-    const [typesR, clientsR, txRows] = await Promise.all([
-      prisma.therapy_consultation_types.findMany({
-        where: { household_id: householdId },
-        orderBy: [{ sort_order: "asc" }, { name: "asc" }],
-      }),
+    const [clientsR, txRows] = await Promise.all([
       prisma.therapy_clients.findMany({
         where: {
           household_id: householdId,
@@ -149,7 +154,6 @@ export async function ConsultationsPageContent({
         },
       }),
     ]);
-    consultationTypes = typesR;
     modalClients = clientsR;
     transactionOptions = txRows as ConsultationModalTxnRow[];
   }
@@ -185,21 +189,21 @@ export async function ConsultationsPageContent({
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{co.filters}</h2>
         {filteredReceipt ? (
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-normal text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <PrivateClinicFilterResetButton
               href={CONSULTATIONS_BASE}
               label={c.filterReset}
-              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-xs font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
+              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
             />
           </p>
         ) : null}
         <form
-          className="grid gap-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-3 sm:p-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]"
+          className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-x-3 sm:p-4"
           method="get"
         >
           {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
-          <div>
+          <div className="min-w-0 flex-1 basis-[11.5rem]">
             <label htmlFor="consultations-filter-job" className="block text-xs text-slate-400">
               {c.job}
             </label>
@@ -207,7 +211,7 @@ export async function ConsultationsPageContent({
               id="consultations-filter-job"
               name="job"
               defaultValue={filters.job}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>
               {jobs.map((j) => (
@@ -217,7 +221,25 @@ export async function ConsultationsPageContent({
               ))}
             </select>
           </div>
-          <div>
+          <div className="min-w-0 flex-1 basis-[10.5rem]">
+            <label htmlFor="consultations-filter-type" className="block text-xs text-slate-400">
+              {c.type}
+            </label>
+            <select
+              id="consultations-filter-type"
+              name="consultation_type_id"
+              defaultValue={filters.consultation_type_id}
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{c.any}</option>
+              {consultationTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {therapyLocalizedCategoryName(t, uiLanguage)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="w-[7.5rem] shrink-0">
             <label htmlFor="consultations-filter-received" className="block text-xs text-slate-400">
               {co.filterReceivedPayment}
             </label>
@@ -225,35 +247,35 @@ export async function ConsultationsPageContent({
               id="consultations-filter-received"
               name="received"
               defaultValue={filters.received}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
             >
               <option value="all">{co.receivedAll}</option>
               <option value="linked">{co.receivedLinked}</option>
               <option value="unlinked">{co.receivedUnlinked}</option>
             </select>
           </div>
-          <div>
+          <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.from}</label>
             <input
               name="from"
               type="date"
               defaultValue={filters.from}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
             />
           </div>
-          <div>
+          <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.to}</label>
             <input
               name="to"
               type="date"
               defaultValue={filters.to}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
             />
           </div>
-          <div className="col-span-full flex flex-wrap items-end justify-end gap-2 sm:mt-auto">
+          <div className="flex shrink-0 items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
             >
               {c.apply}
             </button>
@@ -286,6 +308,7 @@ export async function ConsultationsPageContent({
               clients: co.clients,
               amount: c.amount,
               receipt: co.receipt,
+              notes: c.notes,
               edit: c.edit,
               linked: co.receivedLinked,
               unlinked: co.receivedUnlinked,
@@ -332,6 +355,7 @@ export async function ConsultationsPageContent({
             amountLabel: co.amountLabel,
             linkedTx: co.linkTx,
             clients: co.clients,
+            selectClientPlaceholder: co.selectClientPlaceholder,
             addAdditionalClient: co.addAdditionalClient,
             remove: c.remove,
             notes: c.notes,
@@ -389,6 +413,7 @@ export async function ConsultationsPageContent({
             amountLabel: co.amountLabel,
             linkedTx: co.linkTx,
             clients: co.clients,
+            selectClientPlaceholder: co.selectClientPlaceholder,
             addAdditionalClient: co.addAdditionalClient,
             remove: c.remove,
             notes: c.notes,

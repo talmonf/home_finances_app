@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     cursorId: cursor,
     filters: {
       job: url.searchParams.get("job")?.trim() || "",
+      consultation_type_id: url.searchParams.get("consultation_type_id")?.trim() || "",
       receipt: url.searchParams.get("receipt")?.trim() || "",
       from: url.searchParams.get("from")?.trim() || "",
       to: url.searchParams.get("to")?.trim() || "",

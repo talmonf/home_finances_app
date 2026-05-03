@@ -299,7 +299,7 @@ export default async function ReceiptsPage({
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{r.filters}</h2>
         <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+          className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:gap-x-3 sm:p-4"
           method="get"
         >
           <div>
@@ -392,10 +392,10 @@ export default async function ReceiptsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex shrink-0 items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
             >
               {c.apply}
             </button>

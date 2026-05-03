@@ -334,12 +334,12 @@ export default async function TreatmentsPage({
 
       <section className="space-y-1">
         {filteredReceipt ? (
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-normal text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <PrivateClinicFilterResetButton
               href="/dashboard/private-clinic/treatments"
               label={c.filterReset}
-              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-xs font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
+              className="inline-flex h-auto min-h-0 items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-normal text-sky-400 hover:text-sky-300 hover:underline disabled:opacity-60"
             />
           </p>
         ) : null}

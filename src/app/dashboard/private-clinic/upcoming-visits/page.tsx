@@ -231,13 +231,16 @@ export default async function UpcomingVisitsPage({
         <p className="mt-1 text-sm text-slate-400">{uv.pageIntro}</p>
       </div>
       {settings?.family_therapy_enabled ? (
-        <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
-          <div>
+        <form
+          method="get"
+          className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3 sm:gap-x-3 sm:p-4"
+        >
+          <div className="min-w-0 flex-1 basis-[12rem]">
             <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
             <select
               name="family"
               defaultValue={familyFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
             >
               <option value="">{anyFamilyLabel}</option>
               {families.map((family) => (
@@ -247,12 +250,17 @@ export default async function UpcomingVisitsPage({
               ))}
             </select>
           </div>
-          <button type="submit" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-            {c.apply}
-          </button>
-          {familyFilter ? (
-            <PrivateClinicFilterResetButton href="/dashboard/private-clinic/upcoming-visits" label={c.filterReset} />
-          ) : null}
+          <div className="flex shrink-0 items-end gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
+            >
+              {c.apply}
+            </button>
+            {familyFilter ? (
+              <PrivateClinicFilterResetButton href="/dashboard/private-clinic/upcoming-visits" label={c.filterReset} />
+            ) : null}
+          </div>
         </form>
       ) : null}
 

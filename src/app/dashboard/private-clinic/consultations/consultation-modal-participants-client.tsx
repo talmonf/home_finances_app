@@ -8,14 +8,19 @@ type Props = {
   clients: ClientOption[];
   labels: {
     clients: string;
+    selectClientPlaceholder: string;
     addAdditionalClient: string;
     remove: string;
   };
   initialParticipantIds: string[];
 };
 
+function initialRows(ids: string[]): string[] {
+  return ids.length > 0 ? [...ids] : [""];
+}
+
 export function ConsultationModalParticipantsPicker({ clients, labels, initialParticipantIds }: Props) {
-  const [participantIds, setParticipantIds] = useState<string[]>(initialParticipantIds);
+  const [participantIds, setParticipantIds] = useState<string[]>(() => initialRows(initialParticipantIds));
   const selectedIds = useMemo(() => new Set(participantIds.filter(Boolean)), [participantIds]);
 
   return (
@@ -32,22 +37,24 @@ export function ConsultationModalParticipantsPicker({ clients, labels, initialPa
                 next[index] = e.target.value;
                 setParticipantIds(next);
               }}
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full max-w-sm rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{labels.clients}</option>
+              <option value="">{labels.selectClientPlaceholder}</option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id} disabled={selectedIds.has(cl.id) && cl.id !== clientId}>
                   {cl.label}
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={() => setParticipantIds((prev) => prev.filter((_, rowIndex) => rowIndex !== index))}
-              className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
-            >
-              {labels.remove}
-            </button>
+            {participantIds.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => setParticipantIds((prev) => prev.filter((_, rowIndex) => rowIndex !== index))}
+                className="shrink-0 rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
+              >
+                {labels.remove}
+              </button>
+            ) : null}
           </div>
         ))}
         <button

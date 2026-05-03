@@ -589,10 +589,10 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="ms-2 flex shrink-0 items-end gap-2 sm:ms-3">
+            <div className="flex shrink-0 items-end gap-2">
               <button
                 type="submit"
-                className="h-9 shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
+                className="shrink-0 rounded-lg bg-slate-700 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-600"
               >
                 {c.apply}
               </button>
