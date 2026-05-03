@@ -15,6 +15,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
+import { therapyClientFormErrorMessage } from "./form-error-message";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
@@ -207,6 +208,7 @@ export default async function ClientsPage({
   const cl = privateClinicClients(uiLanguage);
 
   const resolved = searchParams ? await searchParams : undefined;
+  const listErrorMsg = therapyClientFormErrorMessage(resolved?.error, cl);
   const q = (resolved?.q ?? "").trim();
   const status = resolved?.status === "all" || resolved?.status === "inactive" ? resolved.status : "active";
   const fromRaw = (resolved?.from ?? "").trim();
@@ -340,12 +342,13 @@ export default async function ClientsPage({
   );
 
   const today = startOfTodayLocal();
+  const activeClientIds = clients.filter((c) => c.is_active).map((c) => c.id);
   const scheduledAppointments =
-    clients.length > 0
+    activeClientIds.length > 0
       ? await prisma.therapy_appointments.findMany({
           where: {
             household_id: householdId,
-            client_id: { in: clients.map((c) => c.id) },
+            client_id: { in: activeClientIds },
             status: "scheduled",
             start_at: { gte: today },
           },
@@ -448,11 +451,11 @@ export default async function ClientsPage({
 
   return (
     <div className="space-y-6">
-      {resolved?.error && (
+      {listErrorMsg ? (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
-          {resolved.error}
+          {listErrorMsg}
         </p>
-      )}
+      ) : null}
       {(resolved?.created || resolved?.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
           {c.saved}
@@ -469,12 +472,13 @@ export default async function ClientsPage({
         </Link>
       </div>
 
-      <section className="space-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3">
+      <section className="min-w-0 space-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3">
         <h2 className="text-sm font-medium text-slate-300">{cl.filters}</h2>
-        <form method="get" className="space-y-2">
+        <form method="get" className="min-w-0 space-y-2">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="grid grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto]">
+          <div className="min-w-0 overflow-x-auto">
+            <div className="grid min-w-0 grid-cols-1 items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(9rem,0.9fr)_minmax(8.5rem,0.8fr)_minmax(8.5rem,0.8fr)_auto]">
             <div className="space-y-1 xl:min-w-0">
               <label htmlFor="clients_filter_q" className="block text-[11px] text-slate-400">
                 {cl.filterSearchLabel}
@@ -585,20 +589,24 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <button
-              type="submit"
-              className="h-9 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80 xl:self-end"
-            >
-              {c.apply}
-            </button>
-          </div>
-          {hasActiveFilters ? (
-            <div className="flex justify-end">
-              <Link href={clientsListHref({ sort, dir })} className="text-sm text-sky-400 hover:text-sky-300">
-                {c.cancel}
-              </Link>
+            <div className="flex min-w-0 shrink-0 flex-wrap items-end justify-end gap-2 xl:self-end">
+              <button
+                type="submit"
+                className="h-9 shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
+              >
+                {c.apply}
+              </button>
+              {hasActiveFilters ? (
+                <Link
+                  href={clientsListHref({ sort, dir })}
+                  className="shrink-0 text-xs text-sky-400 hover:text-sky-300 hover:underline"
+                >
+                  {c.filterReset}
+                </Link>
+              ) : null}
             </div>
-          ) : null}
+          </div>
+          </div>
           <p className="text-[11px] text-slate-500">{cl.filterDateRangeHelp}</p>
         </form>
       </section>

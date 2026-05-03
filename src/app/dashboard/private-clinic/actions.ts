@@ -15,6 +15,7 @@ import {
 } from "@/lib/therapy/appointment-audit";
 import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
+import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import {
   getSystemDefaultSessionMinutes,
   resolveSessionDurationMinutes,
@@ -49,6 +50,9 @@ import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 const BASE = "/dashboard/private-clinic";
 const ADMIN_HOUSEHOLDS = "/admin/households";
 const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
+
+/** Stored on `therapy_appointments.cancellation_reason` when visits end due to client status or end date. */
+const CLIENT_DISCHARGE_APPOINTMENT_CANCELLATION = "Client inactive or end of care";
 
 function endOfUtcDayForReceipt(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
@@ -1424,6 +1428,23 @@ export async function updateTherapyClient(formData: FormData) {
   } catch (error) {
     console.error("updateTherapyClient failed", { householdId, clientId: id, error });
     redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "save-failed");
+  }
+
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (userId) {
+    const cancelledCount = await cancelScheduledTherapyAppointmentsAfterClientCareChange({
+      householdId,
+      userId,
+      userFamilyMemberId,
+      clientId: id,
+      newIsActive: formData.has("is_active"),
+      newEndDate: endDate,
+    });
+    if (cancelledCount > 0) {
+      revalidatePath(`${BASE}/appointments`);
+      revalidatePath(`${BASE}/reports`);
+    }
   }
 
   revalidatePath(`${BASE}/clients`);
@@ -2989,6 +3010,97 @@ async function syncAppointmentToGoogleCalendar(params: {
     await saveGoogleSyncFailure(params.appointment.id, message);
     return message;
   }
+}
+
+/**
+ * Cancels future scheduled appointments when a client is marked inactive or given an end date.
+ * Returns how many appointments were cancelled.
+ */
+async function cancelScheduledTherapyAppointmentsAfterClientCareChange(params: {
+  householdId: string;
+  userId: string;
+  userFamilyMemberId: string | null;
+  clientId: string;
+  newIsActive: boolean;
+  newEndDate: Date | null;
+}): Promise<number> {
+  const { householdId, userId, userFamilyMemberId, clientId, newIsActive, newEndDate } = params;
+  const todayStart = startOfTodayLocal();
+  const endOfCareDay = newEndDate ? endOfUtcDayForReceipt(newEndDate) : null;
+
+  const candidates = await prisma.therapy_appointments.findMany({
+    where: {
+      household_id: householdId,
+      client_id: clientId,
+      status: "scheduled",
+    },
+    include: APPOINTMENT_AUDIT_INCLUDE,
+  });
+
+  let cancelled = 0;
+  for (const before of candidates) {
+    const inactiveRule = !newIsActive && before.start_at >= todayStart;
+    const endDateRule = endOfCareDay !== null && before.start_at > endOfCareDay;
+    if (!inactiveRule && !endDateRule) continue;
+    if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, before.job_id))) continue;
+
+    try {
+      await prisma.therapy_appointments.updateMany({
+        where: { id: before.id, household_id: householdId },
+        data: { status: "cancelled", cancellation_reason: CLIENT_DISCHARGE_APPOINTMENT_CANCELLATION },
+      });
+
+      const after = await prisma.therapy_appointments.findFirst({
+        where: { id: before.id, household_id: householdId },
+        include: APPOINTMENT_AUDIT_INCLUDE,
+      });
+      if (!after) continue;
+
+      await logTherapyAppointmentAudit({
+        householdId,
+        userId,
+        appointmentId: before.id,
+        action: TherapyAppointmentAuditAction.cancel,
+        metadata: {
+          before: appointmentToSnapshot(before),
+          after: appointmentToSnapshot(after),
+          reason: CLIENT_DISCHARGE_APPOINTMENT_CANCELLATION,
+          notes: null,
+        },
+      });
+
+      const actingUser = await prisma.users.findFirst({
+        where: { id: userId, household_id: householdId },
+        select: { ui_language: true },
+      });
+      await syncAppointmentToGoogleCalendar({
+        householdId,
+        actingUserId: userId,
+        actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+        appointment: {
+          id: after.id,
+          start_at: after.start_at,
+          duration_minutes: after.duration_minutes ?? null,
+          google_calendar_event_id: after.google_calendar_event_id ?? null,
+          status: after.status,
+          client: {
+            first_name: after.client.first_name,
+            last_name: after.client.last_name,
+          },
+          job: { job_title: after.job.job_title },
+        },
+      });
+      cancelled += 1;
+    } catch (error) {
+      console.error("cancelScheduledTherapyAppointmentsAfterClientCareChange: single appointment", {
+        appointmentId: before.id,
+        clientId,
+        error,
+      });
+    }
+  }
+
+  return cancelled;
 }
 
 export async function createTherapyAppointment(formData: FormData) {

@@ -92,6 +92,14 @@ export async function ConsultationsPageContent({
   if (filters.sort !== "occurred_at") listParams.set("sort", filters.sort);
   if (filters.dir !== "desc") listParams.set("dir", filters.dir);
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
+  const hasConsultationsListFilters =
+    Boolean(filters.job) ||
+    Boolean(filters.receipt) ||
+    Boolean(filters.from) ||
+    Boolean(filters.to) ||
+    filters.received !== "all" ||
+    filters.sort !== "occurred_at" ||
+    filters.dir !== "desc";
 
   const apiListParams = new URLSearchParams(listParams);
   apiListParams.set("take", "50");
@@ -178,8 +186,8 @@ export async function ConsultationsPageContent({
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
-            <a href="/dashboard/private-clinic/consultations" className="text-sky-400 hover:underline">
-              {c.cancel}
+            <a href={CONSULTATIONS_BASE} className="text-sky-400 hover:underline">
+              {c.filterReset}
             </a>
           </p>
         ) : null}
@@ -239,12 +247,19 @@ export async function ConsultationsPageContent({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:mt-auto"
-          >
-            {c.apply}
-          </button>
+          <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-5 sm:mt-auto">
+            <button
+              type="submit"
+              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+            >
+              {c.apply}
+            </button>
+            {hasConsultationsListFilters ? (
+              <a href={CONSULTATIONS_BASE} className="text-xs text-sky-400 hover:text-sky-300 hover:underline">
+                {c.filterReset}
+              </a>
+            ) : null}
+          </div>
         </form>
       </section>
 

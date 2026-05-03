@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   prisma,
   requireHouseholdMember,
@@ -80,6 +81,13 @@ export default async function TravelPage({
   if (filters.to) listParams.set("to", filters.to);
   if (filters.received !== "all") listParams.set("received", filters.received);
   const baseListHref = listParams.size > 0 ? `${TRAVEL_BASE}?${listParams.toString()}` : TRAVEL_BASE;
+  const hasTravelListFilters =
+    Boolean(filters.job) ||
+    Boolean(filters.client) ||
+    Boolean(filters.receipt) ||
+    Boolean(filters.from) ||
+    Boolean(filters.to) ||
+    filters.received !== "all";
 
   const [jobs, clients, treatments, rows] = await Promise.all([
     prisma.jobs.findMany({
@@ -150,8 +158,8 @@ export default async function TravelPage({
         {filteredReceipt ? (
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
-            <a href="/dashboard/private-clinic/travel" className="text-sky-400 hover:underline">
-              {c.cancel}
+            <a href={TRAVEL_BASE} className="text-sky-400 hover:underline">
+              {c.filterReset}
             </a>
           </p>
         ) : null}
@@ -221,12 +229,19 @@ export default async function TravelPage({
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600 sm:mt-auto"
-          >
-            {c.apply}
-          </button>
+          <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-6 sm:mt-auto">
+            <button
+              type="submit"
+              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+            >
+              {c.apply}
+            </button>
+            {hasTravelListFilters ? (
+              <Link href={TRAVEL_BASE} className="text-xs text-sky-400 hover:text-sky-300 hover:underline">
+                {c.filterReset}
+              </Link>
+            ) : null}
+          </div>
         </form>
       </section>
 

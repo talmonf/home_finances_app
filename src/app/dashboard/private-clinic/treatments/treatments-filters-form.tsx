@@ -23,6 +23,9 @@ type Props = {
   programs: ProgramOption[];
   clients: Array<Option & { inactive?: boolean }>;
   families: Option[];
+  /** When set with `filterResetLabel`, shows a compact link next to Apply */
+  filterResetHref?: string;
+  filterResetLabel?: string;
   labels: {
     filters: string;
     payment: string;
@@ -185,13 +188,21 @@ export function TreatmentsFiltersForm(props: Props) {
         />
       </div>
 
-      <div className="flex-none">
+      <div className="flex flex-none items-end gap-1.5">
         <button
           type="submit"
           className="w-auto rounded-md bg-slate-700 px-2.5 py-1 text-xs text-slate-100 hover:bg-slate-600"
         >
           {props.labels.apply}
         </button>
+        {props.filterResetHref && props.filterResetLabel ? (
+          <a
+            href={props.filterResetHref}
+            className="whitespace-nowrap pb-0.5 text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
+          >
+            {props.filterResetLabel}
+          </a>
+        ) : null}
       </div>
       </form>
     </fieldset>

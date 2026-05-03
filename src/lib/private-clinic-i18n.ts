@@ -158,6 +158,8 @@ export function privateClinicCommon(lang: UiLanguage) {
     from: p("From", "מ"),
     to: p("To", "עד"),
     apply: p("Apply", "החל"),
+    /** Short label next to Apply on filter forms */
+    filterReset: p("Reset", "איפוס"),
     all: p("All", "הכל"),
     any: p("Any", "כלשהו"),
     anyF: p("Any", "כלשהי"),

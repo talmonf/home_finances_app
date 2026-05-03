@@ -230,23 +230,33 @@ export default async function UpcomingVisitsPage({
         <p className="mt-1 text-sm text-slate-400">{uv.pageIntro}</p>
       </div>
       {settings?.family_therapy_enabled ? (
-        <form method="get" className="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
-          <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
-          <select
-            name="family"
-            defaultValue={familyFilter}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{anyFamilyLabel}</option>
-            {families.map((family) => (
-              <option key={family.id} value={family.id}>
-                {family.name}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="ml-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+        <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
+            <select
+              name="family"
+              defaultValue={familyFilter}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">{anyFamilyLabel}</option>
+              {families.map((family) => (
+                <option key={family.id} value={family.id}>
+                  {family.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
             {c.apply}
           </button>
+          {familyFilter ? (
+            <Link
+              href="/dashboard/private-clinic/upcoming-visits"
+              className="text-xs text-sky-400 hover:text-sky-300 hover:underline"
+            >
+              {c.filterReset}
+            </Link>
+          ) : null}
         </form>
       ) : null}
 

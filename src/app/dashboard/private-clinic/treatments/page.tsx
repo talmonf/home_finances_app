@@ -261,6 +261,7 @@ export default async function TreatmentsPage({
   if (filters.dir !== "desc") queryParams.set("dir", filters.dir);
   const baseListHref = `/dashboard/private-clinic/treatments?${queryParams.toString()}`;
   const apiHrefBase = `/api/private-clinic/treatments?${queryParams.toString()}&take=50`;
+  const hasTreatmentListFilters = queryParams.size > 0;
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
   const appointmentId = (sp.appointment ?? "").trim();
@@ -335,7 +336,7 @@ export default async function TreatmentsPage({
           <p className="text-xs text-slate-400">
             {c.filteredByReceipt(filteredReceipt.receipt_number)}{" "}
             <Link href="/dashboard/private-clinic/treatments" className="text-sky-400 hover:underline">
-              {c.cancel}
+              {c.filterReset}
             </Link>
           </p>
         ) : null}
@@ -349,6 +350,8 @@ export default async function TreatmentsPage({
           from={filters.from}
           to={filters.to}
           receipt={filters.receipt}
+          filterResetHref={hasTreatmentListFilters ? "/dashboard/private-clinic/treatments" : undefined}
+          filterResetLabel={hasTreatmentListFilters ? c.filterReset : undefined}
           showExternalReporting={showExternalReporting}
           familyEnabled={Boolean(settings?.family_therapy_enabled)}
           jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}

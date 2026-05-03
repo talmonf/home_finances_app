@@ -109,6 +109,15 @@ export default async function ReceiptsPage({
     sort: parseReceiptsSortKey(sp.sort),
     dir: parseReceiptsSortDir(sp.dir),
   };
+  const RECEIPTS_BASE = "/dashboard/private-clinic/receipts";
+  const hasReceiptListFilters =
+    Boolean(filters.job) ||
+    Boolean(filters.client) ||
+    Boolean(filters.family) ||
+    Boolean(filters.from) ||
+    Boolean(filters.to) ||
+    filters.recipient !== "all" ||
+    filters.bank !== "all";
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
     select: { family_member_id: true },
@@ -382,12 +391,19 @@ export default async function ReceiptsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
-          >
-            {c.apply}
-          </button>
+          <div className="flex flex-wrap items-end gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+            >
+              {c.apply}
+            </button>
+            {hasReceiptListFilters ? (
+              <Link href={RECEIPTS_BASE} className="text-xs text-sky-400 hover:text-sky-300 hover:underline">
+                {c.filterReset}
+              </Link>
+            ) : null}
+          </div>
         </form>
       </section>
 
