@@ -172,7 +172,7 @@ export default async function TravelPage({
           method="get"
         >
           {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
-          <div className="min-w-0 flex-1 basis-[11.5rem]">
+          <div className="min-w-0 max-w-xs grow-0 basis-[11.5rem]">
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
@@ -187,7 +187,7 @@ export default async function TravelPage({
               ))}
             </select>
           </div>
-          <div className="min-w-0 flex-1 basis-[11.5rem]">
+          <div className="min-w-0 max-w-xs grow-0 basis-[11.5rem]">
             <label className="block text-xs text-slate-400">{c.client}</label>
             <select
               name="client"

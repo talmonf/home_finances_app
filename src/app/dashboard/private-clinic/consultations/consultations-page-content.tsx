@@ -203,7 +203,7 @@ export async function ConsultationsPageContent({
           method="get"
         >
           {filters.receipt ? <input type="hidden" name="receipt" value={filters.receipt} /> : null}
-          <div className="min-w-0 flex-1 basis-[11.5rem]">
+          <div className="min-w-0 max-w-xs grow-0 basis-[11.5rem]">
             <label htmlFor="consultations-filter-job" className="block text-xs text-slate-400">
               {c.job}
             </label>
@@ -221,7 +221,7 @@ export async function ConsultationsPageContent({
               ))}
             </select>
           </div>
-          <div className="min-w-0 flex-1 basis-[10.5rem]">
+          <div className="min-w-0 max-w-xs grow-0 basis-[10.5rem]">
             <label htmlFor="consultations-filter-type" className="block text-xs text-slate-400">
               {c.type}
             </label>
