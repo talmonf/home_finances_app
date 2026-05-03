@@ -478,8 +478,8 @@ export default async function ClientsPage({
         <form method="get" className="min-w-0 space-y-2">
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
-            <div className="space-y-1 min-w-0">
+          <div className="flex min-w-0 flex-wrap items-end gap-2">
+            <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_q" className="block text-[11px] text-slate-400">
                 {cl.filterSearchLabel}
               </label>
@@ -492,7 +492,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="space-y-1 min-w-0">
+            <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_job" className="block text-[11px] text-slate-400">
                 {cl.filterJobLabel}
               </label>
@@ -511,7 +511,7 @@ export default async function ClientsPage({
               </select>
             </div>
             {programs.length > 0 ? (
-              <div className="space-y-1 min-w-0">
+              <div className="min-w-0 grow basis-44 space-y-1">
                 <label htmlFor="clients_filter_program" className="block text-[11px] text-slate-400">
                   {cl.filterProgramLabel}
                 </label>
@@ -531,7 +531,7 @@ export default async function ClientsPage({
               </div>
             ) : null}
             {familyTherapyEnabled ? (
-              <div className="space-y-1 min-w-0">
+              <div className="min-w-0 grow basis-44 space-y-1">
                 <label htmlFor="clients_filter_family" className="block text-[11px] text-slate-400">
                   {cl.filterFamilyLabel}
                 </label>
@@ -550,7 +550,7 @@ export default async function ClientsPage({
                 </select>
               </div>
             ) : null}
-            <div className="space-y-1 min-w-0">
+            <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_status" className="block text-[11px] text-slate-400">
                 {cl.filterStatusLabel}
               </label>
@@ -565,7 +565,7 @@ export default async function ClientsPage({
                 <option value="inactive">{cl.filterStatusInactiveOnly}</option>
               </select>
             </div>
-            <div className="space-y-1 min-w-0">
+            <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_from" className="block text-[11px] text-slate-400">
                 {c.from}
               </label>
@@ -577,7 +577,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="space-y-1 min-w-0">
+            <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_to" className="block text-[11px] text-slate-400">
                 {c.to}
               </label>
@@ -589,7 +589,7 @@ export default async function ClientsPage({
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
-            <div className="col-span-full flex min-w-0 flex-wrap items-end justify-end gap-2">
+            <div className="ms-2 flex shrink-0 items-end gap-2 sm:ms-3">
               <button
                 type="submit"
                 className="h-9 shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800/80"
