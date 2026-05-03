@@ -44,10 +44,12 @@ test("private profile links receipt allocations despite receipt formatting diffe
 
   const scratch = await analyzePrivateProfileForTest(params, {
     isPrivateClinic: true,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "דנה", last_name: null }],
     programsByJob: [],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
@@ -106,10 +108,12 @@ test("private profile links receipt allocations when treatment receipt has apost
 
   const scratch = await analyzePrivateProfileForTest(params, {
     isPrivateClinic: true,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "דנה", last_name: null }],
     programsByJob: [],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
@@ -161,10 +165,12 @@ test("private profile links receipt allocations with hidden RTL markers and spac
 
   const scratch = await analyzePrivateProfileForTest(params, {
     isPrivateClinic: true,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "דנה", last_name: null }],
     programsByJob: [],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0, `errors: ${scratch.errors.join(" | ")}`);
@@ -225,6 +231,8 @@ test("private profile infers allocations when receipt number exists only on anch
 
   const scratch = await analyzePrivateProfileForTest(params, {
     isPrivateClinic: true,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
     programsByJob: [],
     bankAccounts: [{ id: "ba-1", account_number: "506018" }],
@@ -293,10 +301,12 @@ test("org monthly profile links receipt allocations to monthly treatments", asyn
 
   const scratch = await analyzeOrgProfileForTest(params, {
     isPrivateClinic: false,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
     programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0);
@@ -362,10 +372,12 @@ test("org monthly profile links allocations for short visit labels (בית/טל�
 
   const scratch = await analyzeOrgProfileForTest(params, {
     isPrivateClinic: false,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
     programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0);
@@ -427,10 +439,12 @@ test("org monthly profile uses sole job program when program column is empty", a
 
   const scratch = await analyzeOrgProfileForTest(params, {
     isPrivateClinic: false,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
     programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0);
@@ -496,10 +510,12 @@ test("org monthly profile links allocations when payment row appears last", asyn
 
   const scratch = await analyzeOrgProfileForTest(params, {
     isPrivateClinic: false,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "מאור", last_name: null }],
     programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.equal(scratch.errors.length, 0);
@@ -538,10 +554,12 @@ test("private profile blocks receipt anchor when no treatments can be linked", a
 
   const scratch = await analyzePrivateProfileForTest(params, {
     isPrivateClinic: true,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [{ id: "c-1", first_name: "דנה", last_name: null }],
     programsByJob: [],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.ok(scratch.errors.some((e) => e.includes("could not be linked to any treatments")));
@@ -579,10 +597,12 @@ test("org monthly profile blocks payment receipt when month has no linked treatm
 
   const scratch = await analyzeOrgProfileForTest(params, {
     isPrivateClinic: false,
+    jobFamilyMemberId: null,
+    jobEmploymentType: null,
     clients: [],
     programsByJob: [{ id: "p-1", name: "ארגון א", job_id: "job-1" }],
     bankAccounts: [],
-    digitalMethods: [{ id: "dm-1", name: "ביט" }],
+    digitalMethods: [{ id: "dm-1", name: "ביט", method_type: "bit", family_member_id: null }],
   });
 
   assert.ok(scratch.errors.some((e) => e.includes("could not be linked to any treatments")));

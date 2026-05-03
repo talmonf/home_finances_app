@@ -1,14 +1,12 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
-import {
-  privateClinicOverviewCardLabel,
-  privateClinicOverviewStrings,
-} from "@/lib/private-clinic-i18n";
+import { privateClinicOverviewStrings } from "@/lib/private-clinic-i18n";
 import {
   jobWherePrivateClinicScoped,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import PrivateClinicOverviewCardsClient from "./private-clinic-overview-cards-client";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
@@ -181,26 +179,15 @@ export default async function PrivateClinicOverviewPage({
         </div>
       ) : null}
       {jobsCount > 0 ? (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {cards.map((c) => (
-        <Link
-          key={c.id}
-          href={c.href}
-          aria-label={privateClinicOverviewCardLabel(c.id, uiLanguage)}
-          className="block rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 ring-1 ring-slate-800 transition hover:border-slate-600 hover:bg-slate-900 hover:ring-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-        >
-          <p
-            className={`text-xs tracking-wide text-slate-500 ${uiLanguage === "he" ? "normal-case" : "uppercase"}`}
-          >
-            {privateClinicOverviewCardLabel(c.id, uiLanguage)}
-          </p>
-          <p className="text-2xl font-semibold text-slate-100">{c.value}</p>
-          {"subValue" in c ? (
-            <p className="mt-1 text-xs text-slate-400">{c.subValue}</p>
-          ) : null}
-        </Link>
-      ))}
-      </div>
+        <PrivateClinicOverviewCardsClient
+          uiLanguage={uiLanguage}
+          cards={cards.map((c) => ({
+            id: c.id,
+            href: c.href,
+            value: c.value,
+            ...("subValue" in c ? { subValue: c.subValue } : {}),
+          }))}
+        />
       ) : null}
     </>
   );

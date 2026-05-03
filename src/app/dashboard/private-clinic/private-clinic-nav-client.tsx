@@ -1,13 +1,14 @@
 "use client";
 
 import { LoadingSpinner } from "@/components/loading-spinner";
-import {
-  PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT,
-  type PrivateClinicNavSegmentReadyDetail,
-} from "@/lib/private-clinic-nav-segment-ready";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  normalizePrivateClinicHrefPath,
+  normalizePrivateClinicPathname,
+  usePrivateClinicNavPending,
+} from "./private-clinic-nav-pending-context";
 
 type PrivateClinicNavClientItem = {
   key: string;
@@ -24,69 +25,16 @@ type PrivateClinicNavClientProps = {
   items: PrivateClinicNavClientItem[];
 };
 
-function normalizePathname(pathname: string): string {
-  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
-  return pathname;
-}
-
-/** `usePathname()` omits query/hash — normalize link targets to path-only. */
-function normalizeHrefPath(href: string): string {
-  const pathOnly = href.split("?")[0]?.split("#")[0] ?? href;
-  return normalizePathname(pathOnly);
-}
-
-/** Tab targets where `useTransition` ends before slow RSC has finished — clear pending via segment-ready only. */
-const NAV_CLEAR_PENDING_AFTER_SEGMENT_READY = new Set([
-  normalizeHrefPath("/dashboard/private-clinic/consultations"),
-  normalizeHrefPath("/dashboard/private-clinic/clients"),
-]);
-
 export default function PrivateClinicNavClient({
   navAriaLabel,
   moreMenuLabel,
   items,
 }: PrivateClinicNavClientProps) {
-  const router = useRouter();
   const pathname = usePathname();
-  const normalizedPathname = useMemo(() => normalizePathname(pathname ?? ""), [pathname]);
+  const normalizedPathname = useMemo(() => normalizePrivateClinicPathname(pathname ?? ""), [pathname]);
+  const { pendingHref, pushWithPending } = usePrivateClinicNavPending();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const moreMenuContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isTransitionPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    if (!pendingHref) return;
-    const pendingNorm = normalizeHrefPath(pendingHref);
-    if (pendingNorm === normalizedPathname) {
-      if (NAV_CLEAR_PENDING_AFTER_SEGMENT_READY.has(pendingNorm)) return;
-      queueMicrotask(() => setPendingHref(null));
-      return;
-    }
-    if (isTransitionPending) return;
-    queueMicrotask(() => setPendingHref(null));
-  }, [normalizedPathname, pendingHref, isTransitionPending]);
-
-  useEffect(() => {
-    const onSegmentReady = (e: Event) => {
-      const detail = (e as CustomEvent<PrivateClinicNavSegmentReadyDetail>).detail;
-      if (!detail?.path) return;
-      const arrivedNorm = normalizeHrefPath(detail.path);
-      setPendingHref((prev) => {
-        if (prev != null && normalizeHrefPath(prev) === arrivedNorm) return null;
-        return prev;
-      });
-    };
-    window.addEventListener(PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT, onSegmentReady);
-    return () => window.removeEventListener(PRIVATE_CLINIC_NAV_SEGMENT_READY_EVENT, onSegmentReady);
-  }, []);
-
-  useEffect(() => {
-    if (!pendingHref) return;
-    const pn = normalizeHrefPath(pendingHref);
-    if (!NAV_CLEAR_PENDING_AFTER_SEGMENT_READY.has(pn)) return;
-    const id = window.setTimeout(() => setPendingHref(null), 120_000);
-    return () => window.clearTimeout(id);
-  }, [pendingHref]);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -117,7 +65,7 @@ export default function PrivateClinicNavClient({
   const primaryItems = items.filter((item) => (item.placement ?? "primary") === "primary");
   const moreItems = items.filter((item) => (item.placement ?? "primary") === "more");
   const hasActiveMoreItem = moreItems.some(
-    (item) => normalizedPathname === normalizeHrefPath(item.href),
+    (item) => normalizedPathname === normalizePrivateClinicHrefPath(item.href),
   );
 
   const linkClassName = (isActive: boolean) =>
@@ -126,7 +74,7 @@ export default function PrivateClinicNavClient({
       : "inline-flex items-center gap-1.5 rounded-lg bg-slate-800/80 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800";
 
   const renderItemLink = (item: PrivateClinicNavClientItem) => {
-    const normalizedHref = normalizeHrefPath(item.href);
+    const normalizedHref = normalizePrivateClinicHrefPath(item.href);
     const isActive = normalizedPathname === normalizedHref;
     const showTabSpinner = pendingHref === normalizedHref;
 
@@ -151,10 +99,7 @@ export default function PrivateClinicNavClient({
           }
 
           event.preventDefault();
-          setPendingHref(normalizedHref);
-          startTransition(() => {
-            router.push(item.href);
-          });
+          pushWithPending(item.href);
         }}
         className={linkClassName(isActive)}
       >

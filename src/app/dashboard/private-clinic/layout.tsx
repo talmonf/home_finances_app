@@ -11,6 +11,7 @@ import {
 } from "@/lib/therapy/bootstrap";
 import { getPrivateClinicReminderBadgeCount } from "@/lib/private-clinic/reminder-badge";
 import PrivateClinicNavClient from "./private-clinic-nav-client";
+import { PrivateClinicNavPendingProvider } from "./private-clinic-nav-pending-context";
 
 export default async function PrivateClinicLayout({
   children,
@@ -61,26 +62,28 @@ export default async function PrivateClinicLayout({
   return (
     <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-4 sm:py-4">
       <div className="w-full min-w-0 max-w-6xl space-y-3 sm:space-y-4">
-        <header className="space-y-2">
-          <PrivateClinicNavClient
-            navAriaLabel={layoutCopy.navAriaLabel}
-            moreMenuLabel={layoutCopy.moreMenuLabel}
-            items={navItems.map((item) => ({
-              key: item.key,
-              href: item.href,
-              label: privateClinicNavLabel(item.key, uiLanguage),
-              placement: item.placement,
-              reminderBadgeCount: item.key === "reminders" ? reminderBadgeCount : null,
-              reminderBadgeAriaLabel:
-                item.key === "reminders" && reminderBadgeCount != null
-                  ? uiLanguage === "he"
-                    ? `${reminderBadgeCount} תזכורות קרובות`
-                    : `${reminderBadgeCount} upcoming reminders`
-                  : undefined,
-            }))}
-          />
-        </header>
-        {children}
+        <PrivateClinicNavPendingProvider>
+          <header className="space-y-2">
+            <PrivateClinicNavClient
+              navAriaLabel={layoutCopy.navAriaLabel}
+              moreMenuLabel={layoutCopy.moreMenuLabel}
+              items={navItems.map((item) => ({
+                key: item.key,
+                href: item.href,
+                label: privateClinicNavLabel(item.key, uiLanguage),
+                placement: item.placement,
+                reminderBadgeCount: item.key === "reminders" ? reminderBadgeCount : null,
+                reminderBadgeAriaLabel:
+                  item.key === "reminders" && reminderBadgeCount != null
+                    ? uiLanguage === "he"
+                      ? `${reminderBadgeCount} תזכורות קרובות`
+                      : `${reminderBadgeCount} upcoming reminders`
+                    : undefined,
+              }))}
+            />
+          </header>
+          {children}
+        </PrivateClinicNavPendingProvider>
       </div>
     </div>
   );
