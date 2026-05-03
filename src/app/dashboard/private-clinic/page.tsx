@@ -139,18 +139,19 @@ export default async function PrivateClinicOverviewPage({
     ]);
 
   const cards = [
-    { id: "activeClients" as const, value: clients },
-    { id: "treatments" as const, value: treatments },
-    { id: "receipts" as const, value: receipts },
-    { id: "expenses" as const, value: expenses },
-    { id: "appointments" as const, value: appointments },
+    { id: "activeClients" as const, href: "/dashboard/private-clinic/clients", value: clients },
+    { id: "treatments" as const, href: "/dashboard/private-clinic/treatments", value: treatments },
+    { id: "receipts" as const, href: "/dashboard/private-clinic/receipts", value: receipts },
+    { id: "expenses" as const, href: "/dashboard/private-clinic/expenses", value: expenses },
+    { id: "appointments" as const, href: "/dashboard/private-clinic/appointments", value: appointments },
     {
       id: "upcomingVisits" as const,
+      href: "/dashboard/private-clinic/upcoming-visits",
       value: upcomingVisitsData.total,
       subValue: overviewCopy.overdueCount(upcomingVisitsData.overdue),
     },
-    { id: "consultations" as const, value: consultations },
-    { id: "travel" as const, value: travel },
+    { id: "consultations" as const, href: "/dashboard/private-clinic/consultations", value: consultations },
+    { id: "travel" as const, href: "/dashboard/private-clinic/travel", value: travel },
   ];
 
   const passwordBanner = passwordJustUpdated ? (
@@ -182,9 +183,11 @@ export default async function PrivateClinicOverviewPage({
       {jobsCount > 0 ? (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
-        <div
+        <Link
           key={c.id}
-          className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 ring-1 ring-slate-800"
+          href={c.href}
+          aria-label={privateClinicOverviewCardLabel(c.id, uiLanguage)}
+          className="block rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 ring-1 ring-slate-800 transition hover:border-slate-600 hover:bg-slate-900 hover:ring-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
         >
           <p
             className={`text-xs tracking-wide text-slate-500 ${uiLanguage === "he" ? "normal-case" : "uppercase"}`}
@@ -195,7 +198,7 @@ export default async function PrivateClinicOverviewPage({
           {"subValue" in c ? (
             <p className="mt-1 text-xs text-slate-400">{c.subValue}</p>
           ) : null}
-        </div>
+        </Link>
       ))}
       </div>
       ) : null}
