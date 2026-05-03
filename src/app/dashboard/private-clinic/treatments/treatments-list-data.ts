@@ -34,7 +34,7 @@ export type TreatmentListRowDto = {
   job_label: string;
   program_label: string | null;
   family_name: string | null;
-  amount: string;
+  amount: string | null;
   currency: string;
   payment_status: TherapyPaymentStatus;
   job_external_reporting_system: string | null;
@@ -181,7 +181,7 @@ export async function loadTreatmentsCursorPage(params: {
         job_label: formatPrivateClinicJobLabel(t.job),
         program_label: t.program?.name ?? null,
         family_name: t.family?.name ?? null,
-        amount: t.amount.toString(),
+        amount: t.amount != null ? t.amount.toString() : null,
         currency: t.currency,
         payment_status: paymentStatus,
         job_external_reporting_system: t.job.external_reporting_system,

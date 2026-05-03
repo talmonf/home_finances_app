@@ -225,7 +225,7 @@ export async function GET() {
         program_id: t.program_id,
         family_id: t.family_id ?? "",
         occurred_at: t.occurred_at.toISOString(),
-        amount: t.amount.toString(),
+        amount: t.amount != null ? t.amount.toString() : "",
         currency: t.currency,
         visit_type: t.visit_type,
         note_1: t.note_1 ?? "",

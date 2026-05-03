@@ -12,6 +12,7 @@ export function treatmentPaymentStatus(
   treatmentAmount: unknown,
   allocatedSum: unknown,
 ): TherapyPaymentStatus {
+  if (treatmentAmount == null) return "unpaid";
   const t =
     typeof treatmentAmount === "object" && treatmentAmount !== null && "toNumber" in treatmentAmount
       ? (treatmentAmount as { toNumber(): number }).toNumber()

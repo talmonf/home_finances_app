@@ -232,7 +232,7 @@ export async function GET(req: Request) {
     for (const t of treatments) {
       const allocSum = t.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
       if (allocSum === 0) treatmentsNoAllocation += 1;
-      if (allocSum < num(t.amount) - 0.005) treatmentsUnderAllocated += 1;
+      if (t.amount != null && allocSum < num(t.amount) - 0.005) treatmentsUnderAllocated += 1;
     }
 
     let consultationsNoAllocation = 0;

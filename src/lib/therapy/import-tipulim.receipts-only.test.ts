@@ -253,6 +253,179 @@ test("receipts-only import defaults salary employees to salary_fictitious kind",
   assert.equal(scratch.pendingReceipts[0]?.netAmount, scratch.pendingReceipts[0]?.totalAmount);
 });
 
+test("receipts-only import matches PaymentDate header (no space)", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        PaymentDate: "2026-04-10",
+        Client: "Dana C",
+        Amount: "400.00",
+        "Receipt #": "PD-1",
+        Notes: "",
+        "Payment method": "cash",
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingReceipts.length, 1);
+});
+
+test("receipts-only multi-date: per-session share within cap allocates 1050 as 350×3", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        "Payment Date": "2026-04-01",
+        Client: "Dana C",
+        Amount: "1050.00",
+        "Receipt #": "MULTI-OK",
+        Notes: "",
+        "Payment method": "cash",
+        treatmentDate01: "2026-03-20",
+        treatmentDate02: "2026-04-02",
+        treatmentDate03: "2026-04-09",
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingTreatments.size, 3);
+  const amounts = [...scratch.pendingTreatments.values()].map((x) => x.amount).sort();
+  assert.deepEqual(amounts, ["350.00", "350.00", "350.00"]);
+  const receipt = scratch.pendingReceipts[0]!;
+  assert.equal(receipt.allocations.length, 3);
+  assert.ok(!receipt.omitTreatmentAmountsAndAllocations);
+});
+
+test("receipts-only multi-date: per-session share above cap creates treatments with null amount without allocations", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        "Payment Date": "2026-04-01",
+        Client: "Dana C",
+        Amount: "3000.00",
+        "Receipt #": "MULTI-HI",
+        Notes: "",
+        "Payment method": "cash",
+        treatmentDate01: "2026-03-10",
+        treatmentDate02: "2026-03-11",
+        treatmentDate03: "2026-03-18",
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingTreatments.size, 3);
+  assert.ok([...scratch.pendingTreatments.values()].every((t) => t.amount == null));
+  const receipt = scratch.pendingReceipts[0]!;
+  assert.equal(receipt.allocations.length, 0);
+  assert.equal(receipt.omitTreatmentAmountsAndAllocations, true);
+  assert.ok(scratch.warnings.some((w) => w.includes("split across 3 treatment dates")));
+});
+
+test("receipts-only import applies single Time column to all treatment dates", async () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
+  const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet([
+      {
+        "Payment Date": "2026-04-01",
+        Client: "Dana C",
+        Amount: "800.00",
+        "Receipt #": "TIME-ROW",
+        Notes: "",
+        "Payment method": "cash",
+        treatmentDate01: "2026-04-02",
+        treatmentDate02: "2026-04-03",
+        Time: 0.5520833333333334,
+      },
+    ]),
+    "Sheet1",
+  );
+
+  const scratch = await analyzeReceiptOnlyProfileForTest(
+    {
+      householdId: "hh-1",
+      jobId: "job-1",
+      selectedProgramId: null,
+      profile: "tipulim_receipts_only",
+      workbook,
+      sheetName: "Sheet1",
+      missingVisitType: "clinic",
+      usualTreatmentCost: "400.00",
+    },
+    receiptCtx,
+  );
+
+  assert.equal(scratch.errors.length, 0);
+  assert.equal(scratch.pendingTreatments.size, 2);
+  const hours = [...scratch.pendingTreatments.values()].map((x) => x.occurredAt.getUTCHours());
+  assert.equal(hours[0], hours[1], "row-level Time should apply to every treatment date");
+});
+
 test("receipts-only import defaults non-employee jobs to regular kind", async () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/test";
   const { analyzeReceiptOnlyProfileForTest } = await import("@/lib/therapy/import-tipulim");

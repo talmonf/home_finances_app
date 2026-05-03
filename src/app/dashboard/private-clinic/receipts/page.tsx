@@ -627,7 +627,7 @@ export default async function ReceiptsPage({
                           <input type="hidden" name="treatment_id" value={t.id} />
                           <span>
                             {t.client.first_name} {t.client.last_name ?? ""} | {t.occurred_at.toISOString().slice(0, 10)} |{" "}
-                            {t.amount.toString()} {t.currency}
+                            {t.amount != null ? `${t.amount.toString()} ${t.currency}` : "—"}
                           </span>
                           <button type="submit" className="text-rose-400 hover:underline">
                             {r.unlinkFromReceipt}
@@ -648,7 +648,7 @@ export default async function ReceiptsPage({
                       <input type="checkbox" name="treatment_ids" value={t.id} />
                       <span>
                         {t.client.first_name} {t.client.last_name ?? ""} | {t.occurred_at.toISOString().slice(0, 10)} |{" "}
-                        {t.amount.toString()} {t.currency}
+                        {t.amount != null ? `${t.amount.toString()} ${t.currency}` : "—"}
                       </span>
                     </label>
                     ))}

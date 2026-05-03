@@ -780,13 +780,13 @@ export function privateClinicReceipts(lang: UiLanguage) {
     importBackToReceipts: p("Back to receipts", "חזרה לקבלות"),
     importTitleReceipts: p("Import receipts", "ייבוא קבלות"),
     importInstructionsReceipts: p(
-      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Optional columns treatmentDate01, treatmentDate02, … set each session’s treatment date, and treatmentTime01, treatmentTime02, … set each session’s time. Date cells may include time directly. Naive date-times are interpreted in Asia/Jerusalem. If several treatment dates are filled on one row, the amount is split evenly across those sessions.",
-      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. עמודות אופציונליות treatmentDate01, treatmentDate02, … מגדירות את תאריך כל טיפול, ועמודות treatmentTime01, treatmentTime02, … מגדירות את השעה לכל טיפול. תאי תאריך יכולים לכלול שעה ישירות. תאריך-שעה ללא אזור זמן מפורש מפורש לפי Asia/Jerusalem. אם ממלאים כמה תאריכי טיפול באותה שורה, הסכום מתחלק שווה בין המפגשים.",
+      "Upload a spreadsheet with: Payment Date, Client, Amount, Receipt #, Notes, Payment method. Optional columns treatmentDate01, treatmentDate02, … set each session’s treatment date, and treatmentTime01, treatmentTime02, … set each session’s time (or use a single Time column for all dates on that row). Date cells may include time directly. Naive date-times are interpreted in Asia/Jerusalem. If several treatment dates are filled on one row, the amount is split evenly across those sessions; each share is compared to usual fee ×110% — shares within that cap set treatment amounts and receipt allocations; otherwise treatments are created with session fee unset (blank) and the receipt is left unallocated to them until you edit manually.",
+      "העלו גיליון עם: תאריך תשלום, לקוח, סכום, מספר קבלה, הערות, אמצעי תשלום. עמודות אופציונליות treatmentDate01, treatmentDate02, … מגדירות את תאריך כל טיפול, ועמודות treatmentTime01, treatmentTime02, … מגדירות את השעה לכל טיפול (או עמודת Time אחת לכל התאריכים באותה שורה). תאי תאריך יכולים לכלול שעה ישירות. תאריך-שעה ללא אזור זמן מפורש מפורש לפי Asia/Jerusalem. אם ממלאים כמה תאריכי טיפול באותה שורה, הסכום מתחלק שווה בין המפגשים; כל חלק מושווה לעלות המפגש המקובלת ×110% — חלקים בטווח מגדירים סכומי טיפול וחלוקת קבלה; אחרת נוצרים טיפולים ללא סכום מפגש (ריק) והקבלה נשארת ללא הקצאה אליהם עד עריכה ידנית.",
     ),
     usualTreatmentCostLabel: p("Usual treatment cost (per session)", "עלות טיפול מקובלת (למפגש)"),
     usualTreatmentCostHint: p(
-      "Compared to each receipt amount: auto-create one treatment when amount ≤ this × 110%.",
-      "מושווה לסכום כל קבלה: ייווצר טיפול אוטומטית כאשר הסכום ≤ ערך זה × 110%.",
+      "Compared to each receipt amount: auto-create one treatment when amount ≤ this × 110%. With several treatment dates on one row, each equal split share is compared the same way.",
+      "מושווה לסכום כל קבלה: ייווצר טיפול אוטומטית כאשר הסכום ≤ ערך זה × 110%. כשיש כמה תאריכי טיפול בשורה, כל חלק מהחלוקה השווה נבדק באותה צורה.",
     ),
     saveUsualTreatmentCostDefault: p("Save as household default for next time", "שמירה כברירת מחדל לבית"),
     importCreatedAppointments: p("appointments", "תורים"),

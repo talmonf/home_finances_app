@@ -125,7 +125,8 @@ export function TreatmentsListClient({
       if (sortKey === "occurred_at") return new Date(row.occurred_at_iso).getTime();
       if (sortKey === "client") return `${row.client_first_name} ${row.client_last_name ?? ""}`.trim().toLocaleLowerCase();
       if (sortKey === "job") return row.job_label.toLocaleLowerCase();
-      if (sortKey === "amount") return Number(row.amount);
+      if (sortKey === "amount")
+        return row.amount != null && row.amount !== "" ? Number(row.amount) : Number.NEGATIVE_INFINITY;
       if (sortKey === "paid") return rankForPaidStatus(row.payment_status);
       if (sortKey === "receipt") return row.receipt_allocations[0]?.receipt_number ?? "";
       if (sortKey === "edit") return row.id;
@@ -276,7 +277,9 @@ export function TreatmentsListClient({
                   <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
                   {showFamily ? <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td> : null}
                   <td className="px-3 py-2 text-slate-200">
-                    {formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)}
+                    {t.amount != null && t.amount !== ""
+                      ? formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)
+                      : "—"}
                   </td>
                   <td className="px-3 py-2 text-slate-400">{treatmentPaymentStatusLabel(uiLanguage, t.payment_status)}</td>
                   <td className="max-w-[12rem] px-3 py-2 text-slate-400">

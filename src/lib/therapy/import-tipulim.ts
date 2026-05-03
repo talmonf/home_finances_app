@@ -75,7 +75,8 @@ type PendingTreatment = {
   clientRef: ClientRef;
   programName: string | null;
   occurredAt: Date;
-  amount: string;
+  /** `null` when fee is unknown (receipt import multi-date share above usual ×110%). */
+  amount: string | null;
   visitType: "clinic" | "home" | "phone" | "video";
   note: string | null;
   paymentDate: Date | null;
@@ -150,6 +151,11 @@ type PendingReceipt = {
   treatmentDigitalMethodId?: string | null;
   /** Receipt-only import: when no auto-treatment, client comes from the row (not from allocations). */
   explicitClientRefForReceipt?: ClientRef | null;
+  /**
+   * Receipt-only import: multi-date row where per-session share exceeds usual fee ×110%.
+   * Treatments are created with no session amount and no receipt allocations until edited manually.
+   */
+  omitTreatmentAmountsAndAllocations?: boolean;
 };
 
 function defaultReceiptKindForJobEmploymentType(
@@ -1294,9 +1300,61 @@ async function analyzeReceiptOnlyProfile(
     }
 
     const amtNum = Number(amount);
-    const autoTreatment = amtNum <= threshold + 0.005;
 
-    if (autoTreatment) {
+    const treatmentDateEntries = collectReceiptTreatmentDateColumnEntries(row);
+    const treatmentTimeEntries = new Map(
+      collectReceiptTreatmentTimeColumnEntries(row).map((entry) => [entry.order, entry]),
+    );
+    const rowLevelTreatmentTime = treatmentTimeCell(row);
+    const treatmentOccurredAt: Date[] = [];
+    let treatmentDatesInvalid = false;
+    for (const { label, cell } of treatmentDateEntries) {
+      const orderMatch = label.match(/(\d+)$/);
+      const order = orderMatch ? Number(orderMatch[1]) : null;
+      const timeEntry = order ? treatmentTimeEntries.get(order) : undefined;
+      const baseParsed = parseReceiptDateCell(cell, datePreference);
+      const timeForCell = timeEntry?.cell ?? rowLevelTreatmentTime;
+      const merged = baseParsed.date ? parseDateFromCell(baseParsed.date, timeForCell) : null;
+      const parsedTreatmentDate = { date: merged, ambiguous: baseParsed.ambiguous };
+      if (parsedTreatmentDate.ambiguous) {
+        scratch.errors.push(
+          `Row ${rowNumber}: ambiguous ${label} "${String(cell)}". Use YYYY-MM-DD or choose a date format.`,
+        );
+        treatmentDatesInvalid = true;
+        break;
+      }
+      const od = parsedTreatmentDate.date;
+      if (!od) {
+        const timeLabel = timeEntry?.label ? ` + ${timeEntry.label}` : "";
+        scratch.errors.push(`Row ${rowNumber}: invalid ${label}${timeLabel}.`);
+        treatmentDatesInvalid = true;
+        break;
+      }
+      treatmentOccurredAt.push(od);
+    }
+    if (treatmentDatesInvalid) continue;
+
+    const sessionCount = treatmentOccurredAt.length > 0 ? treatmentOccurredAt.length : 1;
+    const amountParts: string[] | null =
+      sessionCount === 1 ? [amount] : splitMoneyEqualParts(amount, sessionCount);
+    if (!amountParts || amountParts.length !== sessionCount) {
+      scratch.errors.push(`Row ${rowNumber}: could not split Amount across treatment dates.`);
+      continue;
+    }
+
+    const perPartWithinSessionCap = (parts: string[]) =>
+      parts.every((p) => Number(p) <= threshold + 0.005);
+
+    let createTreatments = false;
+    let omitTreatmentAmountsAndAllocations = false;
+    if (sessionCount > 1) {
+      createTreatments = true;
+      omitTreatmentAmountsAndAllocations = !perPartWithinSessionCap(amountParts);
+    } else {
+      createTreatments = amtNum <= threshold + 0.005;
+    }
+
+    if (createTreatments) {
       let vt = params.missingVisitType ?? null;
       if (!vt) {
         scratch.errors.push(
@@ -1304,54 +1362,17 @@ async function analyzeReceiptOnlyProfile(
         );
         continue;
       }
-      addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+      for (let c = 0; c < sessionCount; c += 1) {
+        addTreatmentCount(scratch.treatmentCountsByDisplay, clientRef.displayName);
+      }
       const display = clientRef.displayName;
 
-      const treatmentDateEntries = collectReceiptTreatmentDateColumnEntries(row);
-      const treatmentTimeEntries = new Map(
-        collectReceiptTreatmentTimeColumnEntries(row).map((entry) => [entry.order, entry]),
-      );
-      const treatmentOccurredAt: Date[] = [];
-      let treatmentDatesInvalid = false;
-      for (const { label, cell } of treatmentDateEntries) {
-        const orderMatch = label.match(/(\d+)$/);
-        const order = orderMatch ? Number(orderMatch[1]) : null;
-        const timeEntry = order ? treatmentTimeEntries.get(order) : undefined;
-        const baseParsed = parseReceiptDateCell(cell, datePreference);
-        const merged = baseParsed.date ? parseDateFromCell(baseParsed.date, timeEntry?.cell) : null;
-        const parsedTreatmentDate = { date: merged, ambiguous: baseParsed.ambiguous };
-        if (parsedTreatmentDate.ambiguous) {
-          scratch.errors.push(
-            `Row ${rowNumber}: ambiguous ${label} "${String(cell)}". Use YYYY-MM-DD or choose a date format.`,
-          );
-          treatmentDatesInvalid = true;
-          break;
-        }
-        const od = parsedTreatmentDate.date;
-        if (!od) {
-          const timeLabel = timeEntry?.label ? ` + ${timeEntry.label}` : "";
-          scratch.errors.push(`Row ${rowNumber}: invalid ${label}${timeLabel}.`);
-          treatmentDatesInvalid = true;
-          break;
-        }
-        treatmentOccurredAt.push(od);
-      }
-      if (treatmentDatesInvalid) continue;
-
-      const sessionCount = treatmentOccurredAt.length > 0 ? treatmentOccurredAt.length : 1;
-      const amountParts =
-        sessionCount === 1 ? [amount] : splitMoneyEqualParts(amount, sessionCount);
-      if (!amountParts || amountParts.length !== sessionCount) {
-        scratch.errors.push(`Row ${rowNumber}: could not split Amount across treatment dates.`);
-        continue;
-      }
-
       const allocations: PendingAllocation[] = [];
-      const rowLevelTreatmentTime = treatmentTimeCell(row);
       for (let i = 0; i < sessionCount; i += 1) {
         const occurredAt = treatmentOccurredAt[i] ?? parseDateFromCell(issuedAt, rowLevelTreatmentTime) ?? issuedAt;
-        const partAmount = amountParts[i]!;
-        const baseKey = `${display}|${monthKey(occurredAt)}|${partAmount}|${vt}|receipt:${receiptNum}|n:${i}`;
+        const partAmount: string | null = omitTreatmentAmountsAndAllocations ? null : amountParts[i]!;
+        const amountKeyPart = partAmount ?? "unset";
+        const baseKey = `${display}|${monthKey(occurredAt)}|${amountKeyPart}|${vt}|receipt:${receiptNum}|n:${i}`;
         const tKey = uniqueTreatmentKey(scratch.pendingTreatments, baseKey, rowNumber);
         scratch.pendingTreatments.set(tKey, {
           key: tKey,
@@ -1367,7 +1388,15 @@ async function analyzeReceiptOnlyProfile(
           paymentBankAccountId: bankId,
           paymentDigitalMethodId: digitalId,
         });
-        allocations.push({ amount: partAmount, treatmentKey: tKey });
+        if (!omitTreatmentAmountsAndAllocations) {
+          allocations.push({ amount: amountParts[i]!, treatmentKey: tKey });
+        }
+      }
+
+      if (omitTreatmentAmountsAndAllocations) {
+        scratch.warnings.push(
+          `Row ${rowNumber}: receipt #${receiptNum} split across ${sessionCount} treatment dates yields a share above ${(threshold + 0.005).toFixed(2)} (usual fee +10% per session). Treatments are created with session amount unset and the receipt is not allocated to them — set amounts and allocations manually if needed.`,
+        );
       }
 
       scratch.pendingReceipts.push({
@@ -1386,6 +1415,7 @@ async function analyzeReceiptOnlyProfile(
         allocations,
         consultationAllocations: [],
         travelAllocations: [],
+        omitTreatmentAmountsAndAllocations,
       });
     } else {
       scratch.pendingReceipts.push({
@@ -1629,9 +1659,9 @@ async function analyzePrivateProfile(
     if (allocations.length === 0) {
       const issueDay = utcDayKey(issuedAt);
       const inferred = Array.from(scratch.pendingTreatments.values())
-        .filter((t) => t.paymentDate && utcDayKey(t.paymentDate) === issueDay)
+        .filter((t) => t.paymentDate && utcDayKey(t.paymentDate) === issueDay && t.amount != null)
         .sort((a, b) => a.rowNumber - b.rowNumber)
-        .map((t) => ({ amount: t.amount, treatmentKey: t.key }));
+        .map((t) => ({ amount: t.amount!, treatmentKey: t.key }));
       if (inferred.length > 0) {
         const inferredSum = inferred.reduce((sum, a) => sum + Number(a.amount), 0);
         if (Math.abs(inferredSum - Number(totalAmount)) <= 0.01) {
@@ -1969,7 +1999,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
     const allocations: PendingAllocation[] = [];
     for (const tKey of treatmentKeys) {
       const treatment = scratch.pendingTreatments.get(tKey);
-      if (!treatment) continue;
+      if (!treatment || treatment.amount == null) continue;
       const uniq = `${tKey}|${treatment.amount}`;
       if (allocationsSeen.has(uniq)) continue;
       allocationsSeen.add(uniq);
@@ -2106,7 +2136,8 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
         const consultations = r.consultationAllocations?.length ?? 0;
         const travel = r.travelAllocations?.length ?? 0;
         const manualReceiptOnly = Boolean(r.explicitClientRefForReceipt) && treatment === 0;
-        return treatment + consultations + travel === 0 && !manualReceiptOnly;
+        const deferredMultiSession = r.omitTreatmentAmountsAndAllocations === true;
+        return treatment + consultations + travel === 0 && !manualReceiptOnly && !deferredMultiSession;
       }).length,
       unlinkedReceiptsSample: scratch.pendingReceipts
         .filter((r) => {
@@ -2114,7 +2145,8 @@ function makeSummary(scratch: AnalyzeScratch): TipulimAnalyzeResult {
           const consultations = r.consultationAllocations?.length ?? 0;
           const travel = r.travelAllocations?.length ?? 0;
           const manualReceiptOnly = Boolean(r.explicitClientRefForReceipt) && treatment === 0;
-          return treatment + consultations + travel === 0 && !manualReceiptOnly;
+          const deferredMultiSession = r.omitTreatmentAmountsAndAllocations === true;
+          return treatment + consultations + travel === 0 && !manualReceiptOnly && !deferredMultiSession;
         })
         .slice(0, 5)
         .map((r) => ({ rowNumber: r.rowNumber, receiptNumber: r.receiptNumber })),
@@ -2446,7 +2478,7 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       job_id: string;
       program_id: string | null;
       occurred_at: Date;
-      amount: string | number;
+      amount: string | number | null;
       currency: string;
       visit_type: "clinic" | "home" | "phone" | "video";
       note_1: string | null;

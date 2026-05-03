@@ -1805,7 +1805,7 @@ model therapy_treatments {
   job_id                String
   program_id            String?
   occurred_at           DateTime
-  amount                Decimal  @db.Decimal(15, 2)
+  amount                Decimal? @db.Decimal(15, 2)
   currency              String   @default("ILS")
   visit_type            TherapyVisitType
   note_1                String?

@@ -507,7 +507,7 @@ export default async function TreatmentsPage({
             program_id: editTreatment.program_id ?? "",
             occurred_date: utcDateToHtmlDateInputValue(editTreatment.occurred_at),
             occurred_time: defaultOccurredTimeInputValue(editTreatment.occurred_at),
-            amount: editTreatment.amount.toString(),
+            amount: editTreatment.amount != null ? editTreatment.amount.toString() : "",
             currency: editTreatment.currency,
             visit_type: editTreatment.visit_type,
             linked_transaction_id: editTreatment.linked_transaction_id ?? "",
