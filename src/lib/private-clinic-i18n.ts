@@ -65,6 +65,12 @@ export type PrivateClinicOverviewStatId =
   | "consultations"
   | "travel";
 
+/** Nav tab key for an overview stat tile — must match `getVisiblePrivateClinicNavItems` keys. */
+export function privateClinicOverviewStatNavKey(id: PrivateClinicOverviewStatId): PrivateClinicNavKey {
+  if (id === "activeClients") return "clients";
+  return id as PrivateClinicNavKey;
+}
+
 export function privateClinicOverviewCardLabel(id: PrivateClinicOverviewStatId, lang: UiLanguage): string {
   if (lang === "he") {
     const he: Record<PrivateClinicOverviewStatId, string> = {

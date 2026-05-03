@@ -1,9 +1,13 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
-import { privateClinicOverviewStrings } from "@/lib/private-clinic-i18n";
+import {
+  privateClinicOverviewStatNavKey,
+  privateClinicOverviewStrings,
+} from "@/lib/private-clinic-i18n";
 import {
   jobWherePrivateClinicScoped,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import PrivateClinicOverviewCardsClient from "./private-clinic-overview-cards-client";
@@ -34,8 +38,18 @@ export default async function PrivateClinicOverviewPage({
   const uiLanguage = await getCurrentUiLanguage();
   const overviewCopy = privateClinicOverviewStrings(uiLanguage);
 
-  const [jobsCount, clients, treatments, receipts, expenses, appointments, consultations, travel, upcomingVisitsData] =
-    await Promise.all([
+  const [
+    jobsCount,
+    clients,
+    treatments,
+    receipts,
+    expenses,
+    appointments,
+    consultations,
+    travel,
+    upcomingVisitsData,
+    therapySettings,
+  ] = await Promise.all([
       prisma.jobs.count({
         where: {
           household_id: householdId,
@@ -134,7 +148,17 @@ export default async function PrivateClinicOverviewPage({
         }
         return { total, overdue };
       })(),
+      prisma.therapy_settings.findUnique({
+        where: { household_id: householdId },
+        select: { nav_tabs_json: true, family_therapy_enabled: true },
+      }),
     ]);
+
+  let navItems = getVisiblePrivateClinicNavItems(therapySettings?.nav_tabs_json);
+  if (!therapySettings?.family_therapy_enabled) {
+    navItems = navItems.filter((item) => item.key !== "families");
+  }
+  const visibleNavKeys = new Set(navItems.map((item) => item.key));
 
   const cards = [
     { id: "activeClients" as const, href: "/dashboard/private-clinic/clients", value: clients },
@@ -151,6 +175,8 @@ export default async function PrivateClinicOverviewPage({
     { id: "consultations" as const, href: "/dashboard/private-clinic/consultations", value: consultations },
     { id: "travel" as const, href: "/dashboard/private-clinic/travel", value: travel },
   ];
+
+  const visibleCards = cards.filter((c) => visibleNavKeys.has(privateClinicOverviewStatNavKey(c.id)));
 
   const passwordBanner = passwordJustUpdated ? (
     <p
@@ -178,10 +204,10 @@ export default async function PrivateClinicOverviewPage({
           </div>
         </div>
       ) : null}
-      {jobsCount > 0 ? (
+      {jobsCount > 0 && visibleCards.length > 0 ? (
         <PrivateClinicOverviewCardsClient
           uiLanguage={uiLanguage}
-          cards={cards.map((c) => ({
+          cards={visibleCards.map((c) => ({
             id: c.id,
             href: c.href,
             value: c.value,
