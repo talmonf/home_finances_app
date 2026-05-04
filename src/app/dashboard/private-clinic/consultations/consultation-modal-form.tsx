@@ -47,6 +47,7 @@ export function ConsultationModalForm({
   deleteAction,
   closeHref,
   redirectOnSuccess,
+  redirectOnDeleteSuccess,
   redirectOnError,
   householdId,
   uiLanguage,
@@ -61,6 +62,8 @@ export function ConsultationModalForm({
   deleteAction?: (formData: FormData) => void | Promise<void>;
   closeHref: string;
   redirectOnSuccess: string;
+  /** Success URL after delete; defaults to {@link redirectOnSuccess} when omitted. */
+  redirectOnDeleteSuccess?: string;
   redirectOnError: string;
   householdId: string;
   uiLanguage: "en" | "he";
@@ -185,7 +188,11 @@ export function ConsultationModalForm({
       {initial?.id && deleteAction ? (
         <ConfirmDeleteForm action={deleteAction} className="mt-5 border-t border-slate-700 pt-4">
           <input type="hidden" name="id" value={initial.id} />
-          <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
+          <input
+            type="hidden"
+            name="redirect_on_success"
+            value={redirectOnDeleteSuccess ?? redirectOnSuccess}
+          />
           <PendingSubmitButtonWithSpinner
             label={labels.delete}
             pendingLabel={labels.deleting}

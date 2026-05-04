@@ -40,6 +40,7 @@ type ConsultationModalTxnRow = Omit<TherapyTransactionOption, "amount"> & {
 export type ConsultationsPageSearchParams = Promise<{
   created?: string;
   updated?: string;
+  deleted?: string;
   error?: string;
   job?: string;
   receipt?: string;
@@ -180,9 +181,15 @@ export async function ConsultationsPageContent({
           {sp.error}
         </p>
       )}
-      {(sp.created || sp.updated) && (
-        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          {c.saved}
+      {(sp.created || sp.updated || sp.deleted) && (
+        <p
+          className={
+            sp.deleted
+              ? "rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-sm text-slate-200"
+              : "rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100"
+          }
+        >
+          {sp.deleted ? c.deleted : c.saved}
         </p>
       )}
 
@@ -369,6 +376,7 @@ export async function ConsultationsPageContent({
           deleteAction={deleteTherapyConsultation}
           closeHref={baseListHref}
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
+          redirectOnDeleteSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}deleted=1`}
           redirectOnError={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(editConsultation.id)}`}
           householdId={householdId}
           uiLanguage={uiLanguage}

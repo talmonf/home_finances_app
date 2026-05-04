@@ -4240,7 +4240,7 @@ export async function updateTherapyConsultation(formData: FormData) {
 export async function deleteTherapyConsultation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
-  const fallbackSuccess = `${BASE}/consultations?updated=1`;
+  const fallbackSuccess = `${BASE}/consultations?deleted=1`;
   const id = (formData.get("id") as string)?.trim() || "";
   if (!id) return;
   const row = await prisma.therapy_consultations.findFirst({
