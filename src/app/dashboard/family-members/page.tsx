@@ -12,6 +12,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,7 @@ type PageProps = {
     error?: string;
     sort?: string;
     dir?: string;
+    modal?: string;
   }>;
 };
 
@@ -38,6 +41,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const sort = resolvedSearchParams?.sort ?? "name";
   const dir: Prisma.SortOrder = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
@@ -80,28 +84,33 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               {isHebrew ? "בני משפחה" : "Family members"}
             </h1>
             <div className="flex flex-wrap items-start justify-end gap-x-4 gap-y-2">
-              {familyMembersSetupDone ? (
-                <SetupSectionDoneInlineToggle
-                  sectionId="familyMembers"
-                  redirectPath="/dashboard/family-members"
-                  label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
-                  ariaLabel={
-                    isHebrew
+              <SetupSectionDoneInlineToggle
+                sectionId="familyMembers"
+                redirectPath="/dashboard/family-members"
+                isDone={familyMembersSetupDone}
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  familyMembersSetupDone
+                    ? isHebrew
                       ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
                       : "Mark setup as not done on the home dashboard"
-                  }
-                />
-              ) : null}
-              {session?.user?.role === "admin" ? (
-                <Link
-                  href="/dashboard/household-settings"
-                  className="text-sm font-medium text-sky-400 hover:text-sky-300"
-                >
-                  {isHebrew ? "הגדרות משק בית" : "Household settings"}
-                </Link>
-              ) : null}
+                    : isHebrew
+                      ? "סמן את ההגדרה כהושלמה בלוח הבית"
+                      : "Mark setup as done on the home dashboard"
+                }
+              />
             </div>
           </div>
+          {session?.user?.role === "admin" ? (
+            <div>
+              <Link
+                href="/dashboard/household-settings"
+                className="text-sm font-medium text-sky-400 hover:text-sky-300"
+              >
+                {isHebrew ? "הגדרות משק בית" : "Household settings"}
+              </Link>
+            </div>
+          ) : null}
 
           {(resolvedSearchParams?.created ||
             resolvedSearchParams?.updated ||
@@ -125,126 +134,16 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-          <form
-            action={createFamilyMember}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <div className="sm:col-span-2">
-              <label htmlFor="full_name" className="mb-1 block text-xs font-medium text-slate-400">
-                Full name
-              </label>
-              <input
-                id="full_name"
-                name="full_name"
-                required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
-                placeholder="e.g. Jane Doe"
-              />
-            </div>
-            <div>
-              <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
-                Date of birth
-              </label>
-              <input
-                id="date_of_birth"
-                name="date_of_birth"
-                type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">
-                ID number
-              </label>
-              <input
-                id="id_number"
-                name="id_number"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
-                Phone
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. +1 234 567 8900"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="mb-1 block text-xs font-medium text-slate-400">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
-                Relationship
-              </label>
-              <select
-                id="relationship"
-                name="relationship"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">—</option>
-                <option value="Son">Son</option>
-                <option value="Daughter">Daughter</option>
-                <option value="Grandson">Grandson</option>
-                <option value="Granddaughter">Granddaughter</option>
-                <option value="Wife">Wife</option>
-                <option value="Husband">Husband</option>
-                <option value="Partner">Partner</option>
-                <option value="Father">Father</option>
-                <option value="Mother">Mother</option>
-                <option value="Brother">Brother</option>
-                <option value="Sister">Sister</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">
-                Linked user (optional)
-              </label>
-              <select
-                id="user_id"
-                name="user_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">— None —</option>
-                {householdUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end sm:col-span-2">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת בן משפחה" : "Add family member"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
+            <DashboardAddButton
+              basePath="/dashboard/family-members"
+              label={isHebrew ? "הוספת בן משפחה" : "Add family member"}
+            />
+          </div>
           {members.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No family members yet. Add one above to use in Studies &amp; Classes or Credit cards.
+              No family members yet. Add one to use in Studies &amp; Classes or Credit cards.
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -334,6 +233,126 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            closeHref="/dashboard/family-members"
+            closeLabel={isHebrew ? "סגירה" : "Close"}
+          >
+            <form
+              action={createFamilyMember}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <div className="sm:col-span-2">
+                <label htmlFor="full_name" className="mb-1 block text-xs font-medium text-slate-400">
+                  Full name
+                </label>
+                <input
+                  id="full_name"
+                  name="full_name"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
+                  placeholder="e.g. Jane Doe"
+                />
+              </div>
+              <div>
+                <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
+                  Date of birth
+                </label>
+                <input
+                  id="date_of_birth"
+                  name="date_of_birth"
+                  type="date"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">
+                  ID number
+                </label>
+                <input
+                  id="id_number"
+                  name="id_number"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
+                  Phone
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="e.g. +1 234 567 8900"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="mb-1 block text-xs font-medium text-slate-400">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
+                  Relationship
+                </label>
+                <select
+                  id="relationship"
+                  name="relationship"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">—</option>
+                  <option value="Son">Son</option>
+                  <option value="Daughter">Daughter</option>
+                  <option value="Grandson">Grandson</option>
+                  <option value="Granddaughter">Granddaughter</option>
+                  <option value="Wife">Wife</option>
+                  <option value="Husband">Husband</option>
+                  <option value="Partner">Partner</option>
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Brother">Brother</option>
+                  <option value="Sister">Sister</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">
+                  Linked user (optional)
+                </label>
+                <select
+                  id="user_id"
+                  name="user_id"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">— None —</option>
+                  {householdUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end sm:col-span-2">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  {isHebrew ? "הוספת בן משפחה" : "Add family member"}
+                </button>
+              </div>
+            </form>
+          </DashboardModal>
+        ) : null}
       </div>
     </div>
   );

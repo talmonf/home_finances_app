@@ -78,18 +78,21 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
             <h1 className="text-2xl font-semibold text-slate-50">
               {isHebrew ? "אמצעי תשלום דיגיטליים" : "Digital payment methods"}
             </h1>
-            {digitalPaymentMethodsSetupDone ? (
-              <SetupSectionDoneInlineToggle
-                sectionId="digitalPaymentMethods"
-                redirectPath="/dashboard/digital-payment-methods"
-                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
-                ariaLabel={
-                  isHebrew
+            <SetupSectionDoneInlineToggle
+              sectionId="digitalPaymentMethods"
+              redirectPath="/dashboard/digital-payment-methods"
+              isDone={digitalPaymentMethodsSetupDone}
+              label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+              ariaLabel={
+                digitalPaymentMethodsSetupDone
+                  ? isHebrew
                     ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
                     : "Mark setup as not done on the home dashboard"
-                }
-              />
-            ) : null}
+                  : isHebrew
+                    ? "סמן את ההגדרה כהושלמה בלוח הבית"
+                    : "Mark setup as done on the home dashboard"
+              }
+            />
           </div>
 
           {(resolvedSearchParams?.created ||

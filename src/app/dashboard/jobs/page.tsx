@@ -80,6 +80,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
               <SetupSectionDoneInlineToggle
                 sectionId="jobs"
                 redirectPath="/dashboard/jobs"
+                isDone={jobsSetupDone}
                 label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
                 ariaLabel={
                   isHebrew

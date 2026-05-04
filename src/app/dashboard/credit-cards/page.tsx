@@ -232,6 +232,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               <SetupSectionDoneInlineToggle
                 sectionId="creditCards"
                 redirectPath="/dashboard/credit-cards"
+                isDone={creditCardsSetupDone}
                 label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
                 ariaLabel={
                   isHebrew

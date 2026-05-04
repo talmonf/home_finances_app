@@ -11,11 +11,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCar } from "./actions";
 import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams?: Promise<{ created?: string; updated?: string; error?: string }>;
+  searchParams?: Promise<{ created?: string; updated?: string; error?: string; add?: string }>;
 };
 
 function formatMoney(value: unknown) {
@@ -48,6 +49,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
   const isHebrew = uiLanguage === "he";
 
   const resolved = searchParams ? await searchParams : undefined;
+  const showAddForm = resolved?.add === "1";
 
   const [cars, familyMembers, creditCards, bankAccounts, carsSetupDone] = await Promise.all([
     prisma.cars.findMany({
@@ -76,18 +78,21 @@ export default async function CarsPage({ searchParams }: PageProps) {
         <header className="space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "רכבים" : "Cars"}</h1>
-            {carsSetupDone ? (
-              <SetupSectionDoneInlineToggle
-                sectionId="cars"
-                redirectPath="/dashboard/cars"
-                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
-                ariaLabel={
-                  isHebrew
+            <SetupSectionDoneInlineToggle
+              sectionId="cars"
+              redirectPath="/dashboard/cars"
+              isDone={carsSetupDone}
+              label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+              ariaLabel={
+                carsSetupDone
+                  ? isHebrew
                     ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
                     : "Mark setup as not done on the home dashboard"
-                }
-              />
-            ) : null}
+                  : isHebrew
+                    ? "סמן את ההגדרה כהושלמה בלוח הבית"
+                    : "Mark setup as done on the home dashboard"
+              }
+            />
           </div>
           {(resolved?.created || resolved?.updated || resolved?.error) && (
             <div
@@ -107,56 +112,10 @@ export default async function CarsPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת רכב" : "Add car"}</h2>
-          <form action={createCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
-            <input name="custom_name" placeholder="Car name (e.g. Kona (Talmon))" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="maker" placeholder="Maker (e.g. Hyundai)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="model" placeholder="Model (e.g. Kona)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="model_year" placeholder="Model year" type="number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="plate_number" placeholder="Plate number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="main_driver_family_member_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Main driver (optional)</option>
-              {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-            </select>
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Purchase date</label>
-              <input name="purchase_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <input name="purchase_amount" placeholder="Purchase amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="purchased_from" placeholder="Purchased from (dealer, private…)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="purchase_odometer_km" placeholder="Km at purchase" type="number" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="extra_purchase_costs" placeholder="Extra purchase costs" type="number" step="0.01" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <textarea name="extra_purchase_costs_notes" placeholder="Extra purchase costs notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="purchase_payment_method" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase payment method</option>
-              <option value="cash">Cash</option>
-              <option value="credit_card">Credit card</option>
-              <option value="bank_account">Bank account</option>
-              <option value="other">Other</option>
-            </select>
-            <select name="purchase_credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase credit card (optional)</option>
-              {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
-            </select>
-            <select name="purchase_bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-              <option value="">Purchase bank account (optional)</option>
-              {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-            </select>
-            <textarea name="purchase_notes" placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <div className="space-y-1">
-              <label className="block text-xs text-slate-400">Sale date</label>
-              <input name="sold_at" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <input name="sold_amount" placeholder="Sold amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="sold_to" placeholder="Sold to" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <textarea name="sale_notes" placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת רכב" : "Add car"}</button>
-          </form>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימת רכבים" : "Cars list"}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימת רכבים" : "Cars list"}</h2>
+            <DashboardAddButton href="/dashboard/cars?add=1" label={isHebrew ? "הוספת רכב" : "Add car"} />
+          </div>
           {cars.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-sm text-slate-400">
               No cars yet.
@@ -221,6 +180,61 @@ export default async function CarsPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+        {showAddForm ? (
+          <section className="space-y-3" id="add-car">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת רכב" : "Add car"}</h2>
+              <Link href="/dashboard/cars" className="text-sm text-slate-300 hover:text-slate-100">
+                {isHebrew ? "סגירה" : "Close"}
+              </Link>
+            </div>
+            <form action={createCar} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
+              <input name="custom_name" placeholder="Car name (e.g. Kona (Talmon))" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="maker" placeholder="Maker (e.g. Hyundai)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="model" placeholder="Model (e.g. Kona)" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="model_year" placeholder="Model year" type="number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="plate_number" placeholder="Plate number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <select name="main_driver_family_member_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Main driver (optional)</option>
+                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              </select>
+              <div className="space-y-1">
+                <label className="block text-xs text-slate-400">Purchase date</label>
+                <input name="purchase_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              </div>
+              <input name="purchase_amount" placeholder="Purchase amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="purchased_from" placeholder="Purchased from (dealer, private…)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="purchase_odometer_km" placeholder="Km at purchase" type="number" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="extra_purchase_costs" placeholder="Extra purchase costs" type="number" step="0.01" min="0" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <textarea name="extra_purchase_costs_notes" placeholder="Extra purchase costs notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <select name="purchase_payment_method" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Purchase payment method</option>
+                <option value="cash">Cash</option>
+                <option value="credit_card">Credit card</option>
+                <option value="bank_account">Bank account</option>
+                <option value="other">Other</option>
+              </select>
+              <select name="purchase_credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Purchase credit card (optional)</option>
+                {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
+              </select>
+              <select name="purchase_bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                <option value="">Purchase bank account (optional)</option>
+                {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+              </select>
+              <textarea name="purchase_notes" placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <div className="space-y-1">
+                <label className="block text-xs text-slate-400">Sale date</label>
+                <input name="sold_at" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              </div>
+              <input name="sold_amount" placeholder="Sold amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <input name="sold_to" placeholder="Sold to" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <textarea name="sale_notes" placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <textarea name="notes" placeholder="Notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">{isHebrew ? "הוספת רכב" : "Add car"}</button>
+            </form>
+          </section>
+        ) : null}
       </div>
     </div>
   );

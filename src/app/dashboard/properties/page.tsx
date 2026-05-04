@@ -46,18 +46,21 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-semibold text-slate-50">
               {isHebrew ? "בתים ונכסים" : "Homes & properties"}
             </h1>
-            {propertiesSetupDone ? (
-              <SetupSectionDoneInlineToggle
-                sectionId="properties"
-                redirectPath="/dashboard/properties"
-                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
-                ariaLabel={
-                  isHebrew
+            <SetupSectionDoneInlineToggle
+              sectionId="properties"
+              redirectPath="/dashboard/properties"
+              isDone={propertiesSetupDone}
+              label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+              ariaLabel={
+                propertiesSetupDone
+                  ? isHebrew
                     ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
                     : "Mark setup as not done on the home dashboard"
-                }
-              />
-            ) : null}
+                  : isHebrew
+                    ? "סמן את ההגדרה כהושלמה בלוח הבית"
+                    : "Mark setup as done on the home dashboard"
+              }
+            />
           </div>
           {(resolvedSearchParams?.created ||
             resolvedSearchParams?.updated ||

@@ -77,6 +77,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
               <SetupSectionDoneInlineToggle
                 sectionId="bankAccounts"
                 redirectPath="/dashboard/bank-accounts"
+                isDone={bankAccountsSetupDone}
                 label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
                 ariaLabel={
                   isHebrew
