@@ -9,11 +9,6 @@ import {
   getAuthSession,
 } from "@/lib/auth";
 import { parseFilledAtFieldForServer } from "@/lib/petrol-fillup-filled-at";
-import {
-  insertPetrolFillupImportRows,
-  matrixFromSpreadsheetBuffer,
-  parsePetrolFillupImportMatrix,
-} from "@/lib/petrol-fillups-import";
 import { ensureDefaultExpenseCategories, ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import { materializeSeriesAppointments } from "@/lib/therapy/series-materialize";
 import {
@@ -975,46 +970,6 @@ export async function deletePrivateClinicPetrolFillup(id: string, carId: string)
   revalidatePath("/dashboard/petrol-fillups");
   revalidatePath(`/dashboard/cars/${carId}`);
   redirect(`${BASE}/petrol?carId=${encodeURIComponent(carId)}&deleted=1`);
-}
-
-export async function importPrivateClinicPetrolFillupsFromSpreadsheet(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
-  const car_id = (formData.get("car_id") as string | null)?.trim() || "";
-  const file = formData.get("file");
-  if (!car_id) {
-    redirect(`${BASE}/petrol?error=${encodeURIComponent("Select a vehicle first.")}`);
-  }
-  if (!(file instanceof File) || file.size === 0) {
-    redirect(
-      `${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Choose a CSV or Excel file to import.")}`,
-    );
-  }
-  if (!(await validateCarInHousehold(householdId, car_id))) {
-    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Invalid car")}`);
-  }
-
-  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
-  let matrix: ReturnType<typeof matrixFromSpreadsheetBuffer>;
-  try {
-    const ab = await file.arrayBuffer();
-    matrix = matrixFromSpreadsheetBuffer(ab);
-  } catch {
-    redirect(
-      `${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Could not read that file. Try CSV or .xlsx.")}`,
-    );
-  }
-
-  const parsed = parsePetrolFillupImportMatrix(matrix, dateDisplayFormat);
-  if (!parsed.ok) {
-    const msg = parsed.errors.slice(0, 12).join(" ");
-    redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`);
-  }
-
-  const n = await insertPetrolFillupImportRows(prisma, householdId, car_id, parsed.rows);
-  revalidatePath(`${BASE}/petrol`);
-  revalidatePath("/dashboard/petrol-fillups");
-  revalidatePath(`/dashboard/cars/${car_id}`);
-  redirect(`${BASE}/petrol?carId=${encodeURIComponent(car_id)}&imported=${encodeURIComponent(String(n))}`);
 }
 
 // --- Programs ---

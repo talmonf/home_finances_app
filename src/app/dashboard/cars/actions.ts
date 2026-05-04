@@ -7,11 +7,6 @@ import {
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { parseFilledAtFieldForServer } from "@/lib/petrol-fillup-filled-at";
-import {
-  insertPetrolFillupImportRows,
-  matrixFromSpreadsheetBuffer,
-  parsePetrolFillupImportMatrix,
-} from "@/lib/petrol-fillups-import";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { deleteS3ObjectFromJobStorage } from "@/lib/object-storage";
 import { revalidatePath } from "next/cache";
@@ -700,51 +695,4 @@ export async function deleteCarPetrolFillup(id: string, carId: string) {
   revalidatePath("/dashboard/petrol-fillups");
   revalidatePath(`/dashboard/cars/${carId}`);
   redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(carId)}&deleted=1`);
-}
-
-export async function importCarPetrolFillupsFromSpreadsheet(formData: FormData) {
-  await requireHouseholdMember();
-  const householdId = await getCurrentHouseholdId();
-  if (!householdId) redirect("/");
-
-  const car_id = (formData.get("car_id") as string | null)?.trim() || "";
-  const file = formData.get("file");
-  if (!car_id) {
-    redirect(`/dashboard/petrol-fillups?error=${encodeURIComponent("Select a vehicle first.")}`);
-  }
-  if (!(file instanceof File) || file.size === 0) {
-    redirect(
-      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Choose a CSV or Excel file to import.")}`,
-    );
-  }
-
-  const err = await validateHouseholdRefs(householdId, { car_id });
-  if (err) {
-    redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
-  }
-
-  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
-  let matrix: ReturnType<typeof matrixFromSpreadsheetBuffer>;
-  try {
-    const ab = await file.arrayBuffer();
-    matrix = matrixFromSpreadsheetBuffer(ab);
-  } catch {
-    redirect(
-      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Could not read that file. Try CSV or .xlsx.")}`,
-    );
-  }
-
-  const parsed = parsePetrolFillupImportMatrix(matrix, dateDisplayFormat);
-  if (!parsed.ok) {
-    const msg = parsed.errors.slice(0, 12).join(" ");
-    redirect(
-      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`,
-    );
-  }
-
-  const n = await insertPetrolFillupImportRows(prisma, householdId, car_id, parsed.rows);
-  revalidatePath("/dashboard/petrol-fillups");
-  revalidatePath(`/dashboard/cars/${car_id}`);
-  revalidatePath("/dashboard/private-clinic/petrol");
-  redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&imported=${encodeURIComponent(String(n))}`);
 }

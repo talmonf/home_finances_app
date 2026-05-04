@@ -1105,6 +1105,22 @@ export function privateClinicPetrol(lang: UiLanguage) {
     importedOne: p("Imported 1 fill-up.", "יובא תדלוק אחד."),
     importedMany: (n: number) =>
       p(`Imported ${n} fill-ups.`, `יובאו ${n} תדלוקים.`),
+    importAnalyze: p("Analyze file", "ניתוח הקובץ"),
+    importConfirm: p("Import rows", "ייבוא השורות"),
+    importClearPreview: p("Clear preview", "ניקוי התצוגה"),
+    importPreviewTitle: p("Preview", "תצוגה מקדימה"),
+    importValidRows: (n: number) =>
+      p(`${n} row(s) ready to import.`, `${n} שורות מוכנות לייבוא.`),
+    importRowIssuesTitle: p("Row issues (fix the file and analyze again)", "בעיות בשורות (תקנו את הקובץ ונתחו שוב)"),
+    importFatalTitle: p("Cannot read file", "לא ניתן לקרוא את הקובץ"),
+    importSheetLabel: p("Sheet", "גיליון"),
+    importSheetPickHint: p("This workbook has multiple sheets — pick one before analyzing.", "לקובץ יש כמה גיליונות — בחרו גיליון לפני הניתוח."),
+    importWorkingAnalyze: p("Analyzing…", "מנתח…"),
+    importWorkingCommit: p("Importing…", "מייבא…"),
+    importSampleNote: p("Showing up to 40 sample rows.", "מוצגות עד 40 שורות לדוגמה."),
+    importCommitBlocked: p("Fix all row issues before importing.", "תקנו את כל בעיות השורות לפני הייבוא."),
+    importDoneNavigate: p("Opening petrol…", "פותח תדלוק…"),
+    importColumnLitres: p("Litres", "ליטרים"),
   };
 }
 

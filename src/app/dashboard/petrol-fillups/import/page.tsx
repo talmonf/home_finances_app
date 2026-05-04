@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { carDisplayLabel } from "@/lib/petrol-fillups-metrics";
-import { importCarPetrolFillupsFromSpreadsheet } from "@/app/dashboard/cars/actions";
+import { PetrolFillupsImportForm } from "@/components/petrol-fillups-import-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -14,6 +14,30 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams?: Promise<{ carId?: string }>;
+};
+
+const L = {
+  chooseFile: "Spreadsheet file",
+  instructions:
+    "First analyze the file to see a preview and any row issues. Import runs only after the preview is clean and you click Import rows.",
+  analyze: "Analyze file",
+  confirm: "Import rows",
+  clearPreview: "Clear preview",
+  previewTitle: "Preview",
+  validRows: (n: number) => `${n} row(s) ready to import.`,
+  rowIssuesTitle: "Row issues (fix the file and analyze again)",
+  fatalTitle: "Cannot parse file",
+  sheetLabel: "Sheet",
+  sheetPickHint: "Choose a sheet, then analyze again if you change it.",
+  workingAnalyze: "Analyzing…",
+  workingCommit: "Importing…",
+  sampleNote: "Showing up to 40 sample rows.",
+  commitBlocked: "Fix all row issues before importing.",
+  tableDate: "Date",
+  tableAmount: "Amount",
+  tableLitres: "Litres",
+  tableOdo: "Odometer (km)",
+  tableNotes: "Notes",
 };
 
 export default async function PetrolFillupsImportPage({ searchParams }: PageProps) {
@@ -38,9 +62,10 @@ export default async function PetrolFillupsImportPage({ searchParams }: PageProp
   const dateFormat = await getCurrentHouseholdDateDisplayFormat();
   const formatHint = HOUSEHOLD_DATE_FORMAT_LABELS[dateFormat];
   const backHref = `/dashboard/petrol-fillups?carId=${encodeURIComponent(car.id)}`;
+  const afterImportHref = backHref;
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-6 px-4 pb-10 pt-4">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-10 pt-4">
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-slate-50">Import petrol fill-ups</h1>
         <p className="text-sm text-slate-400">
@@ -49,44 +74,26 @@ export default async function PetrolFillupsImportPage({ searchParams }: PageProp
       </header>
 
       <p className="text-sm text-slate-400">
-        Upload a CSV or Excel file (.xlsx). First row: headers. Required columns:{" "}
-        <code className="text-slate-300">filled_at</code> (or <code className="text-slate-300">date</code>),{" "}
-        <code className="text-slate-300">amount_paid</code> (or <code className="text-slate-300">amount</code>),{" "}
+        Required columns: <code className="text-slate-300">filled_at</code> (or <code className="text-slate-300">date</code>
+        ), <code className="text-slate-300">amount_paid</code> (or <code className="text-slate-300">amount</code>),{" "}
         <code className="text-slate-300">litres</code>, <code className="text-slate-300">odometer_km</code> (or{" "}
-        <code className="text-slate-300">odometer</code>). Optional: <code className="text-slate-300">notes</code>.
-        Dates: <code className="text-slate-300">yyyy-mm-dd</code> or your household format ({formatHint}).
+        <code className="text-slate-300">odometer</code>). Optional: <code className="text-slate-300">notes</code>. Dates:{" "}
+        <code className="text-slate-300">yyyy-mm-dd</code> or your household format ({formatHint}).
       </p>
 
-      <form action={importCarPetrolFillupsFromSpreadsheet} className="space-y-4">
-        <input type="hidden" name="car_id" value={car.id} />
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-300" htmlFor="petrol-import-file">
-            Spreadsheet file
-          </label>
-          <input
-            id="petrol-import-file"
-            name="file"
-            type="file"
-            required
-            accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-            className="block w-full text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950 hover:file:bg-sky-500"
-          />
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="submit"
-            className="min-h-[48px] rounded-xl bg-sky-500 px-5 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            Import
-          </button>
-          <Link
-            href={backHref}
-            className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-slate-600 px-5 text-sm font-medium text-slate-200 hover:bg-slate-800"
-          >
-            Back to petrol
-          </Link>
-        </div>
-      </form>
+      <PetrolFillupsImportForm
+        carId={car.id}
+        variant="household"
+        afterImportHref={afterImportHref}
+        labels={L}
+      />
+
+      <Link
+        href={backHref}
+        className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-600 px-4 text-sm font-medium text-slate-200 hover:bg-slate-800"
+      >
+        Back to petrol
+      </Link>
     </div>
   );
 }
