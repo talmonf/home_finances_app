@@ -5,7 +5,8 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCar } from "./actions";
@@ -48,7 +49,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
 
   const resolved = searchParams ? await searchParams : undefined;
 
-  const [cars, familyMembers, creditCards, bankAccounts] = await Promise.all([
+  const [cars, familyMembers, creditCards, bankAccounts, carsSetupDone] = await Promise.all([
     prisma.cars.findMany({
       where: { household_id: householdId },
       include: { main_driver: true },
@@ -66,23 +67,28 @@ export default async function CarsPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
     }),
+    getSetupSectionIsDone(householdId, "cars"),
   ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="cars"
-            redirectPath="/dashboard/cars"
-          />
-          <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-          </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Cars</h1>
-          <p className="text-sm text-slate-400">
-            Record vehicles, purchase/sale details, driver ownership, petrol fill-ups, services, licenses, and linked insurance.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "רכבים" : "Cars"}</h1>
+            {carsSetupDone ? (
+              <SetupSectionDoneInlineToggle
+                sectionId="cars"
+                redirectPath="/dashboard/cars"
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  isHebrew
+                    ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                    : "Mark setup as not done on the home dashboard"
+                }
+              />
+            ) : null}
+          </div>
           {(resolved?.created || resolved?.updated || resolved?.error) && (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${

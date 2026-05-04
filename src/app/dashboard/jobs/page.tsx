@@ -5,7 +5,8 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createJob } from "./actions";
@@ -48,7 +49,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
       : "current";
   const showAddForm = resolved?.add === "1";
 
-  const [jobs, familyMembers, bankAccounts, creditCards] = await Promise.all([
+  const [jobs, familyMembers, bankAccounts, creditCards, jobsSetupDone] = await Promise.all([
     prisma.jobs.findMany({
       where: { household_id: householdId },
       include: { family_member: true },
@@ -66,21 +67,27 @@ export default async function JobsPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: [{ issuer_name: "asc" }, { card_name: "asc" }],
     }),
+    getSetupSectionIsDone(householdId, "jobs"),
   ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-4">
       <div className="w-full max-w-screen-2xl space-y-4 rounded-2xl bg-slate-900 p-5 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-2">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="jobs"
-            redirectPath="/dashboard/jobs"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-semibold text-slate-50">{isHebrew ? "משרות" : "Jobs"}</h1>
-            <Link href="/" className="text-sm text-slate-400 hover:text-slate-200">
-              {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-            </Link>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "משרות" : "Jobs"}</h1>
+            {jobsSetupDone ? (
+              <SetupSectionDoneInlineToggle
+                sectionId="jobs"
+                redirectPath="/dashboard/jobs"
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  isHebrew
+                    ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                    : "Mark setup as not done on the home dashboard"
+                }
+              />
+            ) : null}
           </div>
           {(resolved?.created || resolved?.updated || resolved?.error) && (
             <div

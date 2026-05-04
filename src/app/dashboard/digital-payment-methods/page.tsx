@@ -4,7 +4,8 @@ import {
   getCurrentHouseholdId,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -41,7 +42,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
-  const [methods, bankAccounts, familyMembers, creditCards] = await Promise.all([
+  const [methods, bankAccounts, familyMembers, creditCards, digitalPaymentMethodsSetupDone] = await Promise.all([
     prisma.digital_payment_methods.findMany({
       where: { household_id: householdId },
       orderBy: [{ method_type: "asc" }, { name: "asc" }],
@@ -66,29 +67,29 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
       orderBy: { card_name: "asc" },
       select: { id: true, card_name: true, card_last_four: true, cancelled_at: true, expiry_date: true },
     }),
+    getSetupSectionIsDone(householdId, "digitalPaymentMethods"),
   ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="digitalPaymentMethods"
-            redirectPath="/dashboard/digital-payment-methods"
-          />
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">Digital payment methods</h1>
-              <p className="text-sm text-slate-400">
-                Track Bit, PayBox, PayPal, and other digital wallets or payment apps for this household.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">
+              {isHebrew ? "אמצעי תשלום דיגיטליים" : "Digital payment methods"}
+            </h1>
+            {digitalPaymentMethodsSetupDone ? (
+              <SetupSectionDoneInlineToggle
+                sectionId="digitalPaymentMethods"
+                redirectPath="/dashboard/digital-payment-methods"
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  isHebrew
+                    ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                    : "Mark setup as not done on the home dashboard"
+                }
+              />
+            ) : null}
           </div>
 
           {(resolvedSearchParams?.created ||

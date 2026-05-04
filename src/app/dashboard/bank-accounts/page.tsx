@@ -5,8 +5,9 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -46,7 +47,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
-  const [accounts, familyMembers] = await Promise.all([
+  const [accounts, familyMembers, bankAccountsSetupDone] = await Promise.all([
     prisma.bank_accounts.findMany({
       where: { household_id: householdId },
       orderBy: { account_name: "asc" },
@@ -61,32 +62,29 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
       orderBy: { full_name: "asc" },
       select: { id: true, full_name: true },
     }),
+    getSetupSectionIsDone(householdId, "bankAccounts"),
   ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="bankAccounts"
-            redirectPath="/dashboard/bank-accounts"
-          />
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">
-                Bank accounts
-              </h1>
-              <p className="text-sm text-slate-400">
-                Manage bank accounts for this household. Link family members to each account if needed;
-                add accounts before linking credit cards.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">
+              {isHebrew ? "חשבונות בנק" : "Bank accounts"}
+            </h1>
+            {bankAccountsSetupDone ? (
+              <SetupSectionDoneInlineToggle
+                sectionId="bankAccounts"
+                redirectPath="/dashboard/bank-accounts"
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  isHebrew
+                    ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                    : "Mark setup as not done on the home dashboard"
+                }
+              />
+            ) : null}
           </div>
 
           {(resolvedSearchParams?.created ||

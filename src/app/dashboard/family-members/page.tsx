@@ -10,7 +10,8 @@ import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 ? { is_active: dir }
                 : { full_name: dir };
 
-  const [members, householdUsers] = await Promise.all([
+  const [members, householdUsers, familyMembersSetupDone] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId },
       include: { users: true },
@@ -67,35 +68,39 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
+    getSetupSectionIsDone(householdId, "familyMembers"),
   ]);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="familyMembers"
-            redirectPath="/dashboard/family-members"
-          />
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "בני משפחה" : "Family members"}</h1>
-              <p className="text-sm text-slate-400">Manage people in your household.</p>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">
+              {isHebrew ? "בני משפחה" : "Family members"}
+            </h1>
+            <div className="flex flex-wrap items-start justify-end gap-x-4 gap-y-2">
+              {familyMembersSetupDone ? (
+                <SetupSectionDoneInlineToggle
+                  sectionId="familyMembers"
+                  redirectPath="/dashboard/family-members"
+                  label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                  ariaLabel={
+                    isHebrew
+                      ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                      : "Mark setup as not done on the home dashboard"
+                  }
+                />
+              ) : null}
+              {session?.user?.role === "admin" ? (
+                <Link
+                  href="/dashboard/household-settings"
+                  className="text-sm font-medium text-sky-400 hover:text-sky-300"
+                >
+                  {isHebrew ? "הגדרות משק בית" : "Household settings"}
+                </Link>
+              ) : null}
             </div>
-            {session?.user?.role === "admin" ? (
-              <Link
-                href="/dashboard/household-settings"
-                className="text-sm font-medium text-sky-400 hover:text-sky-300"
-              >
-                {isHebrew ? "הגדרות משק בית" : "Household settings"}
-              </Link>
-            ) : null}
           </div>
 
           {(resolvedSearchParams?.created ||
