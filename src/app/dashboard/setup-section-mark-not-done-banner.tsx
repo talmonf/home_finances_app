@@ -1,5 +1,6 @@
-import { prisma, getCurrentHouseholdId } from "@/lib/auth";
+import { getCurrentHouseholdId } from "@/lib/auth";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import type { SetupSectionId } from "@/lib/setup-section-ids";
 
 type Props = {
@@ -14,16 +15,8 @@ export async function SetupSectionMarkNotDoneBanner({
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return null;
 
-  const row = await prisma.household_section_statuses.findUnique({
-    where: {
-      household_id_section_id: {
-        household_id: householdId,
-        section_id: sectionId,
-      },
-    },
-  });
-
-  if (!row?.is_done) return null;
+  const done = await getSetupSectionIsDone(householdId, sectionId);
+  if (!done) return null;
 
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">

@@ -7,7 +7,8 @@ import {
 } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
-import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
+import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
+import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -120,7 +121,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   const cardStatusFilter = normalizeCardStatusFilter(resolvedSearchParams?.cardStatus);
   const rawCardScheme = (resolvedSearchParams?.cardScheme ?? "").trim();
 
-  const [familyMembers, bankAccounts, totalCardCount, schemeRows] = await Promise.all([
+  const [familyMembers, bankAccounts, totalCardCount, schemeRows, creditCardsSetupDone] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
@@ -136,6 +137,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
       distinct: ["scheme"],
       orderBy: { scheme: "asc" },
     }),
+    getSetupSectionIsDone(householdId, "creditCards"),
   ]);
 
   const householdSchemes = schemeRows.map((r) => r.scheme);
@@ -222,25 +224,22 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <SetupSectionMarkNotDoneBanner
-            sectionId="creditCards"
-            redirectPath="/dashboard/credit-cards"
-          />
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">
-                Credit cards
-              </h1>
-              <p className="text-sm text-slate-400">
-                Manage credit cards and link them to a family member and settlement bank account.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="text-2xl font-semibold text-slate-50">
+              {isHebrew ? "כרטיסי אשראי" : "Credit cards"}
+            </h1>
+            {creditCardsSetupDone ? (
+              <SetupSectionDoneInlineToggle
+                sectionId="creditCards"
+                redirectPath="/dashboard/credit-cards"
+                label={isHebrew ? "הושלם בלוח הבית" : "Done on home"}
+                ariaLabel={
+                  isHebrew
+                    ? "סמן את ההגדרה כלא הושלמה בלוח הבית"
+                    : "Mark setup as not done on the home dashboard"
+                }
+              />
+            ) : null}
           </div>
 
           {(resolvedSearchParams?.created ||
@@ -273,11 +272,11 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
             />
           </div>
 
-          <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <h3 className="text-sm font-medium text-slate-200">
+          <fieldset className="rounded-xl border border-slate-700 bg-slate-900/60 px-2 pb-4 pt-1">
+            <legend className="px-1 text-sm font-medium text-slate-200">
               {isHebrew ? "מסננים" : "Filters"}
-            </h3>
-            <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            </legend>
+            <form className="mt-2 grid gap-3 px-2 sm:grid-cols-2 lg:grid-cols-4">
               <input type="hidden" name="sort" value={sort} />
               <input type="hidden" name="dir" value={dir} />
               {resolvedSearchParams?.created ? (
@@ -351,7 +350,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                 </button>
               </div>
             </form>
-          </div>
+          </fieldset>
 
           {totalCardCount === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
