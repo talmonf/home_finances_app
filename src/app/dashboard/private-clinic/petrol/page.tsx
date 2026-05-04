@@ -22,6 +22,7 @@ import {
   deletePrivateClinicPetrolFillup,
   updatePrivateClinicPetrolFillup,
 } from "../actions";
+import { PetrolFillupShellForm } from "@/components/petrol-fillup-shell-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -39,6 +40,7 @@ type PageProps = {
     vehicleSaved?: string;
     vehicleUpdated?: string;
     vehicleDeleted?: string;
+    imported?: string;
   }>;
 };
 
@@ -97,6 +99,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
       if (resolved.vehicleSaved) p.set("vehicleSaved", resolved.vehicleSaved);
       if (resolved.vehicleUpdated) p.set("vehicleUpdated", resolved.vehicleUpdated);
       if (resolved.vehicleDeleted) p.set("vehicleDeleted", resolved.vehicleDeleted);
+      if (resolved.imported) p.set("imported", resolved.imported);
       p.delete("edit");
       redirect(`/dashboard/private-clinic/petrol?${p.toString()}`);
     }
@@ -204,6 +207,14 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
           {decodeURIComponent(resolved.error.replace(/\+/g, " "))}
         </div>
       )}
+      {resolved.imported && selectedCarId ? (
+        <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+          {(() => {
+            const n = Number.parseInt(String(resolved.imported), 10);
+            return n === 1 ? pp.importedOne : pp.importedMany(Number.isFinite(n) ? n : 0);
+          })()}
+        </div>
+      ) : null}
 
       {selectedCarId ? (
         <>
@@ -219,12 +230,20 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-medium text-slate-200">{c.recentFillUps}</h2>
-              <Link
-                href={addFillupHref}
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-              >
-                {pp.newFillUp}
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/dashboard/private-clinic/petrol/import?carId=${encodeURIComponent(selectedCarId)}`}
+                  className="rounded-lg border border-slate-600 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  {pp.importFillUps}
+                </Link>
+                <Link
+                  href={addFillupHref}
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {pp.newFillUp}
+                </Link>
+              </div>
             </div>
             {fillups.length === 0 ? (
               <p className="rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-6 text-center text-sm text-slate-500">
@@ -424,7 +443,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
       {showFillupForm && selectedCarId ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/75 p-3 sm:p-6">
           <Link href={cancelEditHref} aria-label="Close fill-up form" className="absolute inset-0" />
-          <section className="relative w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-lg shadow-slate-950/60 ring-1 ring-slate-700/80 sm:max-h-[calc(100dvh-3rem)]">
+          <section className="relative w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-lg shadow-slate-950/60 ring-1 ring-slate-700/80 sm:max-h-[calc(100dvh-3rem)] md:max-w-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-medium text-slate-200">
                 {editingFillup ? pp.editFillUp : pp.newFillUp}
@@ -436,12 +455,13 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                 {c.cancel}
               </Link>
             </div>
-            <form
-              key={editingFillup?.id ?? "new-fillup"}
+            <PetrolFillupShellForm
+              formKey={editingFillup?.id ?? "new-fillup"}
               action={editingFillup ? updatePrivateClinicPetrolFillup : createPrivateClinicPetrolFillup}
-              className="flex flex-col gap-4"
+              className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-x-4"
             >
               <PetrolFillupDateTankerFields
+                key={`${selectedCarId}-${editingFillup?.id ?? "new"}`}
                 members={familyMembers}
                 defaultFilledAt={editingFillup ? dateInputValue(editingFillup.filled_at) : today}
                 defaultTankerId={editingFillup?.tanked_up_by_family_member_id ?? null}
@@ -478,7 +498,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                   odometerKm: pp.odometerKm,
                 }}
               />
-              <div className="[&_select]:min-h-[52px] [&_select]:text-base [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3">
+              <div className="md:col-span-2 [&_select]:min-h-[52px] [&_select]:rounded-xl [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:px-4 [&_select]:py-3 [&_select]:text-base">
                 <TherapyTransactionLinkSelect
                   name="linked_transaction_id"
                   householdId={householdId}
@@ -488,7 +508,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                   noneOptionLabel={c.txNoneLinked}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <label className={labelClass} htmlFor="notes">
                   {pp.notesOptional}
                 </label>
@@ -500,7 +520,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                   className={`${inputClass} min-h-[88px] resize-y py-3`}
                 />
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center md:col-span-2">
                 <button
                   type="submit"
                   className="min-h-[56px] rounded-xl bg-sky-500 px-5 text-base font-semibold text-slate-950 shadow-md shadow-sky-900/30 hover:bg-sky-400 active:bg-sky-500 sm:flex-1"
@@ -514,7 +534,7 @@ export default async function PrivateClinicPetrolPage({ searchParams }: PageProp
                   {c.cancel}
                 </Link>
               </div>
-            </form>
+            </PetrolFillupShellForm>
           </section>
         </div>
       ) : null}

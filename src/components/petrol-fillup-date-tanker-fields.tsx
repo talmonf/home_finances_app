@@ -1,7 +1,10 @@
 "use client";
 
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
-import { useEffect, useMemo, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
+import { formatFilledAtForForm, parseFilledAtFromForm } from "@/lib/petrol-fillup-filled-at";
+import { useMemo, useState } from "react";
 
 const inputClass =
   "w-full min-h-[52px] rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-base text-slate-100 shadow-inner shadow-slate-950/40 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40";
@@ -27,6 +30,7 @@ const defaultDateTankerLabels = {
 
 type Props = {
   members: PetrolTankerMember[];
+  /** Stored calendar day as `yyyy-mm-dd` (UTC). */
   defaultFilledAt: string;
   /** Stored tanker when editing (always shown in list if missing from age filter) */
   defaultTankerId?: string | null;
@@ -41,20 +45,24 @@ function asDate(d: Date | string | null): Date | null {
 
 export function PetrolFillupDateTankerFields({ members, defaultFilledAt, defaultTankerId, labels }: Props) {
   const L = { ...defaultDateTankerLabels, ...labels };
-  const [filledAt, setFilledAt] = useState(defaultFilledAt);
+  const dateFormat = useHouseholdDateFormat();
+  const formatHint = HOUSEHOLD_DATE_FORMAT_LABELS[dateFormat];
+
+  const initialIso = defaultFilledAt.trim();
+  const [filledAtIso, setFilledAtIso] = useState(initialIso);
+  const [displayDate, setDisplayDate] = useState(() => formatFilledAtForForm(initialIso, dateFormat));
+  const [dateError, setDateError] = useState<string | null>(null);
   const [tankerId, setTankerId] = useState(defaultTankerId ?? "");
 
-  useEffect(() => {
-    setFilledAt(defaultFilledAt);
-  }, [defaultFilledAt]);
-
-  useEffect(() => {
-    setTankerId(defaultTankerId ?? "");
-  }, [defaultTankerId]);
-
-  const filledAtDate = useMemo(() => new Date(`${filledAt}T12:00:00.000Z`), [filledAt]);
+  const filledAtDate = useMemo(
+    () => (filledAtIso ? new Date(`${filledAtIso}T12:00:00.000Z`) : new Date("invalid")),
+    [filledAtIso],
+  );
 
   const eligibleTankers = useMemo(() => {
+    if (!filledAtIso || Number.isNaN(filledAtDate.getTime())) {
+      return [];
+    }
     const base = members.filter((m) => {
       const dob = asDate(m.date_of_birth);
       return dob != null && isEligiblePetrolTankerOnFillDate(dob, filledAtDate);
@@ -65,33 +73,67 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
       if (extra) list = [...list, extra];
     }
     return list.sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [members, filledAtDate, defaultTankerId]);
+  }, [members, filledAtDate, filledAtIso, defaultTankerId]);
 
-  useEffect(() => {
-    setTankerId((prev) => {
-      if (!prev) return prev;
-      if (!eligibleTankers.some((m) => m.id === prev)) return "";
-      return prev;
-    });
-  }, [eligibleTankers]);
+  const safeTankerId = useMemo(() => {
+    if (!tankerId) return "";
+    return eligibleTankers.some((m) => m.id === tankerId) ? tankerId : "";
+  }, [tankerId, eligibleTankers]);
 
   const anyDob = members.some((m) => m.date_of_birth != null);
 
+  function applyDisplay(raw: string) {
+    setDisplayDate(raw);
+    const parsed = parseFilledAtFromForm(raw, dateFormat);
+    if (parsed.ok) {
+      setFilledAtIso(parsed.isoYmd);
+      setDateError(null);
+    } else {
+      setFilledAtIso("");
+    }
+  }
+
+  function onBlurDisplay() {
+    const parsed = parseFilledAtFromForm(displayDate, dateFormat);
+    if (parsed.ok) {
+      setFilledAtIso(parsed.isoYmd);
+      setDisplayDate(formatFilledAtForForm(parsed.isoYmd, dateFormat));
+      setDateError(null);
+    } else {
+      setDateError(parsed.message);
+      setFilledAtIso("");
+    }
+  }
+
   return (
-    <>
+    <div className="contents">
       <div className="space-y-2">
-        <label className={labelClass} htmlFor="filled_at">
+        <label className={labelClass} htmlFor="filled_at_display">
           {L.date}
         </label>
+        <input type="hidden" name="filled_at" value={filledAtIso} required />
         <input
-          id="filled_at"
-          name="filled_at"
-          type="date"
-          required
-          value={filledAt}
-          onChange={(e) => setFilledAt(e.target.value)}
-          className={inputClass}
+          id="filled_at_display"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={formatHint}
+          value={displayDate}
+          onChange={(e) => applyDisplay(e.target.value)}
+          onBlur={onBlurDisplay}
+          aria-invalid={dateError ? true : undefined}
+          aria-describedby={dateError ? "filled_at_error" : "filled_at_hint"}
+          className={`${inputClass} ${dateError ? "border-rose-500/80 ring-1 ring-rose-500/30" : ""}`}
         />
+        {dateError ? (
+          <p id="filled_at_error" className="text-xs text-rose-400">
+            {dateError}
+          </p>
+        ) : (
+          <p id="filled_at_hint" className="text-xs text-slate-500">
+            {formatHint}
+          </p>
+        )}
       </div>
       {eligibleTankers.length > 0 ? (
         <div className="space-y-2">
@@ -101,8 +143,7 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
           <select
             id="tanked_up_by_family_member_id"
             name="tanked_up_by_family_member_id"
-            required
-            value={tankerId}
+            value={safeTankerId}
             onChange={(e) => setTankerId(e.target.value)}
             className={inputClass}
           >
@@ -115,11 +156,11 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
           </select>
           <p className="text-xs text-slate-500">{L.tankerAgeHint}</p>
         </div>
-      ) : (
+      ) : filledAtIso && !Number.isNaN(filledAtDate.getTime()) ? (
         <p className="rounded-xl border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-sm text-slate-500">
           {anyDob ? L.tankerNoEligible : L.tankerNoDob}
         </p>
-      )}
-    </>
+      ) : null}
+    </div>
   );
 }

@@ -27,6 +27,7 @@ export function ConfirmDeleteForm({
       {...rest}
       className={className}
       action={action}
+      data-skip-global-submit-feedback=""
       onSubmit={(e) => {
         if (!window.confirm(message)) {
           e.preventDefault();

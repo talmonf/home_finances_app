@@ -41,7 +41,7 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
   const costPreview = useMemo(() => formatCostPerLitrePreview(amount, litres), [amount, litres]);
 
   return (
-    <>
+    <div className="contents">
       <input type="hidden" name="car_id" value={carId} />
       {fillupId ? <input type="hidden" name="id" value={fillupId} /> : null}
       <input type="hidden" name="currency" value={currency} />
@@ -82,13 +82,13 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
           className={inputClass}
         />
       </div>
-      <div className="rounded-xl border border-slate-600/80 bg-slate-800/50 px-4 py-3 text-sm">
+      <div className="rounded-xl border border-slate-600/80 bg-slate-800/50 px-4 py-3 text-sm md:col-span-2">
         <span className="text-slate-400">{L.costPerLitrePreview}</span>
         <p className="mt-1 text-lg font-medium tabular-nums text-slate-100">
           {costPreview != null ? `${costPreview}` : "—"}
         </p>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 md:col-span-2">
         <label className={labelClass} htmlFor="odometer_km">
           {L.odometerKm}
         </label>
@@ -103,6 +103,6 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
           className={inputClass}
         />
       </div>
-    </>
+    </div>
   );
 }

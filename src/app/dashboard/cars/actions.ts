@@ -1,6 +1,17 @@
 "use server";
 
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { parseFilledAtFieldForServer } from "@/lib/petrol-fillup-filled-at";
+import {
+  insertPetrolFillupImportRows,
+  matrixFromSpreadsheetBuffer,
+  parsePetrolFillupImportMatrix,
+} from "@/lib/petrol-fillups-import";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
 import { deleteS3ObjectFromJobStorage } from "@/lib/object-storage";
 import { revalidatePath } from "next/cache";
@@ -36,25 +47,13 @@ function parseLitres(raw: string | null): string | null {
   return parsed.toFixed(3);
 }
 
-async function countEligiblePetrolTankers(householdId: string, filledAt: Date): Promise<number> {
-  const members = await prisma.family_members.findMany({
-    where: { household_id: householdId, is_active: true, date_of_birth: { not: null } },
-    select: { date_of_birth: true },
-  });
-  return members.filter((m) => isEligiblePetrolTankerOnFillDate(m.date_of_birth!, filledAt)).length;
-}
-
 async function resolveTankedUpByFamilyMemberId(
   householdId: string,
   raw: string | null | undefined,
   filledAt: Date,
-  eligibleTankerCount: number,
 ): Promise<{ id: string | null; error: string | null }> {
   const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (!trimmed) {
-    if (eligibleTankerCount > 0) {
-      return { id: null, error: "Choose who tanked up." };
-    }
     return { id: null, error: null };
   }
   const member = await prisma.family_members.findFirst({
@@ -519,8 +518,12 @@ export async function createCarPetrolFillup(formData: FormData) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const car_id = (formData.get("car_id") as string | null)?.trim() || null;
-  const filled_at = parseDateInput((formData.get("filled_at") as string | null)?.trim() || null);
+  const filled_at = parseFilledAtFieldForServer(
+    (formData.get("filled_at") as string | null)?.trim() || null,
+    dateDisplayFormat,
+  );
   const amount_paid = parseMoney((formData.get("amount_paid") as string | null) ?? null);
   const litres = parseLitres((formData.get("litres") as string | null) ?? null);
   const odometerRaw = (formData.get("odometer_km") as string | null)?.trim();
@@ -533,7 +536,9 @@ export async function createCarPetrolFillup(formData: FormData) {
       : null;
 
   if (!car_id || !filled_at || !amount_paid || !litres || odometer_km === null) {
-    const msg = "Date, amount, litres, and odometer are required.";
+    const msg = !filled_at
+      ? "Enter a valid fill date (not in the future)."
+      : "Date, amount, litres, and odometer are required.";
     if (car_id) {
       redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`);
     }
@@ -545,12 +550,10 @@ export async function createCarPetrolFillup(formData: FormData) {
     redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
   }
 
-  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
   const tankedUp = await resolveTankedUpByFamilyMemberId(
     householdId,
     formData.get("tanked_up_by_family_member_id") as string,
     filled_at,
-    eligibleTankers,
   );
   if (tankedUp.error) {
     redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(tankedUp.error)}`);
@@ -598,9 +601,13 @@ export async function updateCarPetrolFillup(formData: FormData) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const id = (formData.get("id") as string | null)?.trim() || null;
   const car_id = (formData.get("car_id") as string | null)?.trim() || null;
-  const filled_at = parseDateInput((formData.get("filled_at") as string | null)?.trim() || null);
+  const filled_at = parseFilledAtFieldForServer(
+    (formData.get("filled_at") as string | null)?.trim() || null,
+    dateDisplayFormat,
+  );
   const amount_paid = parseMoney((formData.get("amount_paid") as string | null) ?? null);
   const litres = parseLitres((formData.get("litres") as string | null) ?? null);
   const odometerRaw = (formData.get("odometer_km") as string | null)?.trim();
@@ -613,7 +620,9 @@ export async function updateCarPetrolFillup(formData: FormData) {
       : null;
 
   if (!id || !car_id || !filled_at || !amount_paid || !litres || odometer_km === null) {
-    const msg = "Date, amount, litres, and odometer are required.";
+    const msg = !filled_at
+      ? "Enter a valid fill date (not in the future)."
+      : "Date, amount, litres, and odometer are required.";
     if (car_id) {
       redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`);
     }
@@ -635,12 +644,10 @@ export async function updateCarPetrolFillup(formData: FormData) {
     redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
   }
 
-  const eligibleTankers = await countEligiblePetrolTankers(householdId, filled_at);
   const tankedUp = await resolveTankedUpByFamilyMemberId(
     householdId,
     formData.get("tanked_up_by_family_member_id") as string,
     filled_at,
-    eligibleTankers,
   );
   if (tankedUp.error) {
     redirect(
@@ -693,4 +700,51 @@ export async function deleteCarPetrolFillup(id: string, carId: string) {
   revalidatePath("/dashboard/petrol-fillups");
   revalidatePath(`/dashboard/cars/${carId}`);
   redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(carId)}&deleted=1`);
+}
+
+export async function importCarPetrolFillupsFromSpreadsheet(formData: FormData) {
+  await requireHouseholdMember();
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/");
+
+  const car_id = (formData.get("car_id") as string | null)?.trim() || "";
+  const file = formData.get("file");
+  if (!car_id) {
+    redirect(`/dashboard/petrol-fillups?error=${encodeURIComponent("Select a vehicle first.")}`);
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(
+      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Choose a CSV or Excel file to import.")}`,
+    );
+  }
+
+  const err = await validateHouseholdRefs(householdId, { car_id });
+  if (err) {
+    redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(err)}`);
+  }
+
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  let matrix: ReturnType<typeof matrixFromSpreadsheetBuffer>;
+  try {
+    const ab = await file.arrayBuffer();
+    matrix = matrixFromSpreadsheetBuffer(ab);
+  } catch {
+    redirect(
+      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent("Could not read that file. Try CSV or .xlsx.")}`,
+    );
+  }
+
+  const parsed = parsePetrolFillupImportMatrix(matrix, dateDisplayFormat);
+  if (!parsed.ok) {
+    const msg = parsed.errors.slice(0, 12).join(" ");
+    redirect(
+      `/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&error=${encodeURIComponent(msg)}`,
+    );
+  }
+
+  const n = await insertPetrolFillupImportRows(prisma, householdId, car_id, parsed.rows);
+  revalidatePath("/dashboard/petrol-fillups");
+  revalidatePath(`/dashboard/cars/${car_id}`);
+  revalidatePath("/dashboard/private-clinic/petrol");
+  redirect(`/dashboard/petrol-fillups?carId=${encodeURIComponent(car_id)}&imported=${encodeURIComponent(String(n))}`);
 }

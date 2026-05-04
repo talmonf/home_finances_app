@@ -1092,6 +1092,19 @@ export function privateClinicPetrol(lang: UiLanguage) {
       "Add a date of birth for each person who should appear here. You need at least one person aged 16+ on the fill date to record who tanked up.",
       "הוסיפו תאריך לידה לכל אדם שאמור להופיע. נדרש לפחות אדם אחד בן 16+ בתאריך התדלוק.",
     ),
+    importFillUps: p("Import fill-ups", "ייבוא תדלוקים"),
+    importTitle: p("Import petrol fill-ups", "ייבוא תדלוקים"),
+    importIntro: p(
+      "Upload a CSV or Excel file (.xlsx). The first row must be headers. Required columns: date (or filled_at), amount_paid (or amount), litres, odometer_km (or odometer). Optional: notes. Dates may be yyyy-mm-dd or match your household date format.",
+      "העלו קובץ CSV או Excel ‎(.xlsx). בשורה הראשונה כותרות. עמודות נדרשות: תאריך (או filled_at), amount_paid (או amount), litres, odometer_km (או odometer). אופציונלי: notes. תאריכים ב־yyyy-mm-dd או לפי פורמט התאריך של הבית.",
+    ),
+    importFileLabel: p("Spreadsheet file", "קובץ גיליון"),
+    importSubmit: p("Import", "ייבוא"),
+    importBack: p("Back to petrol", "חזרה לתדלוק"),
+    importNeedCar: p("Select a vehicle on the petrol page first.", "בחרו רכב בעמוד התדלוק תחילה."),
+    importedOne: p("Imported 1 fill-up.", "יובא תדלוק אחד."),
+    importedMany: (n: number) =>
+      p(`Imported ${n} fill-ups.`, `יובאו ${n} תדלוקים.`),
   };
 }
 
