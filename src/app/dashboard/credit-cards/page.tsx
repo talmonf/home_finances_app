@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { SetupSectionMarkNotDoneBanner } from "@/app/dashboard/setup-section-mark-not-done-banner";
 import Link from "next/link";
@@ -43,6 +44,43 @@ function formatOptionalDate(d: Date | null, dateDisplayFormat: Awaited<ReturnTyp
   return formatHouseholdDate(d, dateDisplayFormat);
 }
 
+const CARD_STATUS_FILTERS = ["open", "active", "expired", "cancelled", "all"] as const;
+type CardStatusFilter = (typeof CARD_STATUS_FILTERS)[number];
+
+function normalizeCardStatusFilter(raw: string | undefined): CardStatusFilter {
+  const t = (raw ?? "").trim().toLowerCase();
+  return CARD_STATUS_FILTERS.includes(t as CardStatusFilter) ? (t as CardStatusFilter) : "open";
+}
+
+function buildCreditCardListWhere(
+  householdId: string,
+  memberFilter: "" | "unassigned" | string,
+  cardStatus: CardStatusFilter,
+  now: Date,
+): Prisma.credit_cardsWhereInput {
+  const where: Prisma.credit_cardsWhereInput = { household_id: householdId };
+
+  if (memberFilter === "unassigned") {
+    where.family_member_id = null;
+  } else if (memberFilter) {
+    where.family_member_id = memberFilter;
+  }
+
+  if (cardStatus === "open") {
+    where.cancelled_at = null;
+  } else if (cardStatus === "active") {
+    where.cancelled_at = null;
+    where.OR = [{ expiry_date: null }, { expiry_date: { gte: now } }];
+  } else if (cardStatus === "expired") {
+    where.cancelled_at = null;
+    where.expiry_date = { not: null, lt: now };
+  } else if (cardStatus === "cancelled") {
+    where.cancelled_at = { not: null };
+  }
+
+  return where;
+}
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -51,6 +89,8 @@ type PageProps = {
     modal?: string;
     sort?: string;
     dir?: string;
+    memberId?: string;
+    cardStatus?: string;
   }>;
 };
 
@@ -69,12 +109,11 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   const sort = resolvedSearchParams?.sort ?? "card";
   const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
 
-  const [cards, familyMembers, bankAccounts] = await Promise.all([
-    prisma.credit_cards.findMany({
-      where: { household_id: householdId },
-      include: { family_member: true, bank_account: true },
-      orderBy: { card_name: "asc" },
-    }),
+  const now = new Date();
+  const rawMemberId = (resolvedSearchParams?.memberId ?? "").trim();
+  const cardStatusFilter = normalizeCardStatusFilter(resolvedSearchParams?.cardStatus);
+
+  const [familyMembers, bankAccounts, totalCardCount] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
@@ -83,7 +122,29 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
     }),
+    prisma.credit_cards.count({ where: { household_id: householdId } }),
   ]);
+
+  const memberIdSet = new Set(familyMembers.map((m) => m.id));
+  const effectiveMemberFilter: "" | "unassigned" | string =
+    rawMemberId === "unassigned"
+      ? "unassigned"
+      : rawMemberId && memberIdSet.has(rawMemberId)
+        ? rawMemberId
+        : "";
+
+  const listWhere = buildCreditCardListWhere(
+    householdId,
+    effectiveMemberFilter,
+    cardStatusFilter,
+    now,
+  );
+
+  const cards = await prisma.credit_cards.findMany({
+    where: listWhere,
+    include: { family_member: true, bank_account: true },
+    orderBy: { card_name: "asc" },
+  });
 
   const cardsSorted = [...cards].sort((a, b) => {
     const compare = (av: string | number | Date | null, bv: string | number | Date | null) => {
@@ -192,9 +253,81 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
               label={isHebrew ? "הוספת כרטיס אשראי" : "Add credit card"}
             />
           </div>
-          {cards.length === 0 ? (
+
+          <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <h3 className="text-sm font-medium text-slate-200">
+              {isHebrew ? "מסננים" : "Filters"}
+            </h3>
+            <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <input type="hidden" name="sort" value={sort} />
+              <input type="hidden" name="dir" value={dir} />
+              {resolvedSearchParams?.created ? (
+                <input type="hidden" name="created" value={resolvedSearchParams.created} />
+              ) : null}
+              {resolvedSearchParams?.updated ? (
+                <input type="hidden" name="updated" value={resolvedSearchParams.updated} />
+              ) : null}
+              {resolvedSearchParams?.error ? (
+                <input type="hidden" name="error" value={resolvedSearchParams.error} />
+              ) : null}
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">
+                  {isHebrew ? "בן משפחה" : "Family member"}
+                </label>
+                <select
+                  name="memberId"
+                  defaultValue={effectiveMemberFilter}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">{isHebrew ? "הכל" : "All"}</option>
+                  <option value="unassigned">{isHebrew ? "ללא שיוך" : "Unassigned"}</option>
+                  {familyMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">
+                  {isHebrew ? "סטטוס" : "Status"}
+                </label>
+                <select
+                  name="cardStatus"
+                  defaultValue={cardStatusFilter}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="open">
+                    {isHebrew ? "פתוחים (ללא מבוטלים)" : "Open cards (hide cancelled)"}
+                  </option>
+                  <option value="active">{isHebrew ? "פעילים" : "Active"}</option>
+                  <option value="expired">{isHebrew ? "פג תוקף" : "Expired"}</option>
+                  <option value="cancelled">{isHebrew ? "מבוטלים" : "Cancelled"}</option>
+                  <option value="all">{isHebrew ? "הכל" : "All cards"}</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-slate-600"
+                >
+                  {isHebrew ? "החלת מסננים" : "Apply filters"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {totalCardCount === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No credit cards yet. Add family members and bank accounts first, then add a card above.
+              {isHebrew
+                ? "אין עדיין כרטיסי אשראי. הוסיפו תחילה בני משפחה וחשבונות בנק, ואז הוסיפו כרטיס למעלה."
+                : "No credit cards yet. Add family members and bank accounts first, then add a card above."}
+            </p>
+          ) : cards.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              {isHebrew
+                ? "אין כרטיסי אשראי התואמים למסננים."
+                : "No credit cards match your filters."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -224,6 +357,8 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       if (resolvedSearchParams?.created) query.set("created", resolvedSearchParams.created);
                       if (resolvedSearchParams?.updated) query.set("updated", resolvedSearchParams.updated);
                       if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
+                      if (effectiveMemberFilter) query.set("memberId", effectiveMemberFilter);
+                      if (cardStatusFilter !== "open") query.set("cardStatus", cardStatusFilter);
                       query.set("sort", col.key);
                       query.set("dir", nextDir);
                       return (
