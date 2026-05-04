@@ -10,61 +10,9 @@ import { privateClinicReports } from "@/lib/private-clinic-i18n";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { redirect } from "next/navigation";
 import { MonthPayableReportClient } from "./month-payable-report-client";
+import { TherapistDiaryReportClient } from "./therapist-diary-report-client";
 
 export const dynamic = "force-dynamic";
-
-type Snapshot = {
-  job_id?: string;
-  client_name?: string;
-  start_at?: string;
-  end_at?: string | null;
-  status?: string;
-  cancellation_reason?: string | null;
-  reschedule_reason?: string | null;
-};
-
-function toMetaRecord(meta: unknown): Record<string, unknown> | null {
-  if (meta == null || typeof meta !== "object") return null;
-  return meta as Record<string, unknown>;
-}
-
-function snapshotFromMetadata(meta: unknown): Snapshot | null {
-  const m = toMetaRecord(meta);
-  if (!m) return null;
-  const snap = m.snapshot;
-  if (snap && typeof snap === "object") return snap as Snapshot;
-  const after = m.after;
-  if (after && typeof after === "object") return after as Snapshot;
-  const before = m.before;
-  if (before && typeof before === "object") return before as Snapshot;
-  return null;
-}
-
-function textFromMetadata(meta: unknown, key: "reason" | "notes"): string {
-  const m = toMetaRecord(meta);
-  const value = m?.[key];
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function detailTextFromAuditMetadata(meta: unknown): string {
-  const reasonFromMeta = textFromMetadata(meta, "reason");
-  const notesFromMeta = textFromMetadata(meta, "notes");
-  if (reasonFromMeta && notesFromMeta) {
-    return reasonFromMeta.includes(notesFromMeta)
-      ? reasonFromMeta
-      : `${reasonFromMeta}: ${notesFromMeta}`;
-  }
-  if (reasonFromMeta) return reasonFromMeta;
-  if (notesFromMeta) return notesFromMeta;
-
-  const snap = snapshotFromMetadata(meta);
-  return snap?.reschedule_reason || snap?.cancellation_reason || "—";
-}
-
-function formatIsoDateTime(value?: string | null): string {
-  if (!value) return "";
-  return value.replace("T", " ").slice(0, 19);
-}
 
 export default async function PrivateClinicReportsPage() {
   const session = await requireHouseholdMember();
@@ -86,29 +34,10 @@ export default async function PrivateClinicReportsPage() {
     select: { id: true, job_title: true, employer_name: true },
     orderBy: [{ start_date: "desc" }],
   });
-  const allowedJobIds = new Set(allowedJobs.map((j) => j.id));
   const monthPayableJobOptions = allowedJobs.map((j) => ({
     id: j.id,
     label: formatJobDisplayLabel(j),
   }));
-
-  const audits = await prisma.therapy_appointment_audits.findMany({
-    where: { household_id: householdId },
-    include: {
-      user: { select: { full_name: true } },
-      appointment: { select: { job_id: true } },
-    },
-    orderBy: { created_at: "desc" },
-    take: 200,
-  });
-
-  const filtered = audits.filter((row) => {
-    if (row.appointment) return allowedJobIds.has(row.appointment.job_id);
-    const snap = snapshotFromMetadata(row.metadata);
-    const jid = snap?.job_id;
-    if (jid && allowedJobIds.has(jid)) return true;
-    return false;
-  });
 
   return (
     <div className="space-y-8">
@@ -130,69 +59,21 @@ export default async function PrivateClinicReportsPage() {
           description: r.monthPayableDesc,
           job: r.monthPayableJob,
           month: r.monthPayableMonth,
+          year: r.monthPayableYear,
           download: r.download,
           noJobs: r.monthPayableNoJobs,
         }}
       />
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-medium text-slate-100">{r.therapistDiaryTitle}</h3>
-            <p className="text-sm text-slate-400">{r.therapistDiaryDesc}</p>
-          </div>
-          <a
-            href="/api/private-clinic/reports/therapist-diary"
-            className="shrink-0 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {r.download}
-          </a>
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className="text-sm text-slate-500">{r.empty}</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-700/80">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-700 bg-slate-800/80">
-                  <th className="px-2 py-2 text-slate-300">{r.tableWhen}</th>
-                  <th className="px-2 py-2 text-slate-300">{r.tableUser}</th>
-                  <th className="px-2 py-2 text-slate-300">{r.tableAction}</th>
-                  <th className="px-2 py-2 text-slate-300">{r.tableAppointment}</th>
-                  <th className="px-2 py-2 text-slate-300">{r.tableClient}</th>
-                  <th className="px-2 py-2 text-slate-300">{r.tableDetails}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row) => {
-                  const snap = snapshotFromMetadata(row.metadata);
-                  const appointmentText = snap?.end_at
-                    ? `${formatIsoDateTime(snap.start_at)} → ${formatIsoDateTime(snap.end_at)}`
-                    : formatIsoDateTime(snap?.start_at) || "—";
-                  const detail = detailTextFromAuditMetadata(row.metadata);
-                  return (
-                    <tr key={row.id} className="border-b border-slate-700/60">
-                      <td className="px-2 py-2 whitespace-nowrap text-slate-300">
-                        {row.created_at.toISOString().replace("T", " ").slice(0, 19)}
-                      </td>
-                      <td className="px-2 py-2 text-slate-200">{row.user.full_name}</td>
-                      <td className="px-2 py-2 text-slate-300">{row.action}</td>
-                      <td className="px-2 py-2 whitespace-nowrap text-slate-300">
-                        {appointmentText}
-                      </td>
-                      <td className="px-2 py-2 text-slate-300">{snap?.client_name || "—"}</td>
-                      <td className="px-2 py-2 text-slate-400 max-w-md truncate" title={detail}>
-                        {detail}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <TherapistDiaryReportClient
+        labels={{
+          title: r.therapistDiaryTitle,
+          description: r.therapistDiaryDesc,
+          yearFrom: r.therapistDiaryYearFrom,
+          yearTo: r.therapistDiaryYearTo,
+          download: r.download,
+        }}
+      />
     </div>
   );
 }

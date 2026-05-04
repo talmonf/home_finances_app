@@ -1010,10 +1010,13 @@ export function privateClinicReports(lang: UiLanguage) {
     ),
     monthPayableJob: p("Job", "עבודה"),
     monthPayableMonth: p("Month", "חודש"),
+    monthPayableYear: p("Year", "שנה"),
     monthPayableNoJobs: p(
       "No private-clinic jobs are available for your account.",
       "אין עבודות קליניקה זמינות לחשבון שלך.",
     ),
+    therapistDiaryYearFrom: p("From year", "משנה"),
+    therapistDiaryYearTo: p("To year", "עד שנה"),
   };
 }
 

@@ -103,12 +103,39 @@ async function embedDiaryFonts(pdf: PDFDocument): Promise<{
   return { font, fontBold };
 }
 
-export async function GET() {
+const MAX_YEAR_SPAN = 10;
+const MAX_AUDIT_ROWS = 10_000;
+
+export async function GET(req: Request) {
   const session = await getAuthSession();
   const householdId = session?.user?.householdId;
   if (!session?.user || !householdId || session.user.isSuperAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const url = new URL(req.url);
+  const cy = new Date().getUTCFullYear();
+  let fromYear = Number(url.searchParams.get("fromYear"));
+  let toYear = Number(url.searchParams.get("toYear"));
+  if (!Number.isInteger(fromYear)) fromYear = cy;
+  if (!Number.isInteger(toYear)) toYear = cy;
+  if (fromYear < 2000 || fromYear > 2100 || toYear < 2000 || toYear > 2100) {
+    return NextResponse.json({ error: "fromYear and toYear must be integers 2000–2100" }, { status: 400 });
+  }
+  if (fromYear > toYear) {
+    const t = fromYear;
+    fromYear = toYear;
+    toYear = t;
+  }
+  if (toYear - fromYear > MAX_YEAR_SPAN) {
+    return NextResponse.json(
+      { error: `Year range must be at most ${MAX_YEAR_SPAN} years` },
+      { status: 400 },
+    );
+  }
+
+  const rangeStart = new Date(Date.UTC(fromYear, 0, 1));
+  const rangeEndExclusive = new Date(Date.UTC(toYear + 1, 0, 1));
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -118,11 +145,14 @@ export async function GET() {
   const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const uiLanguage = await getCurrentUiLanguage();
   const reportStrings = privateClinicReports(uiLanguage);
+  const rangeLabel = `${fromYear}–${toYear}`;
   const pdfStrings =
     uiLanguage === "he"
       ? {
           title: reportStrings.therapistDiaryTitle,
           generated: "נוצר בתאריך",
+          range: `טווח: ${rangeLabel} (UTC)`,
+          truncated: `מוצגות עד ${MAX_AUDIT_ROWS} רשומות — צמצמו את טווח השנים אם חסרות רשומות.`,
           when: reportStrings.tableWhen,
           user: reportStrings.tableUser,
           action: reportStrings.tableAction,
@@ -134,6 +164,8 @@ export async function GET() {
       : {
           title: reportStrings.therapistDiaryTitle,
           generated: "Generated",
+          range: `Range: ${rangeLabel} (UTC)`,
+          truncated: `Showing up to ${MAX_AUDIT_ROWS} rows — narrow the year range if entries are missing.`,
           when: reportStrings.tableWhen,
           user: reportStrings.tableUser,
           action: reportStrings.tableAction,
@@ -150,14 +182,18 @@ export async function GET() {
   const allowedJobIds = new Set(allowedJobs.map((j) => j.id));
 
   const rows = await prisma.therapy_appointment_audits.findMany({
-    where: { household_id: householdId },
+    where: {
+      household_id: householdId,
+      created_at: { gte: rangeStart, lt: rangeEndExclusive },
+    },
     include: {
       user: { select: { full_name: true } },
       appointment: { select: { job_id: true } },
     },
     orderBy: { created_at: "desc" },
-    take: 200,
+    take: MAX_AUDIT_ROWS,
   });
+  const hitRowCap = rows.length === MAX_AUDIT_ROWS;
 
   const filtered = rows.filter((r) => {
     if (r.appointment) return allowedJobIds.has(r.appointment.job_id);
@@ -217,7 +253,23 @@ export async function GET() {
       size: 9,
       font,
     });
-    y -= 18;
+    y -= 14;
+    page.drawText(pdfStrings.range, {
+      x: margin,
+      y,
+      size: 9,
+      font,
+    });
+    y -= 14;
+    if (hitRowCap) {
+      page.drawText(pdfStrings.truncated, {
+        x: margin,
+        y,
+        size: 8,
+        font,
+      });
+      y -= 14;
+    }
 
     let x = margin;
     columns.forEach((col) => {
@@ -260,12 +312,13 @@ export async function GET() {
   }
 
   const buf = Buffer.from(await pdf.save());
+  const filename = `therapist-diary-${fromYear}-${toYear}.pdf`;
 
-  return new NextResponse(buf, {
+  return new NextResponse(new Uint8Array(buf), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="therapist-diary.pdf"`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
 }

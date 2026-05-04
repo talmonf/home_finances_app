@@ -11,6 +11,7 @@ type Props = {
     description: string;
     job: string;
     month: string;
+    year: string;
     download: string;
     noJobs: string;
   };
@@ -23,13 +24,16 @@ function defaultPreviousYearMonth(): { year: number; month: number } {
   return { year: d.getFullYear(), month: d.getMonth() + 1 };
 }
 
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+  const m = i + 1;
+  return { value: m, label: String(m).padStart(2, "0") };
+});
+
 export function MonthPayableReportClient({ jobs, labels }: Props) {
   const initial = useMemo(() => defaultPreviousYearMonth(), []);
   const [jobId, setJobId] = useState(() => jobs[0]?.id ?? "");
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);
-
-  const monthValue = `${year}-${String(month).padStart(2, "0")}`;
 
   const downloadHref =
     jobId && year >= 2000 && year <= 2100 && month >= 1 && month <= 12
@@ -68,20 +72,30 @@ export function MonthPayableReportClient({ jobs, labels }: Props) {
           </select>
         </label>
 
-        <label className="flex min-w-[10rem] flex-col gap-1 text-sm">
+        <label className="flex min-w-[5.5rem] flex-col gap-1 text-sm">
           <span className="text-slate-400">{labels.month}</span>
-          <input
-            type="month"
+          <select
             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
-            value={monthValue}
-            onChange={(e) => {
-              const raw = e.target.value;
-              const [y, m] = raw.split("-").map(Number);
-              if (Number.isFinite(y) && Number.isFinite(m)) {
-                setYear(y);
-                setMonth(m);
-              }
-            }}
+            value={month}
+            onChange={(e) => setMonth(Number(e.target.value))}
+          >
+            {MONTH_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex min-w-[7rem] flex-col gap-1 text-sm">
+          <span className="text-slate-400">{labels.year}</span>
+          <input
+            type="number"
+            min={2000}
+            max={2100}
+            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
           />
         </label>
 
