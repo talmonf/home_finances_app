@@ -7,9 +7,6 @@ import * as XLSX from "xlsx";
 
 export const dynamic = "force-dynamic";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function num(d: unknown): number {
   if (d == null) return 0;
   const n = Number(d);
@@ -26,28 +23,6 @@ function monthBoundsUtc(year: number, month1to12: number): { monthStart: Date; m
   const monthStart = new Date(Date.UTC(year, month1to12 - 1, 1));
   const monthEndExclusive = new Date(Date.UTC(year, month1to12, 1));
   return { monthStart, monthEndExclusive };
-}
-
-function parseUuidList(searchParams: URLSearchParams, key: string): string[] {
-  const raw = searchParams.getAll(key).flatMap((v) => v.split(",").map((s) => s.trim()).filter(Boolean));
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const id of raw) {
-    if (!UUID_RE.test(id)) continue;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-  }
-  return out;
-}
-
-function parseBoolParam(params: URLSearchParams, key: string, defaultTrue: boolean): boolean {
-  const v = params.get(key);
-  if (v == null || v === "") return defaultTrue;
-  const s = v.trim().toLowerCase();
-  if (s === "0" || s === "false" || s === "no") return false;
-  if (s === "1" || s === "true" || s === "yes") return true;
-  return defaultTrue;
 }
 
 function formatPersonName(c: { first_name: string; last_name: string | null }): string {
@@ -71,9 +46,26 @@ type UnifiedRow = {
   reported_to_external: string;
 };
 
-function sheet(name: string, rows: Record<string, unknown>[]) {
-  const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ _empty: "" }]);
-  return { name: name.slice(0, 31), ws };
+function appendMonthPayableSheet(
+  wb: XLSX.WorkBook,
+  name: string,
+  exportRows: Record<string, unknown>[],
+  autofilterDataRowCount: number,
+) {
+  const safeName = name.slice(0, 31);
+  const ws = XLSX.utils.json_to_sheet(exportRows.length ? exportRows : [{ _empty: "" }]);
+  if (autofilterDataRowCount > 0 && exportRows.length > 0) {
+    const colCount = Object.keys(exportRows[0]).length;
+    if (colCount > 0) {
+      ws["!autofilter"] = {
+        ref: XLSX.utils.encode_range({
+          s: { r: 0, c: 0 },
+          e: { r: autofilterDataRowCount, c: colCount - 1 },
+        }),
+      };
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, ws, safeName);
 }
 
 export async function GET(req: Request) {
@@ -90,15 +82,6 @@ export async function GET(req: Request) {
   const year = yearRaw != null ? Number(yearRaw) : NaN;
   const month = monthRaw != null ? Number(monthRaw) : NaN;
 
-  const sp = url.searchParams;
-  const includeTreatments = parseBoolParam(sp, "includeTreatments", true);
-  const includeConsultations = parseBoolParam(sp, "includeConsultations", true);
-  const includeTravel = parseBoolParam(sp, "includeTravel", true);
-
-  const programIds = parseUuidList(sp, "programId");
-  const consultationTypeIds = parseUuidList(sp, "consultationTypeId");
-  const clientIds = parseUuidList(sp, "clientId");
-
   if (!jobId) {
     return NextResponse.json({ error: "jobId is required" }, { status: 400 });
   }
@@ -107,12 +90,6 @@ export async function GET(req: Request) {
   }
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return NextResponse.json({ error: "month must be 1–12" }, { status: 400 });
-  }
-  if (!includeTreatments && !includeConsultations && !includeTravel) {
-    return NextResponse.json(
-      { error: "At least one of includeTreatments, includeConsultations, includeTravel must be true" },
-      { status: 400 },
-    );
   }
 
   const user = await prisma.users.findFirst({
@@ -134,31 +111,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Job not found or not accessible" }, { status: 404 });
   }
 
-  if (programIds.length > 0) {
-    const n = await prisma.therapy_service_programs.count({
-      where: { household_id: householdId, job_id: jobId, id: { in: programIds } },
-    });
-    if (n !== programIds.length) {
-      return NextResponse.json({ error: "Invalid or inaccessible programId" }, { status: 400 });
-    }
-  }
-  if (consultationTypeIds.length > 0) {
-    const n = await prisma.therapy_consultation_types.count({
-      where: { household_id: householdId, id: { in: consultationTypeIds } },
-    });
-    if (n !== consultationTypeIds.length) {
-      return NextResponse.json({ error: "Invalid or inaccessible consultationTypeId" }, { status: 400 });
-    }
-  }
-  if (clientIds.length > 0) {
-    const n = await prisma.therapy_clients.count({
-      where: { household_id: householdId, id: { in: clientIds } },
-    });
-    if (n !== clientIds.length) {
-      return NextResponse.json({ error: "Invalid or inaccessible clientId" }, { status: 400 });
-    }
-  }
-
   const { monthStart, monthEndExclusive } = monthBoundsUtc(year, month);
   const jobLabel = formatJobDisplayLabel(job);
 
@@ -172,147 +124,92 @@ export async function GET(req: Request) {
     action: "export",
     status: "started",
     summary: "Month payable report started",
-    metadata: {
-      jobId,
-      year,
-      month,
-      includeTreatments,
-      includeConsultations,
-      includeTravel,
-      programIds: programIds.length,
-      consultationTypeIds: consultationTypeIds.length,
-      clientIds: clientIds.length,
-    },
+    metadata: { jobId, year, month },
   });
 
   try {
-    const treatmentWhere = {
+    const baseTreatmentWhere = {
       household_id: householdId,
       job_id: jobId,
       occurred_at: { gte: monthStart, lt: monthEndExclusive },
-      ...(programIds.length > 0 ? { program_id: { in: programIds } } : {}),
-      ...(clientIds.length > 0
-        ? {
-            OR: [
-              { client_id: { in: clientIds } },
-              { participants: { some: { client_id: { in: clientIds } } } },
-            ],
-          }
-        : {}),
     };
 
-    const consultationWhere = {
+    const baseConsultationWhere = {
       household_id: householdId,
       job_id: jobId,
       occurred_at: { gte: monthStart, lt: monthEndExclusive },
-      ...(consultationTypeIds.length > 0
-        ? { consultation_type_id: { in: consultationTypeIds } }
-        : {}),
-      ...(clientIds.length > 0
-        ? { participants: { some: { client_id: { in: clientIds } } } }
-        : {}),
     };
 
-    const travelAnd = [
-      { OR: [{ job: jobScope }, { treatment: { job: jobScope } }] },
-      { OR: [{ job_id: jobId }, { treatment: { job_id: jobId } }] },
-      ...(clientIds.length > 0
-        ? [
-            {
-              treatment_id: { not: null },
-              treatment: {
-                OR: [
-                  { client_id: { in: clientIds } },
-                  { participants: { some: { client_id: { in: clientIds } } } },
-                ],
-              },
-            },
-          ]
-        : []),
-      ...(programIds.length > 0
-        ? [
-            {
-              OR: [{ treatment_id: null }, { treatment: { program_id: { in: programIds } } }],
-            },
-          ]
-        : []),
-    ];
-
-    const travelWhere = {
+    const baseTravelWhere = {
       household_id: householdId,
       occurred_at: { gte: monthStart, lt: monthEndExclusive },
-      AND: travelAnd,
+      AND: [
+        { OR: [{ job: jobScope }, { treatment: { job: jobScope } }] },
+        { OR: [{ job_id: jobId }, { treatment: { job_id: jobId } }] },
+      ],
     };
 
     const [treatments, consultations, travelRows] = await Promise.all([
-      includeTreatments
-        ? prisma.therapy_treatments.findMany({
-            where: treatmentWhere,
-            orderBy: { occurred_at: "asc" },
+      prisma.therapy_treatments.findMany({
+        where: baseTreatmentWhere,
+        orderBy: { occurred_at: "asc" },
+        select: {
+          id: true,
+          occurred_at: true,
+          amount: true,
+          currency: true,
+          visit_type: true,
+          reported_to_external_system: true,
+          program: { select: { name: true } },
+          client: { select: { first_name: true, last_name: true } },
+          participants: {
+            select: { client: { select: { first_name: true, last_name: true } } },
+          },
+          receipt_allocations: { select: { amount: true } },
+        },
+      }),
+      prisma.therapy_consultations.findMany({
+        where: baseConsultationWhere,
+        orderBy: { occurred_at: "asc" },
+        select: {
+          id: true,
+          occurred_at: true,
+          amount: true,
+          income_amount: true,
+          cost_amount: true,
+          currency: true,
+          notes: true,
+          consultation_type: { select: { name: true } },
+          participants: {
+            select: { client: { select: { first_name: true, last_name: true } } },
+          },
+          receipt_allocations: { select: { amount: true } },
+        },
+      }),
+      prisma.therapy_travel_entries.findMany({
+        where: baseTravelWhere,
+        orderBy: { occurred_at: "asc" },
+        select: {
+          id: true,
+          occurred_at: true,
+          amount: true,
+          currency: true,
+          notes: true,
+          job_id: true,
+          treatment_id: true,
+          treatment: {
             select: {
-              id: true,
-              occurred_at: true,
-              amount: true,
-              currency: true,
-              visit_type: true,
-              reported_to_external_system: true,
-              program_id: true,
+              job_id: true,
               program: { select: { name: true } },
               client: { select: { first_name: true, last_name: true } },
               participants: {
                 select: { client: { select: { first_name: true, last_name: true } } },
               },
-              receipt_allocations: { select: { amount: true } },
             },
-          })
-        : Promise.resolve([]),
-      includeConsultations
-        ? prisma.therapy_consultations.findMany({
-            where: consultationWhere,
-            orderBy: { occurred_at: "asc" },
-            select: {
-              id: true,
-              occurred_at: true,
-              amount: true,
-              income_amount: true,
-              cost_amount: true,
-              currency: true,
-              notes: true,
-              consultation_type: { select: { name: true } },
-              participants: {
-                select: { client: { select: { first_name: true, last_name: true } } },
-              },
-              receipt_allocations: { select: { amount: true } },
-            },
-          })
-        : Promise.resolve([]),
-      includeTravel
-        ? prisma.therapy_travel_entries.findMany({
-            where: travelWhere,
-            orderBy: { occurred_at: "asc" },
-            select: {
-              id: true,
-              occurred_at: true,
-              amount: true,
-              currency: true,
-              notes: true,
-              job_id: true,
-              treatment_id: true,
-              treatment: {
-                select: {
-                  job_id: true,
-                  program_id: true,
-                  program: { select: { name: true } },
-                  client: { select: { first_name: true, last_name: true } },
-                  participants: {
-                    select: { client: { select: { first_name: true, last_name: true } } },
-                  },
-                },
-              },
-              receipt_allocations: { select: { amount: true } },
-            },
-          })
-        : Promise.resolve([]),
+          },
+          receipt_allocations: { select: { amount: true } },
+        },
+      }),
     ]);
 
     const unified: UnifiedRow[] = [];
@@ -457,11 +354,11 @@ export async function GET(req: Request) {
     }
 
     const wb = XLSX.utils.book_new();
-    const { name, ws } = sheet(
-      "Month_payable",
-      exportRows.length > 0 ? exportRows : [{ line_type: "(no rows)", occurred_at: "", job: jobLabel }],
-    );
-    XLSX.utils.book_append_sheet(wb, ws, name);
+    const sheetRows =
+      exportRows.length > 0
+        ? exportRows
+        : [{ line_type: "(no rows)", occurred_at: "", job: jobLabel }];
+    appendMonthPayableSheet(wb, "Month_payable", sheetRows, unified.length);
 
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "buffer" }) as Buffer;
     const filename = `private-clinic-month-payable-${year}-${String(month).padStart(2, "0")}-${job.id.slice(0, 8)}.xlsx`;
@@ -481,9 +378,6 @@ export async function GET(req: Request) {
         year,
         month,
         rowCount: unified.length,
-        includeTreatments,
-        includeConsultations,
-        includeTravel,
       },
     });
 
