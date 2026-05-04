@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [ ] 111_therapy_travel_consultation_km.sql (2026-05-01)
 - [x] 110_therapy_treatments_amount_nullable.sql (2026-05-03)
 - [x] 109_property_utilities_contact_and_dates.sql (2026-04-30)
 - [x] 106_therapy_consultations_single_amount_and_participants.sql (2026-04-30)
@@ -131,6 +132,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 111 | `111_therapy_travel_consultation_km.sql` (2026-05-01) | ALTER | `therapy_travel_entries`: drop legacy job XOR treatment check, backfill `job_id` from linked treatment, add optional `consultation_id` (FK) and `km`, add mutual-exclusion check between treatment and consultation. |
 | 110 | `110_therapy_treatments_amount_nullable.sql` (2026-05-03) | ALTER | `therapy_treatments.amount`: nullable so receipt import can create sessions with unknown fee until edited. |
 | 109 | `109_property_utilities_contact_and_dates.sql` (2026-04-30) | ALTER | `property_utilities`: optional `start_date`, `website_url`, `contact_phone`, `contact_email`, `facebook_url`. |
 | 106 | `106_therapy_consultations_single_amount_and_participants.sql` (2026-04-30) | ALTER/CREATE/UPDATE | `therapy_consultations`: add canonical `amount`/`currency` and `linked_transaction_id`, backfill from legacy income/cost and split tx links; add `therapy_consultation_participants` for linking one consultation to multiple clients. |

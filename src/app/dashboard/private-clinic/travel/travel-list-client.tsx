@@ -13,9 +13,10 @@ type SortDir = "asc" | "desc";
 export type TravelListRowDto = {
   id: string;
   occurred_at_iso: string | null;
-  scope: "job" | "treatment";
+  scope: "job" | "treatment" | "consultation";
   client_first_name: string | null;
   client_last_name: string | null;
+  consultation_type_name: string | null;
   job_label: string | null;
   amount: string | null;
   currency: string;
@@ -31,6 +32,7 @@ type Labels = {
   receipt: string;
   edit: string;
   scopeTreatment: string;
+  scopeConsultation: string;
   scopeJob: string;
   linked: string;
   unlinked: string;
@@ -151,7 +153,9 @@ export function TravelListClient({
               <td className="px-3 py-2 text-slate-300">
                 {row.scope === "treatment"
                   ? `${labels.scopeTreatment} ${formatClientNameForDisplay(obfuscate, row.client_first_name ?? "", row.client_last_name)}`
-                  : labels.scopeJob}
+                  : row.scope === "consultation"
+                    ? `${labels.scopeConsultation} ${[row.consultation_type_name, formatClientNameForDisplay(obfuscate, row.client_first_name ?? "", row.client_last_name)].filter(Boolean).join(" — ")}`
+                    : labels.scopeJob}
               </td>
               <td className="px-3 py-2 text-slate-400">{row.job_label ?? "—"}</td>
               <td className="px-3 py-2 text-slate-300">

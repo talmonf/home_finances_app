@@ -90,7 +90,7 @@ export default async function TravelPage({
     Boolean(filters.to) ||
     filters.received !== "all";
 
-  const [jobs, clients, treatments, rows] = await Promise.all([
+  const [jobs, clients, treatments, consultations, rows] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -108,6 +108,16 @@ export default async function TravelPage({
       orderBy: { occurred_at: "desc" },
       take: 300,
       include: { client: true, job: true },
+    }),
+    prisma.therapy_consultations.findMany({
+      where: { household_id: householdId, job: jobScope },
+      orderBy: { occurred_at: "desc" },
+      take: 300,
+      include: {
+        job: true,
+        consultation_type: true,
+        participants: { take: 1, include: { client: true } },
+      },
     }),
     loadTravelRows({
       householdId,
@@ -129,17 +139,39 @@ export default async function TravelPage({
           where: {
             id: editId,
             household_id: householdId,
-            OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
+            OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
           },
-          include: { treatment: { include: { client: true, job: true } }, job: true },
+          include: {
+            treatment: { include: { client: true, job: true } },
+            consultation: {
+              include: {
+                job: true,
+                consultation_type: true,
+                participants: { take: 1, include: { client: true } },
+              },
+            },
+            job: true,
+          },
         })
       : null;
   const jobOptions = jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }));
   const treatmentOptions = treatments.map((t) => ({
     id: t.id,
+    jobId: t.job_id,
     label: `${formatHouseholdDate(t.occurred_at, dateDisplayFormat)} — ${formatClientNameForDisplay(obfuscate, t.client.first_name, t.client.last_name)} — ${formatJobDisplayLabel(t.job)}`,
     occurredAtYmd: utcDateToHtmlDateInputValue(t.occurred_at),
   }));
+  const consultationOptions = consultations.map((c) => {
+    const pc = c.participants[0]?.client;
+    const clientPart = pc ? formatClientNameForDisplay(obfuscate, pc.first_name, pc.last_name) : "";
+    const typeName = c.consultation_type.name_he || c.consultation_type.name;
+    return {
+      id: c.id,
+      jobId: c.job_id,
+      label: `${formatHouseholdDate(c.occurred_at, dateDisplayFormat)} — ${typeName}${clientPart ? ` — ${clientPart}` : ""} — ${formatJobDisplayLabel(c.job)}`,
+      occurredAtYmd: utcDateToHtmlDateInputValue(c.occurred_at),
+    };
+  });
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -267,6 +299,7 @@ export default async function TravelPage({
               receipt: tv.receipt,
               edit: c.edit,
               scopeTreatment: tv.scopeTreatment,
+              scopeConsultation: tv.scopeConsultation,
               scopeJob: tv.scopeJob,
               linked: tv.receivedLinked,
               unlinked: tv.receivedUnlinked,
@@ -287,6 +320,7 @@ export default async function TravelPage({
           uiLanguage={uiLanguage}
           jobOptions={jobOptions}
           treatmentOptions={treatmentOptions}
+          consultationOptions={consultationOptions}
           c={c}
           tv={tv}
         />
@@ -303,16 +337,22 @@ export default async function TravelPage({
           uiLanguage={uiLanguage}
           jobOptions={jobOptions}
           treatmentOptions={treatmentOptions}
+          consultationOptions={consultationOptions}
           c={c}
           tv={tv}
           initial={{
             id: editEntry.id,
-            link_scope: editEntry.treatment_id ? "treatment" : "job",
-            job_id: editEntry.job_id ?? "",
+            job_id:
+              editEntry.job_id ??
+              editEntry.treatment?.job_id ??
+              editEntry.consultation?.job_id ??
+              "",
             treatment_id: editEntry.treatment_id ?? "",
+            consultation_id: editEntry.consultation_id ?? "",
             occurred_at: editEntry.occurred_at ? editEntry.occurred_at.toISOString().slice(0, 16) : "",
             amount: editEntry.amount?.toString() ?? "",
             currency: editEntry.currency,
+            km: editEntry.km != null ? String(editEntry.km) : "",
             linked_transaction_id: editEntry.linked_transaction_id ?? "",
             notes: editEntry.notes ?? "",
           }}

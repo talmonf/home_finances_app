@@ -3,7 +3,11 @@ import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-l
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
 import type { UiLanguage } from "@/lib/ui-language";
-import { TravelScopeJobTreatmentOccurredFields, type TreatmentTravelOption } from "./travel-scope-job-treatment-occurred-client";
+import {
+  TravelJobTreatmentConsultationOccurredFields,
+  type ConsultationTravelOption,
+  type TreatmentTravelOption,
+} from "./travel-scope-job-treatment-occurred-client";
 
 type TravelOption = {
   id: string;
@@ -12,12 +16,13 @@ type TravelOption = {
 
 type TravelModalInitial = {
   id: string;
-  link_scope: "job" | "treatment";
   job_id: string;
   treatment_id: string;
+  consultation_id: string;
   occurred_at: string;
   amount: string;
   currency: string;
+  km: string;
   linked_transaction_id: string;
   notes: string;
 };
@@ -33,6 +38,7 @@ export function TravelModalForm({
   uiLanguage,
   jobOptions,
   treatmentOptions,
+  consultationOptions,
   c,
   tv,
   initial,
@@ -47,6 +53,7 @@ export function TravelModalForm({
   uiLanguage: UiLanguage;
   jobOptions: TravelOption[];
   treatmentOptions: TreatmentTravelOption[];
+  consultationOptions: ConsultationTravelOption[];
   c: ReturnType<typeof privateClinicCommon>;
   tv: ReturnType<typeof privateClinicTravel>;
   initial?: TravelModalInitial;
@@ -64,36 +71,58 @@ export function TravelModalForm({
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
           {initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
-          <TravelScopeJobTreatmentOccurredFields
+          <TravelJobTreatmentConsultationOccurredFields
             jobOptions={jobOptions}
             treatmentOptions={treatmentOptions}
+            consultationOptions={consultationOptions}
             uiLanguage={uiLanguage}
             initial={
               initial
                 ? {
-                    link_scope: initial.link_scope,
                     job_id: initial.job_id,
                     treatment_id: initial.treatment_id,
+                    consultation_id: initial.consultation_id,
                     occurred_at: initial.occurred_at,
                   }
                 : undefined
             }
-            relatedJobLabel={tv.relatedJob}
-            relatedTreatmentLabel={tv.relatedTreatment}
-            jobPlaceholder={tv.jobWhenScope}
-            treatmentPlaceholder={tv.treatmentWhenScope}
+            jobLabel={tv.fieldJob}
+            treatmentLabel={tv.fieldTreatmentOptional}
+            consultationLabel={tv.fieldConsultationOptional}
+            occurredAtLabel={tv.fieldOccurredAt}
+            jobPlaceholder={tv.jobSelectPlaceholder}
+            treatmentPlaceholder={tv.treatmentSelectPlaceholder}
+            consultationPlaceholder={tv.consultationSelectPlaceholder}
+            chooseJobFirstHint={tv.formLinkingInstructions}
           />
-          <div className="flex gap-2">
+          <div className="md:col-span-2 flex flex-wrap items-end gap-3">
+            <div className="min-w-0 grow">
+              <label className="block text-xs font-medium text-slate-400">{tv.fieldAmount}</label>
+              <input
+                name="amount"
+                required
+                defaultValue={initial?.amount ?? ""}
+                placeholder={tv.amountPlaceholder}
+                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div className="w-24 shrink-0">
+              <label className="block text-xs font-medium text-slate-400">{tv.fieldCurrency}</label>
+              <input
+                name="currency"
+                defaultValue={initial?.currency ?? "ILS"}
+                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              />
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-400">{tv.fieldKmOptional}</label>
             <input
-              name="amount"
-              defaultValue={initial?.amount ?? ""}
-              placeholder={tv.costAmountOptional}
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="currency"
-              defaultValue={initial?.currency ?? "ILS"}
-              className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              name="km"
+              inputMode="decimal"
+              defaultValue={initial?.km ?? ""}
+              placeholder={tv.kmPlaceholder}
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div className="md:col-span-2">
@@ -106,12 +135,16 @@ export function TravelModalForm({
               noneOptionLabel={c.txNoneLinked}
             />
           </div>
-          <textarea
-            name="notes"
-            defaultValue={initial?.notes ?? ""}
-            placeholder={tv.notesRoute}
-            className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-400">{tv.fieldNotes}</label>
+            <textarea
+              name="notes"
+              defaultValue={initial?.notes ?? ""}
+              placeholder={tv.notesPlaceholder}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              rows={3}
+            />
+          </div>
           <div className="md:col-span-2 flex flex-wrap items-center gap-3">
             <PendingSubmitButtonWithSpinner
               label={c.save}

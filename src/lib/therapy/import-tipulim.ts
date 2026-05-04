@@ -108,6 +108,8 @@ type PendingTravel = {
   note: string | null;
   clientRef: ClientRef | null;
   treatmentKey: string | null;
+  /** Parsed optional distance in km from import row (e.g. ק״מ column). */
+  km: string | null;
 };
 
 type PendingConsultation = {
@@ -804,6 +806,31 @@ function monthKey(d: Date): string {
 
 function utcDayKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function resolvedClientIdFromRef(
+  ref: ClientRef | null | undefined,
+  clientIdByKey: Map<string, string>,
+): string | null {
+  if (!ref) return null;
+  if (ref.kind === "existing") return ref.id;
+  return clientIdByKey.get(ref.tempKey) ?? null;
+}
+
+function findUniquePendingConsultationKeyForTravel(
+  travel: { occurredAt: Date | null; clientRef: ClientRef | null },
+  travelClientId: string | null,
+  pendingConsultations: PendingConsultation[],
+  clientIdByKey: Map<string, string>,
+): string | null {
+  if (!travel.occurredAt || !travelClientId) return null;
+  const day = utcDayKey(travel.occurredAt);
+  const matches = pendingConsultations.filter((c) => {
+    const cid = resolvedClientIdFromRef(c.clientRef, clientIdByKey);
+    return cid === travelClientId && utcDayKey(c.occurredAt) === day;
+  });
+  if (matches.length !== 1) return null;
+  return matches[0]!.key;
 }
 
 function parseClientName(raw: string): { firstName: string; lastInitial: string | null } {
@@ -1881,6 +1908,12 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         // to same-client + same-date treatment linkage.
         linkedTreatmentKey = `${clientRef.displayName}|${monthKey(occurredAt)}|${amount}|home`;
       }
+      let kmParsed: string | null = null;
+      const kmCell = s(row["ק״מ"]) || s(row["קמ"]);
+      if (kmCell) {
+        const kn = Number(kmCell.replace(",", "."));
+        if (Number.isFinite(kn) && kn >= 0) kmParsed = kn.toFixed(2);
+      }
       const travelKey = `travel:${rowNumber}`;
       scratch.pendingTravel.push({
         key: travelKey,
@@ -1890,6 +1923,7 @@ async function analyzeOrgProfile(params: TipulimAnalyzeParams, ctx: {
         note: s(row["הערות"]) || null,
         clientRef,
         treatmentKey: linkedTreatmentKey,
+        km: kmParsed,
       });
       const month = `${occurredAt.getUTCFullYear()}-${String(occurredAt.getUTCMonth() + 1).padStart(2, "0")}`;
       const travelArr = travelKeysByMonth.get(month) ?? [];
@@ -2705,10 +2739,12 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
       household_id: string;
       job_id: string;
       treatment_id: string | null;
+      consultation_id: string | null;
       occurred_at: Date;
       amount: string | number;
       currency: string;
       notes: string | null;
+      km: string | null;
     }> = [];
     for (const tr of scratch.pendingTravel) {
       if (!tr.occurredAt) continue;
@@ -2725,6 +2761,20 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
           }
         }
       }
+      let consultationIdResolved: string | null = null;
+      if (!treatmentId && tr.clientRef && tr.occurredAt) {
+        const clientIdForTravel =
+          tr.clientRef.kind === "existing"
+            ? tr.clientRef.id
+            : clientIdByKey.get(tr.clientRef.tempKey) ?? null;
+        const cKey = findUniquePendingConsultationKeyForTravel(
+          tr,
+          clientIdForTravel,
+          scratch.pendingConsultations,
+          clientIdByKey,
+        );
+        if (cKey) consultationIdResolved = consultationIdByKey.get(cKey) ?? null;
+      }
       const travelId = crypto.randomUUID();
       travelRows.push({
         id: travelId,
@@ -2732,10 +2782,12 @@ export async function commitTipulimImport(params: TipulimAnalyzeParams): Promise
         household_id: params.householdId,
         job_id: params.jobId,
         treatment_id: treatmentId,
+        consultation_id: consultationIdResolved,
         occurred_at: tr.occurredAt,
         amount: tr.amount,
         currency: "ILS",
         notes: tr.note,
+        km: tr.km,
       });
       travelIdByKey.set(tr.key, travelId);
     }

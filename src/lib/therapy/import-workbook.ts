@@ -39,12 +39,18 @@ export async function importTherapyWorkbook(params: {
     return t?.id ?? null;
   };
 
-  const assertTreatment = async (treatmentId: string) => {
-    const t = await prisma.therapy_treatments.findFirst({
+  const assertTreatmentWithJob = async (treatmentId: string) => {
+    return prisma.therapy_treatments.findFirst({
       where: { id: treatmentId, household_id: householdId },
-      select: { id: true },
+      select: { id: true, job_id: true },
     });
-    return t?.id ?? null;
+  };
+
+  const assertConsultationWithJob = async (consultationId: string) => {
+    return prisma.therapy_consultations.findFirst({
+      where: { id: consultationId, household_id: householdId },
+      select: { id: true, job_id: true },
+    });
   };
 
   // Programs
@@ -544,23 +550,68 @@ export async function importTherapyWorkbook(params: {
   for (const r of sheetRows(workbook, "Travel")) {
     const job_id = str(r.job_id);
     const treatment_id = str(r.treatment_id);
-    if (!job_id && !treatment_id) continue;
-    if (job_id && treatment_id) {
-      errors.push(`Travel: row has both job and treatment — skip`);
+    const consultation_id = str(r.consultation_id);
+    const kmRaw = str(r.km);
+    if (treatment_id && consultation_id) {
+      errors.push(`Travel: row has both treatment and consultation — skip`);
       continue;
     }
-    if (job_id && !(await assertJob(job_id))) continue;
-    if (treatment_id && !(await assertTreatment(treatment_id))) continue;
+    let resolvedJobId: string | null = job_id || null;
+    let treatmentId: string | null = treatment_id || null;
+    let consultationId: string | null = consultation_id || null;
+
+    if (treatment_id) {
+      const t = await assertTreatmentWithJob(treatment_id);
+      if (!t) {
+        errors.push(`Travel: treatment not found ${treatment_id}`);
+        continue;
+      }
+      if (resolvedJobId && resolvedJobId !== t.job_id) {
+        errors.push(`Travel: job_id does not match treatment's job — skip`);
+        continue;
+      }
+      resolvedJobId = t.job_id;
+    } else if (consultation_id) {
+      const c = await assertConsultationWithJob(consultation_id);
+      if (!c) {
+        errors.push(`Travel: consultation not found ${consultation_id}`);
+        continue;
+      }
+      if (resolvedJobId && resolvedJobId !== c.job_id) {
+        errors.push(`Travel: job_id does not match consultation's job — skip`);
+        continue;
+      }
+      resolvedJobId = c.job_id;
+    }
+
+    if (!resolvedJobId) continue;
+    if (!(await assertJob(resolvedJobId))) {
+      errors.push(`Travel: job not found ${resolvedJobId}`);
+      continue;
+    }
+
+    let kmVal: string | null = null;
+    if (kmRaw) {
+      const kn = Number(kmRaw.replace(",", "."));
+      if (!Number.isFinite(kn) || kn < 0) {
+        errors.push(`Travel: invalid km ${kmRaw}`);
+        continue;
+      }
+      kmVal = kn.toFixed(2);
+    }
+
     try {
       const occurredRaw = str(r.occurred_at);
       const amountRaw = str(r.amount);
       const data = {
         household_id: householdId,
-        job_id: job_id || null,
-        treatment_id: treatment_id || null,
+        job_id: resolvedJobId,
+        treatment_id: treatmentId,
+        consultation_id: consultationId,
         occurred_at: occurredRaw ? new Date(occurredRaw) : null,
         amount: amountRaw || null,
         currency: str(r.currency) || "ILS",
+        km: kmVal,
         notes: str(r.notes) || null,
         linked_transaction_id: str(r.linked_transaction_id) || null,
       };

@@ -144,8 +144,16 @@ export async function GET(req: Request) {
       household_id: householdId,
       occurred_at: { gte: monthStart, lt: monthEndExclusive },
       AND: [
-        { OR: [{ job: jobScope }, { treatment: { job: jobScope } }] },
-        { OR: [{ job_id: jobId }, { treatment: { job_id: jobId } }] },
+        {
+          OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
+        },
+        {
+          OR: [
+            { job_id: jobId },
+            { treatment: { job_id: jobId } },
+            { consultation: { job_id: jobId } },
+          ],
+        },
       ],
     };
 
@@ -197,11 +205,21 @@ export async function GET(req: Request) {
           notes: true,
           job_id: true,
           treatment_id: true,
+          consultation_id: true,
           treatment: {
             select: {
               job_id: true,
               program: { select: { name: true } },
               client: { select: { first_name: true, last_name: true } },
+              participants: {
+                select: { client: { select: { first_name: true, last_name: true } } },
+              },
+            },
+          },
+          consultation: {
+            select: {
+              job_id: true,
+              consultation_type: { select: { name: true } },
               participants: {
                 select: { client: { select: { first_name: true, last_name: true } } },
               },
@@ -272,6 +290,7 @@ export async function GET(req: Request) {
       const allocSum = tr.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
       let clientStr = "";
       let programStr = "";
+      let consultationTypeStr = "";
       if (tr.treatment) {
         const nameSet = new Set<string>();
         nameSet.add(formatPersonName(tr.treatment.client));
@@ -280,6 +299,13 @@ export async function GET(req: Request) {
         }
         clientStr = [...nameSet].filter(Boolean).join("; ");
         programStr = tr.treatment.program?.name ?? "";
+      } else if (tr.consultation) {
+        const nameSet = new Set<string>();
+        for (const p of tr.consultation.participants) {
+          nameSet.add(formatPersonName(p.client));
+        }
+        clientStr = [...nameSet].filter(Boolean).join("; ");
+        consultationTypeStr = tr.consultation.consultation_type.name;
       }
       const at = tr.occurred_at!;
       const iso = at.toISOString();
@@ -289,7 +315,7 @@ export async function GET(req: Request) {
         occurred_at_sort: iso,
         job: jobLabel,
         program: programStr,
-        consultation_type: "",
+        consultation_type: consultationTypeStr,
         client: clientStr,
         visit_type: "",
         amount_payable: num(tr.amount),

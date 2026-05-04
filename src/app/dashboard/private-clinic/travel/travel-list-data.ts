@@ -43,16 +43,33 @@ export async function loadTravelRows(params: {
       household_id: householdId,
       AND: [
         {
-          OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
+          OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
         },
         ...(filters.job
           ? [
               {
-                OR: [{ job_id: filters.job }, { treatment: { job_id: filters.job } }],
+                OR: [
+                  { job_id: filters.job },
+                  { treatment: { job_id: filters.job } },
+                  { consultation: { job_id: filters.job } },
+                ],
               },
             ]
           : []),
-        ...(filters.client ? [{ treatment: { client_id: filters.client } }] : []),
+        ...(filters.client
+          ? [
+              {
+                OR: [
+                  { treatment: { client_id: filters.client } },
+                  {
+                    consultation: {
+                      participants: { some: { client_id: filters.client } },
+                    },
+                  },
+                ],
+              },
+            ]
+          : []),
         ...(filters.receipt
           ? [
               {
@@ -83,6 +100,13 @@ export async function loadTravelRows(params: {
     include: {
       job: true,
       treatment: { include: { client: true, job: true } },
+      consultation: {
+        include: {
+          job: true,
+          consultation_type: true,
+          participants: { take: 1, include: { client: true } },
+        },
+      },
       receipt_allocations: {
         select: { receipt_id: true, receipt: { select: { receipt_number: true } } },
         take: 1,
@@ -91,20 +115,35 @@ export async function loadTravelRows(params: {
     },
   });
 
-  return entries.map((entry) => ({
+  return entries.map((entry) => {
+    const scope: "job" | "treatment" | "consultation" = entry.treatment_id
+      ? "treatment"
+      : entry.consultation_id
+        ? "consultation"
+        : "job";
+    const consultClient = entry.consultation?.participants[0]?.client;
+    return {
     id: entry.id,
     occurred_at_iso: entry.occurred_at ? entry.occurred_at.toISOString() : null,
-    scope: entry.treatment_id ? "treatment" : "job",
-    client_first_name: entry.treatment?.client.first_name ?? null,
-    client_last_name: entry.treatment?.client.last_name ?? null,
+    scope,
+    client_first_name:
+      entry.treatment?.client.first_name ?? consultClient?.first_name ?? null,
+    client_last_name: entry.treatment?.client.last_name ?? consultClient?.last_name ?? null,
+    consultation_type_name:
+      entry.consultation?.consultation_type.name_he ||
+      entry.consultation?.consultation_type.name ||
+      null,
     job_label: entry.treatment
       ? formatJobDisplayLabel(entry.treatment.job)
-      : entry.job
-        ? formatJobDisplayLabel(entry.job)
-        : null,
+      : entry.consultation
+        ? formatJobDisplayLabel(entry.consultation.job)
+        : entry.job
+          ? formatJobDisplayLabel(entry.job)
+          : null,
     amount: entry.amount?.toString() ?? null,
     currency: entry.currency,
     linked_receipt_id: entry.receipt_allocations[0]?.receipt_id ?? null,
     linked_receipt_number: entry.receipt_allocations[0]?.receipt.receipt_number ?? null,
-  }));
+  };
+  });
 }

@@ -2165,6 +2165,7 @@ model therapy_consultations {
   linked_cost_tx     transactions? @relation("TherapyConsultationCostTx", fields: [linked_cost_transaction_id], references: [id], onDelete: SetNull)
   receipt_allocations therapy_receipt_consultation_allocations[]
   participants       therapy_consultation_participants[]
+  travel_entries     therapy_travel_entries[]
 
   @@index([household_id, job_id])
   @@index([household_id, occurred_at])
@@ -2190,10 +2191,12 @@ model therapy_travel_entries {
   household_id          String
   job_id                String?
   treatment_id          String?
+  consultation_id       String?
   occurred_at           DateTime?
   notes                 String?
   amount                Decimal? @db.Decimal(15, 2)
   currency              String   @default("ILS")
+  km                    Decimal? @db.Decimal(10, 2)
   linked_transaction_id String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
@@ -2201,8 +2204,10 @@ model therapy_travel_entries {
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   job                jobs?       @relation(fields: [job_id], references: [id], onDelete: Cascade)
   treatment          therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  consultation       therapy_consultations? @relation(fields: [consultation_id], references: [id], onDelete: Cascade)
   linked_transaction transactions? @relation("TherapyTravelTransaction", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
   receipt_allocations therapy_receipt_travel_allocations[]
 
   @@index([household_id])
+  @@index([consultation_id])
 }

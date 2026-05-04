@@ -214,6 +214,14 @@ function parseMoney(raw: string | null | undefined): string | null {
   return parsed.toFixed(2);
 }
 
+function parseOptionalKm(raw: string | null | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const parsed = Number(value.replace(",", "."));
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed.toFixed(2);
+}
+
 function parseDate(raw: string | null | undefined): Date | null {
   if (!raw?.trim()) return null;
   const d = new Date(raw);
@@ -3866,6 +3874,13 @@ async function assertTreatmentForHousehold(householdId: string, treatmentId: str
   });
 }
 
+async function assertConsultationForHousehold(householdId: string, consultationId: string) {
+  return prisma.therapy_consultations.findFirst({
+    where: { id: consultationId, household_id: householdId },
+    select: { id: true, job_id: true },
+  });
+}
+
 // --- Consultation types ---
 
 export async function createTherapyConsultationType(formData: FormData) {
@@ -4119,32 +4134,36 @@ export async function createTherapyTravelEntry(formData: FormData) {
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const fallbackSuccess = `${BASE}/travel?created=1`;
   const fallbackError = `${BASE}/travel`;
-  const scope = (formData.get("link_scope") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const treatment_id = (formData.get("treatment_id") as string)?.trim() || "";
+  const consultation_id = (formData.get("consultation_id") as string)?.trim() || "";
   const notes = (formData.get("notes") as string)?.trim() || null;
   const amountStr = parseMoney((formData.get("amount") as string) || null);
+  const kmStr = parseOptionalKm((formData.get("km") as string) || null);
   const occurredRaw = (formData.get("occurred_at") as string)?.trim() || "";
 
-  let jobId: string | null = null;
-  let treatmentId: string | null = null;
+  if (!job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  if (amountStr == null) redirectPrivateClinicScoped(formData, "error", fallbackError, "amount");
+  if (treatment_id && consultation_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "link");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
 
-  if (scope === "treatment") {
-    if (!treatment_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  let treatmentId: string | null = null;
+  let consultationIdOut: string | null = null;
+
+  if (treatment_id) {
     const t = await assertTreatmentForHousehold(householdId, treatment_id);
     if (!t) redirectPrivateClinicScoped(formData, "error", fallbackError, "treatment");
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, t.job_id))) {
-      redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
-    }
+    if (t.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
     treatmentId = t.id;
-  } else if (scope === "job") {
-    if (!job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
-      redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
-    }
-    jobId = job_id;
-  } else {
-    redirectPrivateClinicScoped(formData, "error", fallbackError, "scope");
+  }
+
+  if (consultation_id) {
+    const c = await assertConsultationForHousehold(householdId, consultation_id);
+    if (!c) redirectPrivateClinicScoped(formData, "error", fallbackError, "consultation");
+    if (c.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+    consultationIdOut = c.id;
   }
 
   const occurred_at = occurredRaw ? new Date(occurredRaw) : null;
@@ -4161,11 +4180,13 @@ export async function createTherapyTravelEntry(formData: FormData) {
     data: {
       id: crypto.randomUUID(),
       household_id: householdId,
-      job_id: jobId,
+      job_id: job_id,
       treatment_id: treatmentId,
+      consultation_id: consultationIdOut,
       occurred_at,
       notes,
       amount: amountStr,
+      km: kmStr,
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       linked_transaction_id,
     },
@@ -4181,31 +4202,39 @@ export async function updateTherapyTravelEntry(formData: FormData) {
   const id = (formData.get("id") as string)?.trim() || "";
   const row = await prisma.therapy_travel_entries.findFirst({
     where: { id, household_id: householdId },
-    include: { treatment: { select: { job_id: true } } },
+    include: { treatment: { select: { job_id: true } }, consultation: { select: { job_id: true } } },
   });
   if (!row) redirect(`${BASE}/travel?error=notfound`);
-  const priorJobId = row.treatment_id ? row.treatment?.job_id ?? null : row.job_id;
+  const priorJobId = row.job_id ?? row.treatment?.job_id ?? row.consultation?.job_id ?? null;
   if (priorJobId && !(await assertJobForCurrentUserScope(householdId, userFm, priorJobId))) {
     redirect(`${BASE}/travel?error=notfound`);
   }
 
-  const scope = (formData.get("link_scope") as string)?.trim() || "";
   const job_id = (formData.get("job_id") as string)?.trim() || "";
   const treatment_id = (formData.get("treatment_id") as string)?.trim() || "";
+  const consultation_id = (formData.get("consultation_id") as string)?.trim() || "";
 
-  let jobId: string | null = null;
+  if (!job_id) redirect(`${BASE}/travel?error=missing`);
+  const amountStr = parseMoney((formData.get("amount") as string) || null);
+  if (amountStr == null) redirect(`${BASE}/travel?error=amount`);
+  if (treatment_id && consultation_id) redirect(`${BASE}/travel?error=link`);
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/travel?error=job`);
+
   let treatmentId: string | null = null;
+  let consultationIdOut: string | null = null;
 
-  if (scope === "treatment") {
-    if (!treatment_id) redirect(`${BASE}/travel?error=missing`);
+  if (treatment_id) {
     const t = await assertTreatmentForHousehold(householdId, treatment_id);
     if (!t) redirect(`${BASE}/travel?error=treatment`);
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, t.job_id))) redirect(`${BASE}/travel?error=job`);
+    if (t.job_id !== job_id) redirect(`${BASE}/travel?error=job`);
     treatmentId = t.id;
-  } else {
-    if (!job_id) redirect(`${BASE}/travel?error=missing`);
-    if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) redirect(`${BASE}/travel?error=job`);
-    jobId = job_id;
+  }
+
+  if (consultation_id) {
+    const c = await assertConsultationForHousehold(householdId, consultation_id);
+    if (!c) redirect(`${BASE}/travel?error=consultation`);
+    if (c.job_id !== job_id) redirect(`${BASE}/travel?error=job`);
+    consultationIdOut = c.id;
   }
 
   const occurredRaw = (formData.get("occurred_at") as string)?.trim() || "";
@@ -4214,7 +4243,7 @@ export async function updateTherapyTravelEntry(formData: FormData) {
     redirect(`${BASE}/travel?error=date`);
   }
 
-  const amountStr = parseMoney((formData.get("amount") as string) || null);
+  const kmStr = parseOptionalKm((formData.get("km") as string) || null);
   const linked_transaction_id = await resolveTransactionLink(
     householdId,
     formData.get("linked_transaction_id") as string,
@@ -4223,11 +4252,13 @@ export async function updateTherapyTravelEntry(formData: FormData) {
   await prisma.therapy_travel_entries.update({
     where: { id },
     data: {
-      job_id: jobId,
+      job_id: job_id,
       treatment_id: treatmentId,
+      consultation_id: consultationIdOut,
       occurred_at,
       notes: (formData.get("notes") as string)?.trim() || null,
-      amount: amountStr ?? null,
+      amount: amountStr,
+      km: kmStr,
       currency: (formData.get("currency") as string)?.trim() || "ILS",
       linked_transaction_id,
     },
@@ -4244,10 +4275,10 @@ export async function deleteTherapyTravelEntry(formData: FormData) {
   if (!id) return;
   const row = await prisma.therapy_travel_entries.findFirst({
     where: { id, household_id: householdId },
-    include: { treatment: { select: { job_id: true } } },
+    include: { treatment: { select: { job_id: true } }, consultation: { select: { job_id: true } } },
   });
   if (!row) return;
-  const priorJobId = row.treatment_id ? row.treatment?.job_id ?? null : row.job_id;
+  const priorJobId = row.job_id ?? row.treatment?.job_id ?? row.consultation?.job_id ?? null;
   if (priorJobId && !(await assertJobForCurrentUserScope(householdId, userFm, priorJobId))) return;
   await prisma.therapy_travel_entries.deleteMany({
     where: { id, household_id: householdId },

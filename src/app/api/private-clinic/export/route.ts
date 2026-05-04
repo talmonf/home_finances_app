@@ -112,7 +112,7 @@ export async function GET() {
     prisma.therapy_travel_entries.findMany({
       where: {
         household_id: householdId,
-        OR: [{ job: jobScope }, { treatment: { job: jobScope } }],
+        OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
       },
       orderBy: { created_at: "desc" },
     }),
@@ -365,9 +365,11 @@ export async function GET() {
         id: t.id,
         job_id: t.job_id ?? "",
         treatment_id: t.treatment_id ?? "",
+        consultation_id: t.consultation_id ?? "",
         occurred_at: t.occurred_at?.toISOString() ?? "",
         amount: t.amount?.toString() ?? "",
         currency: t.currency,
+        km: t.km?.toString() ?? "",
         notes: t.notes ?? "",
         linked_transaction_id: t.linked_transaction_id ?? "",
       })),
