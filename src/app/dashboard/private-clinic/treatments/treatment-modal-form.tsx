@@ -2,6 +2,7 @@ import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-l
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
 import { TreatmentPaymentFieldsSection } from "./treatment-payment-fields-section";
+import { TreatmentTravelSessionFields } from "./treatment-travel-session-fields";
 
 type JobOption = {
   id: string;
@@ -57,6 +58,11 @@ type Labels = {
     inlineReceiptNumber: string;
     inlineReceiptDate: string;
     addTreatmentAttachmentHint: string;
+    treatmentTravelSection: string;
+    treatmentTravelCheckbox: string;
+    treatmentTravelAmount: string;
+    treatmentTravelKmOptional: string;
+    treatmentTravelCurrencyHint: string;
   };
   note1: string;
   note2: string;
@@ -86,6 +92,9 @@ export type TreatmentModalInitial = {
   note_1?: string;
   note_2?: string;
   note_3?: string;
+  treatment_travel_enabled?: boolean;
+  treatment_travel_amount?: string;
+  treatment_travel_km?: string;
 };
 
 export function TreatmentModalForm({
@@ -196,6 +205,16 @@ export function TreatmentModalForm({
             }}
             bankAccounts={bankAccounts}
             digitalPaymentMethods={digitalPaymentMethods}
+          />
+          <TreatmentTravelSessionFields
+            labels={{
+              section: labels.tr.treatmentTravelSection,
+              checkbox: labels.tr.treatmentTravelCheckbox,
+              amount: labels.tr.treatmentTravelAmount,
+              kmOptional: labels.tr.treatmentTravelKmOptional,
+              currencyHint: labels.tr.treatmentTravelCurrencyHint,
+            }}
+            initial={initial}
           />
           {mode === "create" ? (
             <div className="md:col-span-2 grid gap-3 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3 md:grid-cols-2">

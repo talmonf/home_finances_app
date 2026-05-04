@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TreatmentTravelSessionFields } from "../../../treatments/treatment-travel-session-fields";
 
 type ClientOption = { id: string; label: string };
 
@@ -17,6 +18,13 @@ type Props = {
     addAdditionalClient: string;
     remove: string;
     submit: string;
+    travel: {
+      section: string;
+      checkbox: string;
+      amount: string;
+      kmOptional: string;
+      currencyHint: string;
+    };
   };
 };
 
@@ -93,6 +101,7 @@ export function ReportTreatmentFormClient({ action, appointmentId, clients, labe
           {labels.addAdditionalClient}
         </button>
       </div>
+      <TreatmentTravelSessionFields labels={labels.travel} />
       <button
         type="submit"
         className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"

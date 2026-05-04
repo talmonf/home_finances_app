@@ -302,6 +302,10 @@ export default async function TreatmentsPage({
               orderBy: { created_at: "asc" },
               include: { receipt: { select: { id: true, receipt_number: true } } },
             },
+            travel_entries: {
+              orderBy: { created_at: "desc" },
+              take: 1,
+            },
           },
         })
       : null;
@@ -323,7 +327,7 @@ export default async function TreatmentsPage({
     <div className="space-y-5 sm:space-y-6">
       {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
-          {sp.error}
+          {sp.error === "travel_amount" ? tr.treatmentTravelAmountError : sp.error}
         </p>
       )}
       {(sp.created || sp.updated) && (
@@ -519,6 +523,15 @@ export default async function TreatmentsPage({
             note_1: editTreatment.note_1 ?? "",
             note_2: editTreatment.note_2 ?? "",
             note_3: editTreatment.note_3 ?? "",
+            treatment_travel_enabled: editTreatment.travel_entries.length > 0,
+            treatment_travel_amount:
+              editTreatment.travel_entries[0]?.amount != null
+                ? editTreatment.travel_entries[0].amount.toString()
+                : "",
+            treatment_travel_km:
+              editTreatment.travel_entries[0]?.km != null
+                ? editTreatment.travel_entries[0].km.toString()
+                : "",
           }}
           extraContent={
             <div className="space-y-3">

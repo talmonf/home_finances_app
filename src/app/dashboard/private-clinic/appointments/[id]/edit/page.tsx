@@ -10,6 +10,7 @@ import {
 import {
   privateClinicAppointments,
   privateClinicCommon,
+  privateClinicTreatments,
 } from "@/lib/private-clinic-i18n";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import {
@@ -57,6 +58,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const ap = privateClinicAppointments(uiLanguage);
+  const tr = privateClinicTreatments(uiLanguage);
 
   const apt = await prisma.therapy_appointments.findFirst({
     where: {
@@ -164,6 +166,12 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         </div>
       ) : null}
 
+      {query.error === "travel_amount" ? (
+        <div className="rounded-xl border border-rose-700/50 bg-rose-950/30 px-4 py-3 text-sm text-rose-100/90">
+          {tr.treatmentTravelAmountError}
+        </div>
+      ) : null}
+
       <AppointmentEditFormClient
         action={updateTherapyAppointment}
         id={apt.id}
@@ -245,6 +253,13 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
               addAdditionalClient: ap.addAdditionalClient,
               remove: ap.remove,
               submit: ap.reportTreatmentSubmit,
+              travel: {
+                section: tr.treatmentTravelSection,
+                checkbox: tr.treatmentTravelCheckbox,
+                amount: tr.treatmentTravelAmount,
+                kmOptional: tr.treatmentTravelKmOptional,
+                currencyHint: tr.treatmentTravelCurrencyHint,
+              },
             }}
           />
         )}

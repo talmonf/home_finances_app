@@ -222,6 +222,83 @@ function parseOptionalKm(raw: string | null | undefined): string | null {
   return parsed.toFixed(2);
 }
 
+/** Client passed to `prisma.$transaction` — subset of PrismaClient used by therapy travel sync. */
+type PrismaTherapyTx = Omit<
+  typeof prisma,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends" | "$use"
+>;
+
+/**
+ * Keeps `therapy_travel_entries` in sync when travel is toggled from the treatment form.
+ * When disabled, deletes every row linked to this treatment (including rare duplicates from imports).
+ */
+async function syncTherapyTravelForTreatmentInTx(
+  tx: PrismaTherapyTx,
+  args: {
+    householdId: string;
+    treatmentId: string;
+    jobId: string;
+    occurredAt: Date;
+    currency: string;
+    enabled: boolean;
+    travelAmount: string | null;
+    travelKm: string | null;
+  },
+): Promise<void> {
+  const { householdId, treatmentId, jobId, occurredAt, currency, enabled, travelAmount, travelKm } = args;
+  if (!enabled) {
+    await tx.therapy_travel_entries.deleteMany({
+      where: { household_id: householdId, treatment_id: treatmentId },
+    });
+    return;
+  }
+  if (!travelAmount) return;
+  const cur = currency.trim() || "ILS";
+  const newest = await tx.therapy_travel_entries.findFirst({
+    where: { household_id: householdId, treatment_id: treatmentId },
+    orderBy: { created_at: "desc" },
+    select: { id: true },
+  });
+  if (newest) {
+    await tx.therapy_travel_entries.update({
+      where: { id: newest.id },
+      data: {
+        job_id: jobId,
+        occurred_at: occurredAt,
+        amount: travelAmount,
+        km: travelKm,
+        currency: cur,
+        consultation_id: null,
+      },
+    });
+  } else {
+    await tx.therapy_travel_entries.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        job_id: jobId,
+        treatment_id: treatmentId,
+        consultation_id: null,
+        occurred_at: occurredAt,
+        amount: travelAmount,
+        km: travelKm,
+        currency: cur,
+      },
+    });
+  }
+}
+
+function parseTreatmentTravelFromForm(formData: FormData): {
+  enabled: boolean;
+  travelAmount: string | null;
+  travelKm: string | null;
+} {
+  const enabled = formData.get("treatment_travel_enabled") === "1";
+  const travelAmount = parseMoney((formData.get("treatment_travel_amount") as string) || null);
+  const travelKm = parseOptionalKm((formData.get("treatment_travel_km") as string) || null);
+  return { enabled, travelAmount, travelKm };
+}
+
 function parseDate(raw: string | null | undefined): Date | null {
   if (!raw?.trim()) return null;
   const d = new Date(raw);
@@ -2038,6 +2115,12 @@ export async function createTherapyTreatment(formData: FormData) {
   const reportedToExternalSystem =
     Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 
+  const treatmentTravel = parseTreatmentTravelFromForm(formData);
+  if (treatmentTravel.enabled && !treatmentTravel.travelAmount) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "travel_amount");
+  }
+  const treatmentCurrency = (formData.get("currency") as string)?.trim() || "ILS";
+
   const treatmentId = crypto.randomUUID();
   const inlineReceiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
   const inlineReceiptIssuedAt = parseDateRequired((formData.get("receipt_issued_at") as string)?.trim() || null);
@@ -2053,7 +2136,7 @@ export async function createTherapyTreatment(formData: FormData) {
           program_id,
           occurred_at,
           amount: amountStr,
-          currency: (formData.get("currency") as string)?.trim() || "ILS",
+          currency: treatmentCurrency,
           visit_type,
           note_1: (formData.get("note_1") as string)?.trim() || null,
           note_2: (formData.get("note_2") as string)?.trim() || null,
@@ -2085,7 +2168,7 @@ export async function createTherapyTreatment(formData: FormData) {
             total_amount: amountStr,
             net_amount: amountStr,
             receipt_kind: inlineReceiptKind,
-            currency: (formData.get("currency") as string)?.trim() || "ILS",
+            currency: treatmentCurrency,
             recipient_type: "client",
             payment_method: "cash",
           },
@@ -2113,6 +2196,16 @@ export async function createTherapyTreatment(formData: FormData) {
           throw new Error("APPOINTMENT_ALREADY_LINKED");
         }
       }
+      await syncTherapyTravelForTreatmentInTx(tx, {
+        householdId,
+        treatmentId,
+        jobId: job_id,
+        occurredAt: occurred_at,
+        currency: treatmentCurrency,
+        enabled: treatmentTravel.enabled,
+        travelAmount: treatmentTravel.travelAmount,
+        travelKm: treatmentTravel.travelKm,
+      });
     });
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_ALREADY_LINKED") {
@@ -2125,6 +2218,7 @@ export async function createTherapyTreatment(formData: FormData) {
   }
 
   revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/travel`);
   if (appointmentToComplete) {
     revalidatePath(`${BASE}/appointments`);
     revalidatePath(`${BASE}/upcoming-visits`);
@@ -2210,29 +2304,48 @@ export async function updateTherapyTreatment(formData: FormData) {
   const reportedToExternalSystem =
     Boolean(selectedJob.external_reporting_system) && formData.get("reported_to_external_system") === "1";
 
-  await prisma.therapy_treatments.update({
-    where: { id },
-    data: {
-      job_id,
-      family_id: primaryClient?.family_id ?? null,
-      program_id,
-      occurred_at,
-      amount: amountStr,
-      currency: (formData.get("currency") as string)?.trim() || "ILS",
-      visit_type,
-      note_1: (formData.get("note_1") as string)?.trim() || null,
-      note_2: (formData.get("note_2") as string)?.trim() || null,
-      note_3: (formData.get("note_3") as string)?.trim() || null,
-      linked_transaction_id,
-      payment_date: payment.payment_date,
-      payment_method: payment.payment_method,
-      payment_bank_account_id: payment.payment_bank_account_id,
-      payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
-      reported_to_external_system: reportedToExternalSystem,
-    },
+  const treatmentTravel = parseTreatmentTravelFromForm(formData);
+  if (treatmentTravel.enabled && !treatmentTravel.travelAmount) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "travel_amount");
+  }
+  const treatmentCurrency = (formData.get("currency") as string)?.trim() || "ILS";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_treatments.update({
+      where: { id },
+      data: {
+        job_id,
+        family_id: primaryClient?.family_id ?? null,
+        program_id,
+        occurred_at,
+        amount: amountStr,
+        currency: treatmentCurrency,
+        visit_type,
+        note_1: (formData.get("note_1") as string)?.trim() || null,
+        note_2: (formData.get("note_2") as string)?.trim() || null,
+        note_3: (formData.get("note_3") as string)?.trim() || null,
+        linked_transaction_id,
+        payment_date: payment.payment_date,
+        payment_method: payment.payment_method,
+        payment_bank_account_id: payment.payment_bank_account_id,
+        payment_digital_payment_method_id: payment.payment_digital_payment_method_id,
+        reported_to_external_system: reportedToExternalSystem,
+      },
+    });
+    await syncTherapyTravelForTreatmentInTx(tx, {
+      householdId,
+      treatmentId: id,
+      jobId: job_id,
+      occurredAt: occurred_at,
+      currency: treatmentCurrency,
+      enabled: treatmentTravel.enabled,
+      travelAmount: treatmentTravel.travelAmount,
+      travelKm: treatmentTravel.travelKm,
+    });
   });
 
   revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/travel`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
 }
 
@@ -3585,6 +3698,11 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
   }
   const amountStr = parseMoney(formData.get("amount") as string);
   if (!amountStr) redirect(`${BASE}/appointments/${appointmentId}/edit?error=amount`);
+  const treatmentTravel = parseTreatmentTravelFromForm(formData);
+  if (treatmentTravel.enabled && !treatmentTravel.travelAmount) {
+    redirect(`${BASE}/appointments/${appointmentId}/edit?error=travel_amount`);
+  }
+  const appointmentTreatmentCurrency = (formData.get("currency") as string | null)?.trim() || "ILS";
   const additionalParticipantIds = parseUniqueIds(formData.getAll("additional_participant_ids"));
   for (const participantId of additionalParticipantIds) {
     if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
@@ -3616,7 +3734,7 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
         program_id: appointment.program_id,
         occurred_at: appointment.start_at,
         amount: amountStr,
-        currency: (formData.get("currency") as string | null)?.trim() || "ILS",
+        currency: appointmentTreatmentCurrency,
         visit_type: appointment.visit_type,
         note_1: (formData.get("note_1") as string | null)?.trim() || null,
         note_2: (formData.get("note_2") as string | null)?.trim() || null,
@@ -3645,6 +3763,16 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
       if (updated.count !== 1) {
         throw new Error("APPOINTMENT_ALREADY_LINKED");
       }
+      await syncTherapyTravelForTreatmentInTx(tx, {
+        householdId,
+        treatmentId,
+        jobId: appointment.job_id,
+        occurredAt: appointment.start_at,
+        currency: appointmentTreatmentCurrency,
+        enabled: treatmentTravel.enabled,
+        travelAmount: treatmentTravel.travelAmount,
+        travelKm: treatmentTravel.travelKm,
+      });
     });
   } catch (error) {
     if (
@@ -3676,6 +3804,7 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
 
   revalidatePath(`${BASE}/appointments`);
   revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/travel`);
   revalidatePath(`${BASE}/reports`);
   redirect(`${BASE}/appointments/${appointmentId}/edit?saved=1`);
 }

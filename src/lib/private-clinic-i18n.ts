@@ -581,6 +581,21 @@ export function privateClinicTreatments(lang: UiLanguage) {
     unlinkFromReceipt: p("Unlink", "נתק"),
     inlineReceiptNumber: p("Receipt number (optional)", "מספר קבלה (אופציונלי)"),
     inlineReceiptDate: p("Receipt payment date", "תאריך תשלום בקבלה"),
+    treatmentTravelSection: p("Travel for this session", "נסיעה למפגש זה"),
+    treatmentTravelCheckbox: p(
+      "Record travel reimbursement linked to this treatment",
+      "רישום החזר נסיעות משויך לטיפול זה",
+    ),
+    treatmentTravelAmount: p("Travel reimbursement amount", "סכום החזר נסיעות"),
+    treatmentTravelKmOptional: p("Distance (km, optional)", "מרחק (ק״מ, אופציונלי)"),
+    treatmentTravelCurrencyHint: p(
+      "Uses the session currency above.",
+      "משתמש במטבע של המפגש למעלה.",
+    ),
+    treatmentTravelAmountError: p(
+      "Enter a valid travel reimbursement amount when travel is enabled.",
+      "הזינו סכום החזר נסיעות תקף כאשר מסומנת נסיעה למפגש.",
+    ),
     importBtn: p("Import treatments", "ייבוא טיפולים"),
     importClearPreview: p("Clear preview", "ניקוי תצוגה"),
     importBackToTreatments: p("Back to treatments", "חזרה לטיפולים"),
