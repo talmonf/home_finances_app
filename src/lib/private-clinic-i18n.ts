@@ -1005,8 +1005,8 @@ export function privateClinicReports(lang: UiLanguage) {
     tableDetails: p("Details", "פרטים"),
     monthPayableTitle: p("Month payable (external job)", "תשלום חודשי (מעסיק חיצוני)"),
     monthPayableDesc: p(
-      "Excel summary for one private-clinic job and calendar month: treatments, consultations, travel, receipts that overlap the month (by covered period or issue date), allocation sanity checks, and line-level sheets.",
-      "סיכום Excel לעבודה אחת ולחודש קלנדרי: טיפולים, ייעוצים, נסיעות, קבלות החופפות לחודש (לפי תקופה מכוסה או תאריך הנפקה), בדיקות הקצאה וגיליונות שורות.",
+      "One Excel sheet for one job and calendar month: all payable lines (treatments, consultations, travel) in date order, optional filters, and totals per currency at the bottom.",
+      "גיליון Excel אחד לעבודה אחת ולחודש קלנדרי: כל שורות התשלום (טיפולים, ייעוצים, נסיעות) לפי תאריך, מסננים אופציונליים, וסיכומים לפי מטבע בתחתית.",
     ),
     monthPayableJob: p("Job", "עבודה"),
     monthPayableMonth: p("Month", "חודש"),
@@ -1014,6 +1014,26 @@ export function privateClinicReports(lang: UiLanguage) {
     monthPayableNoJobs: p(
       "No private-clinic jobs are available for your account.",
       "אין עבודות קליניקה זמינות לחשבון שלך.",
+    ),
+    monthPayableIncludeLines: p("Include", "כלול"),
+    monthPayableTreatments: p("Treatments", "טיפולים"),
+    monthPayableConsultations: p("Consultations", "ייעוצים"),
+    monthPayableTravel: p("Travel", "נסיעות"),
+    monthPayableProgram: p("Program (treatments & linked travel)", "תוכנית (טיפולים ונסיעות מקושרות)"),
+    monthPayableConsultationType: p("Consultation type", "סוג ייעוץ"),
+    monthPayableClient: p("Client", "לקוח"),
+    monthPayableClearFilters: p("Clear filters", "נקה מסננים"),
+    monthPayableMultiSelectHint: p(
+      "Hold Ctrl (Windows) or Command (Mac) to select or deselect multiple rows.",
+      "החזיקו Ctrl (Windows) או Command (Mac) לבחירה או ביטול בחירה של מספר שורות.",
+    ),
+    monthPayableProgramFilterNote: p(
+      "Program filters treatments and travel linked to a treatment. Consultations are not tied to a program.",
+      "מסנן התוכנית משפיע על טיפולים ועל נסיעות שמקושרות לטיפול. ייעוצים לא משויכים לתוכנית.",
+    ),
+    monthPayableClientFilterTravelNote: p(
+      "When filtering by client, travel rows without a linked treatment are omitted.",
+      "בסינון לפי לקוח, נסיעות ללא טיפול מקושר לא ייכללו.",
     ),
     therapistDiaryYearFrom: p("From year", "משנה"),
     therapistDiaryYearTo: p("To year", "עד שנה"),

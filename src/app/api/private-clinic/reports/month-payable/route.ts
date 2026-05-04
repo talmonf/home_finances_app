@@ -7,6 +7,9 @@ import * as XLSX from "xlsx";
 
 export const dynamic = "force-dynamic";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function num(d: unknown): number {
   if (d == null) return 0;
   const n = Number(d);
@@ -25,18 +28,48 @@ function monthBoundsUtc(year: number, month1to12: number): { monthStart: Date; m
   return { monthStart, monthEndExclusive };
 }
 
-function receiptOverlapsMonth(
-  issuedAt: Date,
-  coveredStart: Date | null,
-  coveredEnd: Date | null,
-  monthStart: Date,
-  monthEndExclusive: Date,
-): boolean {
-  if (coveredStart && coveredEnd) {
-    return coveredStart < monthEndExclusive && coveredEnd >= monthStart;
+function parseUuidList(searchParams: URLSearchParams, key: string): string[] {
+  const raw = searchParams.getAll(key).flatMap((v) => v.split(",").map((s) => s.trim()).filter(Boolean));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const id of raw) {
+    if (!UUID_RE.test(id)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
   }
-  return issuedAt >= monthStart && issuedAt < monthEndExclusive;
+  return out;
 }
+
+function parseBoolParam(params: URLSearchParams, key: string, defaultTrue: boolean): boolean {
+  const v = params.get(key);
+  if (v == null || v === "") return defaultTrue;
+  const s = v.trim().toLowerCase();
+  if (s === "0" || s === "false" || s === "no") return false;
+  if (s === "1" || s === "true" || s === "yes") return true;
+  return defaultTrue;
+}
+
+function formatPersonName(c: { first_name: string; last_name: string | null }): string {
+  return `${c.first_name} ${c.last_name ?? ""}`.trim();
+}
+
+type UnifiedRow = {
+  line_type: string;
+  occurred_at: string;
+  occurred_at_sort: string;
+  job: string;
+  program: string;
+  consultation_type: string;
+  client: string;
+  visit_type: string;
+  amount_payable: number;
+  currency: string;
+  allocated_sum: number;
+  notes: string;
+  id: string;
+  reported_to_external: string;
+};
 
 function sheet(name: string, rows: Record<string, unknown>[]) {
   const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ _empty: "" }]);
@@ -57,6 +90,15 @@ export async function GET(req: Request) {
   const year = yearRaw != null ? Number(yearRaw) : NaN;
   const month = monthRaw != null ? Number(monthRaw) : NaN;
 
+  const sp = url.searchParams;
+  const includeTreatments = parseBoolParam(sp, "includeTreatments", true);
+  const includeConsultations = parseBoolParam(sp, "includeConsultations", true);
+  const includeTravel = parseBoolParam(sp, "includeTravel", true);
+
+  const programIds = parseUuidList(sp, "programId");
+  const consultationTypeIds = parseUuidList(sp, "consultationTypeId");
+  const clientIds = parseUuidList(sp, "clientId");
+
   if (!jobId) {
     return NextResponse.json({ error: "jobId is required" }, { status: 400 });
   }
@@ -65,6 +107,12 @@ export async function GET(req: Request) {
   }
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return NextResponse.json({ error: "month must be 1–12" }, { status: 400 });
+  }
+  if (!includeTreatments && !includeConsultations && !includeTravel) {
+    return NextResponse.json(
+      { error: "At least one of includeTreatments, includeConsultations, includeTravel must be true" },
+      { status: 400 },
+    );
   }
 
   const user = await prisma.users.findFirst({
@@ -80,11 +128,35 @@ export async function GET(req: Request) {
       id: true,
       job_title: true,
       employer_name: true,
-      external_reporting_system: true,
     },
   });
   if (!job) {
     return NextResponse.json({ error: "Job not found or not accessible" }, { status: 404 });
+  }
+
+  if (programIds.length > 0) {
+    const n = await prisma.therapy_service_programs.count({
+      where: { household_id: householdId, job_id: jobId, id: { in: programIds } },
+    });
+    if (n !== programIds.length) {
+      return NextResponse.json({ error: "Invalid or inaccessible programId" }, { status: 400 });
+    }
+  }
+  if (consultationTypeIds.length > 0) {
+    const n = await prisma.therapy_consultation_types.count({
+      where: { household_id: householdId, id: { in: consultationTypeIds } },
+    });
+    if (n !== consultationTypeIds.length) {
+      return NextResponse.json({ error: "Invalid or inaccessible consultationTypeId" }, { status: 400 });
+    }
+  }
+  if (clientIds.length > 0) {
+    const n = await prisma.therapy_clients.count({
+      where: { household_id: householdId, id: { in: clientIds } },
+    });
+    if (n !== clientIds.length) {
+      return NextResponse.json({ error: "Invalid or inaccessible clientId" }, { status: 400 });
+    }
   }
 
   const { monthStart, monthEndExclusive } = monthBoundsUtc(year, month);
@@ -100,290 +172,296 @@ export async function GET(req: Request) {
     action: "export",
     status: "started",
     summary: "Month payable report started",
-    metadata: { jobId, year, month },
+    metadata: {
+      jobId,
+      year,
+      month,
+      includeTreatments,
+      includeConsultations,
+      includeTravel,
+      programIds: programIds.length,
+      consultationTypeIds: consultationTypeIds.length,
+      clientIds: clientIds.length,
+    },
   });
 
   try {
-    const [treatments, consultations, travelRows, receipts] = await Promise.all([
-      prisma.therapy_treatments.findMany({
-        where: {
-          household_id: householdId,
-          job_id: jobId,
-          occurred_at: { gte: monthStart, lt: monthEndExclusive },
-        },
-        orderBy: { occurred_at: "asc" },
-        select: {
-          id: true,
-          occurred_at: true,
-          amount: true,
-          currency: true,
-          visit_type: true,
-          reported_to_external_system: true,
-          client: { select: { first_name: true, last_name: true } },
-          receipt_allocations: { select: { amount: true } },
-        },
-      }),
-      prisma.therapy_consultations.findMany({
-        where: {
-          household_id: householdId,
-          job_id: jobId,
-          occurred_at: { gte: monthStart, lt: monthEndExclusive },
-        },
-        orderBy: { occurred_at: "asc" },
-        select: {
-          id: true,
-          occurred_at: true,
-          amount: true,
-          income_amount: true,
-          cost_amount: true,
-          currency: true,
-          notes: true,
-          consultation_type: { select: { name: true } },
-          receipt_allocations: { select: { amount: true } },
-        },
-      }),
-      prisma.therapy_travel_entries.findMany({
-        where: {
-          household_id: householdId,
-          occurred_at: { gte: monthStart, lt: monthEndExclusive },
-          AND: [
-            { OR: [{ job: jobScope }, { treatment: { job: jobScope } }] },
-            { OR: [{ job_id: jobId }, { treatment: { job_id: jobId } }] },
-          ],
-        },
-        orderBy: { occurred_at: "asc" },
-        select: {
-          id: true,
-          occurred_at: true,
-          amount: true,
-          currency: true,
-          notes: true,
-          job_id: true,
-          treatment_id: true,
-          treatment: {
-            select: {
-              job_id: true,
-              client: { select: { first_name: true, last_name: true } },
+    const treatmentWhere = {
+      household_id: householdId,
+      job_id: jobId,
+      occurred_at: { gte: monthStart, lt: monthEndExclusive },
+      ...(programIds.length > 0 ? { program_id: { in: programIds } } : {}),
+      ...(clientIds.length > 0
+        ? {
+            OR: [
+              { client_id: { in: clientIds } },
+              { participants: { some: { client_id: { in: clientIds } } } },
+            ],
+          }
+        : {}),
+    };
+
+    const consultationWhere = {
+      household_id: householdId,
+      job_id: jobId,
+      occurred_at: { gte: monthStart, lt: monthEndExclusive },
+      ...(consultationTypeIds.length > 0
+        ? { consultation_type_id: { in: consultationTypeIds } }
+        : {}),
+      ...(clientIds.length > 0
+        ? { participants: { some: { client_id: { in: clientIds } } } }
+        : {}),
+    };
+
+    const travelAnd = [
+      { OR: [{ job: jobScope }, { treatment: { job: jobScope } }] },
+      { OR: [{ job_id: jobId }, { treatment: { job_id: jobId } }] },
+      ...(clientIds.length > 0
+        ? [
+            {
+              treatment_id: { not: null },
+              treatment: {
+                OR: [
+                  { client_id: { in: clientIds } },
+                  { participants: { some: { client_id: { in: clientIds } } } },
+                ],
+              },
             },
-          },
-          receipt_allocations: { select: { amount: true } },
-        },
-      }),
-      prisma.therapy_receipts.findMany({
-        where: { household_id: householdId, job_id: jobId },
-        select: {
-          id: true,
-          receipt_number: true,
-          issued_at: true,
-          total_amount: true,
-          net_amount: true,
-          currency: true,
-          recipient_type: true,
-          receipt_kind: true,
-          covered_period_start: true,
-          covered_period_end: true,
-        },
-      }),
+          ]
+        : []),
+      ...(programIds.length > 0
+        ? [
+            {
+              OR: [{ treatment_id: null }, { treatment: { program_id: { in: programIds } } }],
+            },
+          ]
+        : []),
+    ];
+
+    const travelWhere = {
+      household_id: householdId,
+      occurred_at: { gte: monthStart, lt: monthEndExclusive },
+      AND: travelAnd,
+    };
+
+    const [treatments, consultations, travelRows] = await Promise.all([
+      includeTreatments
+        ? prisma.therapy_treatments.findMany({
+            where: treatmentWhere,
+            orderBy: { occurred_at: "asc" },
+            select: {
+              id: true,
+              occurred_at: true,
+              amount: true,
+              currency: true,
+              visit_type: true,
+              reported_to_external_system: true,
+              program_id: true,
+              program: { select: { name: true } },
+              client: { select: { first_name: true, last_name: true } },
+              participants: {
+                select: { client: { select: { first_name: true, last_name: true } } },
+              },
+              receipt_allocations: { select: { amount: true } },
+            },
+          })
+        : Promise.resolve([]),
+      includeConsultations
+        ? prisma.therapy_consultations.findMany({
+            where: consultationWhere,
+            orderBy: { occurred_at: "asc" },
+            select: {
+              id: true,
+              occurred_at: true,
+              amount: true,
+              income_amount: true,
+              cost_amount: true,
+              currency: true,
+              notes: true,
+              consultation_type: { select: { name: true } },
+              participants: {
+                select: { client: { select: { first_name: true, last_name: true } } },
+              },
+              receipt_allocations: { select: { amount: true } },
+            },
+          })
+        : Promise.resolve([]),
+      includeTravel
+        ? prisma.therapy_travel_entries.findMany({
+            where: travelWhere,
+            orderBy: { occurred_at: "asc" },
+            select: {
+              id: true,
+              occurred_at: true,
+              amount: true,
+              currency: true,
+              notes: true,
+              job_id: true,
+              treatment_id: true,
+              treatment: {
+                select: {
+                  job_id: true,
+                  program_id: true,
+                  program: { select: { name: true } },
+                  client: { select: { first_name: true, last_name: true } },
+                  participants: {
+                    select: { client: { select: { first_name: true, last_name: true } } },
+                  },
+                },
+              },
+              receipt_allocations: { select: { amount: true } },
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
-    const overlappingReceipts = receipts.filter((r) =>
-      receiptOverlapsMonth(
-        r.issued_at,
-        r.covered_period_start,
-        r.covered_period_end,
-        monthStart,
-        monthEndExclusive,
-      ),
-    );
-    const overlapIds = overlappingReceipts.map((r) => r.id);
+    const unified: UnifiedRow[] = [];
 
-    const [allocTreat, allocConsult, allocTravel] =
-      overlapIds.length === 0
-        ? [[], [], []] as const
-        : await Promise.all([
-            prisma.therapy_receipt_allocations.findMany({
-              where: { household_id: householdId, receipt_id: { in: overlapIds } },
-              select: { amount: true },
-            }),
-            prisma.therapy_receipt_consultation_allocations.findMany({
-              where: { household_id: householdId, receipt_id: { in: overlapIds } },
-              select: { amount: true },
-            }),
-            prisma.therapy_receipt_travel_allocations.findMany({
-              where: { household_id: householdId, receipt_id: { in: overlapIds } },
-              select: { amount: true },
-            }),
-          ]);
-
-    const sumTreatmentActivity = treatments.reduce((s, t) => s + num(t.amount), 0);
-    const sumConsultActivity = consultations.reduce((s, c) => s + consultationLineAmount(c), 0);
-    const sumTravelActivity = travelRows.reduce((s, t) => s + num(t.amount), 0);
-
-    const sumAllocOnOverlapReceipts =
-      allocTreat.reduce((s, a) => s + num(a.amount), 0) +
-      allocConsult.reduce((s, a) => s + num(a.amount), 0) +
-      allocTravel.reduce((s, a) => s + num(a.amount), 0);
-
-    const sumNetReceiptsOverlap = overlappingReceipts.reduce((s, r) => s + num(r.net_amount), 0);
-    const sumTotalReceiptsOverlap = overlappingReceipts.reduce((s, r) => s + num(r.total_amount), 0);
-
-    let treatmentsNoAllocation = 0;
-    let treatmentsUnderAllocated = 0;
     for (const t of treatments) {
       const allocSum = t.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      if (allocSum === 0) treatmentsNoAllocation += 1;
-      if (t.amount != null && allocSum < num(t.amount) - 0.005) treatmentsUnderAllocated += 1;
+      const nameSet = new Set<string>();
+      nameSet.add(formatPersonName(t.client));
+      for (const p of t.participants) {
+        nameSet.add(formatPersonName(p.client));
+      }
+      const clientStr = [...nameSet].filter(Boolean).join("; ");
+      const iso = t.occurred_at.toISOString();
+      unified.push({
+        line_type: "treatment",
+        occurred_at: iso.slice(0, 10),
+        occurred_at_sort: iso,
+        job: jobLabel,
+        program: t.program?.name ?? "",
+        consultation_type: "",
+        client: clientStr,
+        visit_type: String(t.visit_type),
+        amount_payable: num(t.amount),
+        currency: t.currency,
+        allocated_sum: allocSum,
+        notes: "",
+        id: t.id,
+        reported_to_external: String(t.reported_to_external_system),
+      });
     }
 
-    let consultationsNoAllocation = 0;
     for (const c of consultations) {
       const line = consultationLineAmount(c);
       const allocSum = c.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      if (line > 0 && allocSum === 0) consultationsNoAllocation += 1;
-    }
-
-    let travelNoAllocation = 0;
-    for (const tr of travelRows) {
-      const amt = num(tr.amount);
-      const allocSum = tr.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      if (amt > 0 && allocSum === 0) travelNoAllocation += 1;
-    }
-
-    const summaryRows: Record<string, unknown>[] = [
-      { key: "job", value: jobLabel },
-      { key: "job_id", value: job.id },
-      { key: "external_reporting_system", value: job.external_reporting_system ?? "" },
-      { key: "calendar_month_utc", value: `${year}-${String(month).padStart(2, "0")}` },
-      { key: "month_range_start_utc", value: monthStart.toISOString().slice(0, 10) },
-      { key: "month_range_end_exclusive_utc", value: monthEndExclusive.toISOString().slice(0, 10) },
-      { key: "", value: "" },
-      {
-        key: "activity_treatments_count",
-        value: treatments.length,
-      },
-      { key: "activity_treatments_sum_amount", value: sumTreatmentActivity },
-      {
-        key: "activity_consultations_count",
-        value: consultations.length,
-      },
-      { key: "activity_consultations_sum_line_amount", value: sumConsultActivity },
-      {
-        key: "activity_travel_rows_count",
-        value: travelRows.length,
-      },
-      { key: "activity_travel_sum_amount", value: sumTravelActivity },
-      {
-        key: "activity_sum_treatments_plus_consultations_plus_travel",
-        value: sumTreatmentActivity + sumConsultActivity + sumTravelActivity,
-      },
-      { key: "", value: "" },
-      {
-        key: "receipts_overlapping_month_count",
-        value: overlappingReceipts.length,
-      },
-      { key: "receipts_overlapping_month_sum_net", value: sumNetReceiptsOverlap },
-      { key: "receipts_overlapping_month_sum_total", value: sumTotalReceiptsOverlap },
-      { key: "", value: "" },
-      {
-        key: "allocations_on_overlapping_receipts_sum_all_lines",
-        value: sumAllocOnOverlapReceipts,
-      },
-      {
-        key: "allocations_on_overlapping_receipts_minus_net_receipts",
-        value: sumAllocOnOverlapReceipts - sumNetReceiptsOverlap,
-      },
-      { key: "", value: "" },
-      {
-        key: "qc_treatments_in_month_with_zero_allocation",
-        value: treatmentsNoAllocation,
-      },
-      {
-        key: "qc_treatments_in_month_allocated_less_than_amount",
-        value: treatmentsUnderAllocated,
-      },
-      {
-        key: "qc_consultations_in_month_with_line_amount_but_zero_allocation",
-        value: consultationsNoAllocation,
-      },
-      {
-        key: "qc_travel_in_month_with_amount_but_zero_allocation",
-        value: travelNoAllocation,
-      },
-    ];
-
-    const treatmentSheet = treatments.map((t) => {
-      const allocSum = t.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      const client = `${t.client.first_name} ${t.client.last_name ?? ""}`.trim();
-      return {
-        id: t.id,
-        occurred_at: t.occurred_at.toISOString().slice(0, 10),
-        visit_type: String(t.visit_type),
-        amount: num(t.amount),
-        currency: t.currency,
-        allocated_sum: allocSum,
-        reported_to_external_system: t.reported_to_external_system,
-        client: client,
-      };
-    });
-
-    const consultationSheet = consultations.map((c) => {
-      const line = consultationLineAmount(c);
-      const allocSum = c.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      return {
-        id: c.id,
-        occurred_at: c.occurred_at.toISOString().slice(0, 10),
-        type: c.consultation_type.name,
-        line_amount: line,
-        amount_raw: num(c.amount),
-        income_amount_raw: num(c.income_amount),
-        cost_amount_raw: num(c.cost_amount),
+      const nameSet = new Set<string>();
+      for (const p of c.participants) {
+        nameSet.add(formatPersonName(p.client));
+      }
+      const clientStr = [...nameSet].filter(Boolean).join("; ");
+      const iso = c.occurred_at.toISOString();
+      unified.push({
+        line_type: "consultation",
+        occurred_at: iso.slice(0, 10),
+        occurred_at_sort: iso,
+        job: jobLabel,
+        program: "",
+        consultation_type: c.consultation_type.name,
+        client: clientStr,
+        visit_type: "",
+        amount_payable: line,
         currency: c.currency,
         allocated_sum: allocSum,
         notes: c.notes ?? "",
-      };
-    });
+        id: c.id,
+        reported_to_external: "",
+      });
+    }
 
-    const travelSheet = travelRows.map((tr) => {
+    for (const tr of travelRows) {
       const allocSum = tr.receipt_allocations.reduce((s, a) => s + num(a.amount), 0);
-      const client = tr.treatment
-        ? `${tr.treatment.client.first_name} ${tr.treatment.client.last_name ?? ""}`.trim()
-        : "";
-      return {
-        id: tr.id,
-        occurred_at: tr.occurred_at ? tr.occurred_at.toISOString().slice(0, 10) : "",
-        amount: num(tr.amount),
+      let clientStr = "";
+      let programStr = "";
+      if (tr.treatment) {
+        const nameSet = new Set<string>();
+        nameSet.add(formatPersonName(tr.treatment.client));
+        for (const p of tr.treatment.participants) {
+          nameSet.add(formatPersonName(p.client));
+        }
+        clientStr = [...nameSet].filter(Boolean).join("; ");
+        programStr = tr.treatment.program?.name ?? "";
+      }
+      const at = tr.occurred_at!;
+      const iso = at.toISOString();
+      unified.push({
+        line_type: "travel",
+        occurred_at: iso.slice(0, 10),
+        occurred_at_sort: iso,
+        job: jobLabel,
+        program: programStr,
+        consultation_type: "",
+        client: clientStr,
+        visit_type: "",
+        amount_payable: num(tr.amount),
         currency: tr.currency,
         allocated_sum: allocSum,
-        scope_job_id: tr.job_id ?? "",
-        linked_treatment_id: tr.treatment_id ?? "",
-        client: client,
         notes: tr.notes ?? "",
-      };
+        id: tr.id,
+        reported_to_external: "",
+      });
+    }
+
+    unified.sort((a, b) => {
+      const c = a.occurred_at_sort.localeCompare(b.occurred_at_sort);
+      if (c !== 0) return c;
+      const t = a.line_type.localeCompare(b.line_type);
+      if (t !== 0) return t;
+      return a.id.localeCompare(b.id);
     });
 
-    const receiptSheet = overlappingReceipts.map((r) => ({
-      receipt_number: r.receipt_number,
-      issued_at: r.issued_at.toISOString().slice(0, 10),
-      covered_period_start: r.covered_period_start ? r.covered_period_start.toISOString().slice(0, 10) : "",
-      covered_period_end: r.covered_period_end ? r.covered_period_end.toISOString().slice(0, 10) : "",
-      total_amount: num(r.total_amount),
-      net_amount: num(r.net_amount),
+    const totalsByCurrency = new Map<string, number>();
+    for (const r of unified) {
+      const cur = r.currency || "ILS";
+      totalsByCurrency.set(cur, (totalsByCurrency.get(cur) ?? 0) + r.amount_payable);
+    }
+
+    const exportRows: Record<string, unknown>[] = unified.map((r) => ({
+      line_type: r.line_type,
+      occurred_at: r.occurred_at,
+      job: r.job,
+      program: r.program,
+      consultation_type: r.consultation_type,
+      client: r.client,
+      visit_type: r.visit_type,
+      amount_payable: r.amount_payable,
       currency: r.currency,
-      recipient_type: String(r.recipient_type),
-      receipt_kind: String(r.receipt_kind),
+      allocated_sum: r.allocated_sum,
+      notes: r.notes,
+      id: r.id,
+      reported_to_external: r.reported_to_external,
     }));
 
-    const wb = XLSX.utils.book_new();
-    const sheets = [
-      sheet("Summary", summaryRows.map((row) => ({ metric: row.key, value: row.value }))),
-      sheet("Treatments", treatmentSheet),
-      sheet("Consultations", consultationSheet),
-      sheet("Travel", travelSheet),
-      sheet("Receipts_overlap", receiptSheet),
-    ];
-    for (const { name, ws } of sheets) {
-      XLSX.utils.book_append_sheet(wb, ws, name);
+    const currencies = [...totalsByCurrency.keys()].sort();
+    if (unified.length > 0 && currencies.length > 0) {
+      exportRows.push({});
+      for (const cur of currencies) {
+        exportRows.push({
+          line_type: "TOTAL",
+          occurred_at: "",
+          job: "",
+          program: "",
+          consultation_type: "",
+          client: "",
+          visit_type: "",
+          amount_payable: totalsByCurrency.get(cur) ?? 0,
+          currency: cur,
+          allocated_sum: "",
+          notes: "",
+          id: "",
+          reported_to_external: "",
+        });
+      }
     }
+
+    const wb = XLSX.utils.book_new();
+    const { name, ws } = sheet(
+      "Month_payable",
+      exportRows.length > 0 ? exportRows : [{ line_type: "(no rows)", occurred_at: "", job: jobLabel }],
+    );
+    XLSX.utils.book_append_sheet(wb, ws, name);
 
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "buffer" }) as Buffer;
     const filename = `private-clinic-month-payable-${year}-${String(month).padStart(2, "0")}-${job.id.slice(0, 8)}.xlsx`;
@@ -402,8 +480,10 @@ export async function GET(req: Request) {
         jobId,
         year,
         month,
-        treatmentCount: treatments.length,
-        receiptOverlapCount: overlappingReceipts.length,
+        rowCount: unified.length,
+        includeTreatments,
+        includeConsultations,
+        includeTravel,
       },
     });
 

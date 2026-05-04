@@ -38,6 +38,42 @@ export default async function PrivateClinicReportsPage() {
     id: j.id,
     label: formatJobDisplayLabel(j),
   }));
+  const allowedJobIds = allowedJobs.map((j) => j.id);
+
+  const [monthPayablePrograms, monthPayableConsultationTypes, monthPayableClients] =
+    await Promise.all([
+      allowedJobIds.length === 0
+        ? Promise.resolve([] as { id: string; name: string; job_id: string }[])
+        : prisma.therapy_service_programs.findMany({
+            where: { household_id: householdId, job_id: { in: allowedJobIds } },
+            select: { id: true, name: true, job_id: true },
+            orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+          }),
+      prisma.therapy_consultation_types.findMany({
+        where: { household_id: householdId },
+        select: { id: true, name: true },
+        orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      }),
+      prisma.therapy_clients.findMany({
+        where: { household_id: householdId, is_active: true },
+        select: { id: true, first_name: true, last_name: true },
+        orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
+      }),
+    ]);
+
+  const monthPayableProgramOptions = monthPayablePrograms.map((pr) => ({
+    id: pr.id,
+    name: pr.name,
+    jobId: pr.job_id,
+  }));
+  const monthPayableConsultationTypeOptions = monthPayableConsultationTypes.map((ct) => ({
+    id: ct.id,
+    name: ct.name,
+  }));
+  const monthPayableClientOptions = monthPayableClients.map((c) => ({
+    id: c.id,
+    label: `${c.first_name} ${c.last_name ?? ""}`.trim(),
+  }));
 
   return (
     <div className="space-y-8">
@@ -54,6 +90,9 @@ export default async function PrivateClinicReportsPage() {
 
       <MonthPayableReportClient
         jobs={monthPayableJobOptions}
+        programs={monthPayableProgramOptions}
+        consultationTypes={monthPayableConsultationTypeOptions}
+        clients={monthPayableClientOptions}
         labels={{
           title: r.monthPayableTitle,
           description: r.monthPayableDesc,
@@ -62,6 +101,17 @@ export default async function PrivateClinicReportsPage() {
           year: r.monthPayableYear,
           download: r.download,
           noJobs: r.monthPayableNoJobs,
+          includeLines: r.monthPayableIncludeLines,
+          treatments: r.monthPayableTreatments,
+          consultations: r.monthPayableConsultations,
+          travel: r.monthPayableTravel,
+          program: r.monthPayableProgram,
+          consultationType: r.monthPayableConsultationType,
+          client: r.monthPayableClient,
+          clearFilters: r.monthPayableClearFilters,
+          multiSelectHint: r.monthPayableMultiSelectHint,
+          programFilterNote: r.monthPayableProgramFilterNote,
+          clientFilterTravelNote: r.monthPayableClientFilterTravelNote,
         }}
       />
 
