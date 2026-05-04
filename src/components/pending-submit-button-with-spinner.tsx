@@ -24,6 +24,7 @@ export function PendingSubmitButtonWithSpinner({
       type="submit"
       disabled={effectiveDisabled}
       aria-busy={pending}
+      data-skip-global-text-replace=""
       className={className}
     >
       {pending ? <LoadingSpinner className="mr-1.5 h-3.5 w-3.5" /> : null}

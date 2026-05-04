@@ -34,7 +34,17 @@ export function GlobalFormSubmitFeedback() {
         button.setAttribute("aria-busy", "true");
       });
 
-      if (submitter && "textContent" in submitter && submitter.textContent !== null) {
+      /** Replacing `textContent` breaks React-managed buttons (e.g. spinner + `useFormStatus`). */
+      const skipTextReplace =
+        submitter instanceof HTMLButtonElement &&
+        submitter.hasAttribute("data-skip-global-text-replace");
+
+      if (
+        !skipTextReplace &&
+        submitter &&
+        "textContent" in submitter &&
+        submitter.textContent !== null
+      ) {
         submitter.setAttribute("data-original-label", submitter.textContent);
         submitter.textContent = pendingLabel;
         submitter.classList.add("hf-pending-submit");
