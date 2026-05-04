@@ -189,7 +189,7 @@ export function HouseholdDashboardPanel({
         ) : (
           <>
             {filteredSetup.length > 0 && (
-              <SetupHouseholdCollapsible>
+              <SetupHouseholdCollapsible expandWhen={Boolean(queryLower)}>
                   {filteredSetup.map((section) => (
                     <div
                       key={section.id}
