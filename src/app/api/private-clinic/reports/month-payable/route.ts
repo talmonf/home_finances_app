@@ -353,7 +353,6 @@ export async function GET(req: Request) {
       currency: r.currency,
       allocated_sum: r.allocated_sum,
       notes: r.notes,
-      id: r.id,
       reported_to_external: r.reported_to_external,
     }));
 
@@ -373,7 +372,6 @@ export async function GET(req: Request) {
           currency: cur,
           allocated_sum: "",
           notes: "",
-          id: "",
           reported_to_external: "",
         });
       }
