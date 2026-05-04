@@ -24,7 +24,7 @@ const L = {
   confirm: "Import rows",
   clearPreview: "Clear preview",
   previewTitle: "Preview",
-  validRows: (n: number) => `${n} row(s) ready to import.`,
+  validRowsTemplate: "{count} row(s) ready to import.",
   rowIssuesTitle: "Row issues (fix the file and analyze again)",
   fatalTitle: "Cannot parse file",
   sheetLabel: "Sheet",

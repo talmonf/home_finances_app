@@ -19,7 +19,8 @@ export type PetrolFillupsImportFormLabels = {
   confirm: string;
   clearPreview: string;
   previewTitle: string;
-  validRows: (n: number) => string;
+  /** Use `{count}` for the number of valid rows. */
+  validRowsTemplate: string;
   rowIssuesTitle: string;
   fatalTitle: string;
   sheetLabel: string;
@@ -240,7 +241,9 @@ export function PetrolFillupsImportForm({
         <div className="space-y-3 rounded-lg border border-slate-600 bg-slate-950/40 p-3">
           <h2 className="text-base font-semibold text-slate-100">{labels.previewTitle}</h2>
           {preview.sheetWarning ? <p className="text-sm text-amber-200">{preview.sheetWarning}</p> : null}
-          <p className="text-sm text-emerald-200">{labels.validRows(preview.rowCount)}</p>
+          <p className="text-sm text-emerald-200">
+            {labels.validRowsTemplate.replace(/\{count\}/g, String(preview.rowCount))}
+          </p>
           <p className="text-xs text-slate-500">
             {labels.sampleNote} {preview.activeSheet ? `(${preview.activeSheet})` : ""}
           </p>

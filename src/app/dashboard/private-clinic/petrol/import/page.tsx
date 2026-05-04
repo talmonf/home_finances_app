@@ -51,7 +51,7 @@ export default async function PrivateClinicPetrolImportPage({ searchParams }: Pa
     confirm: pp.importConfirm,
     clearPreview: pp.importClearPreview,
     previewTitle: pp.importPreviewTitle,
-    validRows: pp.importValidRows,
+    validRowsTemplate: pp.importValidRowsTemplate,
     rowIssuesTitle: pp.importRowIssuesTitle,
     fatalTitle: pp.importFatalTitle,
     sheetLabel: pp.importSheetLabel,

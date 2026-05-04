@@ -1109,8 +1109,10 @@ export function privateClinicPetrol(lang: UiLanguage) {
     importConfirm: p("Import rows", "ייבוא השורות"),
     importClearPreview: p("Clear preview", "ניקוי התצוגה"),
     importPreviewTitle: p("Preview", "תצוגה מקדימה"),
-    importValidRows: (n: number) =>
-      p(`${n} row(s) ready to import.`, `${n} שורות מוכנות לייבוא.`),
+    importValidRowsTemplate: p(
+      "{count} row(s) ready to import.",
+      "{count} שורות מוכנות לייבוא.",
+    ),
     importRowIssuesTitle: p("Row issues (fix the file and analyze again)", "בעיות בשורות (תקנו את הקובץ ונתחו שוב)"),
     importFatalTitle: p("Cannot read file", "לא ניתן לקרוא את הקובץ"),
     importSheetLabel: p("Sheet", "גיליון"),
