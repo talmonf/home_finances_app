@@ -57,6 +57,7 @@ function buildCreditCardListWhere(
   memberFilter: "" | "unassigned" | string,
   cardStatus: CardStatusFilter,
   now: Date,
+  schemeFilter: string,
 ): Prisma.credit_cardsWhereInput {
   const where: Prisma.credit_cardsWhereInput = { household_id: householdId };
 
@@ -64,6 +65,10 @@ function buildCreditCardListWhere(
     where.family_member_id = null;
   } else if (memberFilter) {
     where.family_member_id = memberFilter;
+  }
+
+  if (schemeFilter) {
+    where.scheme = schemeFilter as "visa" | "mastercard" | "amex" | "diners_club" | "isracard" | "other";
   }
 
   if (cardStatus === "open") {
@@ -91,6 +96,7 @@ type PageProps = {
     dir?: string;
     memberId?: string;
     cardStatus?: string;
+    cardScheme?: string;
   }>;
 };
 
@@ -112,8 +118,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   const now = new Date();
   const rawMemberId = (resolvedSearchParams?.memberId ?? "").trim();
   const cardStatusFilter = normalizeCardStatusFilter(resolvedSearchParams?.cardStatus);
+  const rawCardScheme = (resolvedSearchParams?.cardScheme ?? "").trim();
 
-  const [familyMembers, bankAccounts, totalCardCount] = await Promise.all([
+  const [familyMembers, bankAccounts, totalCardCount, schemeRows] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
@@ -123,7 +130,18 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
       orderBy: { account_name: "asc" },
     }),
     prisma.credit_cards.count({ where: { household_id: householdId } }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId },
+      select: { scheme: true },
+      distinct: ["scheme"],
+      orderBy: { scheme: "asc" },
+    }),
   ]);
+
+  const householdSchemes = schemeRows.map((r) => r.scheme);
+  const householdSchemeSet = new Set<string>(householdSchemes);
+  const effectiveSchemeFilter =
+    rawCardScheme && householdSchemeSet.has(rawCardScheme) ? rawCardScheme : "";
 
   const memberIdSet = new Set(familyMembers.map((m) => m.id));
   const effectiveMemberFilter: "" | "unassigned" | string =
@@ -138,6 +156,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
     effectiveMemberFilter,
     cardStatusFilter,
     now,
+    effectiveSchemeFilter,
   );
 
   const cards = await prisma.credit_cards.findMany({
@@ -306,6 +325,23 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <option value="all">{isHebrew ? "הכל" : "All cards"}</option>
                 </select>
               </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">
+                  {isHebrew ? "רשת כרטיס" : "Scheme"}
+                </label>
+                <select
+                  name="cardScheme"
+                  defaultValue={effectiveSchemeFilter}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="">{isHebrew ? "הכל" : "All"}</option>
+                  {householdSchemes.map((s) => (
+                    <option key={s} value={s}>
+                      {formatScheme(s)}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex items-end">
                 <button
                   type="submit"
@@ -359,6 +395,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                       if (resolvedSearchParams?.error) query.set("error", resolvedSearchParams.error);
                       if (effectiveMemberFilter) query.set("memberId", effectiveMemberFilter);
                       if (cardStatusFilter !== "open") query.set("cardStatus", cardStatusFilter);
+                      if (effectiveSchemeFilter) query.set("cardScheme", effectiveSchemeFilter);
                       query.set("sort", col.key);
                       query.set("dir", nextDir);
                       return (
