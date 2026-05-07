@@ -512,18 +512,18 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   });
 
   return (
-    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-6">
-      <div className="w-full max-w-screen-2xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <form method="get" className="flex flex-wrap items-end gap-4">
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-3">
+      <div className="w-full max-w-screen-2xl space-y-4 rounded-2xl bg-slate-900 p-6 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <form method="get" className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col">
-            <label htmlFor="category" className="mb-1 text-xs font-medium text-slate-400">
+            <label htmlFor="category" className="mb-0.5 text-xs font-medium text-slate-400">
               {isHebrew ? "קטגוריה" : "Category"}
             </label>
             <select
               id="category"
               name="category"
               defaultValue={effectiveCategoryFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
             >
               <option value="all">{isHebrew ? "הכל" : "All"}</option>
               {categories.map((c) => (
@@ -535,14 +535,14 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="owner" className="mb-1 text-xs font-medium text-slate-400">
+            <label htmlFor="owner" className="mb-0.5 text-xs font-medium text-slate-400">
               {isHebrew ? "בעלים (= בן משפחה)" : "Owner (= Family Member)"}
             </label>
             <select
               id="owner"
               name="owner"
               defaultValue={effectiveOwnerFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
             >
               <option value="all">{isHebrew ? "הכל" : "All"}</option>
               {familyMembers.map((m) => (
@@ -555,7 +555,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
 
           <button
             type="submit"
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+            className="rounded-lg bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-sky-500"
           >
             {isHebrew ? "החל" : "Apply"}
           </button>
