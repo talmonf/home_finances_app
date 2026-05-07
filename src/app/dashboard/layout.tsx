@@ -40,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const pathname = headerList.get("x-pathname") ?? "";
   const showObfuscateToggle = pathname.startsWith("/dashboard/private-clinic");
   const showPetrolTitle = pathname.startsWith("/dashboard/petrol-fillups");
+  const showUpcomingRenewalsTitle = pathname.startsWith("/dashboard/upcoming-renewals");
   const privateClinicCopy = showObfuscateToggle ? privateClinicLayoutStrings(uiLanguage) : null;
   const toolbarContextTitle = showObfuscateToggle
     ? privateClinicCopy?.title
@@ -47,6 +48,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ? uiLanguage === "he"
         ? "תדלוק"
         : "Petrol fill-up"
+      : showUpcomingRenewalsTitle
+        ? uiLanguage === "he"
+          ? "חידושים ותאריכי יעד קרובים"
+          : "Upcoming Renewals & Deadlines"
       : undefined;
   const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin

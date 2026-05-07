@@ -43,6 +43,51 @@ function getDaysInMonth(year: number, monthZeroBased: number) {
   return new Date(year, monthZeroBased + 1, 0).getDate();
 }
 
+function overdueLabelForCategory(category: string, isHebrew: boolean) {
+  if (isHebrew) {
+    switch (category) {
+      case "Task":
+        return "באיחור";
+      case "Identity":
+      case "Credit card":
+      case "Insurance":
+      case "Car license":
+      case "Warranty":
+        return "פג תוקף";
+      case "Rental":
+      case "Utility":
+      case "Car service":
+      case "Savings policy":
+      case "Loan":
+      case "Subscription":
+      case "Donation":
+      default:
+        return "עבר";
+    }
+  }
+
+  switch (category) {
+    case "Task":
+      return "Past due";
+    case "Identity":
+    case "Credit card":
+    case "Insurance":
+    case "Car license":
+    case "Warranty":
+      return "Expired";
+    case "Donation":
+      return "Passed";
+    case "Rental":
+    case "Utility":
+    case "Car service":
+    case "Savings policy":
+    case "Loan":
+    case "Subscription":
+    default:
+      return "Overdue";
+  }
+}
+
 function nextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
   const year = baseDate.getFullYear();
   const month = baseDate.getMonth();
@@ -467,22 +512,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   });
 
   return (
-    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <header className="space-y-3">
-          <Link href="/" className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200">
-            {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-          </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">Upcoming Renewals &amp; Deadlines</h1>
-          <p className="text-sm text-slate-400">
-            Renewal and expiration dates across subscriptions (including past subscription renewal
-            dates you may have missed), identity, cards, insurance policies, savings policy renewals
-            and maturities, car licenses, scheduled car services, rental end dates, utilities, task due
-            dates, donations, loans (monthly repayment and maturity), and warranty-bearing significant
-            purchases.
-          </p>
-        </header>
-
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-6">
+      <div className="w-full max-w-screen-2xl space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <form method="get" className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col">
             <label htmlFor="category" className="mb-1 text-xs font-medium text-slate-400">
@@ -550,9 +581,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
               <tbody>
                 {filteredRows.map((row) => {
                   const isPassed = dateOnlyLocal(row.renewalDate) < today;
-                  const isDonation = row.category === "Donation";
-                  const isSubscription = row.category === "Subscription";
-                  const overdue = (isSubscription || isDonation) && isPassed;
+                  const overdue = isPassed;
+                  const overdueLabel = overdueLabelForCategory(row.category, isHebrew);
                   return (
                   <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                     <td
@@ -564,7 +594,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                       {formatHouseholdDate(row.renewalDate, dateDisplayFormat)}
                       {overdue ? (
                         <span className="ms-2 text-xs font-medium text-rose-400/90">
-                          {isDonation ? "Passed" : "Overdue"}
+                          {overdueLabel}
                         </span>
                       ) : null}
                     </td>
