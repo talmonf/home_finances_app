@@ -1451,8 +1451,8 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "**דוחות**, **תזכורות**, **ייעוצים**, **נסיעות**, **דלק**, **ביטוח קליניקה**, **מנויים מקצועיים** — לשימוש ככל שהפרקטיקה גדלה — דיווח, תזכורות, שירותים מחוץ למפגש, נסיעות ורכב, והוצאות מקצועיות.",
     ),
     advReceiptsTreatments: p(
-      "**Receipts linkage (treatments / consultations / travel)** — Treatments represent clinical work; receipts represent collected payments. Create the monthly receipt in **Receipts**, then open it and link treatments from the receipt form. In the receipts list, use **T / C / TR** counters to jump to Treatments / Consultations / Travel filtered for that receipt, so month-end review and bookkeeping stay aligned.",
-      "**שיוך קבלות (טיפולים / ייעוצים / נסיעות)** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. צרו קבלה חודשית במסך **קבלות**, פתחו אותה וקשרו טיפולים מתוך טופס הקבלה. ברשימת הקבלות השתמשו במונים **T / C / TR** כדי לעבור לטיפולים / ייעוצים / נסיעות מסוננים לאותה קבלה, וכך לשמור התאמה בין סגירת חודש להנהלת חשבונות.",
+      "**Receipts linkage (treatments / consultations / travel)** — Treatments represent clinical work; receipts represent collected payments. In **New receipt**, you can enable auto-link when period totals match gross. After save, review/edit links in the same receipt screen (with Select all / Deselect all / Select suggested), and use **T / C / TR** counters to jump to filtered lists.",
+      "**שיוך קבלות (טיפולים / ייעוצים / נסיעות)** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. ב**קבלה חדשה** ניתן להפעיל שיוך אוטומטי כשהסכומים בתקופה תואמים לברוטו. לאחר השמירה ממשיכים באותו מסך לקישור/עריכה (בחירת הכל / ניקוי בחירה / בחירת מוצעים), ובוחרים במונים **T / C / TR** למעבר לרשימות המסוננות.",
     ),
     advDemoPrivacy: p(
       "**Demo privacy mode** — Use **Hide client names & amounts (demo)** in the top toolbar when you need to demo the system to others or share screens with the system administrator. It masks client names and monetary amounts during your session to reduce data exposure.",
