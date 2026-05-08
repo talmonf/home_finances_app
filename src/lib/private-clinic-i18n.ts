@@ -778,6 +778,22 @@ export function privateClinicReceipts(lang: UiLanguage) {
         `Suggested total differs from gross by ${diff} ${currency}.`,
         `הסכום המוצע שונה מהברוטו ב-${diff} ${currency}.`,
       ),
+    autoLinkPromptTitle: p(
+      "After creating, auto-link entries if selected-period totals match gross",
+      "לאחר יצירה, לשייך אוטומטית רשומות אם סכומי התקופה שנבחרה תואמים לברוטו",
+    ),
+    autoLinkPromptHint: p(
+      "This checks unlinked treatments, consultations, and travel in the selected covered period for the same job.",
+      "הבדיקה כוללת טיפולים, ייעוצים ונסיעות לא מקושרים בתקופת הכיסוי שנבחרה ולאותה משרה.",
+    ),
+    autoLinkCreatedSuccess: p(
+      "Receipt created and suggested entries were linked automatically (totals matched gross).",
+      "הקבלה נוצרה והשורות המוצעות שויכו אוטומטית (הסכומים תאמו לברוטו).",
+    ),
+    autoLinkCreatedSkipped: p(
+      "Receipt created. Suggested entries were not auto-linked because totals did not match gross (or period is missing).",
+      "הקבלה נוצרה. לא בוצע שיוך אוטומטי כי הסכומים לא תאמו לברוטו (או שחסרה תקופה).",
+    ),
     coveredStart: p("Covered period start", "תחילת תקופה מכוסה"),
     coveredEnd: p("Covered period end", "סוף תקופה מכוסה"),
     receivablesLastMonth: p("Organization receivables (last month)", "חובות ארגונים (חודש קודם)"),

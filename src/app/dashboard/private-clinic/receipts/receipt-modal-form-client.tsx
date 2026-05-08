@@ -74,6 +74,7 @@ export function ReceiptModalFormClient({
   labels,
   initial,
   extraContent,
+  formExtraContent,
   children,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -87,6 +88,7 @@ export function ReceiptModalFormClient({
   labels: ReceiptModalLabels;
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
+  formExtraContent?: ReactNode;
   /** Server-rendered transaction picker (passed from parent Server Component). */
   children: ReactNode;
 }) {
@@ -355,6 +357,7 @@ export function ReceiptModalFormClient({
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
+          {formExtraContent ? <div className="md:col-span-2">{formExtraContent}</div> : null}
 
           <div className="md:col-span-2 flex items-center gap-2">
             <button

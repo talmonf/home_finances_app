@@ -2423,6 +2423,7 @@ export async function createTherapyReceipt(formData: FormData) {
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
   const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
+  const autoLinkSuggestedOnCreate = (formData.get("auto_link_suggested_on_create") as string)?.trim() === "1";
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
 
@@ -2489,8 +2490,127 @@ export async function createTherapyReceipt(formData: FormData) {
     },
   });
 
+  let autoLinkApplied = false;
+  let autoLinkAttempted = false;
+  if (autoLinkSuggestedOnCreate && covered_period_start && covered_period_end) {
+    autoLinkAttempted = true;
+    const rangeWhere = {
+      occurred_at: {
+        gte: covered_period_start,
+        lte: endOfUtcDayForReceipt(covered_period_end),
+      },
+    };
+    const [treatments, consultations, travelEntries] = await Promise.all([
+      prisma.therapy_treatments.findMany({
+        where: {
+          household_id: householdId,
+          job_id,
+          receipt_allocations: { none: {} },
+          amount: { not: null },
+          ...rangeWhere,
+        },
+        select: { id: true, amount: true },
+      }),
+      prisma.therapy_consultations.findMany({
+        where: {
+          household_id: householdId,
+          job_id,
+          receipt_allocations: { none: {} },
+          ...rangeWhere,
+        },
+        select: { id: true, amount: true, income_amount: true },
+      }),
+      prisma.therapy_travel_entries.findMany({
+        where: {
+          household_id: householdId,
+          receipt_allocations: { none: {} },
+          amount: { not: null },
+          OR: [{ job_id }, { treatment: { job_id } }, { consultation: { job_id } }],
+          ...rangeWhere,
+        },
+        select: { id: true, amount: true },
+      }),
+    ]);
+
+    const treatmentsTotal = treatments.reduce((sum, row) => sum + Number(row.amount?.toString() ?? "0"), 0);
+    const consultationsWithAmounts = consultations
+      .map((row) => ({ id: row.id, amount: row.amount ?? row.income_amount }))
+      .filter((row): row is { id: string; amount: NonNullable<typeof row.amount> } => row.amount != null);
+    const consultationsTotal = consultationsWithAmounts.reduce((sum, row) => sum + Number(row.amount.toString()), 0);
+    const travelTotal = travelEntries.reduce((sum, row) => sum + Number(row.amount?.toString() ?? "0"), 0);
+    const suggestedTotal = treatmentsTotal + consultationsTotal + travelTotal;
+    const grossTotal = Number(totalStr.toString());
+    const totalsMatch = Math.abs(suggestedTotal - grossTotal) < 0.005;
+
+    if (totalsMatch && (treatments.length > 0 || consultationsWithAmounts.length > 0 || travelEntries.length > 0)) {
+      await prisma.$transaction(async (tx) => {
+        for (const row of treatments) {
+          await tx.therapy_receipt_allocations.upsert({
+            where: { receipt_id_treatment_id: { receipt_id: id, treatment_id: row.id } },
+            create: {
+              id: crypto.randomUUID(),
+              household_id: householdId,
+              receipt_id: id,
+              treatment_id: row.id,
+              amount: row.amount!,
+            },
+            update: { amount: row.amount! },
+          });
+        }
+        for (const row of consultationsWithAmounts) {
+          await tx.therapy_receipt_consultation_allocations.upsert({
+            where: {
+              receipt_id_consultation_id: {
+                receipt_id: id,
+                consultation_id: row.id,
+              },
+            },
+            create: {
+              id: crypto.randomUUID(),
+              household_id: householdId,
+              receipt_id: id,
+              consultation_id: row.id,
+              amount: row.amount,
+            },
+            update: { amount: row.amount },
+          });
+        }
+        for (const row of travelEntries) {
+          await tx.therapy_receipt_travel_allocations.upsert({
+            where: {
+              receipt_id_travel_entry_id: {
+                receipt_id: id,
+                travel_entry_id: row.id,
+              },
+            },
+            create: {
+              id: crypto.randomUUID(),
+              household_id: householdId,
+              receipt_id: id,
+              travel_entry_id: row.id,
+              amount: row.amount!,
+            },
+            update: { amount: row.amount! },
+          });
+        }
+      });
+      autoLinkApplied = true;
+      revalidatePath(`${BASE}/treatments`);
+      revalidatePath(`${BASE}/consultations`);
+      revalidatePath(`${BASE}/travel`);
+    }
+  }
+
   revalidatePath(`${BASE}/receipts`);
-  redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}`);
+  const successParams = new URLSearchParams();
+  successParams.set("modal", "edit");
+  successParams.set("edit_id", id);
+  successParams.set("created", "1");
+  if (autoLinkAttempted) {
+    successParams.set("autoLink", "1");
+    successParams.set("autoLinkApplied", autoLinkApplied ? "1" : "0");
+  }
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts?${successParams.toString()}`);
 }
 
 export async function updateTherapyReceipt(formData: FormData) {

@@ -27,6 +27,7 @@ export async function ReceiptModalForm({
   labels,
   initial,
   extraContent,
+  formExtraContent,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -40,6 +41,7 @@ export async function ReceiptModalForm({
   labels: ReceiptModalFormLabels;
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
+  formExtraContent?: ReactNode;
 }) {
   const clientLabels: ReceiptModalLabels = {
     titleNew: labels.titleNew,
@@ -89,6 +91,7 @@ export async function ReceiptModalForm({
       labels={clientLabels}
       initial={initial}
       extraContent={extraContent}
+      formExtraContent={formExtraContent}
     >
       <TherapyTransactionLinkSelect
         name="linked_transaction_id"

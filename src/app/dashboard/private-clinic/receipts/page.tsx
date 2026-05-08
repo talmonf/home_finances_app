@@ -94,6 +94,8 @@ type ReceiptSearch = {
   created?: string;
   updated?: string;
   deleted?: string;
+  autoLink?: string;
+  autoLinkApplied?: string;
   error?: string;
 };
 
@@ -472,7 +474,13 @@ export default async function ReceiptsPage({
       ) : null}
       {(sp.created || sp.updated || sp.deleted) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          {sp.deleted ? c.deleted : c.saved}
+          {sp.deleted
+            ? c.deleted
+            : sp.created && sp.autoLink === "1"
+              ? sp.autoLinkApplied === "1"
+                ? r.autoLinkCreatedSuccess
+                : r.autoLinkCreatedSkipped
+              : c.saved}
         </p>
       )}
       <section className="space-y-3">
@@ -637,7 +645,7 @@ export default async function ReceiptsPage({
           action={createTherapyReceipt}
           mode="create"
           closeHref={baseListHref}
-          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
+          redirectOnSuccess=""
           redirectOnError={`${baseListHref}&modal=new`}
           householdId={householdId}
           jobs={jobs.map((j) => ({
@@ -693,6 +701,23 @@ export default async function ReceiptsPage({
             linkTxPaymentHint: r.linkTxPaymentHint,
             txNoneLinked: c.txNoneLinked,
           }}
+          formExtraContent={
+            <div className="rounded border border-slate-700/80 bg-slate-900/40 p-3 text-xs text-slate-300">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  name="auto_link_suggested_on_create"
+                  value="1"
+                  defaultChecked
+                  className="mt-0.5"
+                />
+                <span className="space-y-1">
+                  <span className="block text-slate-200">{r.autoLinkPromptTitle}</span>
+                  <span className="block text-slate-400">{r.autoLinkPromptHint}</span>
+                </span>
+              </label>
+            </div>
+          }
         />
       ) : null}
       {modalMode === "edit" && editReceipt ? (
