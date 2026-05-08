@@ -794,6 +794,14 @@ export function privateClinicReceipts(lang: UiLanguage) {
       "Receipt created. Suggested entries were not auto-linked because totals did not match gross (or period is missing).",
       "הקבלה נוצרה. לא בוצע שיוך אוטומטי כי הסכומים לא תאמו לברוטו (או שחסרה תקופה).",
     ),
+    autoLinkAllocatedTotal: p(
+      "Auto-linked total (currently allocated)",
+      "סכום שיוך אוטומטי (מוקצה כעת)",
+    ),
+    autoLinkAllocatedMatchesGross: p(
+      "Allocated total matches receipt gross.",
+      "הסכום המוקצה תואם לברוטו בקבלה.",
+    ),
     coveredStart: p("Covered period start", "תחילת תקופה מכוסה"),
     coveredEnd: p("Covered period end", "סוף תקופה מכוסה"),
     receivablesLastMonth: p("Organization receivables (last month)", "חובות ארגונים (חודש קודם)"),

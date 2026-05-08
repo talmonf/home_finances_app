@@ -463,6 +463,26 @@ export default async function ReceiptsPage({
   const grossAmountValue = editReceipt ? decimalStringToNumber(editReceipt.total_amount.toString()) : 0;
   const suggestedGrossDiff = suggestedCombinedTotal - grossAmountValue;
   const suggestedMatchesGross = Math.abs(suggestedGrossDiff) < 0.005;
+  const linkedTreatmentsTotal = treatmentsLinkedToReceipt.reduce(
+    (sum, row) => sum + decimalStringToNumber(row.amount?.toString() ?? "0"),
+    0,
+  );
+  const linkedConsultationsTotal = consultationsLinkedToReceipt.reduce(
+    (sum, row) => sum + decimalStringToNumber((row.amount ?? row.income_amount)?.toString() ?? "0"),
+    0,
+  );
+  const linkedTravelTotal = travelLinkedToReceipt.reduce(
+    (sum, row) => sum + decimalStringToNumber(row.amount?.toString() ?? "0"),
+    0,
+  );
+  const linkedCombinedTotal = linkedTreatmentsTotal + linkedConsultationsTotal + linkedTravelTotal;
+  const showPostAutoLinkSummary = sp.autoLink === "1" && sp.autoLinkApplied === "1";
+  const summaryTreatmentsTotal = showPostAutoLinkSummary ? linkedTreatmentsTotal : suggestedTreatmentsTotal;
+  const summaryConsultationsTotal = showPostAutoLinkSummary ? linkedConsultationsTotal : suggestedConsultationsTotal;
+  const summaryTravelTotal = showPostAutoLinkSummary ? linkedTravelTotal : suggestedTravelTotal;
+  const summaryCombinedTotal = showPostAutoLinkSummary ? linkedCombinedTotal : suggestedCombinedTotal;
+  const summaryDiffFromGross = summaryCombinedTotal - grossAmountValue;
+  const summaryMatchesGross = Math.abs(summaryDiffFromGross) < 0.005;
   const listDataVersion = `${firstPage.rows[0]?.id ?? "none"}:${firstPage.rows.length}:${firstPage.nextCursor ?? "end"}:${
     sp.created ? "1" : "0"
   }:${sp.updated ? "1" : "0"}`;
@@ -816,22 +836,26 @@ export default async function ReceiptsPage({
                 </div>
               </div>
               <div className="rounded border border-slate-700/80 bg-slate-900/40 p-2">
-                <p className="font-medium text-slate-200">{r.suggestedCombinedTotal}</p>
+                <p className="font-medium text-slate-200">
+                  {showPostAutoLinkSummary ? r.autoLinkAllocatedTotal : r.suggestedCombinedTotal}
+                </p>
                 <p>
-                  {suggestedCombinedTotal.toFixed(2)} {editReceipt.currency}
+                  {summaryCombinedTotal.toFixed(2)} {editReceipt.currency}
                 </p>
                 <p className="text-slate-400">
                   {r.suggestedTotalsBreakdown(
-                    suggestedTreatmentsTotal.toFixed(2),
-                    suggestedConsultationsTotal.toFixed(2),
-                    suggestedTravelTotal.toFixed(2),
+                    summaryTreatmentsTotal.toFixed(2),
+                    summaryConsultationsTotal.toFixed(2),
+                    summaryTravelTotal.toFixed(2),
                   )}
                 </p>
-                {suggestedMatchesGross ? (
-                  <p className="text-emerald-300">{r.suggestedMatchesGross}</p>
+                {summaryMatchesGross ? (
+                  <p className="text-emerald-300">
+                    {showPostAutoLinkSummary ? r.autoLinkAllocatedMatchesGross : r.suggestedMatchesGross}
+                  </p>
                 ) : (
                   <p className="text-amber-300">
-                    {r.suggestedDiffFromGross(suggestedGrossDiff.toFixed(2), editReceipt.currency)}
+                    {r.suggestedDiffFromGross(summaryDiffFromGross.toFixed(2), editReceipt.currency)}
                   </p>
                 )}
               </div>
