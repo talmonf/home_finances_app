@@ -367,8 +367,8 @@ export function ReceiptModalFormClient({
               {labels.cancel}
             </a>
           </div>
-          {extraContent ? <div className="md:col-span-2">{extraContent}</div> : null}
         </form>
+        {extraContent ? <div className="mt-4">{extraContent}</div> : null}
       </div>
     </div>
   );
