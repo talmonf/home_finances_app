@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
 import {
@@ -14,8 +15,13 @@ import { redirect } from "next/navigation";
 import {
   createTherapyReceipt,
   updateTherapyReceipt,
+  deleteTherapyReceipt,
   linkTreatmentsToReceipt,
   deleteReceiptAllocation,
+  linkConsultationsToReceipt,
+  deleteConsultationReceiptAllocation,
+  linkTravelEntriesToReceipt,
+  deleteTravelReceiptAllocation,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import {
@@ -34,6 +40,7 @@ import {
 } from "./receipts-list-data";
 import { ReceiptsListClient } from "./receipts-list-client";
 import { ReceiptModalForm } from "./receipt-modal-form";
+import { ReceiptAllocationPicker } from "./receipt-allocation-picker";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +74,11 @@ function clientOptionJobIds(row: {
   return [...s];
 }
 
+function decimalStringToNumber(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 type ReceiptSearch = {
   job?: string;
   client?: string;
@@ -81,6 +93,7 @@ type ReceiptSearch = {
   edit_id?: string;
   created?: string;
   updated?: string;
+  deleted?: string;
   error?: string;
 };
 
@@ -248,7 +261,7 @@ export default async function ReceiptsPage({
         }
       : {};
 
-  const [treatmentsLinkedToReceipt, treatmentsAvailableToLink] = editReceipt
+  const [treatmentsLinkedToReceipt, treatmentsAvailableToLink, consultationsLinkedToReceipt, consultationsAvailableToLink, travelLinkedToReceipt, travelAvailableToLink] = editReceipt
     ? await Promise.all([
         prisma.therapy_treatments.findMany({
           where: {
@@ -283,17 +296,181 @@ export default async function ReceiptsPage({
           orderBy: { occurred_at: "desc" },
           take: 200,
         }),
+        prisma.therapy_consultations.findMany({
+          where: {
+            household_id: householdId,
+            job_id: editReceipt.job_id,
+            receipt_allocations: { some: { receipt_id: editReceipt.id } },
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            income_amount: true,
+            currency: true,
+            income_currency: true,
+            participants: {
+              take: 1,
+              select: {
+                client: { select: { first_name: true, last_name: true } },
+              },
+            },
+          },
+          orderBy: { occurred_at: "desc" },
+          take: 200,
+        }),
+        prisma.therapy_consultations.findMany({
+          where: {
+            household_id: householdId,
+            job_id: editReceipt.job_id,
+            receipt_allocations: { none: {} },
+            ...orgCoverageRangeWhere,
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            income_amount: true,
+            currency: true,
+            income_currency: true,
+            participants: {
+              take: 1,
+              select: {
+                client: { select: { first_name: true, last_name: true } },
+              },
+            },
+          },
+          orderBy: { occurred_at: "desc" },
+          take: 200,
+        }),
+        prisma.therapy_travel_entries.findMany({
+          where: {
+            household_id: householdId,
+            receipt_allocations: { some: { receipt_id: editReceipt.id } },
+            OR: [
+              { job_id: editReceipt.job_id },
+              { treatment: { job_id: editReceipt.job_id } },
+              { consultation: { job_id: editReceipt.job_id } },
+            ],
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            currency: true,
+            treatment: { select: { client: { select: { first_name: true, last_name: true } } } },
+            consultation: {
+              select: {
+                participants: {
+                  take: 1,
+                  select: { client: { select: { first_name: true, last_name: true } } },
+                },
+              },
+            },
+          },
+          orderBy: [{ occurred_at: "desc" }, { created_at: "desc" }],
+          take: 200,
+        }),
+        prisma.therapy_travel_entries.findMany({
+          where: {
+            household_id: householdId,
+            receipt_allocations: { none: {} },
+            OR: [
+              { job_id: editReceipt.job_id },
+              { treatment: { job_id: editReceipt.job_id } },
+              { consultation: { job_id: editReceipt.job_id } },
+            ],
+            ...orgCoverageRangeWhere,
+          },
+          select: {
+            id: true,
+            occurred_at: true,
+            amount: true,
+            currency: true,
+            treatment: { select: { client: { select: { first_name: true, last_name: true } } } },
+            consultation: {
+              select: {
+                participants: {
+                  take: 1,
+                  select: { client: { select: { first_name: true, last_name: true } } },
+                },
+              },
+            },
+          },
+          orderBy: [{ occurred_at: "desc" }, { created_at: "desc" }],
+          take: 200,
+        }),
       ])
-    : [[], []];
+    : [[], [], [], [], [], []];
+
+  const hasCoveredPeriod =
+    Boolean(editReceipt?.covered_period_start) && Boolean(editReceipt?.covered_period_end);
+
+  const treatmentPickerItems = treatmentsAvailableToLink.map((t) => ({
+    id: t.id,
+    label: `${t.client.first_name} ${t.client.last_name ?? ""} | ${t.occurred_at.toISOString().slice(0, 10)} | ${
+      t.amount != null ? `${t.amount.toString()} ${t.currency}` : "—"
+    }`,
+    selectable: t.amount != null,
+    suggested: hasCoveredPeriod && t.amount != null,
+    amount: t.amount?.toString() ?? "0",
+  }));
+
+  const consultationPickerItems = consultationsAvailableToLink.map((entry) => {
+    const person = entry.participants[0]?.client;
+    const entryAmount = entry.amount ?? entry.income_amount;
+    const entryCurrency = entry.currency || entry.income_currency || "ILS";
+    return {
+      id: entry.id,
+      label: `${person ? `${person.first_name} ${person.last_name ?? ""}` : "—"} | ${entry.occurred_at.toISOString().slice(0, 10)} | ${
+        entryAmount != null ? `${entryAmount.toString()} ${entryCurrency}` : "—"
+      }`,
+      selectable: entryAmount != null,
+      suggested: hasCoveredPeriod && entryAmount != null,
+      amount: entryAmount?.toString() ?? "0",
+    };
+  });
+
+  const travelPickerItems = travelAvailableToLink.map((entry) => {
+    const treatmentPerson = entry.treatment?.client;
+    const consultationPerson = entry.consultation?.participants[0]?.client;
+    const person = treatmentPerson ?? consultationPerson;
+    return {
+      id: entry.id,
+      label: `${person ? `${person.first_name} ${person.last_name ?? ""}` : "—"} | ${
+        entry.occurred_at ? entry.occurred_at.toISOString().slice(0, 10) : "—"
+      } | ${entry.amount != null ? `${entry.amount.toString()} ${entry.currency}` : "—"}`,
+      selectable: entry.amount != null,
+      suggested: hasCoveredPeriod && entry.amount != null,
+      amount: entry.amount?.toString() ?? "0",
+    };
+  });
+
+  const suggestedTreatmentsTotal = treatmentPickerItems
+    .filter((item) => item.suggested)
+    .reduce((sum, item) => sum + decimalStringToNumber(item.amount), 0);
+  const suggestedConsultationsTotal = consultationPickerItems
+    .filter((item) => item.suggested)
+    .reduce((sum, item) => sum + decimalStringToNumber(item.amount), 0);
+  const suggestedTravelTotal = travelPickerItems
+    .filter((item) => item.suggested)
+    .reduce((sum, item) => sum + decimalStringToNumber(item.amount), 0);
+  const suggestedCombinedTotal = suggestedTreatmentsTotal + suggestedConsultationsTotal + suggestedTravelTotal;
+  const grossAmountValue = editReceipt ? decimalStringToNumber(editReceipt.total_amount.toString()) : 0;
+  const suggestedGrossDiff = suggestedCombinedTotal - grossAmountValue;
+  const suggestedMatchesGross = Math.abs(suggestedGrossDiff) < 0.005;
+  const listDataVersion = `${firstPage.rows[0]?.id ?? "none"}:${firstPage.rows.length}:${firstPage.nextCursor ?? "end"}:${
+    sp.created ? "1" : "0"
+  }:${sp.updated ? "1" : "0"}`;
 
   return (
     <div className="space-y-8">
       {sp.error ? (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">{r.formError}</p>
       ) : null}
-      {(sp.created || sp.updated) && (
+      {(sp.created || sp.updated || sp.deleted) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
-          {c.saved}
+          {sp.deleted ? c.deleted : c.saved}
         </p>
       )}
       <section className="space-y-3">
@@ -428,6 +605,7 @@ export default async function ReceiptsPage({
           <ReceiptsListClient
             initialRows={firstPage.rows}
             initialCursor={firstPage.nextCursor}
+            dataVersion={listDataVersion}
             apiHrefBase={apiHrefBase}
             listBaseHref={baseListHref}
             uiLanguage={uiLanguage}
@@ -610,6 +788,26 @@ export default async function ReceiptsPage({
                   </p>
                 </div>
               </div>
+              <div className="rounded border border-slate-700/80 bg-slate-900/40 p-2">
+                <p className="font-medium text-slate-200">{r.suggestedCombinedTotal}</p>
+                <p>
+                  {suggestedCombinedTotal.toFixed(2)} {editReceipt.currency}
+                </p>
+                <p className="text-slate-400">
+                  {r.suggestedTotalsBreakdown(
+                    suggestedTreatmentsTotal.toFixed(2),
+                    suggestedConsultationsTotal.toFixed(2),
+                    suggestedTravelTotal.toFixed(2),
+                  )}
+                </p>
+                {suggestedMatchesGross ? (
+                  <p className="text-emerald-300">{r.suggestedMatchesGross}</p>
+                ) : (
+                  <p className="text-amber-300">
+                    {r.suggestedDiffFromGross(suggestedGrossDiff.toFixed(2), editReceipt.currency)}
+                  </p>
+                )}
+              </div>
               <div>
                 <p className="font-medium text-slate-200">{r.tableTreatmentsCount}</p>
                 <p>
@@ -642,21 +840,118 @@ export default async function ReceiptsPage({
               <form action={linkTreatmentsToReceipt} className="space-y-2">
                 <input type="hidden" name="receipt_id" value={editReceipt.id} />
                 <p className="text-slate-200">{r.linkTreatmentsHeading}</p>
-                <div className="max-h-52 space-y-1 overflow-auto rounded border border-slate-700 p-2">
-                  {treatmentsAvailableToLink.map((t) => (
-                    <label key={t.id} className="flex items-center gap-2">
-                      <input type="checkbox" name="treatment_ids" value={t.id} />
-                      <span>
-                        {t.client.first_name} {t.client.last_name ?? ""} | {t.occurred_at.toISOString().slice(0, 10)} |{" "}
-                        {t.amount != null ? `${t.amount.toString()} ${t.currency}` : "—"}
-                      </span>
-                    </label>
-                    ))}
-                </div>
+                <ReceiptAllocationPicker
+                  key={`treatments-${editReceipt.id}-${treatmentPickerItems[0]?.id ?? "none"}-${treatmentPickerItems.length}`}
+                  inputName="treatment_ids"
+                  items={treatmentPickerItems}
+                  selectAllLabel={r.selectAll}
+                  deselectAllLabel={r.deselectAll}
+                  selectSuggestedLabel={r.selectSuggested}
+                />
                 <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
                   {r.linkTreatmentsSubmit}
                 </button>
               </form>
+              <div className="space-y-2">
+                <p className="font-medium text-slate-200">{c.consultations}</p>
+                {consultationsLinkedToReceipt.length > 0 ? (
+                  <div className="space-y-1">
+                    {consultationsLinkedToReceipt.map((entry) => {
+                      const person = entry.participants[0]?.client;
+                      const amount = entry.amount ?? entry.income_amount;
+                      const currency = entry.currency || entry.income_currency || "ILS";
+                      return (
+                        <form
+                          key={entry.id}
+                          action={deleteConsultationReceiptAllocation}
+                          className="flex items-center justify-between gap-3 rounded border border-slate-700/80 px-2 py-1"
+                        >
+                          <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                          <input type="hidden" name="consultation_id" value={entry.id} />
+                          <span>
+                            {person ? `${person.first_name} ${person.last_name ?? ""}` : "—"} |{" "}
+                            {entry.occurred_at.toISOString().slice(0, 10)} |{" "}
+                            {amount != null ? `${amount.toString()} ${currency}` : "—"}
+                          </span>
+                          <button type="submit" className="text-rose-400 hover:underline">
+                            {r.unlinkFromReceipt}
+                          </button>
+                        </form>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-slate-500">{c.noEntriesYet}</p>
+                )}
+              </div>
+              <form action={linkConsultationsToReceipt} className="space-y-2">
+                <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                <p className="text-slate-200">{r.linkConsultationsHeading}</p>
+                <ReceiptAllocationPicker
+                  key={`consultations-${editReceipt.id}-${consultationPickerItems[0]?.id ?? "none"}-${consultationPickerItems.length}`}
+                  inputName="consultation_ids"
+                  items={consultationPickerItems}
+                  selectAllLabel={r.selectAll}
+                  deselectAllLabel={r.deselectAll}
+                  selectSuggestedLabel={r.selectSuggested}
+                />
+                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                  {r.linkConsultationsSubmit}
+                </button>
+              </form>
+              <div className="space-y-2">
+                <p className="font-medium text-slate-200">{c.travel}</p>
+                {travelLinkedToReceipt.length > 0 ? (
+                  <div className="space-y-1">
+                    {travelLinkedToReceipt.map((entry) => {
+                      const treatmentPerson = entry.treatment?.client;
+                      const consultationPerson = entry.consultation?.participants[0]?.client;
+                      const person = treatmentPerson ?? consultationPerson;
+                      return (
+                        <form
+                          key={entry.id}
+                          action={deleteTravelReceiptAllocation}
+                          className="flex items-center justify-between gap-3 rounded border border-slate-700/80 px-2 py-1"
+                        >
+                          <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                          <input type="hidden" name="travel_entry_id" value={entry.id} />
+                          <span>
+                            {person ? `${person.first_name} ${person.last_name ?? ""}` : "—"} |{" "}
+                            {entry.occurred_at ? entry.occurred_at.toISOString().slice(0, 10) : "—"} |{" "}
+                            {entry.amount != null ? `${entry.amount.toString()} ${entry.currency}` : "—"}
+                          </span>
+                          <button type="submit" className="text-rose-400 hover:underline">
+                            {r.unlinkFromReceipt}
+                          </button>
+                        </form>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-slate-500">{c.noEntriesYet}</p>
+                )}
+              </div>
+              <form action={linkTravelEntriesToReceipt} className="space-y-2">
+                <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                <p className="text-slate-200">{r.linkTravelHeading}</p>
+                <ReceiptAllocationPicker
+                  key={`travel-${editReceipt.id}-${travelPickerItems[0]?.id ?? "none"}-${travelPickerItems.length}`}
+                  inputName="travel_entry_ids"
+                  items={travelPickerItems}
+                  selectAllLabel={r.selectAll}
+                  deselectAllLabel={r.deselectAll}
+                  selectSuggestedLabel={r.selectSuggested}
+                />
+                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                  {r.linkTravelSubmit}
+                </button>
+              </form>
+              <ConfirmDeleteForm action={deleteTherapyReceipt} className="border-t border-slate-700 pt-3">
+                <input type="hidden" name="id" value={editReceipt.id} />
+                <button type="submit" className="rounded bg-rose-700 px-3 py-1 text-xs font-semibold text-rose-100 hover:bg-rose-600">
+                  {c.delete}
+                </button>
+              </ConfirmDeleteForm>
             </div>
           }
         />

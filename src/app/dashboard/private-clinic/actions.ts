@@ -2585,6 +2585,30 @@ export async function updateTherapyReceipt(formData: FormData) {
   redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}?updated=1`);
 }
 
+export async function deleteTherapyReceipt(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const id = (formData.get("id") as string)?.trim() || "";
+  if (!id) return;
+
+  const row = await prisma.therapy_receipts.findFirst({
+    where: { id, household_id: householdId },
+    select: { id: true, job_id: true },
+  });
+  if (!row) return;
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) return;
+
+  await prisma.therapy_receipts.deleteMany({
+    where: { id, household_id: householdId },
+  });
+
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/treatments`);
+  revalidatePath(`${BASE}/consultations`);
+  revalidatePath(`${BASE}/travel`);
+  redirect(`${BASE}/receipts?deleted=1`);
+}
+
 export async function upsertReceiptAllocation(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
@@ -2775,6 +2799,187 @@ export async function linkTreatmentsToReceipt(formData: FormData) {
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${receiptId}`);
   revalidatePath(`${BASE}/treatments`);
+  redirect(`${BASE}/receipts/${receiptId}`);
+}
+
+export async function linkConsultationsToReceipt(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
+  const consultationIds = (formData.getAll("consultation_ids") as string[]).map((id) => id.trim()).filter(Boolean);
+  if (!receiptId || consultationIds.length === 0) return;
+
+  const receipt = await prisma.therapy_receipts.findFirst({
+    where: { id: receiptId, household_id: householdId },
+    select: {
+      id: true,
+      job_id: true,
+      recipient_type: true,
+      covered_period_start: true,
+      covered_period_end: true,
+    },
+  });
+  if (!receipt) return;
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, receipt.job_id))) return;
+
+  const orgRangeWhere =
+    receipt.recipient_type === "organization" && receipt.covered_period_start && receipt.covered_period_end
+      ? {
+          occurred_at: {
+            gte: receipt.covered_period_start,
+            lte: endOfUtcDayForReceipt(receipt.covered_period_end),
+          },
+        }
+      : {};
+
+  const consultations = await prisma.therapy_consultations.findMany({
+    where: {
+      household_id: householdId,
+      id: { in: consultationIds },
+      job_id: receipt.job_id,
+      receipt_allocations: { none: {} },
+      ...orgRangeWhere,
+    },
+    select: { id: true, amount: true, income_amount: true },
+  });
+  if (consultations.some((entry) => entry.amount == null && entry.income_amount == null)) {
+    redirect(`${BASE}/receipts/${receiptId}?error=consultationamount`);
+  }
+
+  await prisma.$transaction(
+    consultations.map((entry) => {
+      const allocationAmount = entry.amount ?? entry.income_amount!;
+      return prisma.therapy_receipt_consultation_allocations.upsert({
+        where: {
+          receipt_id_consultation_id: {
+            receipt_id: receiptId,
+            consultation_id: entry.id,
+          },
+        },
+        create: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          receipt_id: receiptId,
+          consultation_id: entry.id,
+          amount: allocationAmount,
+        },
+        update: { amount: allocationAmount },
+      });
+    }),
+  );
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/consultations`);
+  redirect(`${BASE}/receipts/${receiptId}`);
+}
+
+export async function deleteConsultationReceiptAllocation(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
+  const consultationId = (formData.get("consultation_id") as string)?.trim() || "";
+  if (!receiptId || !consultationId) return;
+  await prisma.therapy_receipt_consultation_allocations.deleteMany({
+    where: {
+      household_id: householdId,
+      receipt_id: receiptId,
+      consultation_id: consultationId,
+    },
+  });
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/consultations`);
+  redirect(`${BASE}/receipts/${receiptId}`);
+}
+
+export async function linkTravelEntriesToReceipt(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
+  const travelEntryIds = (formData.getAll("travel_entry_ids") as string[]).map((id) => id.trim()).filter(Boolean);
+  if (!receiptId || travelEntryIds.length === 0) return;
+
+  const receipt = await prisma.therapy_receipts.findFirst({
+    where: { id: receiptId, household_id: householdId },
+    select: {
+      id: true,
+      job_id: true,
+      recipient_type: true,
+      covered_period_start: true,
+      covered_period_end: true,
+    },
+  });
+  if (!receipt) return;
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, receipt.job_id))) return;
+
+  const orgRangeWhere =
+    receipt.recipient_type === "organization" && receipt.covered_period_start && receipt.covered_period_end
+      ? {
+          occurred_at: {
+            gte: receipt.covered_period_start,
+            lte: endOfUtcDayForReceipt(receipt.covered_period_end),
+          },
+        }
+      : {};
+
+  const travelEntries = await prisma.therapy_travel_entries.findMany({
+    where: {
+      household_id: householdId,
+      id: { in: travelEntryIds },
+      receipt_allocations: { none: {} },
+      OR: [
+        { job_id: receipt.job_id },
+        { treatment: { job_id: receipt.job_id } },
+        { consultation: { job_id: receipt.job_id } },
+      ],
+      ...orgRangeWhere,
+    },
+    select: { id: true, amount: true },
+  });
+  if (travelEntries.some((entry) => entry.amount == null)) {
+    redirect(`${BASE}/receipts/${receiptId}?error=travelamount`);
+  }
+
+  await prisma.$transaction(
+    travelEntries.map((entry) =>
+      prisma.therapy_receipt_travel_allocations.upsert({
+        where: {
+          receipt_id_travel_entry_id: {
+            receipt_id: receiptId,
+            travel_entry_id: entry.id,
+          },
+        },
+        create: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          receipt_id: receiptId,
+          travel_entry_id: entry.id,
+          amount: entry.amount!,
+        },
+        update: { amount: entry.amount! },
+      }),
+    ),
+  );
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/travel`);
+  redirect(`${BASE}/receipts/${receiptId}`);
+}
+
+export async function deleteTravelReceiptAllocation(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const receiptId = (formData.get("receipt_id") as string)?.trim() || "";
+  const travelEntryId = (formData.get("travel_entry_id") as string)?.trim() || "";
+  if (!receiptId || !travelEntryId) return;
+  await prisma.therapy_receipt_travel_allocations.deleteMany({
+    where: {
+      household_id: householdId,
+      receipt_id: receiptId,
+      travel_entry_id: travelEntryId,
+    },
+  });
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/receipts/${receiptId}`);
+  revalidatePath(`${BASE}/travel`);
   redirect(`${BASE}/receipts/${receiptId}`);
 }
 

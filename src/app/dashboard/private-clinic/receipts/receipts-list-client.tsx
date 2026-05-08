@@ -31,6 +31,7 @@ type SortDir = "asc" | "desc";
 export function ReceiptsListClient({
   initialRows,
   initialCursor,
+  dataVersion,
   apiHrefBase,
   listBaseHref,
   dateDisplayFormat,
@@ -40,6 +41,7 @@ export function ReceiptsListClient({
 }: {
   initialRows: ReceiptListRowDto[];
   initialCursor: string | null;
+  dataVersion: string;
   apiHrefBase: string;
   listBaseHref: string;
   dateDisplayFormat: HouseholdDateDisplayFormat;
@@ -54,6 +56,12 @@ export function ReceiptsListClient({
   const [sortKey, setSortKey] = useState<ColumnSortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setCursor(initialCursor);
+    setHasMore(Boolean(initialCursor));
+  }, [dataVersion, initialRows, initialCursor]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !cursor) return;

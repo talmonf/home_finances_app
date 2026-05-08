@@ -755,7 +755,29 @@ export function privateClinicReceipts(lang: UiLanguage) {
     createAllocate: p("Create & allocate", "יצירה ושיוך"),
     linkTreatmentsHeading: p("Link treatments to this receipt", "שיוך טיפולים לקבלה זו"),
     linkTreatmentsSubmit: p("Link selected treatments", "שיוך טיפולים נבחרים"),
+    linkConsultationsHeading: p("Link consultations to this receipt", "שיוך ייעוצים לקבלה זו"),
+    linkConsultationsSubmit: p("Link selected consultations", "שיוך ייעוצים נבחרים"),
+    linkTravelHeading: p("Link travel entries to this receipt", "שיוך נסיעות לקבלה זו"),
+    linkTravelSubmit: p("Link selected travel entries", "שיוך נסיעות נבחרות"),
     unlinkFromReceipt: p("Unlink", "נתק"),
+    selectAll: p("Select all", "בחירת הכל"),
+    deselectAll: p("Deselect all", "ניקוי בחירה"),
+    selectSuggested: p("Select suggested (period)", "בחירת מוצעים (תקופה)"),
+    suggestedCombinedTotal: p("Suggested total for selected period", "סכום מוצע לתקופה שנבחרה"),
+    suggestedTotalsBreakdown: (treatments: string, consultations: string, travel: string) =>
+      p(
+        `Breakdown — T: ${treatments}, C: ${consultations}, TR: ${travel}.`,
+        `פירוט — T: ${treatments}, C: ${consultations}, TR: ${travel}.`,
+      ),
+    suggestedMatchesGross: p(
+      "Suggested total matches receipt gross.",
+      "הסכום המוצע תואם לסכום הברוטו בקבלה.",
+    ),
+    suggestedDiffFromGross: (diff: string, currency: string) =>
+      p(
+        `Suggested total differs from gross by ${diff} ${currency}.`,
+        `הסכום המוצע שונה מהברוטו ב-${diff} ${currency}.`,
+      ),
     coveredStart: p("Covered period start", "תחילת תקופה מכוסה"),
     coveredEnd: p("Covered period end", "סוף תקופה מכוסה"),
     receivablesLastMonth: p("Organization receivables (last month)", "חובות ארגונים (חודש קודם)"),
@@ -1405,8 +1427,8 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "**דוחות**, **תזכורות**, **ייעוצים**, **נסיעות**, **דלק**, **ביטוח קליניקה**, **מנויים מקצועיים** — לשימוש ככל שהפרקטיקה גדלה — דיווח, תזכורות, שירותים מחוץ למפגש, נסיעות ורכב, והוצאות מקצועיות.",
     ),
     advReceiptsTreatments: p(
-      "**Receipts and treatments linkage** — Treatments represent clinical work; receipts represent collected payments. You can report payment status on treatments, link treatments to receipts, and manage allocations from the receipts side so reporting and bookkeeping stay aligned.",
-      "**קשר בין קבלות לטיפולים** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. אפשר לדווח סטטוס תשלום בטיפולים, לקשר טיפולים לקבלות, ולנהל שיוכים מצד הקבלות כדי לשמור התאמה בין דיווח להנהלת חשבונות.",
+      "**Receipts linkage (treatments / consultations / travel)** — Treatments represent clinical work; receipts represent collected payments. Create the monthly receipt in **Receipts**, then open it and link treatments from the receipt form. In the receipts list, use **T / C / TR** counters to jump to Treatments / Consultations / Travel filtered for that receipt, so month-end review and bookkeeping stay aligned.",
+      "**שיוך קבלות (טיפולים / ייעוצים / נסיעות)** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. צרו קבלה חודשית במסך **קבלות**, פתחו אותה וקשרו טיפולים מתוך טופס הקבלה. ברשימת הקבלות השתמשו במונים **T / C / TR** כדי לעבור לטיפולים / ייעוצים / נסיעות מסוננים לאותה קבלה, וכך לשמור התאמה בין סגירת חודש להנהלת חשבונות.",
     ),
     advDemoPrivacy: p(
       "**Demo privacy mode** — Use **Hide client names & amounts (demo)** in the top toolbar when you need to demo the system to others or share screens with the system administrator. It masks client names and monetary amounts during your session to reduce data exposure.",
