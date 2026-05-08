@@ -111,6 +111,8 @@ export default async function ReceiptsPage({
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
+  const consultationsLabel = uiLanguage === "he" ? "ייעוצים" : "Consultations";
+  const travelLabel = uiLanguage === "he" ? "נסיעות" : "Travel";
   const sp = searchParams ? await searchParams : {};
   const filters: ReceiptsListFilters = {
     job: sp.job?.trim() || "",
@@ -853,7 +855,7 @@ export default async function ReceiptsPage({
                 </button>
               </form>
               <div className="space-y-2">
-                <p className="font-medium text-slate-200">{c.consultations}</p>
+                <p className="font-medium text-slate-200">{consultationsLabel}</p>
                 {consultationsLinkedToReceipt.length > 0 ? (
                   <div className="space-y-1">
                     {consultationsLinkedToReceipt.map((entry) => {
@@ -900,7 +902,7 @@ export default async function ReceiptsPage({
                 </button>
               </form>
               <div className="space-y-2">
-                <p className="font-medium text-slate-200">{c.travel}</p>
+                <p className="font-medium text-slate-200">{travelLabel}</p>
                 {travelLinkedToReceipt.length > 0 ? (
                   <div className="space-y-1">
                     {travelLinkedToReceipt.map((entry) => {
