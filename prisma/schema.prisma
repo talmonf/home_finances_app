@@ -103,6 +103,7 @@ model households {
   therapy_client_relationships       therapy_client_relationships[]
   private_clinic_backup_snapshots    private_clinic_backup_snapshots[]
   general_audit_events               general_audit_events[]
+  renewal_email_subscriptions        renewal_email_subscriptions[]
 }
 
 model loans {
@@ -1265,6 +1266,50 @@ enum SubscriptionBillingInterval {
   @@map("subscription_billing_interval")
 }
 
+enum RenewalEmailFrequency {
+  daily
+  weekly
+  monthly
+
+  @@map("renewal_email_frequency")
+}
+
+model renewal_email_subscriptions {
+  id               String                 @id @default(uuid())
+  user_id          String                 @unique
+  household_id     String
+  is_active        Boolean                @default(true)
+  recipient_email  String?
+  frequency        RenewalEmailFrequency
+  day_of_week      Int?
+  day_of_month     Int?
+  send_hour        Int                    @default(7)
+  timezone         String                 @default("Asia/Jerusalem")
+  days_ahead       Int                    @default(30)
+  last_sent_at     DateTime?
+  created_at       DateTime               @default(now())
+  updated_at       DateTime               @updatedAt
+
+  user       users                      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  household  households                 @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  deliveries renewal_email_deliveries[]
+}
+
+model renewal_email_deliveries {
+  id               String   @id @default(uuid())
+  subscription_id  String
+  sent_at          DateTime @default(now())
+  recipient_email  String
+  item_count       Int
+  status           String
+  error_message    String?
+  provider_msg_id  String?
+
+  subscription renewal_email_subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@index([subscription_id, sent_at(sort: Desc)])
+}
+
 model super_admins {
   id                    String    @id @default(uuid())
   email                 String    @unique
@@ -1317,6 +1362,7 @@ model users {
   therapy_appointment_audits therapy_appointment_audits[]
   private_clinic_backup_snapshots_created private_clinic_backup_snapshots[]
   general_audit_events      general_audit_events[]
+  renewal_email_subscription renewal_email_subscriptions?
 }
 
 model private_clinic_backup_snapshots {

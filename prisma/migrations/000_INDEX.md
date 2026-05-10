@@ -14,7 +14,8 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
-- [ ] 111_therapy_travel_consultation_km.sql (2026-05-01)
+- [x] 112_renewal_email_subscriptions.sql (2026-05-07)
+- [x] 111_therapy_travel_consultation_km.sql (2026-05-01)
 - [x] 110_therapy_treatments_amount_nullable.sql (2026-05-03)
 - [x] 109_property_utilities_contact_and_dates.sql (2026-04-30)
 - [x] 106_therapy_consultations_single_amount_and_participants.sql (2026-04-30)

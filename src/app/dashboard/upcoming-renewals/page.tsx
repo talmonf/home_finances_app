@@ -1,47 +1,22 @@
 import {
-  prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
-import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
+import {
+  computeUpcomingRenewals,
+  dateOnlyLocal,
+  fetchFamilyMembersForHousehold,
+  RENEWAL_CATEGORY_ORDER,
+  startOfToday,
+  type RenewalRow,
+} from "@/lib/upcoming-renewals/compute";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-type RenewalRow = {
-  id: string;
-  category: string;
-  itemName: string;
-  owner: string;
-  ownerId: string | null;
-  renewalDate: Date;
-  renewalType: string;
-  href: string;
-};
-
-const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
-  electronics: "Electronics",
-  appliances: "Appliances",
-  tools: "Tools",
-  other: "Other",
-};
-
-function startOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function dateOnlyLocal(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function getDaysInMonth(year: number, monthZeroBased: number) {
-  return new Date(year, monthZeroBased + 1, 0).getDate();
-}
 
 function overdueLabelForCategory(category: string, isHebrew: boolean) {
   if (isHebrew) {
@@ -88,22 +63,6 @@ function overdueLabelForCategory(category: string, isHebrew: boolean) {
   }
 }
 
-function nextMonthlyRenewal(dayOfMonth: number, baseDate: Date) {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const thisMonthDay = Math.min(dayOfMonth, getDaysInMonth(year, month));
-  const candidateThisMonth = new Date(year, month, thisMonthDay);
-  // Strictly after today: if today is the billing day, next renewal is next month.
-  if (candidateThisMonth > baseDate) {
-    return candidateThisMonth;
-  }
-  const nextMonthDate = new Date(year, month + 1, 1);
-  const nextYear = nextMonthDate.getFullYear();
-  const nextMonth = nextMonthDate.getMonth();
-  const nextMonthDay = Math.min(dayOfMonth, getDaysInMonth(nextYear, nextMonth));
-  return new Date(nextYear, nextMonth, nextMonthDay);
-}
-
 type PageProps = {
   searchParams?: Promise<{
     category?: string;
@@ -124,355 +83,17 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   const categoryFilter = resolvedSearchParams?.category ?? "all";
   const ownerFilter = resolvedSearchParams?.owner ?? "all";
 
-  const [
-    subscriptions,
-    identities,
-    creditCards,
-    insurancePolicies,
-    rentals,
-    utilities,
-    tasks,
-    donationRenewals,
-    significantPurchases,
-    familyMembers,
-    carLicenses,
-    carServicesNext,
-    loansForRenewals,
-    savingsPoliciesForRenewals,
-  ] = await Promise.all([
-    prisma.subscriptions.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        OR: [
-          { billing_interval: "monthly", monthly_day_of_month: { not: null } },
-          { billing_interval: "annual", renewal_date: { not: null } },
-        ],
-      },
-      include: {
-        credit_card: { include: { family_member: true } },
-        digital_payment_method: { include: { family_member: true } },
-        family_member: true,
-      },
+  const [rows, familyMembers] = await Promise.all([
+    computeUpcomingRenewals({
+      householdId,
+      today,
+      language: isHebrew ? "he" : "en",
     }),
-    prisma.identities.findMany({
-      where: { household_id: householdId, is_active: true, expiry_date: { gte: today } },
-      include: { family_member: true },
-    }),
-    prisma.credit_cards.findMany({
-      where: {
-        household_id: householdId,
-        cancelled_at: null,
-        OR: [
-          { expiry_date: { not: null, gte: today } },
-          { no_charge_policy_valid_until: { not: null, gte: today } },
-        ],
-      },
-      include: { family_member: true },
-    }),
-    prisma.insurance_policies.findMany({
-      where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
-      include: { car: true, family_member: true },
-    }),
-    prisma.rentals.findMany({
-      where: { household_id: householdId, end_date: { not: null, gte: today } },
-      include: { property: true },
-    }),
-    prisma.property_utilities.findMany({
-      where: { household_id: householdId, renewal_date: { not: null, gte: today } },
-      include: { property: true },
-    }),
-    prisma.tasks.findMany({
-      where: {
-        household_id: householdId,
-        due_date: { not: null },
-        status: { not: "closed" },
-      },
-      include: { family_member: true, assigned_user: true },
-    }),
-    prisma.donations.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        renewal_date: { not: null },
-      },
-      include: { payee: true, family_member: true },
-    }),
-    prisma.significant_purchases.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        warranty_expiry_date: { not: null, gte: today },
-      },
-      include: { family_member: true, credit_card: { include: { family_member: true } } },
-    }),
-    prisma.family_members.findMany({
-      where: { household_id: householdId, is_active: true },
-      select: { id: true, full_name: true },
-      orderBy: { full_name: "asc" },
-    }),
-    prisma.car_licenses.findMany({
-      where: { household_id: householdId, expires_at: { gte: today } },
-      include: { car: true },
-      orderBy: { expires_at: "asc" },
-    }),
-    prisma.car_services.findMany({
-      where: {
-        household_id: householdId,
-        next_service_at: { not: null, gte: today },
-      },
-      include: { car: true },
-      orderBy: { next_service_at: "asc" },
-    }),
-    prisma.loans.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        OR: [
-          { repayment_day_of_month: { not: null } },
-          { maturity_date: { not: null, gte: today } },
-        ],
-      },
-    }),
-    prisma.savings_policies.findMany({
-      where: {
-        household_id: householdId,
-        is_active: true,
-        OR: [
-          { renewal_date: { not: null, gte: today } },
-          { maturity_date: { not: null, gte: today } },
-        ],
-      },
-      include: { owner: true },
-    }),
+    fetchFamilyMembersForHousehold(householdId),
   ]);
 
-  const renewalsLang: "en" | "he" = isHebrew ? "he" : "en";
-
-  const rows: RenewalRow[] = [
-    ...subscriptions.map((s) => ({
-      id: `sub-${s.id}`,
-      category: "Subscription",
-      itemName: s.name,
-      owner:
-        s.family_member?.full_name ??
-        s.digital_payment_method?.family_member?.full_name ??
-        s.credit_card?.family_member?.full_name ??
-        "Household",
-      ownerId:
-        s.family_member?.id ??
-        s.digital_payment_method?.family_member?.id ??
-        s.credit_card?.family_member?.id ??
-        null,
-      renewalDate:
-        s.billing_interval === "monthly" && s.monthly_day_of_month
-          ? nextMonthlyRenewal(s.monthly_day_of_month, today)
-          : (s.renewal_date as Date),
-      renewalType: s.billing_interval === "monthly" ? "Monthly" : "Annual",
-      href: `/dashboard/subscriptions/${encodeURIComponent(s.id)}`,
-    })),
-    ...identities.map((i) => ({
-      id: `identity-${i.id}`,
-      category: "Identity",
-      itemName:
-        (() => {
-          const other = i.identity_type_other?.trim() || null;
-          const typeLabel =
-            i.identity_type === "other" ? "Other" : i.identity_type.replaceAll("_", " ");
-          return other ? `${typeLabel} - ${other}` : typeLabel;
-        })(),
-      owner: i.family_member.full_name,
-      ownerId: i.family_member.id,
-      renewalDate: i.expiry_date,
-      renewalType: "—",
-      href: `/dashboard/identities/${i.id}`,
-    })),
-    ...creditCards
-      .filter((c) => c.expiry_date)
-      .map((c) => ({
-        id: `card-${c.id}`,
-        category: "Credit card",
-        itemName: c.card_name,
-        owner: c.family_member?.full_name ?? (isHebrew ? "משק הבית" : "Household"),
-        ownerId: c.family_member?.id ?? null,
-        renewalDate: c.expiry_date as Date,
-        renewalType: "—",
-        href: "/dashboard/credit-cards",
-      })),
-    ...creditCards
-      .filter((c) => c.no_charge_policy_valid_until)
-      .map((c) => ({
-        id: `card-no-charge-${c.id}`,
-        category: "Credit card",
-        itemName: c.card_name,
-        owner: c.family_member?.full_name ?? (isHebrew ? "משק הבית" : "Household"),
-        ownerId: c.family_member?.id ?? null,
-        renewalDate: c.no_charge_policy_valid_until as Date,
-        renewalType: isHebrew ? "תוקף ללא חיוב" : "No-charge policy",
-        href: "/dashboard/credit-cards",
-      })),
-    ...insurancePolicies.map((p) => {
-      const typeLabel = getInsurancePolicyTypeLabel(p.policy_type, renewalsLang);
-      const carPart =
-        p.car != null
-          ? `${p.car.maker} ${p.car.model}${p.car.plate_number ? ` · ${p.car.plate_number}` : ""}`
-          : null;
-      const itemName = `${typeLabel}: ${p.provider_name} — ${p.policy_name}${
-        carPart ? ` (${carPart})` : p.policy_number ? ` (#${p.policy_number})` : ""
-      }`;
-      const owner =
-        p.family_member?.full_name ??
-        (carPart ?? (isHebrew ? "משק הבית" : "Household"));
-      return {
-        id: `insurance-${p.id}`,
-        category: "Insurance",
-        itemName,
-        owner,
-        ownerId: p.family_member_id,
-        renewalDate: p.expiration_date,
-        renewalType: "—",
-        href: "/dashboard/insurance-policies",
-      };
-    }),
-    ...savingsPoliciesForRenewals.flatMap((s) => {
-      const parts: RenewalRow[] = [];
-      const baseName = `${s.provider_name} — ${s.policy_name}`;
-      const owner = s.owner?.full_name ?? (isHebrew ? "משק הבית" : "Household");
-      const ownerId = s.owner_family_member_id;
-      if (s.renewal_date && dateOnlyLocal(s.renewal_date as Date) >= today) {
-        parts.push({
-          id: `savings-renewal-${s.id}`,
-          category: "Savings policy",
-          itemName: baseName,
-          owner,
-          ownerId,
-          renewalDate: s.renewal_date as Date,
-          renewalType: isHebrew ? "חידוש" : "Renewal",
-          href: "/dashboard/savings-policies",
-        });
-      }
-      if (s.maturity_date && dateOnlyLocal(s.maturity_date as Date) >= today) {
-        parts.push({
-          id: `savings-maturity-${s.id}`,
-          category: "Savings policy",
-          itemName: `${baseName} (${isHebrew ? "פרעון" : "maturity"})`,
-          owner,
-          ownerId,
-          renewalDate: s.maturity_date as Date,
-          renewalType: isHebrew ? "פרעון" : "Maturity",
-          href: "/dashboard/savings-policies",
-        });
-      }
-      return parts;
-    }),
-    ...carLicenses.map((l) => ({
-      id: `car-license-${l.id}`,
-      category: "Car license",
-      itemName: `${l.car.maker} ${l.car.model}${l.car.plate_number ? ` · ${l.car.plate_number}` : ""}`,
-      owner: "Vehicle",
-      ownerId: null,
-      renewalDate: l.expires_at,
-      renewalType: "Expiry",
-      href: `/dashboard/cars/${l.car_id}`,
-    })),
-    ...carServicesNext.map((s) => ({
-      id: `car-service-${s.id}`,
-      category: "Car service",
-      itemName: `${s.provider_name} — ${s.car.maker} ${s.car.model}${s.car.plate_number ? ` · ${s.car.plate_number}` : ""}`,
-      owner: "Vehicle",
-      ownerId: null,
-      renewalDate: s.next_service_at as Date,
-      renewalType: "Next service",
-      href: `/dashboard/cars/${s.car_id}`,
-    })),
-    ...rentals
-      .filter((r) => r.end_date)
-      .map((r) => ({
-        id: `rental-${r.id}`,
-        category: "Rental",
-        itemName: `${r.property.name} rental`,
-        owner: r.property.name,
-        ownerId: null,
-        renewalDate: r.end_date as Date,
-        renewalType: "End Date",
-        href: `/dashboard/properties/${r.property_id}`,
-      })),
-    ...utilities
-      .filter((u) => u.renewal_date)
-      .map((u) => ({
-        id: `utility-${u.id}`,
-        category: "Utility",
-        itemName: `${u.provider_name} (${u.utility_type})`,
-        owner: u.property.name,
-        ownerId: null,
-        renewalDate: u.renewal_date as Date,
-        renewalType: "—",
-        href: `/dashboard/properties/${u.property_id}/utilities/${u.id}/edit`,
-      })),
-    ...tasks
-      .filter((t) => t.due_date)
-      .map((t) => ({
-        id: `task-${t.id}`,
-        category: "Task",
-        itemName: t.subject,
-        owner: t.family_member?.full_name ?? t.assigned_user?.full_name ?? "Household",
-        ownerId: t.family_member?.id ?? null,
-        renewalDate: t.due_date as Date,
-        renewalType: "Due Date",
-        href: `/dashboard/tasks/${t.id}/edit`,
-      })),
-    ...donationRenewals.map((d) => ({
-      id: `donation-${d.id}`,
-      category: "Donation",
-      itemName: `${d.organization_name} (${d.category})`,
-      owner: d.family_member ? d.family_member.full_name : "Household",
-      ownerId: d.family_member?.id ?? null,
-      renewalDate: d.renewal_date as Date,
-      renewalType: "—",
-      href: `/dashboard/donations/${d.id}`,
-    })),
-    ...significantPurchases.map((p) => ({
-      id: `purchase-${p.id}`,
-      category: "Warranty",
-      itemName: `${PURCHASE_CATEGORY_LABELS[p.purchase_category] ?? p.purchase_category} — ${p.item_name}`,
-      owner: p.family_member?.full_name ?? p.credit_card?.family_member?.full_name ?? "Household",
-      ownerId: p.family_member?.id ?? p.credit_card?.family_member?.id ?? null,
-      renewalDate: p.warranty_expiry_date as Date,
-      renewalType: "—",
-      href: "/dashboard/significant-purchases",
-    })),
-    ...loansForRenewals.flatMap((loan) => {
-      const parts: RenewalRow[] = [];
-      if (loan.repayment_day_of_month != null) {
-        parts.push({
-          id: `loan-monthly-${loan.id}`,
-          category: "Loan",
-          itemName: `${loan.institution_name}${loan.loan_number ? ` · #${loan.loan_number}` : ""}`,
-          owner: "Household",
-          ownerId: null,
-          renewalDate: nextMonthlyRenewal(loan.repayment_day_of_month, today),
-          renewalType: "Monthly",
-          href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
-        });
-      }
-      if (loan.maturity_date && dateOnlyLocal(loan.maturity_date as Date) >= today) {
-        parts.push({
-          id: `loan-payoff-${loan.id}`,
-          category: "Loan",
-          itemName: `${loan.institution_name} (payoff)${loan.loan_number ? ` · #${loan.loan_number}` : ""}`,
-          owner: "Household",
-          ownerId: null,
-          renewalDate: dateOnlyLocal(loan.maturity_date as Date),
-          renewalType: "Payoff",
-          href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
-        });
-      }
-      return parts;
-    }),
-  ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
-
   const effectiveCategoryFilter =
-    categoryFilter === "all" || rows.some((r) => r.category === categoryFilter)
+    categoryFilter === "all" || rows.some((r: RenewalRow) => r.category === categoryFilter)
       ? categoryFilter
       : "all";
   const familyMemberIdSet = new Set(familyMembers.map((m) => m.id));
@@ -485,26 +106,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     return categoryOk && ownerOk;
   });
 
-  const categoryOrder = [
-    "Subscription",
-    "Identity",
-    "Credit card",
-    "Insurance",
-    "Savings policy",
-    "Car license",
-    "Car service",
-    "Rental",
-    "Utility",
-    "Task",
-    "Donation",
-    "Loan",
-    "Warranty",
-  ];
-  const categories = Array.from(
-    new Set(rows.map((r) => r.category)),
-  ).sort((a, b) => {
-    const ia = categoryOrder.indexOf(a);
-    const ib = categoryOrder.indexOf(b);
+  const categoryOrder = [...RENEWAL_CATEGORY_ORDER];
+  const categories = Array.from(new Set(rows.map((r) => r.category))).sort((a, b) => {
+    const ia = categoryOrder.indexOf(a as (typeof categoryOrder)[number]);
+    const ib = categoryOrder.indexOf(b as (typeof categoryOrder)[number]);
     if (ia === -1 && ib === -1) return a.localeCompare(b);
     if (ia === -1) return 1;
     if (ib === -1) return -1;
@@ -514,52 +119,60 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-3">
       <div className="w-full max-w-screen-2xl space-y-4 rounded-2xl bg-slate-900 p-6 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <form method="get" className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col">
-            <label htmlFor="category" className="mb-0.5 text-xs font-medium text-slate-400">
-              {isHebrew ? "קטגוריה" : "Category"}
-            </label>
-            <select
-              id="category"
-              name="category"
-              defaultValue={effectiveCategoryFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
-            >
-              <option value="all">{isHebrew ? "הכל" : "All"}</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <form method="get" className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col">
+              <label htmlFor="category" className="mb-0.5 text-xs font-medium text-slate-400">
+                {isHebrew ? "קטגוריה" : "Category"}
+              </label>
+              <select
+                id="category"
+                name="category"
+                defaultValue={effectiveCategoryFilter}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
+              >
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex flex-col">
-            <label htmlFor="owner" className="mb-0.5 text-xs font-medium text-slate-400">
-              {isHebrew ? "בעלים (= בן משפחה)" : "Owner (= Family Member)"}
-            </label>
-            <select
-              id="owner"
-              name="owner"
-              defaultValue={effectiveOwnerFilter}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
-            >
-              <option value="all">{isHebrew ? "הכל" : "All"}</option>
-              {familyMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col">
+              <label htmlFor="owner" className="mb-0.5 text-xs font-medium text-slate-400">
+                {isHebrew ? "בעלים (= בן משפחה)" : "Owner (= Family Member)"}
+              </label>
+              <select
+                id="owner"
+                name="owner"
+                defaultValue={effectiveOwnerFilter}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
+              >
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            type="submit"
-            className="rounded-lg bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-sky-500"
+            <button
+              type="submit"
+              className="rounded-lg bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-sky-500"
+            >
+              {isHebrew ? "החל" : "Apply"}
+            </button>
+          </form>
+          <Link
+            href="/dashboard/upcoming-renewals/email-settings"
+            className="text-sm font-medium text-sky-400 hover:text-sky-300"
           >
-            {isHebrew ? "החל" : "Apply"}
-          </button>
-        </form>
+            {isHebrew ? "הגדרות אימייל" : "Email digest settings"}
+          </Link>
+        </div>
 
         {filteredRows.length === 0 ? (
           <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-8 text-center text-sm text-slate-400">
@@ -584,30 +197,29 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                   const overdue = isPassed;
                   const overdueLabel = overdueLabelForCategory(row.category, isHebrew);
                   return (
-                  <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                    <td
-                      className={`px-4 py-3 ${
-                        overdue ? "text-rose-300" : "text-slate-200"
-                      }`}
-                      title={overdue ? "Renewal date has passed" : undefined}
-                    >
-                      {formatHouseholdDate(row.renewalDate, dateDisplayFormat)}
-                      {overdue ? (
-                        <span className="ms-2 text-xs font-medium text-rose-400/90">
-                          {overdueLabel}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-slate-300">{row.category}</td>
-                    <td className="px-4 py-3 text-slate-300">{row.renewalType}</td>
-                    <td className="px-4 py-3 text-slate-100">{row.itemName}</td>
-                    <td className="px-4 py-3 text-slate-400">{row.owner}</td>
-                    <td className="px-4 py-3">
-                      <Link href={row.href} className="text-xs font-medium text-sky-400 hover:text-sky-300">
-                        {isHebrew ? "פתח" : "Open"}
-                      </Link>
-                    </td>
-                  </tr>
+                    <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
+                      <td
+                        className={`px-4 py-3 ${overdue ? "text-rose-300" : "text-slate-200"}`}
+                        title={overdue ? "Renewal date has passed" : undefined}
+                      >
+                        {formatHouseholdDate(row.renewalDate, dateDisplayFormat)}
+                        {overdue ? (
+                          <span className="ms-2 text-xs font-medium text-rose-400/90">{overdueLabel}</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{row.category}</td>
+                      <td className="px-4 py-3 text-slate-300">{row.renewalType}</td>
+                      <td className="px-4 py-3 text-slate-100">{row.itemName}</td>
+                      <td className="px-4 py-3 text-slate-400">{row.owner}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={row.href}
+                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          {isHebrew ? "פתח" : "Open"}
+                        </Link>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -618,4 +230,3 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
     </div>
   );
 }
-

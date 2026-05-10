@@ -1,0 +1,238 @@
+import { prisma, requireHouseholdMember, getAuthSession } from "@/lib/auth";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import {
+  disableRenewalEmailSubscription,
+  sendRenewalEmailTestNow,
+  upsertRenewalEmailSubscription,
+} from "./actions";
+
+export const dynamic = "force-dynamic";
+
+type Search = {
+  saved?: string;
+  disabled?: string;
+  test?: string;
+  reason?: string;
+};
+
+export default async function RenewalEmailSettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Search>;
+}) {
+  await requireHouseholdMember();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  const householdId = session?.user?.householdId;
+  if (!userId || !householdId || session.user.isSuperAdmin) redirect("/");
+
+  const qp = searchParams ? await searchParams : undefined;
+  const user = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId },
+    select: { email: true, ui_language: true },
+  });
+  if (!user) redirect("/");
+
+  const sub = await prisma.renewal_email_subscriptions.findUnique({
+    where: { user_id: userId },
+  });
+
+  const isHebrew = user.ui_language === "he";
+
+  return (
+    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <div className="w-full max-w-lg space-y-6 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <header className="space-y-2">
+          <Link
+            href="/dashboard/upcoming-renewals"
+            className="inline-block text-sm text-slate-400 hover:text-slate-200"
+          >
+            {isHebrew ? "← חזרה לחידושים" : "← Back to upcoming renewals"}
+          </Link>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            {isHebrew ? "אימייל תזכורת חידושים" : "Renewal digest email"}
+          </h1>
+          <p className="text-sm text-slate-400">
+            {isHebrew
+              ? "קבלו בריכוז את רשימת החידושים והמועדים הקרובים. כברירת מחדל נשלח לכתובת המשתמש שלכם."
+              : "Receive a scheduled email with upcoming renewals and deadlines. By default messages go to your account email."}
+          </p>
+        </header>
+
+        {qp?.saved ? (
+          <p className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+            {isHebrew ? "ההגדרות נשמרו." : "Settings saved."}
+          </p>
+        ) : null}
+        {qp?.disabled ? (
+          <p className="rounded-lg border border-amber-800/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+            {isHebrew ? "האימייל המתוזמן כובה." : "Scheduled digest is turned off."}
+          </p>
+        ) : null}
+        {qp?.test === "ok" ? (
+          <p className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+            {isHebrew ? "אימייל בדיקה נשלח." : "Test email sent."}
+          </p>
+        ) : null}
+        {qp?.test === "fail" || qp?.test === "error" || qp?.test === "nosub" ? (
+          <p className="rounded-lg border border-rose-800/60 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+            {qp.test === "nosub"
+              ? isHebrew
+                ? "שמרו את ההגדרות לפני שליחת בדיקה."
+                : "Save your settings before sending a test."
+              : qp.reason
+                ? `${isHebrew ? "שגיאה" : "Error"}: ${qp.reason}`
+                : isHebrew
+                  ? "שליחת הבדיקה נכשלה."
+                  : "Test send failed."}
+          </p>
+        ) : null}
+
+        <form action={upsertRenewalEmailSubscription} className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input type="checkbox" name="is_active" defaultChecked={sub?.is_active ?? true} className="rounded" />
+            {isHebrew ? "הפעל תזכורת אימייל מתוזמנת" : "Enable scheduled digest email"}
+          </label>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "תדירות" : "Frequency"}
+            </label>
+            <select
+              name="frequency"
+              defaultValue={sub?.frequency ?? "weekly"}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="daily">{isHebrew ? "יומי" : "Daily"}</option>
+              <option value="weekly">{isHebrew ? "שבועי" : "Weekly"}</option>
+              <option value="monthly">{isHebrew ? "חודשי" : "Monthly"}</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "יום בשבוע (שבועי בלבד)" : "Day of week (weekly only)"}
+            </label>
+            <select
+              name="day_of_week"
+              defaultValue={String(sub?.day_of_week ?? 0)}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              {(isHebrew
+                ? ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
+                : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+              ).map((label, i) => (
+                <option key={i} value={i}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "יום בחודש (חודשי בלבד, 1–31)" : "Day of month (monthly only, 1–31)"}
+            </label>
+            <input
+              type="number"
+              name="day_of_month"
+              min={1}
+              max={31}
+              defaultValue={sub?.day_of_month ?? 1}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "שעת שליחה (0–23, שעון מקומי)" : "Send hour (0–23, local time)"}
+            </label>
+            <input
+              type="number"
+              name="send_hour"
+              min={0}
+              max={23}
+              defaultValue={sub?.send_hour ?? 7}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "אזור זמן" : "Time zone"}
+            </label>
+            <input
+              type="text"
+              name="timezone"
+              defaultValue={sub?.timezone ?? "Asia/Jerusalem"}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <p className="text-xs text-slate-500">IANA, e.g. Asia/Jerusalem, Europe/London</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "ימים קדימה (חלון)" : "Days ahead (window)"}
+            </label>
+            <input
+              type="number"
+              name="days_ahead"
+              min={1}
+              max={365}
+              defaultValue={sub?.days_ahead ?? 30}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <p className="text-xs text-slate-500">
+              {isHebrew
+                ? "רק פריטים עם תאריך חידוש/מועד מהיום עד כולל יום זה בעוד N ימים."
+                : "Only items with renewal/deadline from today through N calendar days ahead."}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "כתובת נמען (ריק = המייל של המשתמש)" : "Recipient email (blank = your user email)"}
+            </label>
+            <input
+              type="email"
+              name="recipient_email"
+              placeholder={user.email}
+              defaultValue={sub?.recipient_email ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+            <p className="text-xs text-slate-500">{user.email}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            >
+              {isHebrew ? "שמור" : "Save"}
+            </button>
+          </div>
+        </form>
+
+        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <form action={sendRenewalEmailTestNow}>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+            >
+              {isHebrew ? "שלח אימייל בדיקה עכשיו" : "Send test email now"}
+            </button>
+          </form>
+          <form action={disableRenewalEmailSubscription}>
+            <button
+              type="submit"
+              className="rounded-lg border border-rose-900/60 bg-rose-950/30 px-4 py-2 text-sm font-medium text-rose-200 hover:bg-rose-950/50"
+            >
+              {isHebrew ? "כבה תזכורות" : "Turn off digest"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
