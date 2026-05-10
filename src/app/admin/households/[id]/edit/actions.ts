@@ -214,6 +214,50 @@ export async function deleteHousehold(formData: FormData) {
     );
   }
 
+  // #region agent log
+  const [
+    tasksPreDelete,
+    documentsPreDelete,
+    categoriesPreDelete,
+    payeesPreDelete,
+    studiesPreDelete,
+    subscriptionsPreDelete,
+    usefulLinksPreDelete,
+  ] = await Promise.all([
+    prisma.tasks.count({ where: { household_id: householdId } }),
+    prisma.documents.count({ where: { household_id: householdId } }),
+    prisma.categories.count({ where: { household_id: householdId } }),
+    prisma.payees.count({ where: { household_id: householdId } }),
+    prisma.studies_and_classes.count({ where: { household_id: householdId } }),
+    prisma.subscriptions.count({ where: { household_id: householdId } }),
+    prisma.useful_links.count({ where: { household_id: householdId } }),
+  ]);
+  fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "0aca4d" },
+    body: JSON.stringify({
+      sessionId: "0aca4d",
+      runId: "pre-fix",
+      hypothesisId: "H1-H3",
+      location: "actions.ts:deleteHousehold:preDeleteCounts",
+      message: "Counts for tables omitted from delete impact UI",
+      data: {
+        householdIdLen: householdId.length,
+        hasPrivateClinicFeature,
+        therapyAppointmentsCount,
+        tasksPreDelete,
+        documentsPreDelete,
+        categoriesPreDelete,
+        payeesPreDelete,
+        studiesPreDelete,
+        subscriptionsPreDelete,
+        usefulLinksPreDelete,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   try {
     await prisma.$transaction(async (tx) => {
       await tx.households.delete({
@@ -221,6 +265,28 @@ export async function deleteHousehold(formData: FormData) {
       });
     });
   } catch (error) {
+    // #region agent log
+    const isKnown = error instanceof Prisma.PrismaClientKnownRequestError;
+    const known = isKnown ? error : null;
+    fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "0aca4d" },
+      body: JSON.stringify({
+        sessionId: "0aca4d",
+        runId: "pre-fix",
+        hypothesisId: "H2-H4",
+        location: "actions.ts:deleteHousehold:catch",
+        message: "deleteHousehold prisma error",
+        data: {
+          isPrismaKnownRequest: isKnown,
+          code: known?.code ?? null,
+          meta: known?.meta ?? null,
+          name: error instanceof Error ? error.name : typeof error,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
