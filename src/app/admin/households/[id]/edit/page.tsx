@@ -36,6 +36,7 @@ import {
   HouseholdPrivateClinicOnlyButton,
   HouseholdSectionGroupActions,
 } from "@/components/household-dashboard-section-controls";
+import { HouseholdEditStatusPortal } from "@/components/household-edit-status-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,10 @@ export default async function EditHouseholdPage({
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <HouseholdEditStatusPortal
+        saved={Boolean(resolvedSearchParams?.saved)}
+        deleteError={resolvedSearchParams?.deleteError}
+      />
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
@@ -166,27 +171,6 @@ export default async function EditHouseholdPage({
               date format, home dashboard sections, and Clinic tab bar.
             </p>
           </div>
-          {resolvedSearchParams?.saved && (
-            <div className="rounded-lg border border-emerald-600 bg-emerald-950/60 px-3 py-2 text-xs text-emerald-100">
-              Settings saved.
-            </div>
-          )}
-          {resolvedSearchParams?.deleteError === "privateClinicLegalBlock" ? (
-            <div className="rounded-lg border border-amber-600 bg-amber-950/60 px-3 py-2 text-xs text-amber-100">
-              This household cannot be deleted due to legal requirements: it has Clinic appointments.
-              In the future, deletion will be supported after saving a therapist journal (יומן מטפל) for later access.
-            </div>
-          ) : null}
-          {resolvedSearchParams?.deleteError === "foreignKey" ? (
-            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
-              Household deletion failed due to related data constraints. Review linked records and try again.
-            </div>
-          ) : null}
-          {resolvedSearchParams?.deleteError === "unknown" ? (
-            <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
-              Household deletion failed due to an unexpected error. Please try again.
-            </div>
-          ) : null}
         </header>
 
         <nav className="flex flex-wrap gap-2" aria-label="Edit household sections">

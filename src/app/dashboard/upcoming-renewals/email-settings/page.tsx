@@ -6,6 +6,7 @@ import {
   sendRenewalEmailTestNow,
   upsertRenewalEmailSubscription,
 } from "./actions";
+import { RenewalEmailScheduleFields } from "./renewal-email-schedule-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -95,54 +96,12 @@ export default async function RenewalEmailSettingsPage({
             {isHebrew ? "הפעל תזכורת אימייל מתוזמנת" : "Enable scheduled digest email"}
           </label>
 
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-300">
-              {isHebrew ? "תדירות" : "Frequency"}
-            </label>
-            <select
-              name="frequency"
-              defaultValue={sub?.frequency ?? "weekly"}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="daily">{isHebrew ? "יומי" : "Daily"}</option>
-              <option value="weekly">{isHebrew ? "שבועי" : "Weekly"}</option>
-              <option value="monthly">{isHebrew ? "חודשי" : "Monthly"}</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-300">
-              {isHebrew ? "יום בשבוע (שבועי בלבד)" : "Day of week (weekly only)"}
-            </label>
-            <select
-              name="day_of_week"
-              defaultValue={String(sub?.day_of_week ?? 0)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              {(isHebrew
-                ? ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
-                : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-              ).map((label, i) => (
-                <option key={i} value={i}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-300">
-              {isHebrew ? "יום בחודש (חודשי בלבד, 1–31)" : "Day of month (monthly only, 1–31)"}
-            </label>
-            <input
-              type="number"
-              name="day_of_month"
-              min={1}
-              max={31}
-              defaultValue={sub?.day_of_month ?? 1}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
+          <RenewalEmailScheduleFields
+            isHebrew={isHebrew}
+            initialFrequency={sub?.frequency ?? "weekly"}
+            initialDayOfWeek={sub?.day_of_week ?? 0}
+            initialDayOfMonth={sub?.day_of_month ?? 1}
+          />
 
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-300">
