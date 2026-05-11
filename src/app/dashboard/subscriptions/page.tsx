@@ -9,6 +9,7 @@ import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-j
 import { formatHouseholdDate, htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import type { Prisma } from "@/generated/prisma/client";
+import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "./actions";
@@ -209,25 +210,20 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
       orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);
+
+  const jobsForFilter = (() => {
+    const base = familyMemberId ? jobs.filter((j) => j.family_member_id === familyMemberId) : jobs;
+    if (!familyMemberId || !jobId) return base;
+    const selected = jobs.find((j) => j.id === jobId);
+    if (!selected) return base;
+    return base.some((j) => j.id === selected.id) ? base : [...base, selected];
+  })();
+
+  const hasActiveFilters = Boolean(familyMemberId || jobId || payFilter || statusFilter !== "active");
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                href="/"
-                className="mb-2 inline-block text-sm text-slate-400 hover:text-slate-200"
-              >
-                {isHebrew ? "חזרה ללוח הבקרה →" : "← Back to dashboard"}
-              </Link>
-              <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "מנויים" : "Subscriptions"}</h1>
-              <p className="text-sm text-slate-400">
-                Track recurring subscriptions, renewal dates, and payment methods.
-              </p>
-            </div>
-          </div>
-
           {(resolvedSearchParams?.created ||
             resolvedSearchParams?.updated ||
             resolvedSearchParams?.error) && (
@@ -269,13 +265,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
           </div>
           <form
             method="get"
-            className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-6"
+            className="grid items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-6"
           >
-            <div className="lg:col-span-6 text-xs text-slate-500">
-              {isHebrew
-                ? "מנויים מבוטלים מוסתרים כברירת מחדל. ניתן לשנות בסינון הסטטוס."
-                : "Cancelled subscriptions are hidden by default. Change the status filter to include them."}
-            </div>
             <div>
               <label htmlFor="filter_family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "בן/בת משפחה" : "Family member"}
@@ -305,7 +296,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 className={subscriptionSelectClass}
               >
                 <option value="">{isHebrew ? "הכל" : "All"}</option>
-                {jobs.map((j) => (
+                {jobsForFilter.map((j) => (
                   <option key={j.id} value={j.id}>
                     {formatJobDisplayLabel(j)}
                   </option>
@@ -327,7 +318,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="all">{isHebrew ? "הכל" : "All"}</option>
               </select>
             </div>
-            <div className="sm:col-span-2 lg:col-span-2">
+            <div>
               <label htmlFor="filter_pay" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "אמצעי תשלום" : "Payment method"}
               </label>
@@ -348,16 +339,19 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 ))}
               </select>
             </div>
-            <div className="flex flex-wrap items-end gap-2 lg:col-span-2">
+            <div className="flex flex-none items-end gap-2 lg:col-span-2 sm:col-span-2">
               <button
                 type="submit"
                 className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600"
               >
                 {isHebrew ? "החל סינון" : "Apply filters"}
               </button>
-              <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
-                {isHebrew ? "נקה" : "Clear"}
-              </Link>
+              {hasActiveFilters ? (
+                <PrivateClinicFilterResetButton
+                  href="/dashboard/subscriptions"
+                  label={isHebrew ? "נקה" : "Clear"}
+                />
+              ) : null}
             </div>
           </form>
           {subscriptions.length === 0 ? (
