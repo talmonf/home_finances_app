@@ -1,5 +1,8 @@
 {
   "crons": [
-    { "path": "/api/cron/renewal-emails", "schedule": "0 * * * *" }
+    { "path": "/api/cron/renewal-emails", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/renewal-emails", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/renewal-emails", "schedule": "0 12 * * *" },
+    { "path": "/api/cron/renewal-emails", "schedule": "0 18 * * *" }
   ]
 }

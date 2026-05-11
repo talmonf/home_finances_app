@@ -65,11 +65,18 @@ export function startOfCalendarDayInTimeZone(utcDate: Date, timeZone: string): D
   return new Date(year, month - 1, day);
 }
 
-/** True when this hourly cron tick matches the subscription's scheduled local send window. */
+/**
+ * True when `now` falls on the subscription's scheduled local calendar day (by frequency)
+ * and the user's local clock is at or after their preferred {@link RenewalScheduleFields.send_hour}.
+ *
+ * Used by Vercel cron: Hobby allows only daily-or-slower schedules, so we stagger several
+ * UTC runs per day and treat `send_hour` as "earliest local hour" — the first matching tick
+ * after that hour sends the digest; {@link alreadySentOnSameLocalDay} prevents duplicates.
+ */
 export function shouldSendNow(sub: RenewalScheduleFields, now: Date): boolean {
   const tz = sub.timezone || "Asia/Jerusalem";
   const parts = getLocalCalendarParts(now, tz);
-  if (parts.hour !== sub.send_hour) return false;
+  if (parts.hour < sub.send_hour) return false;
 
   switch (sub.frequency) {
     case "daily":

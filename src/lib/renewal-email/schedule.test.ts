@@ -17,9 +17,10 @@ function baseSub(overrides: Partial<RenewalScheduleFields> = {}): RenewalSchedul
   };
 }
 
-test("shouldSendNow daily matches configured hour", () => {
+test("shouldSendNow daily matches at or after configured hour", () => {
   const sub = baseSub({ frequency: "daily", send_hour: 7 });
   assert.equal(shouldSendNow(sub, new Date("2026-05-08T07:00:00Z")), true);
+  assert.equal(shouldSendNow(sub, new Date("2026-05-08T10:15:00Z")), true);
   assert.equal(shouldSendNow(sub, new Date("2026-05-08T06:00:00Z")), false);
 });
 
