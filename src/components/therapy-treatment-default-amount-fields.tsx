@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import type { TherapyVisitType } from "@/generated/prisma/enums";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { UiLanguage } from "@/lib/ui-language";
@@ -60,6 +62,12 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     defaultClientId,
     externalReportingJobIds = [],
   } = props;
+  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
+  const inputFlatClass =
+    "w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
+  const controlClass = `mt-1 ${inputFlatClass}`;
+  const selectSmClass =
+    "w-full rounded-lg border border-slate-500 bg-slate-800 px-2 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
 
   const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
@@ -160,7 +168,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           required
           value={jobId}
           onChange={(e) => onJobChange(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={controlClass}
         >
           <option value="">{labels.select}</option>
           {jobs.map((j) => (
@@ -177,7 +185,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           required={programsForJob.length > 0}
           value={programId}
           onChange={(e) => onProgramChange(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={controlClass}
         >
           <option value="">{labels.select}</option>
           {programsForJob.map((p) => (
@@ -194,7 +202,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           required
           value={visitType}
           onChange={(e) => onVisitTypeChange(e.target.value as TherapyVisitType | "")}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={controlClass}
         >
           <option value="">{labels.select}</option>
           {visitOptions.map((v) => (
@@ -206,13 +214,15 @@ export function TherapyTreatmentDefaultAmountFields(props: {
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.date}</label>
-        <input
-          name="occurred_date"
-          type="date"
-          required
-          defaultValue={defaultValues?.occurred_date ?? ""}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
+        <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
+          <input
+            name="occurred_date"
+            type="date"
+            required
+            defaultValue={defaultValues?.occurred_date ?? ""}
+            className={inputFlatClass}
+          />
+        </span>
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.timeOptional}</label>
@@ -221,7 +231,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           <select
             value={occurredHour}
             onChange={(e) => setOccurredHour(e.target.value)}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            className={selectSmClass}
             aria-label={`${labels.timeOptional} ${hourSuffix}`}
           >
             <option value="">--</option>
@@ -234,7 +244,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           <select
             value={occurredMinute}
             onChange={(e) => setOccurredMinute(e.target.value)}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            className={selectSmClass}
             aria-label={`${labels.timeOptional} ${minuteSuffix}`}
           >
             <option value="">--</option>
@@ -255,7 +265,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={controlClass}
         />
       </div>
       <div>
@@ -264,7 +274,8 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           name="currency"
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          placeholder="ILS"
+          className={controlClass}
         />
       </div>
       {externalReportingJobIds.includes(jobId) ? (

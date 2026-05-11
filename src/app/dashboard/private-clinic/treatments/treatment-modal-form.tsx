@@ -105,6 +105,7 @@ export function TreatmentModalForm({
   redirectOnSuccess,
   redirectOnError,
   householdId,
+  dateInputLang,
   uiLanguage,
   clients,
   jobs,
@@ -124,6 +125,8 @@ export function TreatmentModalForm({
   redirectOnSuccess: string;
   redirectOnError: string;
   householdId: string;
+  /** BCP 47 tag for native date inputs (from household date display format). */
+  dateInputLang: string;
   uiLanguage: "en" | "he";
   clients: ClientOption[];
   jobs: JobOption[];
@@ -224,17 +227,19 @@ export function TreatmentModalForm({
                 <input
                   name="receipt_number"
                   defaultValue=""
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  className="mt-1 w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div>
                 <label className="block text-xs text-slate-400">{labels.tr.inlineReceiptDate}</label>
-                <input
-                  name="receipt_issued_at"
-                  type="date"
-                  defaultValue={initial?.payment_date ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
+                <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
+                  <input
+                    name="receipt_issued_at"
+                    type="date"
+                    defaultValue={initial?.payment_date ?? ""}
+                    className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  />
+                </span>
               </div>
             </div>
           ) : null}

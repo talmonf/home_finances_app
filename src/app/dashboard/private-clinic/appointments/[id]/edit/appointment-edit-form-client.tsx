@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -45,6 +47,7 @@ type Props = {
 };
 
 export function AppointmentEditFormClient(props: Props) {
+  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const [jobId, setJobId] = useState(props.initialJobId);
   const [programId, setProgramId] = useState(props.initialProgramId);
   const [additionalClientIds, setAdditionalClientIds] = useState(
@@ -239,23 +242,25 @@ export function AppointmentEditFormClient(props: Props) {
       <div className="space-y-1 md:col-span-2">
         <span className="block text-sm text-slate-300">{props.labels.start}</span>
         <div className="flex flex-wrap items-end gap-2">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              const nextStartDate = e.target.value;
-              setStartDate(nextStartDate);
-              recalculateEndFromStart(
-                nextStartDate,
-                startTimeHour,
-                startTimeMinute,
-                durationMinutes,
-              );
-            }}
-            required
-            className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            aria-label={props.labels.startDate}
-          />
+          <span lang={dateInputLang} className="inline-block">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                const nextStartDate = e.target.value;
+                setStartDate(nextStartDate);
+                recalculateEndFromStart(
+                  nextStartDate,
+                  startTimeHour,
+                  startTimeMinute,
+                  durationMinutes,
+                );
+              }}
+              required
+              className="w-[11.5rem] rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none ring-slate-700/80 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              aria-label={props.labels.startDate}
+            />
+          </span>
           <div className="flex shrink-0 items-center gap-1">
             <select
               value={startTimeHour}
@@ -313,13 +318,15 @@ export function AppointmentEditFormClient(props: Props) {
       <div className="space-y-1 md:col-span-2">
         <span className="block text-sm text-slate-300">{props.labels.endOptional}</span>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            aria-label={props.labels.endOptional}
-          />
+          <span lang={dateInputLang} className="inline-block">
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-[11.5rem] rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none ring-slate-700/80 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              aria-label={props.labels.endOptional}
+            />
+          </span>
           <div className="flex items-center gap-1">
             <select
               value={endTimeHour}

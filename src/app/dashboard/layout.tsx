@@ -69,7 +69,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       obfuscateSensitive={obfuscateSensitive}
     >
       <GlobalFormSubmitFeedback />
-      <div lang={lang} dir={dir} className="contents">
+      {/* Block wrapper (not `display: contents`) so `lang` applies to native date inputs; see htmlLangForDateDisplayFormat. */}
+      <div lang={lang} dir={dir} className="min-w-0">
         {session?.user?.householdId && !session.user.isSuperAdmin ? (
           <div
             className={`flex justify-center bg-slate-950 px-4 ${usefulSectionId ? "pt-2 pb-4" : "pt-2"}`}

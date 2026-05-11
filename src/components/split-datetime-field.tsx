@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 
 type Props = {
   name: string;
@@ -32,10 +34,14 @@ export function SplitDateTimeField({
   hourAriaLabel,
   minuteAriaLabel,
   wrapperClassName = "grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]",
-  dateInputClassName = "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100",
+  dateInputClassName =
+    "w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
   timeWrapperClassName = "grid grid-cols-2 gap-2",
-  selectClassName = "w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100",
+  selectClassName =
+    "w-full rounded-lg border border-slate-500 bg-slate-800 px-2 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
 }: Props) {
+  const householdDateFormat = useHouseholdDateFormat();
+  const dateInputLang = htmlLangForDateDisplayFormat(householdDateFormat);
   const defaultDateAriaLabel = uiLanguage === "he" ? "תאריך" : "Date";
   const defaultHourAriaLabel = uiLanguage === "he" ? "שעה" : "Hour";
   const defaultMinuteAriaLabel = uiLanguage === "he" ? "דקות" : "Minute";
@@ -67,14 +73,16 @@ export function SplitDateTimeField({
   return (
     <div className={wrapperClassName}>
       <input type="hidden" name={name} value={value} />
-      <input
-        type="date"
-        value={date}
-        required={required}
-        onChange={(e) => setDate(e.target.value)}
-        className={dateInputClassName}
-        aria-label={dateAriaLabel ?? defaultDateAriaLabel}
-      />
+      <span lang={dateInputLang} className="min-w-0 w-full">
+        <input
+          type="date"
+          value={date}
+          required={required}
+          onChange={(e) => setDate(e.target.value)}
+          className={dateInputClassName}
+          aria-label={dateAriaLabel ?? defaultDateAriaLabel}
+        />
+      </span>
       <div className={timeWrapperClassName}>
         <select
           value={hour}

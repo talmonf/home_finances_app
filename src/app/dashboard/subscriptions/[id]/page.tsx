@@ -1,5 +1,12 @@
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentUiLanguage,
+  getCurrentHouseholdDateDisplayFormat,
+} from "@/lib/auth";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateSubscription } from "../actions";
@@ -55,6 +62,8 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -116,7 +125,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
   ]);
 
   const inputClass =
-    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
+    "w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -144,6 +153,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
         <section className="space-y-4">
           <form
             action={updateSubscription}
+            lang={dateInputLang}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
           >
             <input type="hidden" name="id" value={subscription.id} />

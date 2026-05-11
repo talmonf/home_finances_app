@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 
 type Props = {
   organizationPaidJobIds: string[];
@@ -31,8 +33,11 @@ export function TreatmentPaymentFieldsSection({
   bankAccounts,
   digitalPaymentMethods,
 }: Props) {
+  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [jobId, setJobId] = useState("");
+  const controlClass =
+    "mt-1 w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
 
   useEffect(() => {
     const form = rootRef.current?.closest("form");
@@ -60,24 +65,26 @@ export function TreatmentPaymentFieldsSection({
           <input type="hidden" name="payment_digital_payment_method_id" value="" />
         </>
       ) : (
-        <div className="space-y-2 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3">
+        <div className="space-y-2 rounded-lg border border-slate-600/90 bg-slate-800/70 p-3 ring-1 ring-slate-600/40">
           <p className="text-xs text-slate-500">{labels.paymentFieldsHint}</p>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
-              <input
-                name="payment_date"
-                type="date"
-                defaultValue={initial?.payment_date ?? ""}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
+              <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
+                <input
+                  name="payment_date"
+                  type="date"
+                  defaultValue={initial?.payment_date ?? ""}
+                  className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                />
+              </span>
             </div>
             <div>
               <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>
               <select
                 name="payment_method"
                 defaultValue={initial?.payment_method ?? ""}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={controlClass}
               >
                 <option value="">{labels.paymentMethodUnset}</option>
                 <option value="bank_transfer">{labels.paymentBankTransfer}</option>
@@ -89,7 +96,7 @@ export function TreatmentPaymentFieldsSection({
               <select
                 name="payment_bank_account_id"
                 defaultValue={initial?.payment_bank_account_id ?? ""}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={controlClass}
               >
                 <option value="">—</option>
                 {bankAccounts.map((b) => (
@@ -104,7 +111,7 @@ export function TreatmentPaymentFieldsSection({
               <select
                 name="payment_digital_payment_method_id"
                 defaultValue={initial?.payment_digital_payment_method_id ?? ""}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={controlClass}
               >
                 <option value="">—</option>
                 {digitalPaymentMethods.map((d) => (

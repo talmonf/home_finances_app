@@ -6,8 +6,9 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "./actions";
@@ -19,14 +20,77 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(s: string) {
+  return UUID_RE.test(s);
+}
+
+type ListStatusFilter = "active" | "cancelled" | "all";
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
     updated?: string;
     error?: string;
     modal?: string;
+    family_member_id?: string;
+    job_id?: string;
+    status?: string;
+    pay?: string;
   }>;
 };
+
+function parseListStatusFilter(raw: string | undefined): ListStatusFilter {
+  const v = raw?.toLowerCase();
+  if (v === "cancelled" || v === "all") return v;
+  return "active";
+}
+
+function subscriptionsListWhere(
+  householdId: string,
+  filters: {
+    status: ListStatusFilter;
+    familyMemberId: string | null;
+    jobId: string | null;
+    pay: string | null;
+  },
+): Prisma.subscriptionsWhereInput {
+  const where: Prisma.subscriptionsWhereInput = { household_id: householdId };
+  if (filters.status === "active") where.is_active = true;
+  if (filters.status === "cancelled") where.is_active = false;
+  if (filters.familyMemberId) where.family_member_id = filters.familyMemberId;
+  if (filters.jobId) where.job_id = filters.jobId;
+  if (filters.pay === "none") {
+    where.credit_card_id = null;
+    where.digital_payment_method_id = null;
+  } else if (filters.pay?.startsWith("cc:")) {
+    const id = filters.pay.slice(3);
+    if (isUuid(id)) where.credit_card_id = id;
+  } else if (filters.pay?.startsWith("dig:")) {
+    const id = filters.pay.slice(4);
+    if (isUuid(id)) where.digital_payment_method_id = id;
+  }
+  return where;
+}
+
+function subscriptionsListQueryString(args: {
+  modal?: string;
+  family_member_id?: string;
+  job_id?: string;
+  status?: ListStatusFilter;
+  pay?: string;
+}) {
+  const sp = new URLSearchParams();
+  if (args.modal) sp.set("modal", args.modal);
+  if (args.family_member_id) sp.set("family_member_id", args.family_member_id);
+  if (args.job_id) sp.set("job_id", args.job_id);
+  if (args.status && args.status !== "active") sp.set("status", args.status);
+  if (args.pay) sp.set("pay", args.pay);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
+}
 
 function formatMoney(value: unknown) {
   if (value == null) return "—";
@@ -90,18 +154,40 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   }
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
   const today = startOfToday();
 
-  const [subscriptions, creditCards, digitalPaymentMethods, familyMembers, jobs] = await Promise.all([
+  const familyMemberIdRaw = resolvedSearchParams?.family_member_id?.trim() ?? "";
+  const jobIdRaw = resolvedSearchParams?.job_id?.trim() ?? "";
+  const statusFilter = parseListStatusFilter(resolvedSearchParams?.status);
+  const payRaw = resolvedSearchParams?.pay?.trim() ?? "";
+  const familyMemberId =
+    familyMemberIdRaw && isUuid(familyMemberIdRaw) ? familyMemberIdRaw : null;
+  const jobId = jobIdRaw && isUuid(jobIdRaw) ? jobIdRaw : null;
+  let payFilter: string | null = null;
+  if (payRaw === "none") payFilter = "none";
+  else if (payRaw.startsWith("cc:") && isUuid(payRaw.slice(3))) payFilter = payRaw;
+  else if (payRaw.startsWith("dig:") && isUuid(payRaw.slice(4))) payFilter = payRaw;
+
+  const listWhere = subscriptionsListWhere(householdId, {
+    status: statusFilter,
+    familyMemberId,
+    jobId,
+    pay: payFilter,
+  });
+
+  const [subscriptions, subscriptionTotalCount, creditCards, digitalPaymentMethods, familyMembers, jobs] =
+    await Promise.all([
     prisma.subscriptions.findMany({
-      where: { household_id: householdId },
+      where: listWhere,
       include: { credit_card: true, digital_payment_method: true, family_member: true, job: true },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
+    prisma.subscriptions.count({ where: { household_id: householdId } }),
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
@@ -169,15 +255,120 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשימה" : "List"}</h2>
             <Link
-              href="/dashboard/subscriptions?modal=new"
+              href={`/dashboard/subscriptions${subscriptionsListQueryString({
+                modal: "new",
+                family_member_id: familyMemberId ?? undefined,
+                job_id: jobId ?? undefined,
+                status: statusFilter,
+                pay: payFilter ?? undefined,
+              })}`}
               className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
             >
               {isHebrew ? "הוספת מנוי" : "Add subscription"}
             </Link>
           </div>
+          <form
+            method="get"
+            className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-6"
+          >
+            <div className="lg:col-span-6 text-xs text-slate-500">
+              {isHebrew
+                ? "מנויים מבוטלים מוסתרים כברירת מחדל. ניתן לשנות בסינון הסטטוס."
+                : "Cancelled subscriptions are hidden by default. Change the status filter to include them."}
+            </div>
+            <div>
+              <label htmlFor="filter_family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "בן/בת משפחה" : "Family member"}
+              </label>
+              <select
+                id="filter_family_member_id"
+                name="family_member_id"
+                defaultValue={familyMemberId ?? ""}
+                className={subscriptionSelectClass}
+              >
+                <option value="">{isHebrew ? "הכל" : "All"}</option>
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filter_job_id" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "עבודה" : "Job"}
+              </label>
+              <select
+                id="filter_job_id"
+                name="job_id"
+                defaultValue={jobId ?? ""}
+                className={subscriptionSelectClass}
+              >
+                <option value="">{isHebrew ? "הכל" : "All"}</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {formatJobDisplayLabel(j)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filter_status" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "סטטוס" : "Status"}
+              </label>
+              <select
+                id="filter_status"
+                name="status"
+                defaultValue={statusFilter}
+                className={subscriptionSelectClass}
+              >
+                <option value="active">{isHebrew ? "פעיל בלבד" : "Active only"}</option>
+                <option value="cancelled">{isHebrew ? "מבוטל בלבד" : "Cancelled only"}</option>
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-2">
+              <label htmlFor="filter_pay" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "אמצעי תשלום" : "Payment method"}
+              </label>
+              <select id="filter_pay" name="pay" defaultValue={payFilter ?? ""} className={subscriptionSelectClass}>
+                <option value="">{isHebrew ? "הכל" : "All"}</option>
+                <option value="none">{isHebrew ? "ללא כרטיס / אפליקציה" : "None (no card or app)"}</option>
+                {creditCards.map((c) => (
+                  <option key={`cc-${c.id}`} value={`cc:${c.id}`}>
+                    {isHebrew ? "כרטיס: " : "Card: "}
+                    {buildCreditCardLabel(c)}
+                  </option>
+                ))}
+                {digitalPaymentMethods.map((d) => (
+                  <option key={`dig-${d.id}`} value={`dig:${d.id}`}>
+                    {isHebrew ? "דיגיטלי: " : "Digital: "}
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap items-end gap-2 lg:col-span-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600"
+              >
+                {isHebrew ? "החל סינון" : "Apply filters"}
+              </button>
+              <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
+                {isHebrew ? "נקה" : "Clear"}
+              </Link>
+            </div>
+          </form>
           {subscriptions.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין מנויים עדיין." : "No subscriptions yet."}
+              {subscriptionTotalCount > 0
+                ? isHebrew
+                  ? "אין מנויים שמתאימים לסינון. נסו לשנות את הסינון או לנקות."
+                  : "No subscriptions match these filters. Try adjusting or clear filters."
+                : isHebrew
+                  ? "אין מנויים עדיין."
+                  : "No subscriptions yet."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -299,13 +490,22 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-medium text-slate-100">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
-                <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
+                <Link
+                  href={`/dashboard/subscriptions${subscriptionsListQueryString({
+                    family_member_id: familyMemberId ?? undefined,
+                    job_id: jobId ?? undefined,
+                    status: statusFilter,
+                    pay: payFilter ?? undefined,
+                  })}`}
+                  className="text-sm text-slate-400 hover:text-slate-200"
+                >
                   {isHebrew ? "ביטול" : "Cancel"}
                 </Link>
               </div>
               <form
                 action={createSubscription}
                 className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                lang={dateInputLang}
               >
             <div>
               <label
@@ -333,7 +533,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="start_date"
                 name="start_date"
                 type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
             <div>
@@ -347,7 +547,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="renewal_date"
                 name="renewal_date"
                 type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
             <div>
@@ -446,7 +646,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="cancelled_at"
                 name="cancelled_at"
                 type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
             <SubscriptionFamilyJobSelects
@@ -533,7 +733,15 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                   >
                     {isHebrew ? "הוספת מנוי" : "Add subscription"}
                   </button>
-                  <Link href="/dashboard/subscriptions" className="text-sm text-slate-400 hover:text-slate-200">
+                  <Link
+                    href={`/dashboard/subscriptions${subscriptionsListQueryString({
+                      family_member_id: familyMemberId ?? undefined,
+                      job_id: jobId ?? undefined,
+                      status: statusFilter,
+                      pay: payFilter ?? undefined,
+                    })}`}
+                    className="text-sm text-slate-400 hover:text-slate-200"
+                  >
                     {isHebrew ? "ביטול" : "Cancel"}
                   </Link>
                 </div>
