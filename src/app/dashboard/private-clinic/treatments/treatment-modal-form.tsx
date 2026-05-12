@@ -236,6 +236,7 @@ export function TreatmentModalForm({
                   <input
                     name="receipt_issued_at"
                     type="date"
+                    lang={dateInputLang}
                     defaultValue={initial?.payment_date ?? ""}
                     className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />

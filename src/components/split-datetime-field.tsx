@@ -76,6 +76,7 @@ export function SplitDateTimeField({
       <span lang={dateInputLang} className="min-w-0 w-full">
         <input
           type="date"
+          lang={dateInputLang}
           value={date}
           required={required}
           onChange={(e) => setDate(e.target.value)}

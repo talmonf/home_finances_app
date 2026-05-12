@@ -218,6 +218,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
           <input
             name="occurred_date"
             type="date"
+            lang={dateInputLang}
             required
             defaultValue={defaultValues?.occurred_date ?? ""}
             className={inputFlatClass}

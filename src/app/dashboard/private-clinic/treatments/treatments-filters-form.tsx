@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 
 type Option = { id: string; label: string };
@@ -51,6 +53,7 @@ type Props = {
 };
 
 export function TreatmentsFiltersForm(props: Props) {
+  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const [jobId, setJobId] = useState(props.job);
   const [programId, setProgramId] = useState(props.program);
 
@@ -174,6 +177,7 @@ export function TreatmentsFiltersForm(props: Props) {
         <input
           name="from"
           type="date"
+          lang={dateInputLang}
           defaultValue={props.from}
           className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
@@ -184,6 +188,7 @@ export function TreatmentsFiltersForm(props: Props) {
         <input
           name="to"
           type="date"
+          lang={dateInputLang}
           defaultValue={props.to}
           className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />

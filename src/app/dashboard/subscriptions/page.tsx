@@ -527,6 +527,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="start_date"
                 name="start_date"
                 type="date"
+                lang={dateInputLang}
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
@@ -541,6 +542,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="renewal_date"
                 name="renewal_date"
                 type="date"
+                lang={dateInputLang}
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
@@ -640,6 +642,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="cancelled_at"
                 name="cancelled_at"
                 type="date"
+                lang={dateInputLang}
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>

@@ -171,6 +171,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 id="start_date"
                 name="start_date"
                 type="date"
+                lang={dateInputLang}
                 defaultValue={formatDateInput(subscription.start_date)}
                 className={inputClass}
               />
@@ -183,6 +184,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 id="renewal_date"
                 name="renewal_date"
                 type="date"
+                lang={dateInputLang}
                 defaultValue={formatDateInput(subscription.renewal_date)}
                 className={inputClass}
               />
@@ -266,6 +268,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 id="cancelled_at"
                 name="cancelled_at"
                 type="date"
+                lang={dateInputLang}
                 defaultValue={formatDateInput(subscription.cancelled_at)}
                 className={inputClass}
               />

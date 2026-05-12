@@ -245,6 +245,7 @@ export function AppointmentEditFormClient(props: Props) {
           <span lang={dateInputLang} className="inline-block">
             <input
               type="date"
+              lang={dateInputLang}
               value={startDate}
               onChange={(e) => {
                 const nextStartDate = e.target.value;
@@ -321,6 +322,7 @@ export function AppointmentEditFormClient(props: Props) {
           <span lang={dateInputLang} className="inline-block">
             <input
               type="date"
+              lang={dateInputLang}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-[11.5rem] rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none ring-slate-700/80 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"

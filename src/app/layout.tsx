@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
-import { getAuthSession, getCurrentUiLanguage } from "@/lib/auth";
+import { getAuthSession, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
+import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -19,13 +20,25 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getAuthSession();
-  const uiLanguage =
-    session?.user?.householdId && !session.user.isSuperAdmin ? await getCurrentUiLanguage() : "en";
+  const householdMember =
+    Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
+  const uiLanguage = householdMember ? await getCurrentUiLanguage() : "en";
   const dir = uiLanguageDirection(uiLanguage);
   const h = appHeaderStrings(uiLanguage);
 
+  /** Native `<input type="date">` follows document `lang`; generic `en` maps to US (mm/dd) in Chromium. */
+  let htmlLang = uiLanguage;
+  if (householdMember) {
+    if (uiLanguage === "he") {
+      htmlLang = "he";
+    } else {
+      const dateFormat = await getCurrentHouseholdDateDisplayFormat();
+      htmlLang = htmlLangForDateDisplayFormat(dateFormat);
+    }
+  }
+
   return (
-    <html lang={uiLanguage} dir={dir}>
+    <html lang={htmlLang} dir={dir}>
       <body className="antialiased bg-slate-950 text-slate-50">
         <div className="min-h-screen">
           <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
