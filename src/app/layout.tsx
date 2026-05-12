@@ -27,7 +27,7 @@ export default async function RootLayout({
   const h = appHeaderStrings(uiLanguage);
 
   /** Native `<input type="date">` follows document `lang`; generic `en` maps to US (mm/dd) in Chromium. */
-  let htmlLang = uiLanguage;
+  let htmlLang: string = uiLanguage;
   if (householdMember) {
     if (uiLanguage === "he") {
       htmlLang = "he";
