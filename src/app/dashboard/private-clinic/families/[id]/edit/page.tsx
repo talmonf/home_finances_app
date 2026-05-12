@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { notFound, redirect } from "next/navigation";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { deleteTherapyFamily, updateTherapyFamily } from "../../../actions";
@@ -11,13 +13,6 @@ import { DeleteFamilyForm } from "../../delete-family-form";
 export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/families";
-
-function toDateInputValue(d: Date | null | undefined): string {
-  if (!d) return "";
-  const x = new Date(d);
-  if (Number.isNaN(x.getTime())) return "";
-  return x.toISOString().slice(0, 10);
-}
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -178,19 +173,17 @@ export default async function EditFamilyPage({ params, searchParams }: Props) {
         </div>
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Start date", "תאריך התחלה")}</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="start_date"
-            defaultValue={toDateInputValue(family.start_date ?? null)}
+            defaultIsoYmd={utcDateToHtmlDateInputValue(family.start_date ?? null)}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
           />
         </div>
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("End date", "תאריך סיום")}</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="end_date"
-            defaultValue={toDateInputValue(family.end_date ?? null)}
+            defaultIsoYmd={utcDateToHtmlDateInputValue(family.end_date ?? null)}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
           />
         </div>

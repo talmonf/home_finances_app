@@ -1,3 +1,4 @@
+import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import Link from "next/link";
@@ -569,11 +570,10 @@ export default async function ClientsPage({
               <label htmlFor="clients_filter_from" className="block text-[11px] text-slate-400">
                 {c.from}
               </label>
-              <input
+              <HouseholdDateField
                 id="clients_filter_from"
                 name="from"
-                type="date"
-                defaultValue={fromRaw}
+                defaultIsoYmd={fromRaw}
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>
@@ -581,11 +581,10 @@ export default async function ClientsPage({
               <label htmlFor="clients_filter_to" className="block text-[11px] text-slate-400">
                 {c.to}
               </label>
-              <input
+              <HouseholdDateField
                 id="clients_filter_to"
                 name="to"
-                type="date"
-                defaultValue={toRaw}
+                defaultIsoYmd={toRaw}
                 className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
               />
             </div>

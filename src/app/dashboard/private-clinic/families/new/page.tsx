@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { redirect } from "next/navigation";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import { createTherapyFamily } from "../../actions";
@@ -118,16 +119,14 @@ export default async function NewFamilyPage() {
         </div>
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("Start date", "תאריך התחלה")}</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="start_date"
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
           />
         </div>
         <div className="space-y-1">
           <label className="block text-xs text-slate-400">{t("End date", "תאריך סיום")}</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="end_date"
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
           />

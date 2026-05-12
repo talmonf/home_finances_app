@@ -28,6 +28,7 @@ import { ConsultationsListClient } from "./consultations-list-client";
 import { ConsultationModalForm } from "./consultation-modal-form";
 import { ConsultationsAddButton } from "./consultations-add-button";
 import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
@@ -263,21 +264,23 @@ export async function ConsultationsPageContent({
           </div>
           <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.from}</label>
-            <input
-              name="from"
-              type="date"
-              defaultValue={filters.from}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="from"
+                defaultIsoYmd={filters.from}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
           <div className="w-[11.25rem] shrink-0">
             <label className="block text-xs text-slate-400">{c.to}</label>
-            <input
-              name="to"
-              type="date"
-              defaultValue={filters.to}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="to"
+                defaultIsoYmd={filters.to}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
           <div className="flex shrink-0 items-end gap-2">
             <button

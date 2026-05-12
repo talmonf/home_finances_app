@@ -1,3 +1,5 @@
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
@@ -168,19 +170,17 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
           </label>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
-            <input
+            <HouseholdDateField
               name="start_date"
-              type="date"
-              defaultValue={program.start_date ? program.start_date.toISOString().slice(0, 10) : ""}
+              defaultIsoYmd={utcDateToHtmlDateInputValue(program.start_date ?? null)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.endDate}</label>
-            <input
+            <HouseholdDateField
               name="end_date"
-              type="date"
-              defaultValue={program.end_date ? program.end_date.toISOString().slice(0, 10) : ""}
+              defaultIsoYmd={utcDateToHtmlDateInputValue(program.end_date ?? null)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

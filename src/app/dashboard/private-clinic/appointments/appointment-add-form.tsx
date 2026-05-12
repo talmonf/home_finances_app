@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { HouseholdDateField, HouseholdDateIsoControl } from "@/components/household-date-field";
+import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { isoYmdToHouseholdInputDisplay } from "@/lib/household-date-format";
 import {
   createTherapyAppointment,
   createTherapyAppointmentSeries,
@@ -69,6 +72,7 @@ export function AppointmentAddForm({
   prefill,
   allowRecurring = true,
 }: Props) {
+  const dateDisplayFormat = useHouseholdDateFormat();
   const timeHourSuffix = copy.startTimeLabel.includes("שעה") || copy.timeOfDayLabel.includes("שעה") ? "שעה" : "hour";
   const timeMinuteSuffix =
     copy.startTimeLabel.includes("שעה") || copy.timeOfDayLabel.includes("שעה") ? "דקות" : "minute";
@@ -140,6 +144,11 @@ export function AppointmentAddForm({
   }, [singleDurationMinutes, startAtValue]);
   const endDateValue = endAtValue ? endAtValue.slice(0, 10) : "";
   const endTimeValue = endAtValue ? endAtValue.slice(11, 16) : "";
+  const endDateTimeReadonlyDisplay = useMemo(() => {
+    if (!endDateValue) return "";
+    const datePart = isoYmdToHouseholdInputDisplay(endDateValue, dateDisplayFormat);
+    return endTimeValue ? `${datePart} ${endTimeValue}` : datePart;
+  }, [dateDisplayFormat, endDateValue, endTimeValue]);
 
   return (
     <div className="space-y-4">
@@ -265,11 +274,10 @@ export function AppointmentAddForm({
           <div className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.startDateTimeLabel}</span>
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
-              <input
-                name="start_date"
-                type="date"
-                value={singleStartDate}
-                onChange={(e) => setSingleStartDate(e.target.value)}
+              <input type="hidden" name="start_date" value={singleStartDate} />
+              <HouseholdDateIsoControl
+                valueIso={singleStartDate}
+                onIsoChange={setSingleStartDate}
                 required
                 className="w-full self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 aria-label={copy.startDateLabel}
@@ -311,19 +319,11 @@ export function AppointmentAddForm({
             <input type="hidden" name="end_at" value={endAtValue} />
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
               <input
-                type="date"
-                value={endDateValue}
-                readOnly
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label={copy.startDateLabel}
-              />
-              <input
                 type="text"
-                value={endTimeValue}
                 readOnly
-                inputMode="numeric"
-                className="w-full max-w-36 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label={copy.startTimeLabel}
+                value={endDateTimeReadonlyDisplay}
+                className="sm:col-span-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                aria-label={copy.endDateTimeLabel}
               />
             </div>
           </label>
@@ -494,18 +494,16 @@ export function AppointmentAddForm({
           </label>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.seriesStartDateLabel}</span>
-            <input
+            <HouseholdDateField
               name="start_date"
-              type="date"
               required
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </label>
           <label className="space-y-1">
             <span className="block text-xs text-slate-300">{copy.seriesEndDateOptionalLabel}</span>
-            <input
+            <HouseholdDateField
               name="end_date"
-              type="date"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </label>

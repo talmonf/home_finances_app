@@ -1,3 +1,4 @@
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicCommon, privateClinicPrograms } from "@/lib/private-clinic-i18n";
 
@@ -74,17 +75,15 @@ export function ProgramModalForm({
           </label>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
-            <input
+            <HouseholdDateField
               name="start_date"
-              type="date"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.endDate}</label>
-            <input
+            <HouseholdDateField
               name="end_date"
-              type="date"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

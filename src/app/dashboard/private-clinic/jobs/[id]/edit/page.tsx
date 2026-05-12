@@ -1,6 +1,10 @@
+import { HouseholdDateField } from "@/components/household-date-field";
+import {
+  formatHouseholdDate,
+  utcDateToHtmlDateInputValue,
+} from "@/lib/household-date-format";
 import Link from "next/link";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage, getCurrentHouseholdDateDisplayFormat } from "@/lib/auth";
-import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { notFound, redirect } from "next/navigation";
@@ -147,20 +151,18 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.startDate}</label>
-            <input
+            <HouseholdDateField
               name="start_date"
-              type="date"
-              defaultValue={job.start_date.toISOString().slice(0, 10)}
               required
+              defaultIsoYmd={utcDateToHtmlDateInputValue(job.start_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-slate-400">{c.endDate}</label>
-            <input
+            <HouseholdDateField
               name="end_date"
-              type="date"
-              defaultValue={job.end_date ? job.end_date.toISOString().slice(0, 10) : ""}
+              defaultIsoYmd={utcDateToHtmlDateInputValue(job.end_date ?? null)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

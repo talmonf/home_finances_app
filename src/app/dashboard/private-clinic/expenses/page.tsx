@@ -10,6 +10,8 @@ import { privateClinicCommon, privateClinicExpenses } from "@/lib/private-clinic
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createTherapyJobExpense, deleteTherapyJobExpense, updateTherapyJobExpense } from "../actions";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
@@ -137,10 +139,9 @@ export default async function ExpensesPage({
                         </option>
                       ))}
                     </select>
-                    <input
+                    <HouseholdDateField
                       name="expense_date"
-                      type="date"
-                      defaultValue={e.expense_date.toISOString().slice(0, 10)}
+                      defaultIsoYmd={utcDateToHtmlDateInputValue(e.expense_date)}
                       required
                       className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
@@ -222,9 +223,8 @@ export default async function ExpensesPage({
                   </option>
                 ))}
               </select>
-              <input
+              <HouseholdDateField
                 name="expense_date"
-                type="date"
                 required
                 className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />

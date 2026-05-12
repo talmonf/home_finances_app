@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 
 type JobOption = { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" };
 
@@ -217,13 +218,14 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.date}</label>
-            <input
-              name="issued_at"
-              type="date"
-              required
-              defaultValue={initial?.issued_at ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="issued_at"
+                required
+                defaultIsoYmd={initial?.issued_at ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
 
           <div>
@@ -272,22 +274,24 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.coveredStart}</label>
-            <input
-              name="covered_period_start"
-              type="date"
-              defaultValue={initial?.covered_period_start ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="covered_period_start"
+                defaultIsoYmd={initial?.covered_period_start ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-xs text-slate-400">{labels.coveredEnd}</label>
-            <input
-              name="covered_period_end"
-              type="date"
-              defaultValue={initial?.covered_period_end ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="covered_period_end"
+                defaultIsoYmd={initial?.covered_period_end ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
 
           <div>

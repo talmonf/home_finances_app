@@ -1,5 +1,6 @@
 "use client";
 
+import { HouseholdDateIsoControl } from "@/components/household-date-field";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
@@ -113,10 +114,9 @@ export function RescheduleFormClient({
       <div className="space-y-1">
         <span className="block text-sm text-slate-300">{labels.start}</span>
         <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => syncBothDates(e.target.value)}
+          <HouseholdDateIsoControl
+            valueIso={startDate}
+            onIsoChange={syncBothDates}
             required
             className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             aria-label={labels.startDate}
@@ -167,12 +167,11 @@ export function RescheduleFormClient({
       <div className="space-y-1">
         <span className="block text-sm text-slate-300">{labels.endOptional}</span>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => syncBothDates(e.target.value)}
+          <HouseholdDateIsoControl
+            valueIso={endDate}
+            onIsoChange={syncBothDates}
             className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            aria-label={labels.startDate}
+            aria-label={labels.endOptional}
           />
           <div className="flex items-center gap-1">
             <select

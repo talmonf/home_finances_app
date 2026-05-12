@@ -1,3 +1,5 @@
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { createTherapyClient, updateTherapyClient } from "../actions";
@@ -43,15 +45,6 @@ function splitPhones(value: string | null | undefined): { mobile: string; home: 
     .map((s) => s.trim())
     .filter(Boolean);
   return { mobile: parts[0] ?? "", home: parts[1] ?? "" };
-}
-
-function toDateInputValue(d: Date | null | undefined) {
-  if (!d) return "";
-  const z = new Date(d);
-  const y = z.getFullYear();
-  const m = String(z.getMonth() + 1).padStart(2, "0");
-  const day = String(z.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 export function TherapyClientForm({
@@ -306,11 +299,10 @@ export function TherapyClientForm({
         <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
           {c.startDate}
         </label>
-        <input
+        <HouseholdDateField
           id={`${idPrefix}_start_date`}
           name="start_date"
-          type="date"
-          defaultValue={toDateInputValue(client?.start_date)}
+          defaultIsoYmd={utcDateToHtmlDateInputValue(client?.start_date ?? null)}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
@@ -319,11 +311,10 @@ export function TherapyClientForm({
         <label htmlFor={`${idPrefix}_end_date`} className="block text-xs text-slate-400">
           {cl.endDate}
         </label>
-        <input
+        <HouseholdDateField
           id={`${idPrefix}_end_date`}
           name="end_date"
-          type="date"
-          defaultValue={toDateInputValue(client?.end_date)}
+          defaultIsoYmd={utcDateToHtmlDateInputValue(client?.end_date ?? null)}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
@@ -583,21 +584,23 @@ export default async function ReceiptsPage({
           </div>
           <div>
             <label className="block text-xs text-slate-400">{c.from}</label>
-            <input
-              name="from"
-              type="date"
-              defaultValue={sp.from ?? ""}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="from"
+                defaultIsoYmd={sp.from ?? ""}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs text-slate-400">{c.to}</label>
-            <input
-              name="to"
-              type="date"
-              defaultValue={sp.to ?? ""}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            <div className="mt-1">
+              <HouseholdDateField
+                name="to"
+                defaultIsoYmd={sp.to ?? ""}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
           <div className="flex shrink-0 items-end gap-2">
             <button

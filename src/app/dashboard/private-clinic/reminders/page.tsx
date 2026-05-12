@@ -25,6 +25,7 @@ import {
   updatePrivateClinicReminder,
   deletePrivateClinicReminder,
 } from "./actions";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 
 export const dynamic = "force-dynamic";
@@ -287,9 +288,8 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
               ) : null}
               <div>
                 <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
-                <input
+                <HouseholdDateField
                   name="reminder_date"
-                  type="date"
                   required
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 />
@@ -338,11 +338,10 @@ export default async function PrivateClinicRemindersPage({ searchParams }: PageP
               <input type="hidden" name="redirect_on_error" value={modalEditHref} />
               <div>
                 <label className="mb-1 block text-xs text-slate-400">{t.reminderDate}</label>
-                <input
+                <HouseholdDateField
                   name="reminder_date"
-                  type="date"
                   required
-                  defaultValue={toDateInputValue(editingRow.reminder_date)}
+                  defaultIsoYmd={toDateInputValue(editingRow.reminder_date)}
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 />
               </div>
