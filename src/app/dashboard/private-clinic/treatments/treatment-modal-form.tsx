@@ -1,3 +1,4 @@
+import { HouseholdDateField } from "@/components/household-date-field";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
@@ -105,7 +106,6 @@ export function TreatmentModalForm({
   redirectOnSuccess,
   redirectOnError,
   householdId,
-  dateInputLang,
   uiLanguage,
   clients,
   jobs,
@@ -125,8 +125,6 @@ export function TreatmentModalForm({
   redirectOnSuccess: string;
   redirectOnError: string;
   householdId: string;
-  /** BCP 47 tag for native date inputs (from household date display format). */
-  dateInputLang: string;
   uiLanguage: "en" | "he";
   clients: ClientOption[];
   jobs: JobOption[];
@@ -232,15 +230,13 @@ export function TreatmentModalForm({
               </div>
               <div>
                 <label className="block text-xs text-slate-400">{labels.tr.inlineReceiptDate}</label>
-                <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
-                  <input
+                <div className="mt-1">
+                  <HouseholdDateField
                     name="receipt_issued_at"
-                    type="date"
-                    lang={dateInputLang}
-                    defaultValue={initial?.payment_date ?? ""}
+                    defaultIsoYmd={initial?.payment_date ?? ""}
                     className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
-                </span>
+                </div>
               </div>
             </div>
           ) : null}

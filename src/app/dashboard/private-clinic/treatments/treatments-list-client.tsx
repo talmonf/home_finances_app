@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime, htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { TreatmentListRowDto } from "./treatments-list-data";
@@ -67,7 +68,6 @@ export function TreatmentsListClient({
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
 
   useEffect(() => {
     setRows(initialRows);
@@ -176,7 +176,11 @@ export function TreatmentsListClient({
           <input type="hidden" name="redirect_on_success" value={listBaseHref} />
           <input type="hidden" name="redirect_on_error" value={listBaseHref} />
           <input required name="receipt_number" placeholder="#" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-          <input required type="date" name="issued_at" lang={dateInputLang} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+          <HouseholdDateField
+            name="issued_at"
+            required
+            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+          />
           <input required name="total_amount" placeholder="0.00" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
           <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
             {labels.createReceiptLabel}

@@ -47,3 +47,14 @@ button.hf-pending-submit::before {
     transform: rotate(360deg);
   }
 }
+
+/* react-day-picker (household date popover) — dark panel on slate UI */
+.rdp-root.household-day-picker {
+  --rdp-accent-color: rgb(56 189 248);
+  --rdp-accent-background-color: rgb(30 41 59);
+  --rdp-day-height: 2rem;
+  --rdp-day-width: 2rem;
+  --rdp-day_button-height: 1.875rem;
+  --rdp-day_button-width: 1.875rem;
+  color: rgb(226 232 240);
+}

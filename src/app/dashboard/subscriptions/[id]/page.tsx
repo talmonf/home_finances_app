@@ -1,12 +1,12 @@
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
+import { HouseholdDateField } from "@/components/household-date-field";
 import {
   prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentUiLanguage,
-  getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
-import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateSubscription } from "../actions";
@@ -21,15 +21,6 @@ type PageProps = {
 function startOfToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function formatDateInput(d: Date | null) {
-  if (!d) return "";
-  const date = new Date(d);
-  const yyyy = date.getFullYear();
-  const mm = `${date.getMonth() + 1}`.padStart(2, "0");
-  const dd = `${date.getDate()}`.padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 function formatScheme(scheme: string) {
@@ -62,8 +53,6 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
-  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
-  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -153,7 +142,6 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
         <section className="space-y-4">
           <form
             action={updateSubscription}
-            lang={dateInputLang}
             className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
           >
             <input type="hidden" name="id" value={subscription.id} />
@@ -167,12 +155,10 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Start date (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="start_date"
                 name="start_date"
-                type="date"
-                lang={dateInputLang}
-                defaultValue={formatDateInput(subscription.start_date)}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(subscription.start_date)}
                 className={inputClass}
               />
             </div>
@@ -180,12 +166,10 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Renewal date (annual, optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                type="date"
-                lang={dateInputLang}
-                defaultValue={formatDateInput(subscription.renewal_date)}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(subscription.renewal_date)}
                 className={inputClass}
               />
             </div>
@@ -264,12 +248,10 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="cancelled_at" className="mb-1 block text-xs font-medium text-slate-400">
                 Cancellation date (required if Cancelled)
               </label>
-              <input
+              <HouseholdDateField
                 id="cancelled_at"
                 name="cancelled_at"
-                type="date"
-                lang={dateInputLang}
-                defaultValue={formatDateInput(subscription.cancelled_at)}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(subscription.cancelled_at)}
                 className={inputClass}
               />
             </div>

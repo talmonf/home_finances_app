@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
-import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateIsoControl } from "@/components/household-date-field";
 
 type Props = {
   name: string;
@@ -40,8 +39,6 @@ export function SplitDateTimeField({
   selectClassName =
     "w-full rounded-lg border border-slate-500 bg-slate-800 px-2 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
 }: Props) {
-  const householdDateFormat = useHouseholdDateFormat();
-  const dateInputLang = htmlLangForDateDisplayFormat(householdDateFormat);
   const defaultDateAriaLabel = uiLanguage === "he" ? "תאריך" : "Date";
   const defaultHourAriaLabel = uiLanguage === "he" ? "שעה" : "Hour";
   const defaultMinuteAriaLabel = uiLanguage === "he" ? "דקות" : "Minute";
@@ -73,13 +70,11 @@ export function SplitDateTimeField({
   return (
     <div className={wrapperClassName}>
       <input type="hidden" name={name} value={value} />
-      <span lang={dateInputLang} className="min-w-0 w-full">
-        <input
-          type="date"
-          lang={dateInputLang}
-          value={date}
+      <span className="min-w-0 w-full">
+        <HouseholdDateIsoControl
+          valueIso={date}
+          onIsoChange={setDate}
           required={required}
-          onChange={(e) => setDate(e.target.value)}
           className={dateInputClassName}
           aria-label={dateAriaLabel ?? defaultDateAriaLabel}
         />

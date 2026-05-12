@@ -6,7 +6,8 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
-import { formatHouseholdDate, htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import type { Prisma } from "@/generated/prisma/client";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
@@ -155,7 +156,6 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   }
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
-  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -499,7 +499,6 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <form
                 action={createSubscription}
                 className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-3"
-                lang={dateInputLang}
               >
             <div>
               <label
@@ -523,11 +522,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               >
                 Start date (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="start_date"
                 name="start_date"
-                type="date"
-                lang={dateInputLang}
+                defaultIsoYmd=""
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
@@ -538,11 +536,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               >
                 Renewal date (annual, optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                type="date"
-                lang={dateInputLang}
+                defaultIsoYmd=""
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
@@ -638,11 +635,10 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               >
                 Cancellation date (required if Cancelled)
               </label>
-              <input
+              <HouseholdDateField
                 id="cancelled_at"
                 name="cancelled_at"
-                type="date"
-                lang={dateInputLang}
+                defaultIsoYmd=""
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>

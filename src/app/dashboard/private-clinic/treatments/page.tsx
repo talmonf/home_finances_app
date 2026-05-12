@@ -21,7 +21,7 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
-import { htmlLangForDateDisplayFormat, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
 import { TreatmentsListClient } from "./treatments-list-client";
@@ -64,7 +64,6 @@ export default async function TreatmentsPage({
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
-  const dateInputLang = htmlLangForDateDisplayFormat(dateDisplayFormat);
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
@@ -453,7 +452,6 @@ export default async function TreatmentsPage({
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
           redirectOnError={`${baseListHref}&modal=new${appointmentQuery}`}
           householdId={householdId}
-          dateInputLang={dateInputLang}
           uiLanguage={uiLanguage}
           appointmentId={appointmentId || undefined}
           initial={newTreatmentInitial}
@@ -486,7 +484,6 @@ export default async function TreatmentsPage({
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
           redirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editTreatment.id)}`}
           householdId={householdId}
-          dateInputLang={dateInputLang}
           uiLanguage={uiLanguage}
           clients={clients.map((cl) => ({
             id: cl.id,

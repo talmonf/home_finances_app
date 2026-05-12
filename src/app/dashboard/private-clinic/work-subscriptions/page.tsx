@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
@@ -184,10 +185,9 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {t.renewalDate}
               </label>
-              <input
+              <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

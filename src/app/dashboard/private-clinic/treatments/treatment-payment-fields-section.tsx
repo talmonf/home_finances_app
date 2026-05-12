@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
-import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
 
 type Props = {
   organizationPaidJobIds: string[];
@@ -33,7 +32,6 @@ export function TreatmentPaymentFieldsSection({
   bankAccounts,
   digitalPaymentMethods,
 }: Props) {
-  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [jobId, setJobId] = useState("");
   const controlClass =
@@ -70,15 +68,13 @@ export function TreatmentPaymentFieldsSection({
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
-              <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
-                <input
+              <div className="mt-1">
+                <HouseholdDateField
                   name="payment_date"
-                  type="date"
-                  lang={dateInputLang}
-                  defaultValue={initial?.payment_date ?? ""}
+                  defaultIsoYmd={initial?.payment_date ?? ""}
                   className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
-              </span>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>

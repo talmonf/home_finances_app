@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
-import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
 import type { TherapyVisitType } from "@/generated/prisma/enums";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { UiLanguage } from "@/lib/ui-language";
@@ -62,7 +61,6 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     defaultClientId,
     externalReportingJobIds = [],
   } = props;
-  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const inputFlatClass =
     "w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
   const controlClass = `mt-1 ${inputFlatClass}`;
@@ -214,16 +212,14 @@ export function TherapyTreatmentDefaultAmountFields(props: {
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.date}</label>
-        <span lang={dateInputLang} className="mt-1 block w-full min-w-0">
-          <input
+        <div className="mt-1">
+          <HouseholdDateField
             name="occurred_date"
-            type="date"
-            lang={dateInputLang}
+            defaultIsoYmd={defaultValues?.occurred_date ?? ""}
             required
-            defaultValue={defaultValues?.occurred_date ?? ""}
             className={inputFlatClass}
           />
-        </span>
+        </div>
       </div>
       <div>
         <label className="block text-xs text-slate-400">{labels.timeOptional}</label>

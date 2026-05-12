@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
-import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 
 type Option = { id: string; label: string };
@@ -53,7 +52,6 @@ type Props = {
 };
 
 export function TreatmentsFiltersForm(props: Props) {
-  const dateInputLang = htmlLangForDateDisplayFormat(useHouseholdDateFormat());
   const [jobId, setJobId] = useState(props.job);
   const [programId, setProgramId] = useState(props.program);
 
@@ -174,24 +172,24 @@ export function TreatmentsFiltersForm(props: Props) {
 
       <div className="flex-none">
         <label className="block text-[11px] leading-4 text-slate-400">{props.labels.from}</label>
-        <input
-          name="from"
-          type="date"
-          lang={dateInputLang}
-          defaultValue={props.from}
-          className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-        />
+        <div className="mt-0.5">
+          <HouseholdDateField
+            name="from"
+            defaultIsoYmd={props.from}
+            className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+          />
+        </div>
       </div>
 
       <div className="flex-none">
         <label className="block text-[11px] leading-4 text-slate-400">{props.labels.to}</label>
-        <input
-          name="to"
-          type="date"
-          lang={dateInputLang}
-          defaultValue={props.to}
-          className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-        />
+        <div className="mt-0.5">
+          <HouseholdDateField
+            name="to"
+            defaultIsoYmd={props.to}
+            className="w-auto min-w-[8rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+          />
+        </div>
       </div>
 
       <div className="flex flex-none shrink-0 items-end gap-2">

@@ -153,3 +153,85 @@ export const HOUSEHOLD_DATE_FORMAT_LABELS: Record<HouseholdDateDisplayFormat, st
   DMY: "dd/MM/yyyy",
   MDY: "MM/dd/yyyy",
 };
+
+function isValidCalendarDateYmd(year: number, month: number, day: number): boolean {
+  if (year < 1000 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  return dt.getUTCFullYear() === year && dt.getUTCMonth() === month - 1 && dt.getUTCDate() === day;
+}
+
+/** Placeholder hint for a text date field (native `type="date"` ignores household order on many platforms). */
+export function householdDateInputPlaceholder(format: HouseholdDateDisplayFormat): string {
+  switch (format) {
+    case "DMY":
+      return "dd/mm/yyyy";
+    case "MDY":
+      return "mm/dd/yyyy";
+    case "YMD":
+    default:
+      return "yyyy-mm-dd";
+  }
+}
+
+/** `yyyy-mm-dd` calendar day → display string for the household order (empty if invalid). */
+export function isoYmdToHouseholdInputDisplay(
+  isoYmd: string | null | undefined,
+  format: HouseholdDateDisplayFormat,
+): string {
+  if (!isoYmd?.trim()) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoYmd.trim());
+  if (!m) return "";
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!isValidCalendarDateYmd(y, mo, d)) return "";
+  return formatYmdParts(y, mo, d, format);
+}
+
+/**
+ * Parse a user-typed date in the household segment order into `yyyy-mm-dd`.
+ * Also accepts pasted ISO `yyyy-mm-dd`. Returns null if empty/invalid/incomplete.
+ */
+export function parseHouseholdDateInputToIsoYmd(
+  raw: string,
+  format: HouseholdDateDisplayFormat,
+): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (iso) {
+    const y = Number(iso[1]);
+    const mo = Number(iso[2]);
+    const d = Number(iso[3]);
+    if (!isValidCalendarDateYmd(y, mo, d)) return null;
+    return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  }
+  const parts = s.split(/[/.\s]+/).filter((p) => p.length > 0);
+  if (parts.length !== 3) return null;
+  const nums = parts.map((p) => Number.parseInt(p, 10));
+  if (nums.some((n) => Number.isNaN(n))) return null;
+
+  let y: number;
+  let mo: number;
+  let d: number;
+
+  if (format === "YMD") {
+    if (parts[0].length !== 4) return null;
+    y = nums[0];
+    mo = nums[1];
+    d = nums[2];
+  } else if (format === "DMY") {
+    d = nums[0];
+    mo = nums[1];
+    y = nums[2];
+    if (parts[2].length <= 2) y = y < 50 ? 2000 + y : 1900 + y;
+  } else {
+    mo = nums[0];
+    d = nums[1];
+    y = nums[2];
+    if (parts[2].length <= 2) y = y < 50 ? 2000 + y : 1900 + y;
+  }
+
+  if (!isValidCalendarDateYmd(y, mo, d)) return null;
+  return `${String(y).padStart(4, "0")}-${pad2(mo)}-${pad2(d)}`;
+}
