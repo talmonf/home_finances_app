@@ -7,6 +7,7 @@ import { upsertHouseholdEnabledSections } from "@/lib/household-sections";
 import { PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import { ensureTherapySettings } from "@/lib/therapy/bootstrap";
 import type { TherapyHebrewTranscriptionProvider } from "@/generated/prisma/enums";
+import { deleteCoreHouseholdScopedRowsInTransaction } from "@/lib/household-delete-core-scoped";
 import { HOME_FREQUENT_LINK_KEYS, type HomeFrequentLinkKey } from "@/lib/home-frequent-links";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
@@ -261,6 +262,7 @@ export async function deleteHousehold(formData: FormData) {
   try {
     await prisma.$transaction(async (tx) => {
       await deleteTherapyScopedRowsForHousehold(tx, householdId);
+      await deleteCoreHouseholdScopedRowsInTransaction(tx, householdId);
       await tx.households.delete({
         where: { id: householdId },
       });
@@ -334,6 +336,7 @@ async function deleteTherapyScopedRowsForHousehold(
   await tx.therapy_appointment_audits.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_visit_type_default_amounts.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_travel_entries.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_consultation_participants.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_consultations.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_consultation_types.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_appointments.deleteMany({ where: { household_id: householdId } });
