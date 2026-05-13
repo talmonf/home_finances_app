@@ -1,5 +1,3 @@
-import { Prisma } from "@/generated/prisma/client";
-
 /**
  * Interactive transaction client from prisma.$transaction(async (tx) => …).
  * Typed loosely so this module does not depend on generated PrismaClient generics.
@@ -13,6 +11,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
  * Many legacy FKs use REFERENCES households(id) without ON DELETE CASCADE, so a plain
  * households.delete fails (P2003). Remove non–private-clinic rows in dependency-safe order
  * after therapy/clinic rows are already cleared.
+ *
+ * **Durable fix:** run migration `113_household_id_on_delete_cascade.sql` so Postgres cascades
+ * `household_id` deletes; this routine remains as a safety net for older DBs and edge cases.
  */
 export async function deleteCoreHouseholdScopedRowsInTransaction(tx: Tx, householdId: string): Promise<void> {
   if (!UUID_RE.test(householdId)) {
@@ -26,18 +27,21 @@ export async function deleteCoreHouseholdScopedRowsInTransaction(tx: Tx, househo
   await tx.general_audit_events.deleteMany({ where: { household_id: householdId } });
   await tx.private_clinic_backup_snapshots.deleteMany({ where: { household_id: householdId } });
 
+  await tx.renewal_email_subscriptions.deleteMany({ where: { household_id: householdId } });
+
   await tx.tasks.deleteMany({ where: { household_id: householdId } });
 
   await tx.transactions.deleteMany({ where: { household_id: householdId } });
   await tx.documents.deleteMany({ where: { household_id: householdId } });
 
   for (let i = 0; i < 64; i++) {
-    const n = await tx.$executeRaw(
-      Prisma.sql`DELETE FROM categories c
-        WHERE c.household_id = ${householdId}::uuid
-          AND NOT EXISTS (SELECT 1 FROM categories ch WHERE ch.parent_id = c.id)`,
-    );
-    if (Number(n) === 0) break;
+    const { count } = await tx.categories.deleteMany({
+      where: {
+        household_id: householdId,
+        children: { none: {} },
+      },
+    });
+    if (count === 0) break;
   }
 
   await tx.studies_and_classes.deleteMany({ where: { household_id: householdId } });
@@ -72,6 +76,10 @@ export async function deleteCoreHouseholdScopedRowsInTransaction(tx: Tx, househo
       OR: [{ household_id: householdId }, { user: { household_id: householdId } }],
     },
   });
+
+  await tx.job_benefits.deleteMany({ where: { household_id: householdId } });
+  await tx.job_documents.deleteMany({ where: { household_id: householdId } });
+  await tx.job_payroll_entries.deleteMany({ where: { household_id: householdId } });
 
   await tx.jobs.deleteMany({ where: { household_id: householdId } });
 

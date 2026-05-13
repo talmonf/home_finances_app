@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 type Props = {
   saved?: boolean;
   deleteError?: string;
+  /** Optional server-provided diagnostic (from delete action redirect). */
+  deleteDetail?: string;
 };
 
 /**
@@ -13,7 +15,7 @@ type Props = {
  * immediately before Next.js `#next-route-announcer`, so they are not buried
  * under long page content inside the card header.
  */
-export function HouseholdEditStatusPortal({ saved, deleteError }: Props) {
+export function HouseholdEditStatusPortal({ saved, deleteError, deleteDetail }: Props) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
 
   const showSaved = Boolean(saved);
@@ -42,7 +44,7 @@ export function HouseholdEditStatusPortal({ saved, deleteError }: Props) {
       wrapper.remove();
       setContainer(null);
     };
-  }, [hasContent, saved, deleteError]);
+  }, [hasContent, saved, deleteError, deleteDetail]);
 
   if (!hasContent || !container) {
     return null;
@@ -81,7 +83,12 @@ export function HouseholdEditStatusPortal({ saved, deleteError }: Props) {
             role="alert"
             className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100 shadow-lg shadow-slate-950/40"
           >
-            Household deletion failed due to an unexpected error. Please try again.
+            <p>Household deletion failed due to an unexpected error. Please try again.</p>
+            {deleteDetail ? (
+              <p className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] text-rose-200/90">
+                {deleteDetail}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </div>

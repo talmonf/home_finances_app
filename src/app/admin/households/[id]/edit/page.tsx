@@ -47,6 +47,7 @@ type PageProps = {
     usefulSaved?: string;
     usefulError?: string;
     deleteError?: string;
+    deleteDetail?: string;
     tab?: string;
   }>;
 };
@@ -143,6 +144,7 @@ export default async function EditHouseholdPage({
       <HouseholdEditStatusPortal
         saved={Boolean(resolvedSearchParams?.saved)}
         deleteError={resolvedSearchParams?.deleteError}
+        deleteDetail={resolvedSearchParams?.deleteDetail}
       />
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">

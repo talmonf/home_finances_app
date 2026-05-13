@@ -12,6 +12,7 @@ import { HOME_FREQUENT_LINK_KEYS, type HomeFrequentLinkKey } from "@/lib/home-fr
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { Prisma } from "@/generated/prisma/client";
 
 export type HouseholdDeleteImpactRow = {
@@ -268,6 +269,21 @@ export async function deleteHousehold(formData: FormData) {
       });
     });
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    const deleteDetail =
+      error instanceof Prisma.PrismaClientKnownRequestError
+        ? `${error.code}: ${error.message}`.slice(0, 450)
+        : error instanceof Error
+          ? error.message.slice(0, 450)
+          : String(error).slice(0, 450);
+    const detailParam =
+      deleteDetail.length > 0
+        ? `&deleteDetail=${encodeURIComponent(deleteDetail)}`
+        : "";
+
     // #region agent log
     const isKnown = error instanceof Prisma.PrismaClientKnownRequestError;
     const known = isKnown ? error : null;
@@ -294,9 +310,13 @@ export async function deleteHousehold(formData: FormData) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
     ) {
-      redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=foreignKey`);
+      redirect(
+        `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=foreignKey${detailParam}`,
+      );
     }
-    redirect(`/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=unknown`);
+    redirect(
+      `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=unknown${detailParam}`,
+    );
   }
 
   revalidatePath("/admin/households");
