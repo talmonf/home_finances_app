@@ -260,6 +260,7 @@ export async function deleteHousehold(formData: FormData) {
 
   try {
     await prisma.$transaction(async (tx) => {
+      await deleteTherapyScopedRowsForHousehold(tx, householdId);
       await tx.households.delete({
         where: { id: householdId },
       });
@@ -304,4 +305,46 @@ export async function deleteHousehold(formData: FormData) {
   revalidatePath("/dashboard/private-clinic", "layout");
 
   redirect("/admin/households?deleted=1");
+}
+
+type HouseholdDeleteTransactionClient = Omit<
+  typeof prisma,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
+>;
+
+/**
+ * Postgres cannot always CASCADE `DELETE households` when multiple child tables
+ * reference the same `jobs` rows with ON DELETE RESTRICT (e.g. therapy_clients.default_job_id).
+ * Remove therapy/clinic rows in safe order first (aligned with private-clinic snapshot cleanup).
+ */
+async function deleteTherapyScopedRowsForHousehold(
+  tx: HouseholdDeleteTransactionClient,
+  householdId: string,
+): Promise<void> {
+  await tx.therapy_receipt_travel_allocations.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_receipt_consultation_allocations.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_receipt_allocations.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_treatment_participants.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_appointment_participants.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_family_members.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_client_relationships.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_treatment_attachments.deleteMany({ where: { household_id: householdId } });
+  await tx.private_clinic_reminders.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_import_audits.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_appointment_audits.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_visit_type_default_amounts.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_travel_entries.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_consultations.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_consultation_types.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_appointments.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_appointment_series.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_job_expenses.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_receipts.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_treatments.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_clients_jobs.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_families.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_clients.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_service_programs.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_expense_categories.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_settings.deleteMany({ where: { household_id: householdId } });
 }
