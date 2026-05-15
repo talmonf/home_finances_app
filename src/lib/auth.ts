@@ -306,7 +306,7 @@ export async function getCurrentShowUsefulLinks(): Promise<boolean> {
     where: { id: userId, household_id: householdId },
     select: { show_useful_links: true },
   });
-  return row?.show_useful_links ?? true;
+  return row?.show_useful_links ?? false;
 }
 
 /** Super-admin can disable per-entity Links (URL) panels for a household. */

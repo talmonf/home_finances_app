@@ -149,6 +149,7 @@ export default async function HouseholdUsersPage({
         is_active: true,
         must_change_password: true,
         password_changed_at: now,
+        show_useful_links: false,
       },
     });
 

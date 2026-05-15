@@ -1337,7 +1337,7 @@ model users {
   family_member_id     String?
   is_active            Boolean  @default(true)
   /// When false, dashboard useful-links blocks are hidden for this user (super-admin only).
-  show_useful_links    Boolean  @default(true)
+  show_useful_links    Boolean  @default(false)
   google_calendar_enabled Boolean @default(false)
   google_gmail_address String?
   google_calendar_access_token_encrypted String?
