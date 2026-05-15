@@ -10,6 +10,7 @@ import {
   therapyVisitTypesOrdered,
   type VisitTypeDefaultRow,
 } from "@/lib/therapy/visit-type-defaults";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOpt = { id: string; job_title: string };
 type ProgramOpt = { id: string; job_id: string; name: string };
@@ -68,7 +69,10 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     "w-full rounded-lg border border-slate-500 bg-slate-800 px-2 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
   const defaultClient = clients.find((cl) => cl.id === defaultClientId);
 
-  const firstJobId = defaultValues?.job_id || defaultClient?.default_job_id || "";
+  const firstJobId = defaultClinicJobId(
+    jobs,
+    defaultValues?.job_id || defaultClient?.default_job_id || "",
+  );
   const programsForFirst = useMemo(
     () => programs.filter((p) => p.job_id === firstJobId),
     [programs, firstJobId],

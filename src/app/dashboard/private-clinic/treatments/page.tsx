@@ -20,6 +20,7 @@ import {
   jobWhereInPrivateClinicModule,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
@@ -273,15 +274,19 @@ export default async function TreatmentsPage({
     firstPage.rows.some((r) => r.has_external_reporting_system);
   const prefilledClientForNewModal =
     modalMode === "new" && filters.client ? clients.find((cl) => cl.id === filters.client) : null;
-  const newTreatmentInitial: TreatmentModalInitial | undefined = prefilledClientForNewModal
-    ? {
-        client_id: prefilledClientForNewModal.id,
-        client_label: `${prefilledClientForNewModal.first_name} ${prefilledClientForNewModal.last_name ?? ""}`.trim(),
-        job_id: prefilledClientForNewModal.default_job_id,
-        program_id: prefilledClientForNewModal.default_program_id ?? "",
-        visit_type: prefilledClientForNewModal.default_visit_type ?? undefined,
-      }
-    : undefined;
+  const activeClinicJobs = jobs.filter((j) => j.is_active && j.is_private_clinic);
+  const newTreatmentInitial: TreatmentModalInitial | undefined =
+    modalMode === "new"
+      ? prefilledClientForNewModal
+        ? {
+            client_id: prefilledClientForNewModal.id,
+            client_label: `${prefilledClientForNewModal.first_name} ${prefilledClientForNewModal.last_name ?? ""}`.trim(),
+            job_id: defaultClinicJobId(activeClinicJobs, prefilledClientForNewModal.default_job_id),
+            program_id: prefilledClientForNewModal.default_program_id ?? "",
+            visit_type: prefilledClientForNewModal.default_visit_type ?? undefined,
+          }
+        : { job_id: defaultClinicJobId(activeClinicJobs) }
+      : undefined;
   const editId = sp.edit_id?.trim() || "";
   const editTreatment =
     modalMode === "edit" && editId
@@ -350,7 +355,7 @@ export default async function TreatmentsPage({
         <TreatmentsFiltersForm
           paid={filters.paid}
           reported={filters.reported}
-          job={filters.job}
+          job={defaultClinicJobId(activeClinicJobs, sp.job !== undefined ? filters.job : undefined)}
           program={filters.program}
           client={filters.client}
           family={filters.family}

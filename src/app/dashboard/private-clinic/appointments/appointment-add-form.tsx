@@ -9,6 +9,7 @@ import {
   createTherapyAppointmentSeries,
 } from "../actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 type JobOption = { id: string; label: string; defaultDurationMinutes: number | null };
 type ProgramOption = { id: string; jobId: string; label: string; defaultDurationMinutes: number | null };
 type ClientOption = {
@@ -79,9 +80,10 @@ export function AppointmentAddForm({
   const [recurring, setRecurring] = useState(false);
   const [singleClientId, setSingleClientId] = useState(prefill?.clientId ?? "");
   const [seriesClientId, setSeriesClientId] = useState(prefill?.clientId ?? "");
-  const [singleJobId, setSingleJobId] = useState(prefill?.jobId ?? "");
+  const defaultJobId = defaultClinicJobId(jobs, prefill?.jobId);
+  const [singleJobId, setSingleJobId] = useState(defaultJobId);
   const [singleProgramId, setSingleProgramId] = useState(prefill?.programId ?? "");
-  const [seriesJobId, setSeriesJobId] = useState(prefill?.jobId ?? "");
+  const [seriesJobId, setSeriesJobId] = useState(defaultJobId);
   const [seriesProgramId, setSeriesProgramId] = useState(prefill?.programId ?? "");
   const [singleVisitType, setSingleVisitType] = useState(prefill?.visitType ?? "");
   const [seriesVisitType, setSeriesVisitType] = useState(prefill?.visitType ?? "");

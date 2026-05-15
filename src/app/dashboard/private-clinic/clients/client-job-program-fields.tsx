@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = {
@@ -74,9 +75,14 @@ export function ClientJobProgramFields({
   visitFrequencyWeeksInputId?: string;
   labels?: ClientJobProgramFieldLabels;
 }) {
-  const [jobId, setJobId] = useState(defaultJobId ?? "");
+  const initialJobId = defaultClinicJobId(jobs, defaultJobId);
+  const [jobId, setJobId] = useState(initialJobId);
   const [programId, setProgramId] = useState(defaultProgramId ?? "");
-  const [checkedJobs, setCheckedJobs] = useState<Set<string>>(new Set(defaultCheckedJobIds ?? []));
+  const [checkedJobs, setCheckedJobs] = useState<Set<string>>(() => {
+    const next = new Set(defaultCheckedJobIds ?? []);
+    if (initialJobId) next.add(initialJobId);
+    return next;
+  });
 
   const kupatHolimOptions = useMemo(() => {
     // Keep UI ordering aligned with the displayed labels (works for both English and Hebrew).

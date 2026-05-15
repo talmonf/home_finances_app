@@ -6,6 +6,7 @@ import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOption = { id: string; label: string };
 type TypeOption = { id: string; name: string; name_he: string | null };
@@ -87,7 +88,7 @@ export function ConsultationModalForm({
           <select
             name="job_id"
             required
-            defaultValue={initial?.job_id ?? ""}
+            defaultValue={defaultClinicJobId(jobs, initial?.job_id)}
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
             <option value="">{labels.job}</option>

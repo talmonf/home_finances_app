@@ -19,6 +19,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "./form-error-message";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
@@ -241,8 +242,13 @@ export default async function ClientsPage({
       })
     : [];
   const allowedJobIds = new Set(jobs.map((j) => j.id));
+  const hasJobParam = resolved?.job !== undefined;
   const jobIdRaw = (resolved?.job ?? "").trim();
-  const jobId = allowedJobIds.has(jobIdRaw) ? jobIdRaw : "";
+  const jobId = hasJobParam
+    ? allowedJobIds.has(jobIdRaw)
+      ? jobIdRaw
+      : ""
+    : defaultClinicJobId(jobs);
   const allowedProgramIds = new Set(programs.map((p) => p.id));
   const programIdRaw = (resolved?.program ?? "").trim();
   const programId = allowedProgramIds.has(programIdRaw) ? programIdRaw : "";

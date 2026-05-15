@@ -32,6 +32,7 @@ import {
   jobsWhereActiveForPrivateClinicPickers,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import {
   loadReceiptsCursorPage,
   parseReceiptsBankFilter,
@@ -520,7 +521,7 @@ export default async function ReceiptsPage({
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
-              defaultValue={filters.job}
+              defaultValue={defaultClinicJobId(jobs, sp.job !== undefined ? filters.job : undefined)}
               className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>

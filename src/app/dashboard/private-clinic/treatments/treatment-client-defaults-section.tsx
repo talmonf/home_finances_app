@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { TherapyTreatmentDefaultAmountFields } from "@/components/therapy-treatment-default-amount-fields";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOption = {
   id: string;
@@ -129,7 +130,7 @@ export function TreatmentClientDefaultsSection({
           markReportedInExternalSystem: labels.markReportedInExternalSystem,
         }}
         defaultValues={{
-          job_id: initial?.job_id ?? "",
+          job_id: defaultClinicJobId(jobs, initial?.job_id),
           program_id: initial?.program_id ?? "",
           occurred_date: initial?.occurred_date ?? "",
           occurred_time: initial?.occurred_time ?? "",

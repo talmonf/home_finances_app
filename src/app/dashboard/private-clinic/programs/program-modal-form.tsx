@@ -1,6 +1,7 @@
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicCommon, privateClinicPrograms } from "@/lib/private-clinic-i18n";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobWithMember = {
   id: string;
@@ -43,6 +44,7 @@ export function ProgramModalForm({
             <select
               name="job_id"
               required
+              defaultValue={defaultClinicJobId(jobs)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.job}</option>

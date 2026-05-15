@@ -19,6 +19,7 @@ import { TherapyExpenseImageUpload } from "@/components/therapy-expense-image-up
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 export const dynamic = "force-dynamic";
 
@@ -202,6 +203,7 @@ export default async function ExpensesPage({
               <select
                 name="job_id"
                 required
+                defaultValue={defaultClinicJobId(jobs)}
                 className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">{c.job}</option>

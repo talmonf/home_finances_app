@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type Option = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -52,7 +53,7 @@ type Props = {
 };
 
 export function TreatmentsFiltersForm(props: Props) {
-  const [jobId, setJobId] = useState(props.job);
+  const [jobId, setJobId] = useState(() => defaultClinicJobId(props.jobs, props.job));
   const [programId, setProgramId] = useState(props.program);
 
   const programsForJob = useMemo(

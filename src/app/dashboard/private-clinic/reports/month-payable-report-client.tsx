@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 export type MonthPayableJobOption = { id: string; label: string };
 
@@ -31,7 +32,7 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
 
 export function MonthPayableReportClient({ jobs, labels }: Props) {
   const initial = useMemo(() => defaultPreviousYearMonth(), []);
-  const [jobId, setJobId] = useState(() => jobs[0]?.id ?? "");
+  const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs));
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);
 

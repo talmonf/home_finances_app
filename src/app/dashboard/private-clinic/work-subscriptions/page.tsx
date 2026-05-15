@@ -15,6 +15,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSubscription } from "@/app/dashboard/subscriptions/actions";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,7 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                 name="job_id"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
+                defaultValue={defaultClinicJobId(jobs)}
               >
                 <option value="" disabled>
                   {t.selectJob}

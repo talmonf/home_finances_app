@@ -12,6 +12,7 @@ import {
   jobsWhereActiveForPrivateClinicPickers,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { redirect } from "next/navigation";
 import { AppointmentAddForm } from "../appointment-add-form";
@@ -146,7 +147,7 @@ export default async function NewAppointmentPage({
         dow={dow}
         prefill={{
           clientId: sp.client,
-          jobId: sp.job,
+          jobId: defaultClinicJobId(jobOpts, sp.job),
           programId: sp.program,
           visitType: sp.visitType,
           startDate: startDatePrefill,

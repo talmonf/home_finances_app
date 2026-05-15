@@ -8,6 +8,7 @@ import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic
 import { FamilyMembersFormSection, type FamilyMembersFormLabels, type InitialFamilyMemberRow } from "../../family-members-form-section";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { DeleteFamilyForm } from "../../delete-family-form";
 
 export const dynamic = "force-dynamic";
@@ -159,7 +160,7 @@ export default async function EditFamilyPage({ params, searchParams }: Props) {
           <label className="block text-xs text-slate-400">{t("Job", "משרה")}</label>
           <select
             name="default_job_id"
-            defaultValue={family.default_job_id ?? ""}
+            defaultValue={defaultClinicJobId(jobs, family.default_job_id)}
             required
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >

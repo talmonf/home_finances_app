@@ -17,6 +17,7 @@ import type { TherapyTransactionOption } from "@/components/therapy-transaction-
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import {
   loadConsultationsCursorPage,
   parseConsultationsReceivedFilter,
@@ -218,7 +219,7 @@ export async function ConsultationsPageContent({
             <select
               id="consultations-filter-job"
               name="job"
-              defaultValue={filters.job}
+              defaultValue={defaultClinicJobId(jobs, sp.job !== undefined ? filters.job : undefined)}
               className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">{c.any}</option>

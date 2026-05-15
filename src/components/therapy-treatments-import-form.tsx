@@ -4,6 +4,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { useEffect, useMemo, useState } from "react";
 import type { TipulimImportProfile } from "@/lib/therapy/import-tipulim";
 import { FileUploadField } from "@/components/file-upload-field";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type Job = { id: string; title: string };
 type Program = { id: string; jobId: string; name: string; jobLabel?: string };
@@ -184,7 +185,7 @@ export function TherapyTreatmentsImportForm({
   };
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const [jobId, setJobId] = useState("");
+  const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs));
   const [profile, setProfile] = useState<TipulimImportProfile>(
     variant === "receipts" ? "tipulim_receipts_only" : "tipulim_private",
   );

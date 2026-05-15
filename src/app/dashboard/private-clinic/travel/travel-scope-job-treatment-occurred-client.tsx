@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import type { UiLanguage } from "@/lib/ui-language";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOption = { id: string; label: string };
 export type TreatmentTravelOption = { id: string; jobId: string; label: string; occurredAtYmd: string };
@@ -44,7 +45,7 @@ export function TravelJobTreatmentConsultationOccurredFields({
   consultationPlaceholder: string;
   chooseJobFirstHint: string;
 }) {
-  const [jobId, setJobId] = useState(initial?.job_id ?? "");
+  const [jobId, setJobId] = useState(() => defaultClinicJobId(jobOptions, initial?.job_id));
   const [treatmentId, setTreatmentId] = useState(initial?.treatment_id ?? "");
   const [consultationId, setConsultationId] = useState(initial?.consultation_id ?? "");
   const [occurredInitial, setOccurredInitial] = useState(initial?.occurred_at ?? "");

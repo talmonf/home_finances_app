@@ -24,6 +24,7 @@ import {
   jobsWhereActiveForPrivateClinicPickers,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { TravelAddButton } from "./travel-add-button";
 import { TravelListClient } from "./travel-list-client";
 import { TravelModalForm } from "./travel-modal-form";
@@ -209,7 +210,7 @@ export default async function TravelPage({
             <label className="block text-xs text-slate-400">{c.job}</label>
             <select
               name="job"
-              defaultValue={filters.job}
+              defaultValue={defaultClinicJobId(jobs, sp.job !== undefined ? filters.job : undefined)}
               className="mt-1 w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
             >
               <option value="">{c.any}</option>

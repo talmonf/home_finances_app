@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { HouseholdDateField } from "@/components/household-date-field";
 
 type JobOption = { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" };
@@ -100,7 +101,7 @@ export function ReceiptModalFormClient({
   children?: ReactNode;
 }) {
   const jobsById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
-  const [jobId, setJobId] = useState(initial?.job_id ?? "");
+  const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs, initial?.job_id));
   const [programId, setProgramId] = useState(initial?.program_id ?? "");
   const [recipientType, setRecipientType] = useState<string>(initial?.recipient_type ?? "");
   const [paymentMethod, setPaymentMethod] = useState<string>(initial?.payment_method ?? "");
@@ -108,7 +109,7 @@ export function ReceiptModalFormClient({
   const [receiptKind, setReceiptKind] = useState<string>(initial?.receipt_kind ?? "");
 
   useEffect(() => {
-    setJobId(initial?.job_id ?? "");
+    setJobId(defaultClinicJobId(jobs, initial?.job_id));
     setProgramId(initial?.program_id ?? "");
     setRecipientType(initial?.recipient_type ?? "");
     setPaymentMethod(initial?.payment_method ?? "");
