@@ -27,7 +27,7 @@ export function JobModalForm({
   redirectOnSuccess: string;
   redirectOnError: string;
   uiLanguage: UiLanguage;
-  /** When set, Cancel navigates in-page instead of following closeHref (e.g. Getting started overlay). */
+  /** When set, Cancel navigates in-page instead of following closeHref (e.g. User guide overlay). */
   onCancel?: () => void;
   /** Tailwind z-index class for the backdrop (default z-40). */
   overlayZIndexClassName?: string;

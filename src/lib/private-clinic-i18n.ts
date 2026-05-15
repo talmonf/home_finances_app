@@ -1423,10 +1423,10 @@ export function privateClinicReminders(lang: UiLanguage) {
 export function privateClinicGettingStarted(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   return {
-    pageTitle: p("Getting started", "מדריך למשתמש"),
+    pageTitle: p("User Guide", "מדריך למשתמש"),
     welcomeTitle: p("Welcome to the Clinic", "ברוכים הבאים לקליניקה"),
     welcomeBody: p(
-      "This short guide shows how to set up your work and your clients, and how the main workflows fit together. You can open it any time from **More → Getting started**.",
+      "This short guide shows how to set up your work and your clients, and how the main workflows fit together. You can open it any time from **More → User Guide**.",
       "מדריך קצר שמסביר איך להגדיר את המשרה והלקוחות, ואיך זרימות העבודה מתחברות. אפשר לחזור לכאן בכל עת דרך **עוד ← מדריך למשתמש**.",
     ),
     step1Lead: p("To get started, define your", "כדי להתחיל, הגדירו את"),
@@ -1501,7 +1501,7 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
     ),
     jobSavedToast: p("Job saved.", "המשרה נשמרה."),
     moreMenuHint: p(
-      "Tip: open this guide again from **More → Getting started**.",
+      "Tip: open this guide again from **More → User Guide**.",
       "טיפ: אפשר לחזור למדריך דרך **עוד ← מדריך למשתמש**.",
     ),
   };

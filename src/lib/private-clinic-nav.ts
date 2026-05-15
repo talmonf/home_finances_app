@@ -44,7 +44,7 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
   {
     key: "gettingStarted",
     href: "/dashboard/private-clinic/getting-started",
-    label: "Getting started",
+    label: "User Guide",
     placement: "more",
   },
   { key: "settings", href: "/dashboard/private-clinic/settings", label: "Settings", placement: "more" },
