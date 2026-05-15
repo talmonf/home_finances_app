@@ -115,7 +115,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
             employment_type: job.employment_type,
             job_title: job.job_title,
             employer_name: job.employer_name,
-            start_date_iso: job.start_date.toISOString(),
+            start_date_iso: job.start_date ? job.start_date.toISOString() : null,
             end_date_iso: job.end_date ? job.end_date.toISOString() : null,
             is_private_clinic: job.is_private_clinic,
           }))}

@@ -20,7 +20,7 @@ type JobListRow = {
   employment_type: EmploymentType;
   job_title: string;
   employer_name: string | null;
-  start_date_iso: string;
+  start_date_iso: string | null;
   end_date_iso: string | null;
   is_private_clinic: boolean;
 };
@@ -194,8 +194,17 @@ export function JobsListClient({
                   <td className="px-3 py-2 text-slate-300">{employmentTypeLabel(job.employment_type)}</td>
                   <td className="px-3 py-2 text-slate-300">{job.employer_name ?? "Self-employed / not set"}</td>
                   <td className="px-3 py-2 text-slate-300">
-                    {formatHouseholdDate(new Date(job.start_date_iso), dateDisplayFormat)} -{" "}
-                    {job.end_date_iso ? formatHouseholdDate(new Date(job.end_date_iso), dateDisplayFormat) : "Present"}
+                    {job.start_date_iso
+                      ? formatHouseholdDate(new Date(job.start_date_iso), dateDisplayFormat)
+                      : isHebrew
+                        ? "ללא תאריך"
+                        : "No date"}{" "}
+                    -{" "}
+                    {job.end_date_iso
+                      ? formatHouseholdDate(new Date(job.end_date_iso), dateDisplayFormat)
+                      : isHebrew
+                        ? "נוכחי"
+                        : "Present"}
                   </td>
                   <td className="px-3 py-2 text-slate-400">
                     {job.is_private_clinic ? (isHebrew ? "כן" : "Yes") : (isHebrew ? "לא" : "No")}
