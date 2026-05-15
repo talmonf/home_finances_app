@@ -20,6 +20,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,11 @@ export default async function ExpensesPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const ex = privateClinicExpenses(uiLanguage);
+  const clinicOnly = await householdUserOnlyPrivateClinicSection(
+    householdId,
+    session.user.id,
+    uiLanguage,
+  );
   const resolved = searchParams ? await searchParams : undefined;
   const modalMode = resolved?.modal === "new" ? "new" : null;
 
@@ -157,15 +163,17 @@ export default async function ExpensesPage({
                       defaultValue={e.currency}
                       className="rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs"
                     />
-                    <div className="md:col-span-2">
-                      <TherapyTransactionLinkSelect
-                        name="linked_transaction_id"
-                        householdId={householdId}
-                        currentId={e.linked_transaction_id}
-                        label={ex.clinicExpenseOptional}
-                        noneOptionLabel={c.txNoneLinked}
-                      />
-                    </div>
+                    {!clinicOnly ? (
+                      <div className="md:col-span-2">
+                        <TherapyTransactionLinkSelect
+                          name="linked_transaction_id"
+                          householdId={householdId}
+                          currentId={e.linked_transaction_id}
+                          label={ex.clinicExpenseOptional}
+                          noneOptionLabel={c.txNoneLinked}
+                        />
+                      </div>
+                    ) : null}
                     <textarea
                       name="notes"
                       defaultValue={e.notes ?? ""}
@@ -241,16 +249,18 @@ export default async function ExpensesPage({
                 defaultValue="ILS"
                 className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
-              <div className="md:col-span-2">
-                <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
-                <TherapyTransactionLinkSelect
-                  name="linked_transaction_id"
-                  householdId={householdId}
-                  label={ex.linkTxExpense}
-                  hint={ex.linkTxExpenseHint}
-                  noneOptionLabel={c.txNoneLinked}
-                />
-              </div>
+              {!clinicOnly ? (
+                <div className="md:col-span-2">
+                  <label className="block text-xs text-slate-400">{c.linkBankOptional}</label>
+                  <TherapyTransactionLinkSelect
+                    name="linked_transaction_id"
+                    householdId={householdId}
+                    label={ex.linkTxExpense}
+                    hint={ex.linkTxExpenseHint}
+                    noneOptionLabel={c.txNoneLinked}
+                  />
+                </div>
+              ) : null}
               <textarea
                 name="notes"
                 placeholder={c.notes}
