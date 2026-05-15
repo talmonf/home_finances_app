@@ -37,6 +37,7 @@ import {
   HouseholdSectionGroupActions,
 } from "@/components/household-dashboard-section-controls";
 import { HouseholdEditStatusPortal } from "@/components/household-edit-status-portal";
+import { HouseholdDeleteSubmit } from "./household-delete-submit";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,6 @@ type PageProps = {
     usefulSaved?: string;
     usefulError?: string;
     deleteError?: string;
-    deleteDetail?: string;
     tab?: string;
   }>;
 };
@@ -141,11 +141,7 @@ export default async function EditHouseholdPage({
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
-      <HouseholdEditStatusPortal
-        saved={Boolean(resolvedSearchParams?.saved)}
-        deleteError={resolvedSearchParams?.deleteError}
-        deleteDetail={resolvedSearchParams?.deleteDetail}
-      />
+      <HouseholdEditStatusPortal saved={Boolean(resolvedSearchParams?.saved)} />
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
@@ -898,6 +894,33 @@ export default async function EditHouseholdPage({
 
         {activeTab === "danger" ? (
         <section id="danger-zone" className="rounded-xl border border-rose-700/70 bg-rose-950/20 p-4">
+          {resolvedSearchParams?.deleteError ? (
+            <div
+              role="alert"
+              className={`mb-4 rounded-lg border px-3 py-2 text-xs ${
+                resolvedSearchParams.deleteError === "privateClinicLegalBlock"
+                  ? "border-amber-600 bg-amber-950/60 text-amber-100"
+                  : "border-rose-600 bg-rose-950/60 text-rose-100"
+              }`}
+            >
+              {resolvedSearchParams.deleteError === "privateClinicLegalBlock" ? (
+                <p>
+                  This household cannot be deleted due to legal requirements: it has Clinic appointments.
+                </p>
+              ) : resolvedSearchParams.deleteError === "foreignKey" ? (
+                <p>
+                  Household deletion failed due to related data constraints. Review linked records and try again.
+                </p>
+              ) : resolvedSearchParams.deleteError === "timeout" ? (
+                <p>
+                  Deletion took too long while removing related records. Please try again; if it keeps failing,
+                  contact support.
+                </p>
+              ) : (
+                <p>Household deletion failed. Please try again.</p>
+              )}
+            </div>
+          ) : null}
           <h2 className="mb-2 text-sm font-semibold text-rose-200">Danger zone — delete household</h2>
           <p className="mb-3 text-xs text-rose-100/80">
             Deleting a household is permanent and cannot be undone. All related records listed below will be deleted.
@@ -922,20 +945,11 @@ export default async function EditHouseholdPage({
             >
               Cancel
             </Link>
-            <ConfirmDeleteForm
+            <HouseholdDeleteSubmit
               action={deleteHousehold}
-              className="inline"
-              message={`Delete household "${household.name}" permanently?\n\nThis deletes all related data shown above and cannot be undone.\n\nDeletion is blocked if Clinic appointments exist due to legal requirements.`}
-            >
-              <input type="hidden" name="household_id" value={householdId} />
-              <input type="hidden" name="tab" value="danger" />
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-              >
-                Delete household permanently
-              </button>
-            </ConfirmDeleteForm>
+              householdId={householdId}
+              householdName={household.name}
+            />
           </div>
         </section>
         ) : null}

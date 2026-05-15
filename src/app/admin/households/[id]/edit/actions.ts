@@ -260,29 +260,23 @@ export async function deleteHousehold(formData: FormData) {
   }).catch(() => {});
   // #endregion
 
+  const deleteStartedAt = Date.now();
+
   try {
-    await prisma.$transaction(async (tx) => {
-      await deleteTherapyScopedRowsForHousehold(tx, householdId);
-      await deleteCoreHouseholdScopedRowsInTransaction(tx, householdId);
-      await tx.households.delete({
-        where: { id: householdId },
-      });
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        await deleteTherapyScopedRowsForHousehold(tx, householdId);
+        await deleteCoreHouseholdScopedRowsInTransaction(tx, householdId);
+        await tx.households.delete({
+          where: { id: householdId },
+        });
+      },
+      { maxWait: 30_000, timeout: 120_000 },
+    );
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
     }
-
-    const deleteDetail =
-      error instanceof Prisma.PrismaClientKnownRequestError
-        ? `${error.code}: ${error.message}`.slice(0, 450)
-        : error instanceof Error
-          ? error.message.slice(0, 450)
-          : String(error).slice(0, 450);
-    const detailParam =
-      deleteDetail.length > 0
-        ? `&deleteDetail=${encodeURIComponent(deleteDetail)}`
-        : "";
 
     // #region agent log
     const isKnown = error instanceof Prisma.PrismaClientKnownRequestError;
@@ -308,16 +302,40 @@ export async function deleteHousehold(formData: FormData) {
     // #endregion
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2028"
+    ) {
+      redirect(
+        `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=timeout`,
+      );
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
     ) {
       redirect(
-        `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=foreignKey${detailParam}`,
+        `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=foreignKey`,
       );
     }
     redirect(
-      `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=unknown${detailParam}`,
+      `/admin/households/${householdId}/edit?tab=${tabParam}&deleteError=unknown`,
     );
   }
+
+  // #region agent log
+  fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "0aca4d" },
+    body: JSON.stringify({
+      sessionId: "0aca4d",
+      runId: "post-fix",
+      hypothesisId: "P2028-fix",
+      location: "actions.ts:deleteHousehold:success",
+      message: "household delete completed",
+      data: { elapsedMs: Date.now() - deleteStartedAt },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   revalidatePath("/admin/households");
   revalidatePath(`/admin/households/${householdId}`);
