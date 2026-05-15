@@ -185,7 +185,7 @@ export default async function EditProgramPage({ params, searchParams }: PageProp
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-300">Default session length (minutes)</label>
+            <label className="block text-xs text-slate-300">{c.defaultSessionLengthMinutes}</label>
             <input
               name="default_session_length_minutes"
               type="number"

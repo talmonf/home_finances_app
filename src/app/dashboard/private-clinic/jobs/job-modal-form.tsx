@@ -130,7 +130,7 @@ export function JobModalForm({
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-300">Default session length (minutes)</label>
+            <label className="block text-xs text-slate-300">{c.defaultSessionLengthMinutes}</label>
             <input
               name="default_session_length_minutes"
               type="number"
@@ -143,7 +143,6 @@ export function JobModalForm({
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <HouseholdDateField
               name="start_date"
-              required
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

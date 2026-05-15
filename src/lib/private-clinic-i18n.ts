@@ -176,6 +176,10 @@ export function privateClinicCommon(lang: UiLanguage) {
     employer: p("Employer", "מעסיק"),
     startDate: p("Start date", "תאריך התחלה"),
     endDate: p("End date", "תאריך סיום"),
+    defaultSessionLengthMinutes: p(
+      "Default session length (minutes)",
+      "אורך מפגש ברירת מחדל (דקות)",
+    ),
     description: p("Description (optional)", "תיאור (אופציונלי)"),
     sortOrderHint: p(
       "Lower values appear first (for example: 10, 20, 30). Leave empty to use 0.",
@@ -1257,6 +1261,29 @@ export function privateClinicSettings(lang: UiLanguage) {
       "לא ניתן למחוק את קטגוריית ההוצאה כי היא כבר בשימוש.",
     ),
     errGeneric: p("Could not complete the action.", "לא ניתן להשלים את הפעולה."),
+    googleCalendarTitle: p("Google Calendar", "Google Calendar"),
+    googleCalendarIntro: p(
+      "Enable one-way sync so appointment create, reschedule, and cancel actions update your Google Calendar.",
+      "הפעילו סנכרון חד־כיווני כדי שיצירה, שינוי מועד וביטול תורים יעדכנו את Google Calendar.",
+    ),
+    googleConnectFirst: p(
+      "Connect your Google account first. The integration toggle is disabled until a Google account is connected.",
+      "חברו תחילה את חשבון Google. מתג האינטגרציה מושבת עד לחיבור חשבון Google.",
+    ),
+    googleCalendarEnabled: p("Enable Google Calendar integration", "הפעלת אינטגרציית Google Calendar"),
+    gmailAddress: p("Gmail address", "כתובת Gmail"),
+    saveGoogleSettings: p("Save Google settings", "שמירת הגדרות Google"),
+    googleConnectedSuccess: p("Google account connected successfully.", "חשבון Google חובר בהצלחה."),
+    googleSettingsSaved: p("Google Calendar settings saved.", "הגדרות Google Calendar נשמרו."),
+    googleAccountConnected: p("Google account connected.", "חשבון Google מחובר."),
+    googleAccountNotConnected: p("Google account not connected yet.", "חשבון Google עדיין לא מחובר."),
+    connectGoogleAccount: p("Connect Google account", "חיבור חשבון Google"),
+    reconnectGoogleAccount: p("Reconnect Google account", "חיבור מחדש לחשבון Google"),
+    gmailChangedReconnect: p(
+      "Gmail changed. Reconnect to apply it for calendar sync.",
+      "כתובת Gmail השתנתה. חברו מחדש כדי להחיל אותה לסנכרון היומן.",
+    ),
+    gmailPlaceholder: p("name@gmail.com", "name@gmail.com"),
   };
 }
 

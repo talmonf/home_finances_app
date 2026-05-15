@@ -139,7 +139,7 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs text-slate-300">Default session length (minutes)</label>
+            <label className="block text-xs text-slate-300">{c.defaultSessionLengthMinutes}</label>
             <input
               name="default_session_length_minutes"
               type="number"
@@ -153,7 +153,6 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
             <label className="block text-xs text-slate-400">{c.startDate}</label>
             <HouseholdDateField
               name="start_date"
-              required
               defaultIsoYmd={utcDateToHtmlDateInputValue(job.start_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
@@ -201,7 +200,8 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 md:col-span-3">
             <p className="text-xs text-slate-400">
-              {employmentTypeOptionLabel(uiLanguage, job.employment_type)} · {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}
+              {employmentTypeOptionLabel(uiLanguage, job.employment_type)} ·{" "}
+              {formatHouseholdDate(job.start_date, dateDisplayFormat)} -{" "}
               {job.end_date ? formatHouseholdDate(job.end_date, dateDisplayFormat) : c.present}
             </p>
             <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">

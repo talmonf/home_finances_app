@@ -835,14 +835,16 @@ export async function createTherapyJob(formData: FormData) {
     (formData.get("default_session_length_minutes") as string | null) ?? null,
   );
 
-  if (!employment_type || !start_date_raw || !job_title) {
+  if (!employment_type || !job_title) {
     redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
   }
-  const start_date = parseDate(start_date_raw);
+  const start_date = parseDate(start_date_raw || null);
   const end_date = parseDate(end_date_raw || null);
-  if (!start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
+  if (start_date_raw && !start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
   if (end_date_raw && !end_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "end");
-  if (end_date && end_date < start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
+  if (start_date && end_date && end_date < start_date) {
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
+  }
 
   await prisma.jobs.create({
     data: {
@@ -893,14 +895,16 @@ export async function updateTherapyJob(formData: FormData) {
     (formData.get("default_session_length_minutes") as string | null) ?? null,
   );
 
-  if (!employment_type || !start_date_raw || !job_title) {
+  if (!employment_type || !job_title) {
     redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
   }
-  const start_date = parseDate(start_date_raw);
+  const start_date = parseDate(start_date_raw || null);
   const end_date = parseDate(end_date_raw || null);
-  if (!start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
+  if (start_date_raw && !start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "start");
   if (end_date_raw && !end_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "end");
-  if (end_date && end_date < start_date) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
+  if (start_date && end_date && end_date < start_date) {
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "range");
+  }
 
   await prisma.jobs.update({
     where: { id },

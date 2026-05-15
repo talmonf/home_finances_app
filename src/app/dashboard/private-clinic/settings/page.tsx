@@ -105,9 +105,9 @@ export default async function PrivateClinicSettingsPage({
           : sp.error === "ctype-in-use"
             ? ({ kind: "err" as const, text: st.errCtypeInUse })
             : sp.saved === "google-connected"
-              ? ({ kind: "ok" as const, text: "Google account connected successfully." })
+              ? ({ kind: "ok" as const, text: st.googleConnectedSuccess })
               : sp.saved === "google"
-              ? ({ kind: "ok" as const, text: "Google Calendar settings saved." })
+              ? ({ kind: "ok" as const, text: st.googleSettingsSaved })
               : sp.saved === "1"
               ? ({ kind: "ok" as const, text: c.saved })
               : sp.saved === "cat"
@@ -131,14 +131,12 @@ export default async function PrivateClinicSettingsPage({
       ) : null}
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
-        <h2 className="text-lg font-medium text-slate-200">Google Calendar</h2>
-        <p className="mt-2 text-sm text-slate-400">
-          Enable one-way sync so appointment create, reschedule, and cancel actions update your Google Calendar.
-        </p>
+        <h2 className="text-lg font-medium text-slate-200">{st.googleCalendarTitle}</h2>
+        <p className="mt-2 text-sm text-slate-400">{st.googleCalendarIntro}</p>
         <form action={updateMyGoogleCalendarSettings} className="mt-4 space-y-3">
           {!googleConnected ? (
             <p className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
-              Connect your Google account first. The integration toggle is disabled until a Google account is connected.
+              {st.googleConnectFirst}
             </p>
           ) : null}
           <label className="inline-flex items-center gap-2 text-sm text-slate-200">
@@ -149,13 +147,21 @@ export default async function PrivateClinicSettingsPage({
               disabled={!googleConnected}
               className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500"
             />
-            Enable Google Calendar integration
+            {st.googleCalendarEnabled}
           </label>
           <div>
-            <label className="mb-1 block text-xs text-slate-400">Gmail address</label>
+            <label className="mb-1 block text-xs text-slate-400">{st.gmailAddress}</label>
             <GoogleCalendarConnectionControls
               googleConnected={googleConnected}
               initialGmailAddress={defaultGoogleGmailAddress}
+              labels={{
+                accountConnected: st.googleAccountConnected,
+                accountNotConnected: st.googleAccountNotConnected,
+                connectAccount: st.connectGoogleAccount,
+                reconnectAccount: st.reconnectGoogleAccount,
+                gmailChangedReconnect: st.gmailChangedReconnect,
+                gmailPlaceholder: st.gmailPlaceholder,
+              }}
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -163,7 +169,7 @@ export default async function PrivateClinicSettingsPage({
               type="submit"
               className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
             >
-              Save Google settings
+              {st.saveGoogleSettings}
             </button>
           </div>
         </form>
