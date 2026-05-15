@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 114_therapy_receipts_payment_date.sql (2026-05-14)
 - [x] 113_household_id_on_delete_cascade.sql (2026-05-11)
 - [x] 112_renewal_email_subscriptions.sql (2026-05-07)
 - [x] 111_therapy_travel_consultation_km.sql (2026-05-01)
@@ -134,6 +135,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 114 | `114_therapy_receipts_payment_date.sql` (2026-05-14) | ALTER | `therapy_receipts`: optional `payment_date` (DATE) for when payment was received; propagated to linked treatments via app logic. |
 | 113 | `113_household_id_on_delete_cascade.sql` (2026-05-11) | ALTER | `users.family_member_id` → `family_members`: `ON DELETE SET NULL` (avoids household-delete ordering deadlock). All single-column `household_id` FKs to `households(id)` that are not already `ON DELETE CASCADE` are altered to CASCADE so household deletion is reliable at the database layer. |
 | 111 | `111_therapy_travel_consultation_km.sql` (2026-05-01) | ALTER | `therapy_travel_entries`: drop legacy job XOR treatment check, backfill `job_id` from linked treatment, add optional `consultation_id` (FK) and `km`, add mutual-exclusion check between treatment and consultation. |
 | 110 | `110_therapy_treatments_amount_nullable.sql` (2026-05-03) | ALTER | `therapy_treatments.amount`: nullable so receipt import can create sessions with unknown fee until edited. |

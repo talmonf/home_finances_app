@@ -250,6 +250,7 @@ export async function GET() {
         program_id: r.program_id ?? "",
         receipt_number: r.receipt_number,
         issued_at: String(r.issued_at),
+        payment_date: r.payment_date ? String(r.payment_date).slice(0, 10) : "",
         total_amount: r.total_amount.toString(),
         currency: r.currency,
         recipient_type: r.recipient_type,

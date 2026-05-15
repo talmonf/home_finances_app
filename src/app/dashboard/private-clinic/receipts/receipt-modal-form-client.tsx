@@ -41,6 +41,8 @@ export type ReceiptModalLabels = {
   paymentBank: string;
   paymentDigital: string;
   paymentCredit: string;
+  paymentDate: string;
+  paymentDateHint: string;
   linkBankOptional: string;
 };
 
@@ -59,6 +61,7 @@ export type ReceiptModalInitial = {
   covered_period_end?: string;
   recipient_type?: "client" | "organization" | "";
   payment_method?: "cash" | "bank_transfer" | "digital_card" | "credit_card" | "";
+  payment_date?: string;
   linked_transaction_id?: string;
   notes?: string;
 };
@@ -76,6 +79,7 @@ export function ReceiptModalFormClient({
   initial,
   extraContent,
   formExtraContent,
+  showBankLink = true,
   children,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -90,8 +94,10 @@ export function ReceiptModalFormClient({
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
+  /** When false, bank link UI is omitted (clinic-only households). */
+  showBankLink?: boolean;
   /** Server-rendered transaction picker (passed from parent Server Component). */
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const jobsById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
   const [jobId, setJobId] = useState(initial?.job_id ?? "");
@@ -229,6 +235,18 @@ export function ReceiptModalFormClient({
           </div>
 
           <div>
+            <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
+            <p className="mt-0.5 text-xs text-slate-500">{labels.paymentDateHint}</p>
+            <div className="mt-1">
+              <HouseholdDateField
+                name="payment_date"
+                defaultIsoYmd={initial?.payment_date ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="block text-xs text-slate-400">{labels.grossAmount}</label>
             <input
               name="total_amount"
@@ -348,10 +366,15 @@ export function ReceiptModalFormClient({
             </select>
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400">{labels.linkBankOptional}</label>
-            <div className="mt-1">{children}</div>
-          </div>
+          {!showBankLink ? (
+            <input type="hidden" name="linked_transaction_id" value={initial?.linked_transaction_id ?? ""} />
+          ) : null}
+          {showBankLink && children ? (
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400">{labels.linkBankOptional}</label>
+              <div className="mt-1">{children}</div>
+            </div>
+          ) : null}
 
           <div className="md:col-span-2">
             <label className="block text-xs text-slate-400">{labels.notes}</label>

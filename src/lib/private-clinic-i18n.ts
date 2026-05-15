@@ -744,13 +744,18 @@ export function privateClinicReceipts(lang: UiLanguage) {
     paymentBank: p("Bank transfer", "העברה בנקאית"),
     paymentDigital: p("Digital card", "כרטיס דיגיטלי"),
     paymentCredit: p("Credit card", "כרטיס אשראי"),
+    paymentDate: p("Payment date", "תאריך תשלום"),
+    paymentDateHint: p(
+      "Optional. Saving sets this date on all treatments linked to this receipt; clearing it clears their payment dates.",
+      "אופציונלי. שמירה מעדכנת את התאריך בכל הטיפולים המשויכים לקבלה; ניקוי השדה מנקה את תאריכי התשלום שלהם.",
+    ),
     linkTxPayment: p(
       "Link bank transaction — payment received",
       "קישור לתנועת בנק — תשלום שהתקבל",
     ),
     linkTxPaymentHint: p(
-      "Optional: incoming payment that matches this receipt.",
-      "אופציונלי: תשלום נכנס שמתאים לקבלה זו.",
+      "Optional: match an imported bank credit (incoming payment) to this receipt.",
+      "אופציונלי: התאמת זיכוי בנק מיובא (תשלום נכנס) לקבלה זו.",
     ),
     createAllocate: p("Create & allocate", "יצירה ושיוך"),
     linkTreatmentsHeading: p("Link treatments to this receipt", "שיוך טיפולים לקבלה זו"),

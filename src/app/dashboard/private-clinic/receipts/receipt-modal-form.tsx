@@ -28,6 +28,7 @@ export async function ReceiptModalForm({
   initial,
   extraContent,
   formExtraContent,
+  clinicOnly = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -42,6 +43,7 @@ export async function ReceiptModalForm({
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
+  clinicOnly?: boolean;
 }) {
   const clientLabels: ReceiptModalLabels = {
     titleNew: labels.titleNew,
@@ -75,6 +77,8 @@ export async function ReceiptModalForm({
     paymentBank: labels.paymentBank,
     paymentDigital: labels.paymentDigital,
     paymentCredit: labels.paymentCredit,
+    paymentDate: labels.paymentDate,
+    paymentDateHint: labels.paymentDateHint,
     linkBankOptional: labels.linkBankOptional,
   };
 
@@ -92,15 +96,18 @@ export async function ReceiptModalForm({
       initial={initial}
       extraContent={extraContent}
       formExtraContent={formExtraContent}
+      showBankLink={!clinicOnly}
     >
-      <TherapyTransactionLinkSelect
-        name="linked_transaction_id"
-        householdId={householdId}
-        currentId={initial?.linked_transaction_id ?? null}
-        label={labels.linkTxPayment}
-        hint={labels.linkTxPaymentHint}
-        noneOptionLabel={labels.txNoneLinked}
-      />
+      {!clinicOnly ? (
+        <TherapyTransactionLinkSelect
+          name="linked_transaction_id"
+          householdId={householdId}
+          currentId={initial?.linked_transaction_id ?? null}
+          label={labels.linkTxPayment}
+          hint={labels.linkTxPaymentHint}
+          noneOptionLabel={labels.txNoneLinked}
+        />
+      ) : null}
     </ReceiptModalFormClient>
   );
 }

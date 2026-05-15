@@ -59,6 +59,22 @@ const CLIENT_DISCHARGE_APPOINTMENT_CANCELLATION = "Client inactive or end of car
 function endOfUtcDayForReceipt(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
+
+async function syncReceiptPaymentDateToAllocatedTreatments(
+  householdId: string,
+  receiptId: string,
+  paymentDate: Date | null,
+  treatmentIds?: string[],
+) {
+  await prisma.therapy_treatments.updateMany({
+    where: {
+      household_id: householdId,
+      ...(treatmentIds?.length ? { id: { in: treatmentIds } } : {}),
+      receipt_allocations: { some: { receipt_id: receiptId, household_id: householdId } },
+    },
+    data: { payment_date: paymentDate },
+  });
+}
 const CLIENT_STATUS_OPTIONS = new Set([
   "none",
   "exists",
@@ -2423,6 +2439,7 @@ export async function createTherapyReceipt(formData: FormData) {
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
   const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
+  const payment_date = parseDate((formData.get("payment_date") as string)?.trim() || null);
   const autoLinkSuggestedOnCreate = (formData.get("auto_link_suggested_on_create") as string)?.trim() === "1";
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
@@ -2485,10 +2502,13 @@ export async function createTherapyReceipt(formData: FormData) {
       payment_method,
       covered_period_start,
       covered_period_end,
+      payment_date,
       notes: (formData.get("notes") as string)?.trim() || null,
       linked_transaction_id,
     },
   });
+
+  await syncReceiptPaymentDateToAllocatedTreatments(householdId, id, payment_date);
 
   let autoLinkApplied = false;
   let autoLinkAttempted = false;
@@ -2595,12 +2615,18 @@ export async function createTherapyReceipt(formData: FormData) {
         }
       });
       autoLinkApplied = true;
+      if (payment_date) {
+        await syncReceiptPaymentDateToAllocatedTreatments(householdId, id, payment_date);
+      }
       revalidatePath(`${BASE}/treatments`);
       revalidatePath(`${BASE}/consultations`);
       revalidatePath(`${BASE}/travel`);
     }
   }
 
+  if (payment_date) {
+    revalidatePath(`${BASE}/treatments`);
+  }
   revalidatePath(`${BASE}/receipts`);
   const successParams = new URLSearchParams();
   successParams.set("modal", "edit");
@@ -2652,6 +2678,7 @@ export async function updateTherapyReceipt(formData: FormData) {
   const payment_method = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const covered_period_start = parseDate((formData.get("covered_period_start") as string)?.trim() || null);
   const covered_period_end = parseDate((formData.get("covered_period_end") as string)?.trim() || null);
+  const payment_date = parseDate((formData.get("payment_date") as string)?.trim() || null);
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
   if (!recipient_type || !payment_method) redirectPrivateClinicScoped(formData, "error", fallbackPath, "badenum");
@@ -2695,13 +2722,17 @@ export async function updateTherapyReceipt(formData: FormData) {
       payment_method,
       covered_period_start,
       covered_period_end,
+      payment_date,
       notes: (formData.get("notes") as string)?.trim() || null,
       linked_transaction_id,
     },
   });
 
+  await syncReceiptPaymentDateToAllocatedTreatments(householdId, id, payment_date);
+
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${id}`);
+  revalidatePath(`${BASE}/treatments`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}?updated=1`);
 }
 
@@ -2872,6 +2903,7 @@ export async function linkTreatmentsToReceipt(formData: FormData) {
       recipient_type: true,
       covered_period_start: true,
       covered_period_end: true,
+      payment_date: true,
     },
   });
   if (!receipt) return;
@@ -2916,6 +2948,14 @@ export async function linkTreatmentsToReceipt(formData: FormData) {
       });
     }),
   );
+  if (receipt.payment_date) {
+    await syncReceiptPaymentDateToAllocatedTreatments(
+      householdId,
+      receiptId,
+      receipt.payment_date,
+      treatments.map((t) => t.id),
+    );
+  }
   revalidatePath(`${BASE}/receipts`);
   revalidatePath(`${BASE}/receipts/${receiptId}`);
   revalidatePath(`${BASE}/treatments`);

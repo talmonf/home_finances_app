@@ -12,6 +12,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
+import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 import { redirect } from "next/navigation";
 import {
   createTherapyReceipt,
@@ -113,6 +114,11 @@ export default async function ReceiptsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
+  const clinicOnly = await householdUserOnlyPrivateClinicSection(
+    householdId,
+    session.user.id,
+    uiLanguage,
+  );
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const consultationsLabel = uiLanguage === "he" ? "ייעוצים" : "Consultations";
   const travelLabel = uiLanguage === "he" ? "נסיעות" : "Travel";
@@ -719,11 +725,14 @@ export default async function ReceiptsPage({
             paymentBank: r.paymentBank,
             paymentDigital: r.paymentDigital,
             paymentCredit: r.paymentCredit,
+            paymentDate: r.paymentDate,
+            paymentDateHint: r.paymentDateHint,
             linkBankOptional: c.linkBankOptional,
             linkTxPayment: r.linkTxPayment,
             linkTxPaymentHint: r.linkTxPaymentHint,
             txNoneLinked: c.txNoneLinked,
           }}
+          clinicOnly={clinicOnly}
           formExtraContent={
             <div className="rounded border border-slate-700/80 bg-slate-900/40 p-3 text-xs text-slate-300">
               <label className="flex items-start gap-2">
@@ -799,11 +808,14 @@ export default async function ReceiptsPage({
             paymentBank: r.paymentBank,
             paymentDigital: r.paymentDigital,
             paymentCredit: r.paymentCredit,
+            paymentDate: r.paymentDate,
+            paymentDateHint: r.paymentDateHint,
             linkBankOptional: c.linkBankOptional,
             linkTxPayment: r.linkTxPayment,
             linkTxPaymentHint: r.linkTxPaymentHint,
             txNoneLinked: c.txNoneLinked,
           }}
+          clinicOnly={clinicOnly}
           initial={{
             id: editReceipt.id,
             job_id: editReceipt.job_id,
@@ -811,6 +823,7 @@ export default async function ReceiptsPage({
             client_id: editReceipt.client_id ?? "",
             receipt_number: editReceipt.receipt_number,
             issued_at: editReceipt.issued_at.toISOString().slice(0, 10),
+            payment_date: editReceipt.payment_date?.toISOString().slice(0, 10) ?? "",
             total_amount: editReceipt.total_amount.toString(),
             net_amount: editReceipt.net_amount.toString(),
             receipt_kind: editReceipt.receipt_kind,
