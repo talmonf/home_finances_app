@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage } from "@/lib/auth";
 import { setMyUiLanguage } from "@/app/dashboard/user-preferences-actions";
 import { ObfuscateSessionToggle } from "@/components/obfuscate-session-toggle";
+import { privateClinicNavLabel } from "@/lib/private-clinic-i18n";
 
 export async function DashboardUserToolbar({
   showObfuscate,
@@ -32,6 +34,17 @@ export async function DashboardUserToolbar({
         ) : null}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3">
+        {showObfuscate ? (
+          <>
+            <Link
+              href="/dashboard/private-clinic/getting-started"
+              className="rounded-md px-2 py-1 font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+            >
+              {privateClinicNavLabel("gettingStarted", uiLanguage)}
+            </Link>
+            <div className="h-4 w-px bg-slate-700" aria-hidden />
+          </>
+        ) : null}
         <div className="flex items-center gap-1.5">
           <span className="text-slate-500">{isHebrew ? "שפה" : "Language"}</span>
           <form action={setMyUiLanguage} className="inline" data-skip-global-submit-feedback>
