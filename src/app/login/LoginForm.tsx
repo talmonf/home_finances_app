@@ -1,16 +1,20 @@
 "use client";
 
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
+import { appBrandingStrings, type AppPortal } from "@/lib/app-branding-strings";
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 
 export function LoginForm({
+  portal = "home",
   callbackUrl,
   passwordUpdated,
 }: {
+  portal?: AppPortal;
   callbackUrl?: string;
   passwordUpdated?: boolean;
 }) {
+  const branding = appBrandingStrings(portal, "en");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -72,10 +76,10 @@ export function LoginForm({
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
       <div className="w-full max-w-md rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <h1 className="mb-2 text-center text-2xl font-semibold text-slate-50">
-          Home Finance Management
+          {branding.title}
         </h1>
         <p className="mb-6 text-center text-sm text-slate-400">
-          Sign in to manage your households and finances.
+          {branding.tagline}
         </p>
         {passwordUpdated ? (
           <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">

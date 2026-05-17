@@ -1,15 +1,34 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
+import {
+  appBrandingStrings,
+  loginHrefForPortal,
+  resolveAppPortal,
+} from "@/lib/app-branding";
 import { getAuthSession, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
 import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
 import { SignOutButton } from "@/components/sign-out-button";
 
-export const metadata: Metadata = {
-  title: "Home Finance Management",
-  description: "Self-hosted multi-household personal finance system",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getAuthSession();
+  const householdMember =
+    Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
+  const uiLanguage = householdMember ? await getCurrentUiLanguage() : "en";
+  const portal = await resolveAppPortal({
+    isAuthenticated: Boolean(session?.user),
+    isSuperAdmin: Boolean(session?.user?.isSuperAdmin),
+    householdId: session?.user?.householdId,
+    userId: session?.user?.id,
+    uiLanguage,
+  });
+  const branding = appBrandingStrings(portal, uiLanguage);
+  return {
+    title: branding.title,
+    description: branding.metadataDescription,
+  };
+}
 
 // Ensure layout is rendered per request so it always sees the latest session
 export const dynamic = "force-dynamic";
@@ -24,7 +43,14 @@ export default async function RootLayout({
     Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
   const uiLanguage = householdMember ? await getCurrentUiLanguage() : "en";
   const dir = uiLanguageDirection(uiLanguage);
-  const h = appHeaderStrings(uiLanguage);
+  const portal = await resolveAppPortal({
+    isAuthenticated: Boolean(session?.user),
+    isSuperAdmin: Boolean(session?.user?.isSuperAdmin),
+    householdId: session?.user?.householdId,
+    userId: session?.user?.id,
+    uiLanguage,
+  });
+  const h = appHeaderStrings(uiLanguage, portal);
 
   /** Native `<input type="date">` follows document `lang`; generic `en` maps to US (mm/dd) in Chromium. */
   let htmlLang: string = uiLanguage;
@@ -69,7 +95,7 @@ export default async function RootLayout({
                 </div>
               ) : (
                 <Link
-                  href="/login"
+                  href={loginHrefForPortal(portal)}
                   className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
                 >
                   {h.signIn}

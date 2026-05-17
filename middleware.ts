@@ -64,7 +64,10 @@ export async function middleware(req: NextRequest) {
     const callbackUrl = encodeURIComponent(
       req.nextUrl.pathname + req.nextUrl.search,
     );
-    const loginUrl = new URL(`/login?callbackUrl=${callbackUrl}`, req.url);
+    const loginPath = pathname.startsWith("/dashboard/private-clinic")
+      ? "/login/clinic"
+      : "/login";
+    const loginUrl = new URL(`${loginPath}?callbackUrl=${callbackUrl}`, req.url);
     return NextResponse.redirect(loginUrl);
   }
 

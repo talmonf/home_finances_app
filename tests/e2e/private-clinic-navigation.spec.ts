@@ -10,6 +10,12 @@ function normalizeHref(href: string): string | null {
   return trimmed;
 }
 
+test("clinic login page shows clinic branding", async ({ page }) => {
+  await page.goto("/login/clinic");
+  await expect(page.getByRole("heading", { name: "Clinic management" })).toBeVisible();
+  await expect(page.getByText("Sign in to manage your clinic.")).toBeVisible();
+});
+
 test("private clinic navigation does not throw client exceptions", async ({ page }) => {
   const email = process.env.E2E_EMAIL;
   const password = process.env.E2E_PASSWORD;
@@ -25,7 +31,9 @@ test("private clinic navigation does not throw client exceptions", async ({ page
     }
   });
 
-  await page.goto(`/login?callbackUrl=${encodeURIComponent(PRIVATE_CLINIC_BASE)}`);
+  await page.goto(
+    `/login/clinic?callbackUrl=${encodeURIComponent(PRIVATE_CLINIC_BASE)}`,
+  );
   await page.getByLabel("Email").fill(email!);
   await page.getByLabel("Password").fill(password!);
   await page.getByRole("button", { name: /sign in/i }).click();

@@ -1,3 +1,5 @@
+import { appBrandingStrings, type AppPortal } from "@/lib/app-branding-strings";
+
 export const UI_LANGUAGES = ["en", "he"] as const;
 
 export type UiLanguage = (typeof UI_LANGUAGES)[number];
@@ -18,10 +20,11 @@ export const UI_LANGUAGE_LABELS: Record<UiLanguage, string> = {
 };
 
 /** Top shell header (root layout) — matches household UI language when available */
-export function appHeaderStrings(lang: UiLanguage) {
+export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
+  const { title: appTitle } = appBrandingStrings(portal, lang);
   if (lang === "he") {
     return {
-      appTitle: "ניהול כספי הבית",
+      appTitle,
       signedInAs: "מחובר כ־",
       changePassword: "שינוי סיסמה",
       signOut: "התנתק",
@@ -31,7 +34,7 @@ export function appHeaderStrings(lang: UiLanguage) {
     };
   }
   return {
-    appTitle: "Home Finance Management",
+    appTitle,
     signedInAs: "Signed in as",
     changePassword: "Change password",
     signOut: "Sign out",
