@@ -31,8 +31,8 @@ export function ObfuscateSessionToggle({
       />
       <span>
         {isHebrew
-          ? "הסתרת שמות לקוחות וסכומים (הדגמה)"
-          : "Hide client names & amounts (demo)"}
+          ? "הסתרת שמות לקוחות וסכומים"
+          : "Hide client names & amounts"}
       </span>
     </label>
   );

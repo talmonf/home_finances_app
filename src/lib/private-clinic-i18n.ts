@@ -1487,8 +1487,8 @@ export function privateClinicGettingStarted(lang: UiLanguage) {
       "**שיוך קבלות (טיפולים / ייעוצים / נסיעות)** — טיפולים מייצגים עבודה קלינית; קבלות מייצגות גבייה בפועל. ב**קבלה חדשה** ניתן להפעיל שיוך אוטומטי כשהסכומים בתקופה תואמים לברוטו. לאחר השמירה ממשיכים באותו מסך לקישור/עריכה (בחירת הכל / ניקוי בחירה / בחירת מוצעים), ובוחרים במונים **T / C / TR** למעבר לרשימות המסוננות.",
     ),
     advDemoPrivacy: p(
-      "**Demo privacy mode** — Use **Hide client names & amounts (demo)** in the top toolbar when you need to demo the system to others or share screens with the system administrator. It masks client names and monetary amounts during your session to reduce data exposure.",
-      "**מצב פרטיות להדגמה** — השתמשו באפשרות **הסתרת שמות לקוחות וסכומים (הדגמה)** בסרגל העליון כשצריך להדגים את המערכת לאחרים או לשתף מסך עם מנהל המערכת. האפשרות מטשטשת שמות לקוחות וסכומים במהלך הסשן כדי להפחית חשיפת מידע.",
+      "**Demo privacy mode** — Use **Hide client names & amounts** in the top toolbar when you need to demo the system to others or share screens with the system administrator. It masks client names and monetary amounts during your session to reduce data exposure.",
+      "**מצב פרטיות להדגמה** — השתמשו באפשרות **הסתרת שמות לקוחות וסכומים** בסרגל העליון כשצריך להדגים את המערכת לאחרים או לשתף מסך עם מנהל המערכת. האפשרות מטשטשת שמות לקוחות וסכומים במהלך הסשן כדי להפחית חשיפת מידע.",
     ),
     familiesWhenEnabledTitle: p("Families", "משפחות"),
     familiesWhenEnabledBody: p(

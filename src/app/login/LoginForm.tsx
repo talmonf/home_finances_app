@@ -55,6 +55,10 @@ export function LoginForm({
   }, []);
 
   useEffect(() => {
+    if (pinInitialLanguage) {
+      return;
+    }
+
     const trimmed = email.trim();
     if (!trimmed.includes("@")) {
       return;
@@ -84,7 +88,7 @@ export function LoginForm({
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [email]);
+  }, [email, pinInitialLanguage]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -187,7 +191,9 @@ export function LoginForm({
               className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               value={email}
               onChange={(e) => {
-                languagePinnedByUser.current = false;
+                if (!pinInitialLanguage) {
+                  languagePinnedByUser.current = false;
+                }
                 setEmail(e.target.value);
               }}
               required
