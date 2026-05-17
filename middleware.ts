@@ -2,10 +2,26 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import {
+  APP_PORTAL_COOKIE,
+  APP_PORTAL_COOKIE_OPTIONS,
+} from "@/lib/app-portal-cookie";
+import {
   clientIpFromRequest,
   expensiveApiRatelimit,
   loginRatelimit,
 } from "@/lib/rate-limit";
+
+function applyLoginPortalCookie(pathname: string, res: NextResponse): NextResponse {
+  if (pathname === "/login/clinic" || pathname.startsWith("/login/clinic/")) {
+    res.cookies.set(APP_PORTAL_COOKIE, "clinic", APP_PORTAL_COOKIE_OPTIONS);
+    return res;
+  }
+  if (pathname === "/login") {
+    res.cookies.delete(APP_PORTAL_COOKIE);
+    return res;
+  }
+  return res;
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -47,12 +63,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
-  ) {
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
     return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/login")) {
+    return applyLoginPortalCookie(pathname, NextResponse.next());
   }
 
   const token = await getToken({
@@ -68,7 +84,11 @@ export async function middleware(req: NextRequest) {
       ? "/login/clinic"
       : "/login";
     const loginUrl = new URL(`${loginPath}?callbackUrl=${callbackUrl}`, req.url);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    if (loginPath === "/login/clinic") {
+      redirect.cookies.set(APP_PORTAL_COOKIE, "clinic", APP_PORTAL_COOKIE_OPTIONS);
+    }
+    return redirect;
   }
 
   const passwordActionRequired = Boolean(

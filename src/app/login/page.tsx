@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { clearAppPortalCookie } from "@/lib/app-branding";
 import { LoginForm } from "./LoginForm";
 
 type LoginPageProps = {
@@ -25,8 +24,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     redirect(`/login/clinic${suffix}`);
   }
-
-  await clearAppPortalCookie();
 
   const callbackUrl = resolvedSearchParams?.callbackUrl;
   const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";

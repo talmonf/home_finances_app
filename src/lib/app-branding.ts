@@ -17,20 +17,6 @@ export async function readAppPortalCookie(): Promise<AppPortal | null> {
   return parseAppPortalCookie(store.get(APP_PORTAL_COOKIE)?.value);
 }
 
-export async function setAppPortalCookie(portal: AppPortal): Promise<void> {
-  const store = await cookies();
-  store.set(APP_PORTAL_COOKIE, portal, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-  });
-}
-
-export async function clearAppPortalCookie(): Promise<void> {
-  const store = await cookies();
-  store.delete(APP_PORTAL_COOKIE);
-}
-
 export async function resolveAppPortal(params: {
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
