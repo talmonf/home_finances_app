@@ -33,6 +33,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const callbackUrl = resolvedSearchParams?.callbackUrl;
   const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";
+  const langParam = resolvedSearchParams?.lang?.trim();
+  const pinInitialLanguage = langParam === "en" || langParam === "he";
   const initialLanguage = await resolveLoginPageUiLanguage();
 
   return (
@@ -40,6 +42,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <LoginForm
         portal="home"
         initialLanguage={initialLanguage}
+        pinInitialLanguage={pinInitialLanguage}
         callbackUrl={callbackUrl}
         passwordUpdated={passwordUpdated}
       />

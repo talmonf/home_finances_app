@@ -18,11 +18,14 @@ async function persistLoginUiLanguage(language: UiLanguage) {
 export function LoginForm({
   portal = "home",
   initialLanguage = "en",
+  pinInitialLanguage = false,
   callbackUrl,
   passwordUpdated,
 }: {
   portal?: AppPortal;
   initialLanguage?: UiLanguage;
+  /** When true (e.g. `?lang=he`), email lookup will not change the login language. */
+  pinInitialLanguage?: boolean;
   callbackUrl?: string;
   passwordUpdated?: boolean;
 }) {
@@ -31,8 +34,14 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const languagePinnedByUser = useRef(false);
+  const languagePinnedByUser = useRef(pinInitialLanguage);
   const emailLookupGeneration = useRef(0);
+
+  useEffect(() => {
+    if (pinInitialLanguage) {
+      languagePinnedByUser.current = true;
+    }
+  }, [pinInitialLanguage]);
 
   const copy = loginPageStrings(portal, language);
   const dir = uiLanguageDirection(language);
@@ -105,9 +114,11 @@ export function LoginForm({
 
     setLoading(true);
     try {
+      await persistLoginUiLanguage(language);
       const result = await signIn("credentials", {
         email: emailToSubmit,
         password: passwordToSubmit,
+        ui_language: language,
         redirect: false,
         callbackUrl: callbackUrl ?? "/",
       });

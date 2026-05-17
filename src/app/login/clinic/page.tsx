@@ -6,6 +6,7 @@ type LoginClinicPageProps = {
   searchParams?: Promise<{
     callbackUrl?: string;
     passwordUpdated?: string;
+    lang?: string;
   }>;
 };
 
@@ -13,6 +14,8 @@ export default async function LoginClinicPage({ searchParams }: LoginClinicPageP
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const callbackUrl = resolvedSearchParams?.callbackUrl;
   const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";
+  const langParam = resolvedSearchParams?.lang?.trim();
+  const pinInitialLanguage = langParam === "en" || langParam === "he";
   const initialLanguage = await resolveLoginPageUiLanguage();
 
   return (
@@ -20,6 +23,7 @@ export default async function LoginClinicPage({ searchParams }: LoginClinicPageP
       <LoginForm
         portal="clinic"
         initialLanguage={initialLanguage}
+        pinInitialLanguage={pinInitialLanguage}
         callbackUrl={callbackUrl}
         passwordUpdated={passwordUpdated}
       />

@@ -11,6 +11,7 @@ import {
   normalizeHouseholdDateDisplayFormat,
   type HouseholdDateDisplayFormat,
 } from "@/lib/household-date-format";
+import { LOGIN_UI_LANGUAGE_COOKIE } from "@/lib/login-ui-language-cookie";
 import { DEFAULT_UI_LANGUAGE, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
 import { SESSION_OBFUSCATE_COOKIE } from "@/lib/session-obfuscate-cookie";
 import { isPasswordExpired } from "@/lib/password-policy";
@@ -69,6 +70,26 @@ declare module "next-auth/jwt" {
   }
 }
 
+async function resolveUiLanguageForSignIn(
+  credentials: Record<string, unknown>,
+): Promise<UiLanguage> {
+  const raw = credentials.ui_language;
+  if (raw === "en" || raw === "he") {
+    return raw;
+  }
+  if (typeof raw === "string") {
+    return normalizeUiLanguage(raw);
+  }
+
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get(LOGIN_UI_LANGUAGE_COOKIE)?.value;
+  if (cookieLang === "en" || cookieLang === "he") {
+    return cookieLang;
+  }
+
+  return DEFAULT_UI_LANGUAGE;
+}
+
 async function computePasswordActionRequired(
   userId: string,
   isSuperAdmin: boolean,
@@ -106,11 +127,14 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        ui_language: { label: "UI language", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
           return null;
         }
+
+        const creds = credentials as Record<string, unknown>;
 
         const superAdmin = await prisma.super_admins.findUnique({
           where: { email: credentials.email },
@@ -147,6 +171,12 @@ export const authOptions: NextAuthOptions = {
           user.password_hash,
         );
         if (!valid) return null;
+
+        const loginUiLanguage = await resolveUiLanguageForSignIn(creds);
+        await prisma.users.update({
+          where: { id: user.id },
+          data: { ui_language: loginUiLanguage },
+        });
 
         return {
           id: user.id,
