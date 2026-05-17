@@ -7,6 +7,7 @@ import {
   resolveAppPortal,
 } from "@/lib/app-branding";
 import { getAuthSession, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
+import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
 import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -15,7 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const session = await getAuthSession();
   const householdMember =
     Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
-  const uiLanguage = householdMember ? await getCurrentUiLanguage() : "en";
+  const uiLanguage = householdMember
+    ? await getCurrentUiLanguage()
+    : await resolveLoginPageUiLanguage();
   const portal = await resolveAppPortal({
     isAuthenticated: Boolean(session?.user),
     isSuperAdmin: Boolean(session?.user?.isSuperAdmin),
@@ -41,7 +44,9 @@ export default async function RootLayout({
   const session = await getAuthSession();
   const householdMember =
     Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
-  const uiLanguage = householdMember ? await getCurrentUiLanguage() : "en";
+  const uiLanguage = householdMember
+    ? await getCurrentUiLanguage()
+    : await resolveLoginPageUiLanguage();
   const dir = uiLanguageDirection(uiLanguage);
   const portal = await resolveAppPortal({
     isAuthenticated: Boolean(session?.user),

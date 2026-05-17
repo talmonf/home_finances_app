@@ -1,3 +1,4 @@
+import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
@@ -7,6 +8,7 @@ type LoginPageProps = {
     callbackUrl?: string;
     passwordUpdated?: string;
     portal?: string;
+    lang?: string;
   }>;
 };
 
@@ -21,17 +23,23 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     if (resolvedSearchParams.passwordUpdated === "1") {
       qs.set("passwordUpdated", "1");
     }
+    const lang = resolvedSearchParams.lang?.trim();
+    if (lang === "en" || lang === "he") {
+      qs.set("lang", lang);
+    }
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     redirect(`/login/clinic${suffix}`);
   }
 
   const callbackUrl = resolvedSearchParams?.callbackUrl;
   const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";
+  const initialLanguage = await resolveLoginPageUiLanguage();
 
   return (
     <Suspense fallback={null}>
       <LoginForm
         portal="home"
+        initialLanguage={initialLanguage}
         callbackUrl={callbackUrl}
         passwordUpdated={passwordUpdated}
       />

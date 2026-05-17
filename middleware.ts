@@ -6,10 +6,22 @@ import {
   APP_PORTAL_COOKIE_OPTIONS,
 } from "@/lib/app-portal-cookie";
 import {
+  LOGIN_UI_LANGUAGE_COOKIE,
+  LOGIN_UI_LANGUAGE_COOKIE_OPTIONS,
+} from "@/lib/login-ui-language-cookie";
+import {
   clientIpFromRequest,
   expensiveApiRatelimit,
   loginRatelimit,
 } from "@/lib/rate-limit";
+
+function applyLoginUiLanguageFromQuery(req: NextRequest, res: NextResponse): NextResponse {
+  const lang = req.nextUrl.searchParams.get("lang");
+  if (lang === "en" || lang === "he") {
+    res.cookies.set(LOGIN_UI_LANGUAGE_COOKIE, lang, LOGIN_UI_LANGUAGE_COOKIE_OPTIONS);
+  }
+  return res;
+}
 
 function applyLoginPortalCookie(pathname: string, res: NextResponse): NextResponse {
   if (pathname === "/login/clinic" || pathname.startsWith("/login/clinic/")) {
@@ -19,6 +31,15 @@ function applyLoginPortalCookie(pathname: string, res: NextResponse): NextRespon
   if (pathname === "/login") {
     res.cookies.delete(APP_PORTAL_COOKIE);
     return res;
+  }
+  return res;
+}
+
+function applyLoginRouteCookies(pathname: string, req: NextRequest): NextResponse {
+  let res = NextResponse.next();
+  res = applyLoginUiLanguageFromQuery(req, res);
+  if (pathname.startsWith("/login")) {
+    res = applyLoginPortalCookie(pathname, res);
   }
   return res;
 }
@@ -68,7 +89,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/login")) {
-    return applyLoginPortalCookie(pathname, NextResponse.next());
+    return applyLoginRouteCookies(pathname, req);
+  }
+
+  if (pathname === "/" && req.nextUrl.searchParams.get("lang")) {
+    return applyLoginUiLanguageFromQuery(req, NextResponse.next());
   }
 
   const token = await getToken({

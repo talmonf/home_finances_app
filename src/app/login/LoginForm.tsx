@@ -1,31 +1,86 @@
 "use client";
 
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
-import { appBrandingStrings, type AppPortal } from "@/lib/app-branding-strings";
-import { FormEvent, useState } from "react";
+import type { AppPortal } from "@/lib/app-branding-strings";
+import { loginPageStrings } from "@/lib/login-i18n";
+import { uiLanguageDirection, type UiLanguage } from "@/lib/ui-language";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
+
+async function persistLoginUiLanguage(language: UiLanguage) {
+  await fetch("/api/auth/login-ui-language", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
+}
 
 export function LoginForm({
   portal = "home",
+  initialLanguage = "en",
   callbackUrl,
   passwordUpdated,
 }: {
   portal?: AppPortal;
+  initialLanguage?: UiLanguage;
   callbackUrl?: string;
   passwordUpdated?: boolean;
 }) {
-  const branding = appBrandingStrings(portal, "en");
+  const [language, setLanguage] = useState<UiLanguage>(initialLanguage);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const languagePinnedByUser = useRef(false);
+  const emailLookupGeneration = useRef(0);
+
+  const copy = loginPageStrings(portal, language);
+  const dir = uiLanguageDirection(language);
+
+  const applyLanguage = useCallback(async (next: UiLanguage, fromUser: boolean) => {
+    setLanguage(next);
+    if (fromUser) {
+      languagePinnedByUser.current = true;
+    }
+    await persistLoginUiLanguage(next);
+  }, []);
+
+  useEffect(() => {
+    const trimmed = email.trim();
+    if (!trimmed.includes("@")) {
+      return;
+    }
+
+    const generation = ++emailLookupGeneration.current;
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/auth/login-language?email=${encodeURIComponent(trimmed)}`,
+        );
+        if (!res.ok || generation !== emailLookupGeneration.current) {
+          return;
+        }
+        const data = (await res.json()) as { language?: UiLanguage | null };
+        if (
+          !languagePinnedByUser.current &&
+          (data.language === "en" || data.language === "he") &&
+          generation === emailLookupGeneration.current
+        ) {
+          setLanguage(data.language);
+          await persistLoginUiLanguage(data.language);
+        }
+      } catch {
+        // ignore lookup failures
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [email]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    // Android autofill can populate the input value before React state updates.
-    // Read from the form controls to avoid submitting a stale/empty value.
     const formData = new FormData(e.currentTarget);
     const emailValue = formData.get("email");
     const passwordValue = formData.get("password");
@@ -41,11 +96,10 @@ export function LoginForm({
         : String(passwordValue ?? "");
 
     if (!emailToSubmit || !passwordToSubmit) {
-      setError("Invalid email or password");
+      setError(copy.invalidCredentials);
       return;
     }
 
-    // Keep controlled inputs in sync with what the browser actually submitted.
     setEmail(emailToSubmit);
     setPassword(passwordToSubmit);
 
@@ -59,37 +113,61 @@ export function LoginForm({
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(copy.invalidCredentials);
         setLoading(false);
         return;
       }
 
-      // Full navigation so the server sees the new session and renders the right layout
       window.location.href = result?.url ?? "/";
     } catch {
       setLoading(false);
     }
-
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+    <div
+      className="flex min-h-screen items-center justify-center bg-slate-950 px-4"
+      dir={dir}
+    >
       <div className="w-full max-w-md rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
+        <div className="mb-4 flex items-center justify-end gap-1.5 text-xs">
+          <span className="text-slate-500">{copy.languageLabel}</span>
+          <button
+            type="button"
+            onClick={() => void applyLanguage("en", true)}
+            className={
+              language === "en"
+                ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
+                : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            }
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            onClick={() => void applyLanguage("he", true)}
+            className={
+              language === "he"
+                ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
+                : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            }
+          >
+            עב
+          </button>
+        </div>
         <h1 className="mb-2 text-center text-2xl font-semibold text-slate-50">
-          {branding.title}
+          {copy.title}
         </h1>
-        <p className="mb-6 text-center text-sm text-slate-400">
-          {branding.tagline}
-        </p>
+        <p className="mb-6 text-center text-sm text-slate-400">{copy.tagline}</p>
         {passwordUpdated ? (
           <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
-            Password updated. Sign in with your new password.
+            {copy.passwordUpdated}
           </p>
         ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-200">
-              Email
+              {copy.email}
             </label>
             <input
               type="email"
@@ -97,13 +175,16 @@ export function LoginForm({
               autoComplete="username"
               className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-0 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                languagePinnedByUser.current = false;
+                setEmail(e.target.value);
+              }}
               required
             />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-200">
-              Password
+              {copy.password}
             </label>
             <PasswordInputWithToggle
               name="password"
@@ -122,11 +203,10 @@ export function LoginForm({
             disabled={loading}
             className="flex w-full items-center justify-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400 disabled:opacity-60"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? copy.signingIn : copy.signIn}
           </button>
         </form>
       </div>
     </div>
   );
 }
-

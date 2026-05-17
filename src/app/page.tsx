@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  appBrandingStrings,
-  loginHrefForPortal,
-  resolveAppPortal,
-} from "@/lib/app-branding";
+import { loginHrefForPortal, resolveAppPortal } from "@/lib/app-branding";
 import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { loginPageStrings } from "@/lib/login-i18n";
+import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
+import { uiLanguageDirection } from "@/lib/ui-language";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
 import { countOpenMedicalReimbursementRequestsForHousehold } from "@/lib/medical-open-reimbursement-requests";
@@ -44,29 +43,33 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getAuthSession();
 
   if (!session?.user) {
+    const uiLanguage = await resolveLoginPageUiLanguage();
     const portal = await resolveAppPortal({
       isAuthenticated: false,
       isSuperAdmin: false,
       householdId: null,
       userId: null,
-      uiLanguage: "en",
+      uiLanguage,
     });
-    const branding = appBrandingStrings(portal, "en");
+    const copy = loginPageStrings(portal, uiLanguage);
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+      <div
+        className="flex min-h-screen items-center justify-center bg-slate-950"
+        dir={uiLanguageDirection(uiLanguage)}
+      >
         <div className="rounded-2xl bg-slate-900 px-10 py-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
           <h1 className="mb-3 text-2xl font-semibold text-slate-50">
-            {branding.title}
+            {copy.title}
           </h1>
           <p className="mb-6 text-sm text-slate-400">
-            {branding.loggedOutPrompt}
+            {copy.loggedOutPrompt}
           </p>
           <Link
             href={loginHrefForPortal(portal)}
             className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
           >
-            Go to login
+            {copy.goToLogin}
           </Link>
         </div>
       </div>
