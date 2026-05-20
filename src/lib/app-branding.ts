@@ -40,5 +40,5 @@ export async function resolveAppPortal(params: {
   }
 
   const fromCookie = await readAppPortalCookie();
-  return fromCookie ?? "home";
+  return fromCookie ?? "clinic";
 }

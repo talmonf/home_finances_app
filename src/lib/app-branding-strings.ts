@@ -43,5 +43,5 @@ export function appBrandingStrings(portal: AppPortal, lang: UiLanguage) {
 }
 
 export function loginHrefForPortal(portal: AppPortal): string {
-  return portal === "clinic" ? "/login/clinic" : "/login";
+  return portal === "home" ? "/login?portal=home" : "/login";
 }

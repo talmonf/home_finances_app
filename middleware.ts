@@ -23,13 +23,22 @@ function applyLoginUiLanguageFromQuery(req: NextRequest, res: NextResponse): Nex
   return res;
 }
 
-function applyLoginPortalCookie(pathname: string, res: NextResponse): NextResponse {
+function applyLoginPortalCookie(
+  pathname: string,
+  req: NextRequest,
+  res: NextResponse,
+): NextResponse {
   if (pathname === "/login/clinic" || pathname.startsWith("/login/clinic/")) {
     res.cookies.set(APP_PORTAL_COOKIE, "clinic", APP_PORTAL_COOKIE_OPTIONS);
     return res;
   }
   if (pathname === "/login") {
-    res.cookies.delete(APP_PORTAL_COOKIE);
+    const portal = req.nextUrl.searchParams.get("portal");
+    res.cookies.set(
+      APP_PORTAL_COOKIE,
+      portal === "home" ? "home" : "clinic",
+      APP_PORTAL_COOKIE_OPTIONS,
+    );
     return res;
   }
   return res;
@@ -39,7 +48,7 @@ function applyLoginRouteCookies(pathname: string, req: NextRequest): NextRespons
   let res = NextResponse.next();
   res = applyLoginUiLanguageFromQuery(req, res);
   if (pathname.startsWith("/login")) {
-    res = applyLoginPortalCookie(pathname, res);
+    res = applyLoginPortalCookie(pathname, req, res);
   }
   return res;
 }
@@ -105,14 +114,18 @@ export async function middleware(req: NextRequest) {
     const callbackUrl = encodeURIComponent(
       req.nextUrl.pathname + req.nextUrl.search,
     );
-    const loginPath = pathname.startsWith("/dashboard/private-clinic")
-      ? "/login/clinic"
-      : "/login";
-    const loginUrl = new URL(`${loginPath}?callbackUrl=${callbackUrl}`, req.url);
+    const clinicLogin = pathname.startsWith("/dashboard/private-clinic");
+    const loginPath = clinicLogin ? "/login" : "/login?portal=home";
+    const loginUrl = new URL(
+      `${loginPath}${loginPath.includes("?") ? "&" : "?"}callbackUrl=${callbackUrl}`,
+      req.url,
+    );
     const redirect = NextResponse.redirect(loginUrl);
-    if (loginPath === "/login/clinic") {
-      redirect.cookies.set(APP_PORTAL_COOKIE, "clinic", APP_PORTAL_COOKIE_OPTIONS);
-    }
+    redirect.cookies.set(
+      APP_PORTAL_COOKIE,
+      clinicLogin ? "clinic" : "home",
+      APP_PORTAL_COOKIE_OPTIONS,
+    );
     return redirect;
   }
 

@@ -16,7 +16,7 @@ async function persistLoginUiLanguage(language: UiLanguage) {
 }
 
 export function LoginForm({
-  portal = "home",
+  portal = "clinic",
   initialLanguage = "en",
   pinInitialLanguage = false,
   callbackUrl,

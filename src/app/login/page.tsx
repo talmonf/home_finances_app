@@ -12,23 +12,36 @@ type LoginPageProps = {
   }>;
 };
 
+function loginQuerySuffix(params: {
+  callbackUrl?: string;
+  passwordUpdated?: string;
+  portal?: string;
+  lang?: string;
+}): string {
+  const qs = new URLSearchParams();
+  if (params.callbackUrl) {
+    qs.set("callbackUrl", params.callbackUrl);
+  }
+  if (params.passwordUpdated === "1") {
+    qs.set("passwordUpdated", "1");
+  }
+  const lang = params.lang?.trim();
+  if (lang === "en" || lang === "he") {
+    qs.set("lang", lang);
+  }
+  if (params.portal === "home") {
+    qs.set("portal", "home");
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   if (resolvedSearchParams?.portal === "clinic") {
-    const qs = new URLSearchParams();
-    if (resolvedSearchParams.callbackUrl) {
-      qs.set("callbackUrl", resolvedSearchParams.callbackUrl);
-    }
-    if (resolvedSearchParams.passwordUpdated === "1") {
-      qs.set("passwordUpdated", "1");
-    }
-    const lang = resolvedSearchParams.lang?.trim();
-    if (lang === "en" || lang === "he") {
-      qs.set("lang", lang);
-    }
-    const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    redirect(`/login/clinic${suffix}`);
+    const { portal: _portal, ...rest } = resolvedSearchParams;
+    redirect(`/login${loginQuerySuffix(rest)}`);
   }
 
   const callbackUrl = resolvedSearchParams?.callbackUrl;
@@ -36,11 +49,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const langParam = resolvedSearchParams?.lang?.trim();
   const pinInitialLanguage = langParam === "en" || langParam === "he";
   const initialLanguage = await resolveLoginPageUiLanguage();
+  const portal = resolvedSearchParams?.portal === "home" ? "home" : "clinic";
 
   return (
     <Suspense fallback={null}>
       <LoginForm
-        portal="home"
+        portal={portal}
         initialLanguage={initialLanguage}
         pinInitialLanguage={pinInitialLanguage}
         callbackUrl={callbackUrl}
@@ -49,4 +63,3 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     </Suspense>
   );
 }
-

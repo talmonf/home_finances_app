@@ -31,6 +31,6 @@ test("appBrandingStrings clinic he", () => {
 });
 
 test("loginHrefForPortal", () => {
-  assert.equal(loginHrefForPortal("home"), "/login");
-  assert.equal(loginHrefForPortal("clinic"), "/login/clinic");
+  assert.equal(loginHrefForPortal("home"), "/login?portal=home");
+  assert.equal(loginHrefForPortal("clinic"), "/login");
 });
