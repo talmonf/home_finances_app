@@ -101,16 +101,34 @@ export async function middleware(req: NextRequest) {
     return applyLoginRouteCookies(pathname, req);
   }
 
-  if (pathname === "/" && req.nextUrl.searchParams.get("lang")) {
-    return applyLoginUiLanguageFromQuery(req, NextResponse.next());
-  }
-
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
   });
 
   if (!token) {
+    if (pathname === "/") {
+      const qs = new URLSearchParams();
+      if (req.nextUrl.searchParams.get("portal") === "home") {
+        qs.set("portal", "home");
+      }
+      if (req.nextUrl.searchParams.get("passwordUpdated") === "1") {
+        qs.set("passwordUpdated", "1");
+      }
+      const lang = req.nextUrl.searchParams.get("lang");
+      if (lang === "en" || lang === "he") {
+        qs.set("lang", lang);
+      }
+      const suffix = qs.toString() ? `?${qs.toString()}` : "";
+      const redirect = NextResponse.redirect(new URL(`/login${suffix}`, req.url));
+      redirect.cookies.set(
+        APP_PORTAL_COOKIE,
+        qs.get("portal") === "home" ? "home" : "clinic",
+        APP_PORTAL_COOKIE_OPTIONS,
+      );
+      return applyLoginUiLanguageFromQuery(req, redirect);
+    }
+
     const callbackUrl = encodeURIComponent(
       req.nextUrl.pathname + req.nextUrl.search,
     );
