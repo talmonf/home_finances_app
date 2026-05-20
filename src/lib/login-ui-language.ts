@@ -2,11 +2,10 @@ import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/auth";
 import { LOGIN_UI_LANGUAGE_COOKIE } from "@/lib/login-ui-language-cookie";
 import { preferHebrewFromAcceptLanguage } from "@/lib/login-ui-language-helpers";
-import {
-  DEFAULT_UI_LANGUAGE,
-  normalizeUiLanguage,
-  type UiLanguage,
-} from "@/lib/ui-language";
+import { normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
+
+/** Pre-auth login shell default (cookie and per-user lookup still override). */
+export const DEFAULT_LOGIN_UI_LANGUAGE: UiLanguage = "he";
 
 export { LOGIN_UI_LANGUAGE_COOKIE, LOGIN_UI_LANGUAGE_COOKIE_OPTIONS } from "@/lib/login-ui-language-cookie";
 
@@ -22,7 +21,7 @@ export async function resolveLoginPageUiLanguage(): Promise<UiLanguage> {
     return "he";
   }
 
-  return DEFAULT_UI_LANGUAGE;
+  return DEFAULT_LOGIN_UI_LANGUAGE;
 }
 
 /** Effective UI language for sign-in (user override, else household default). */
