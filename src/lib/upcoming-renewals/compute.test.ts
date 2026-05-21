@@ -52,3 +52,17 @@ test("filterRenewalRowsByDaysAhead includes only today..today+N inclusive", asyn
     ["today", "within", "edge"],
   );
 });
+
+test("filterRenewalRowsByDaysAhead with includePastDue adds overdue rows", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const { filterRenewalRowsByDaysAhead } = await import("@/lib/upcoming-renewals/compute");
+  const today = new Date(2026, 4, 8);
+  const rows: RenewalRow[] = [
+    row("past", "2026-05-07T00:00:00.000Z"),
+    row("today", "2026-05-08T00:00:00.000Z"),
+    row("within", "2026-05-10T00:00:00.000Z"),
+  ];
+
+  const filtered = filterRenewalRowsByDaysAhead(rows, today, 3, { includePastDue: true });
+  assert.deepEqual(filtered.map((r) => r.id), ["past", "today", "within"]);
+});

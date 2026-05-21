@@ -55,11 +55,19 @@ export function addDaysLocal(base: Date, days: number): Date {
 }
 
 /** Filter rows to renewal dates in [today, today + daysAhead] (local calendar days). */
-export function filterRenewalRowsByDaysAhead(rows: RenewalRow[], today: Date, daysAhead: number): RenewalRow[] {
+export function filterRenewalRowsByDaysAhead(
+  rows: RenewalRow[],
+  today: Date,
+  daysAhead: number,
+  options?: { includePastDue?: boolean },
+): RenewalRow[] {
   const end = addDaysLocal(today, daysAhead);
+  const includePastDue = options?.includePastDue === true;
   return rows.filter((r) => {
     const rd = dateOnlyLocal(r.renewalDate);
-    return rd >= today && rd <= end;
+    if (rd > end) return false;
+    if (includePastDue) return true;
+    return rd >= today;
   });
 }
 
@@ -85,6 +93,8 @@ export type ComputeUpcomingRenewalsParams = {
   today?: Date;
   /** When set, only rows with renewal date in [today, today + daysAhead] (inclusive). */
   daysAhead?: number;
+  /** When true with `daysAhead`, also include renewal dates before today (overdue / past due). */
+  includePastDue?: boolean;
   language: "en" | "he";
 };
 
@@ -94,9 +104,10 @@ export type ComputeUpcomingRenewalsParams = {
 export async function computeUpcomingRenewals(
   params: ComputeUpcomingRenewalsParams,
 ): Promise<RenewalRow[]> {
-  const { householdId, daysAhead, language } = params;
+  const { householdId, daysAhead, includePastDue, language } = params;
   const today = params.today ?? startOfToday();
   const isHebrew = language === "he";
+  const includeExpired = includePastDue === true;
 
   const [
     subscriptions,
@@ -129,30 +140,49 @@ export async function computeUpcomingRenewals(
       },
     }),
     prisma.identities.findMany({
-      where: { household_id: householdId, is_active: true, expiry_date: { gte: today } },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        expiry_date: includeExpired ? { not: null } : { gte: today },
+      },
       include: { family_member: true },
     }),
     prisma.credit_cards.findMany({
       where: {
         household_id: householdId,
         cancelled_at: null,
-        OR: [
-          { expiry_date: { not: null, gte: today } },
-          { no_charge_policy_valid_until: { not: null, gte: today } },
-        ],
+        OR: includeExpired
+          ? [
+              { expiry_date: { not: null } },
+              { no_charge_policy_valid_until: { not: null } },
+            ]
+          : [
+              { expiry_date: { not: null, gte: today } },
+              { no_charge_policy_valid_until: { not: null, gte: today } },
+            ],
       },
       include: { family_member: true },
     }),
     prisma.insurance_policies.findMany({
-      where: { household_id: householdId, is_active: true, expiration_date: { gte: today } },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        expiration_date: includeExpired ? { not: null } : { gte: today },
+      },
       include: { car: true, family_member: true },
     }),
     prisma.rentals.findMany({
-      where: { household_id: householdId, end_date: { not: null, gte: today } },
+      where: {
+        household_id: householdId,
+        end_date: includeExpired ? { not: null } : { not: null, gte: today },
+      },
       include: { property: true },
     }),
     prisma.property_utilities.findMany({
-      where: { household_id: householdId, renewal_date: { not: null, gte: today } },
+      where: {
+        household_id: householdId,
+        renewal_date: includeExpired ? { not: null } : { not: null, gte: today },
+      },
       include: { property: true },
     }),
     prisma.tasks.findMany({
@@ -175,19 +205,22 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        warranty_expiry_date: { not: null, gte: today },
+        warranty_expiry_date: includeExpired ? { not: null } : { not: null, gte: today },
       },
       include: { family_member: true, credit_card: { include: { family_member: true } } },
     }),
     prisma.car_licenses.findMany({
-      where: { household_id: householdId, expires_at: { gte: today } },
+      where: {
+        household_id: householdId,
+        expires_at: includeExpired ? { not: null } : { gte: today },
+      },
       include: { car: true },
       orderBy: { expires_at: "asc" },
     }),
     prisma.car_services.findMany({
       where: {
         household_id: householdId,
-        next_service_at: { not: null, gte: today },
+        next_service_at: includeExpired ? { not: null } : { not: null, gte: today },
       },
       include: { car: true },
       orderBy: { next_service_at: "asc" },
@@ -198,7 +231,7 @@ export async function computeUpcomingRenewals(
         is_active: true,
         OR: [
           { repayment_day_of_month: { not: null } },
-          { maturity_date: { not: null, gte: today } },
+          { maturity_date: includeExpired ? { not: null } : { not: null, gte: today } },
         ],
       },
     }),
@@ -206,10 +239,15 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        OR: [
-          { renewal_date: { not: null, gte: today } },
-          { maturity_date: { not: null, gte: today } },
-        ],
+        OR: includeExpired
+          ? [
+              { renewal_date: { not: null } },
+              { maturity_date: { not: null } },
+            ]
+          : [
+              { renewal_date: { not: null, gte: today } },
+              { maturity_date: { not: null, gte: today } },
+            ],
       },
       include: { owner: true },
     }),
@@ -306,7 +344,10 @@ export async function computeUpcomingRenewals(
       const baseName = `${s.provider_name} — ${s.policy_name}`;
       const owner = s.owner?.full_name ?? (isHebrew ? "משק הבית" : "Household");
       const ownerId = s.owner_family_member_id;
-      if (s.renewal_date && dateOnlyLocal(s.renewal_date as Date) >= today) {
+      if (
+        s.renewal_date &&
+        (includeExpired || dateOnlyLocal(s.renewal_date as Date) >= today)
+      ) {
         parts.push({
           id: `savings-renewal-${s.id}`,
           category: "Savings policy",
@@ -318,7 +359,10 @@ export async function computeUpcomingRenewals(
           href: "/dashboard/savings-policies",
         });
       }
-      if (s.maturity_date && dateOnlyLocal(s.maturity_date as Date) >= today) {
+      if (
+        s.maturity_date &&
+        (includeExpired || dateOnlyLocal(s.maturity_date as Date) >= today)
+      ) {
         parts.push({
           id: `savings-maturity-${s.id}`,
           category: "Savings policy",
@@ -422,7 +466,10 @@ export async function computeUpcomingRenewals(
           href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
         });
       }
-      if (loan.maturity_date && dateOnlyLocal(loan.maturity_date as Date) >= today) {
+      if (
+        loan.maturity_date &&
+        (includeExpired || dateOnlyLocal(loan.maturity_date as Date) >= today)
+      ) {
         parts.push({
           id: `loan-payoff-${loan.id}`,
           category: "Loan",
@@ -439,7 +486,7 @@ export async function computeUpcomingRenewals(
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
 
   if (daysAhead !== undefined) {
-    return filterRenewalRowsByDaysAhead(rows, today, daysAhead);
+    return filterRenewalRowsByDaysAhead(rows, today, daysAhead, { includePastDue });
   }
   return rows;
 }

@@ -13,55 +13,11 @@ import {
   startOfToday,
   type RenewalRow,
 } from "@/lib/upcoming-renewals/compute";
+import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-function overdueLabelForCategory(category: string, isHebrew: boolean) {
-  if (isHebrew) {
-    switch (category) {
-      case "Task":
-        return "באיחור";
-      case "Identity":
-      case "Credit card":
-      case "Insurance":
-      case "Car license":
-      case "Warranty":
-        return "פג תוקף";
-      case "Rental":
-      case "Utility":
-      case "Car service":
-      case "Savings policy":
-      case "Loan":
-      case "Subscription":
-      case "Donation":
-      default:
-        return "עבר";
-    }
-  }
-
-  switch (category) {
-    case "Task":
-      return "Past due";
-    case "Identity":
-    case "Credit card":
-    case "Insurance":
-    case "Car license":
-    case "Warranty":
-      return "Expired";
-    case "Donation":
-      return "Passed";
-    case "Rental":
-    case "Utility":
-    case "Car service":
-    case "Savings policy":
-    case "Loan":
-    case "Subscription":
-    default:
-      return "Overdue";
-  }
-}
 
 type PageProps = {
   searchParams?: Promise<{

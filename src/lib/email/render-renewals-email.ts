@@ -1,6 +1,7 @@
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { dateOnlyLocal, RENEWAL_CATEGORY_ORDER, type RenewalRow } from "@/lib/upcoming-renewals/compute";
+import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
 
 export type RenderRenewalsEmailParams = {
   rows: RenewalRow[];
@@ -52,8 +53,8 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
     : `Upcoming renewals & deadlines (${rows.length})`;
 
   const intro = he
-    ? `להלן פריטים עם תאריך חידוש או מועד בטווח של ${daysAhead} הימים הקרובים (כולל היום).`
-    : `The following items have a renewal or deadline within the next ${daysAhead} days (including today).`;
+    ? `להלן פריטים שפג תוקפם, באיחור, או עם תאריך חידוש/מועד בטווח של ${daysAhead} הימים הקרובים (כולל היום).`
+    : `The following items are overdue, past due, or have a renewal or deadline within the next ${daysAhead} days (including today).`;
 
   const openDashboard = he ? "פתח את לוח החידושים" : "Open renewals dashboard";
   const dashboardUrl = `${baseUrl}/dashboard/upcoming-renewals`;
@@ -79,14 +80,19 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
   }
   const categories = sortCategories([...byCat.keys()]);
 
-  const inDaysLabel = (n: number) =>
-    n === 0
-      ? he
-        ? "היום"
-        : "Today"
-      : he
-        ? `בעוד ${n} ימים`
-        : `In ${n} day${n === 1 ? "" : "s"}`;
+  const timingLabel = (n: number, category: string) => {
+    if (n < 0) {
+      const daysAgo = Math.abs(n);
+      const overdue = overdueLabelForCategory(category, he);
+      return he
+        ? `${overdue} · לפני ${daysAgo} ימים`
+        : `${overdue} · ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
+    }
+    if (n === 0) {
+      return he ? "היום" : "Today";
+    }
+    return he ? `בעוד ${n} ימים` : `In ${n} day${n === 1 ? "" : "s"}`;
+  };
 
   let textBody = `${intro}\n\n`;
   const htmlSections: string[] = [`<p>${escapeHtml(intro)}</p>`];
@@ -100,10 +106,12 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
     for (const r of list) {
       const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
       const n = daysFromToday(r.renewalDate, today);
-      const line = `${dateStr} · ${r.renewalType} · ${r.itemName} · ${r.owner} (${inDaysLabel(n)})`;
+      const timing = timingLabel(n, r.category);
+      const line = `${dateStr} · ${r.renewalType} · ${r.itemName} · ${r.owner} (${timing})`;
       textBody += `  - ${line}\n`;
+      const timingStyle = n < 0 ? "color:#b91c1c;" : "";
       htmlSections.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} · <span style="color:#555;">${escapeHtml(r.owner)}</span> <em>(${escapeHtml(inDaysLabel(n))})</em></li>`,
+        `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} · <span style="color:#555;">${escapeHtml(r.owner)}</span> <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
       );
     }
     htmlSections.push(`</ul>`);
