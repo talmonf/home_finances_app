@@ -71,6 +71,9 @@ export function filterRenewalRowsByDaysAhead(
   });
 }
 
+/** Earliest date for DB queries when loading overdue renewal rows (with `includePastDue`). */
+const RENEWAL_LOOKBACK_START = new Date(1900, 0, 1);
+
 export const RENEWAL_CATEGORY_ORDER = [
   "Subscription",
   "Identity",
@@ -107,7 +110,7 @@ export async function computeUpcomingRenewals(
   const { householdId, daysAhead, includePastDue, language } = params;
   const today = params.today ?? startOfToday();
   const isHebrew = language === "he";
-  const includeExpired = includePastDue === true;
+  const windowStart = includePastDue === true ? RENEWAL_LOOKBACK_START : today;
 
   const [
     subscriptions,
@@ -143,7 +146,7 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        expiry_date: includeExpired ? { not: null } : { gte: today },
+        expiry_date: { gte: windowStart },
       },
       include: { family_member: true },
     }),
@@ -151,15 +154,10 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         cancelled_at: null,
-        OR: includeExpired
-          ? [
-              { expiry_date: { not: null } },
-              { no_charge_policy_valid_until: { not: null } },
-            ]
-          : [
-              { expiry_date: { not: null, gte: today } },
-              { no_charge_policy_valid_until: { not: null, gte: today } },
-            ],
+        OR: [
+          { expiry_date: { not: null, gte: windowStart } },
+          { no_charge_policy_valid_until: { not: null, gte: windowStart } },
+        ],
       },
       include: { family_member: true },
     }),
@@ -167,21 +165,21 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        expiration_date: includeExpired ? { not: null } : { gte: today },
+        expiration_date: { gte: windowStart },
       },
       include: { car: true, family_member: true },
     }),
     prisma.rentals.findMany({
       where: {
         household_id: householdId,
-        end_date: includeExpired ? { not: null } : { not: null, gte: today },
+        end_date: { not: null, gte: windowStart },
       },
       include: { property: true },
     }),
     prisma.property_utilities.findMany({
       where: {
         household_id: householdId,
-        renewal_date: includeExpired ? { not: null } : { not: null, gte: today },
+        renewal_date: { not: null, gte: windowStart },
       },
       include: { property: true },
     }),
@@ -205,14 +203,14 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        warranty_expiry_date: includeExpired ? { not: null } : { not: null, gte: today },
+        warranty_expiry_date: { not: null, gte: windowStart },
       },
       include: { family_member: true, credit_card: { include: { family_member: true } } },
     }),
     prisma.car_licenses.findMany({
       where: {
         household_id: householdId,
-        expires_at: includeExpired ? { not: null } : { gte: today },
+        expires_at: { gte: windowStart },
       },
       include: { car: true },
       orderBy: { expires_at: "asc" },
@@ -220,7 +218,7 @@ export async function computeUpcomingRenewals(
     prisma.car_services.findMany({
       where: {
         household_id: householdId,
-        next_service_at: includeExpired ? { not: null } : { not: null, gte: today },
+        next_service_at: { not: null, gte: windowStart },
       },
       include: { car: true },
       orderBy: { next_service_at: "asc" },
@@ -231,7 +229,7 @@ export async function computeUpcomingRenewals(
         is_active: true,
         OR: [
           { repayment_day_of_month: { not: null } },
-          { maturity_date: includeExpired ? { not: null } : { not: null, gte: today } },
+          { maturity_date: { not: null, gte: windowStart } },
         ],
       },
     }),
@@ -239,15 +237,10 @@ export async function computeUpcomingRenewals(
       where: {
         household_id: householdId,
         is_active: true,
-        OR: includeExpired
-          ? [
-              { renewal_date: { not: null } },
-              { maturity_date: { not: null } },
-            ]
-          : [
-              { renewal_date: { not: null, gte: today } },
-              { maturity_date: { not: null, gte: today } },
-            ],
+        OR: [
+          { renewal_date: { not: null, gte: windowStart } },
+          { maturity_date: { not: null, gte: windowStart } },
+        ],
       },
       include: { owner: true },
     }),
@@ -344,10 +337,7 @@ export async function computeUpcomingRenewals(
       const baseName = `${s.provider_name} — ${s.policy_name}`;
       const owner = s.owner?.full_name ?? (isHebrew ? "משק הבית" : "Household");
       const ownerId = s.owner_family_member_id;
-      if (
-        s.renewal_date &&
-        (includeExpired || dateOnlyLocal(s.renewal_date as Date) >= today)
-      ) {
+      if (s.renewal_date && dateOnlyLocal(s.renewal_date as Date) >= windowStart) {
         parts.push({
           id: `savings-renewal-${s.id}`,
           category: "Savings policy",
@@ -359,10 +349,7 @@ export async function computeUpcomingRenewals(
           href: "/dashboard/savings-policies",
         });
       }
-      if (
-        s.maturity_date &&
-        (includeExpired || dateOnlyLocal(s.maturity_date as Date) >= today)
-      ) {
+      if (s.maturity_date && dateOnlyLocal(s.maturity_date as Date) >= windowStart) {
         parts.push({
           id: `savings-maturity-${s.id}`,
           category: "Savings policy",
@@ -466,10 +453,7 @@ export async function computeUpcomingRenewals(
           href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
         });
       }
-      if (
-        loan.maturity_date &&
-        (includeExpired || dateOnlyLocal(loan.maturity_date as Date) >= today)
-      ) {
+      if (loan.maturity_date && dateOnlyLocal(loan.maturity_date as Date) >= windowStart) {
         parts.push({
           id: `loan-payoff-${loan.id}`,
           category: "Loan",
