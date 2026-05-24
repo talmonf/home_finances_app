@@ -4,6 +4,7 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { logGeneralAuditEvent } from "@/lib/general-audit";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
@@ -425,6 +426,7 @@ export async function GET() {
       summary: "Private clinic Excel export completed",
       metadata: { sheetCount: sheets.length, filename },
     });
+    await logPrivateClinicAction(session, "importExport", "export");
     return new NextResponse(buf, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

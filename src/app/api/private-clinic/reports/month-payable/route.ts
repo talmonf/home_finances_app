@@ -1,5 +1,6 @@
 import { getAuthSession, prisma } from "@/lib/auth";
 import { logGeneralAuditEvent } from "@/lib/general-audit";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { NextResponse } from "next/server";
@@ -404,6 +405,7 @@ export async function GET(req: Request) {
         rowCount: unified.length,
       },
     });
+    await logPrivateClinicAction(session, "reports", "export_month_payable");
 
     return new NextResponse(new Uint8Array(buf), {
       status: 200,

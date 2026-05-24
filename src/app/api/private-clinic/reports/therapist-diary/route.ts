@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, type PDFFont } from "pdf-lib";
 import { NextResponse } from "next/server";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 
 export const dynamic = "force-dynamic";
 
@@ -313,6 +314,8 @@ export async function GET(req: Request) {
 
   const buf = Buffer.from(await pdf.save());
   const filename = `therapist-diary-${fromYear}-${toYear}.pdf`;
+
+  await logPrivateClinicAction(session, "reports", "export_therapist_diary");
 
   return new NextResponse(new Uint8Array(buf), {
     status: 200,

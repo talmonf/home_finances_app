@@ -48,8 +48,20 @@ import type {
   TherapyVisitType,
 } from "@/generated/prisma/enums";
 import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
+import type { PrivateClinicNavKey } from "@/lib/private-clinic-nav";
 
 const BASE = "/dashboard/private-clinic";
+
+async function logClinicUsage(
+  feature: PrivateClinicNavKey,
+  action: string,
+  opts?: { resourceType?: string; resourceId?: string },
+) {
+  const session = await getAuthSession();
+  if (!session?.user) return;
+  await logPrivateClinicAction(session, feature, action, opts);
+}
 const ADMIN_HOUSEHOLDS = "/admin/households";
 const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
 
@@ -1428,6 +1440,7 @@ export async function createTherapyClient(formData: FormData) {
     }
   });
 
+  await logClinicUsage("clients", "create", { resourceType: "client", resourceId: id });
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/clients/new`);
   revalidatePath(`${BASE}/reminders`);
@@ -1554,6 +1567,7 @@ export async function updateTherapyClient(formData: FormData) {
     }
   }
 
+  await logClinicUsage("clients", "update", { resourceType: "client", resourceId: id });
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/clients/${id}/edit`);
   revalidatePath(`${BASE}/reminders`);
@@ -1576,6 +1590,7 @@ export async function deleteTherapyClient(formData: FormData) {
     where: { id },
   });
 
+  await logClinicUsage("clients", "delete", { resourceType: "client", resourceId: id });
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/families`);
   revalidatePath(`${BASE}/treatments`);
@@ -1857,8 +1872,8 @@ export async function createTherapyFamily(formData: FormData) {
   const billing_basis = parseBillingBasis(formData.get("billing_basis") as string | null);
   const billing_timing = parseBillingTiming(formData.get("billing_timing") as string | null);
 
+  const familyId = crypto.randomUUID();
   await prisma.$transaction(async (tx) => {
-    const familyId = crypto.randomUUID();
     await tx.therapy_families.create({
       data: {
         id: familyId,
@@ -1894,6 +1909,7 @@ export async function createTherapyFamily(formData: FormData) {
     }
   });
 
+  await logClinicUsage("families", "create", { resourceType: "family", resourceId: familyId });
   revalidatePath(`${BASE}/families`);
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/treatments`);
@@ -2237,6 +2253,7 @@ export async function createTherapyTreatment(formData: FormData) {
     throw error;
   }
 
+  await logClinicUsage("treatments", "create", { resourceType: "treatment", resourceId: treatmentId });
   revalidatePath(`${BASE}/treatments`);
   revalidatePath(`${BASE}/travel`);
   if (appointmentToComplete) {
@@ -2364,6 +2381,7 @@ export async function updateTherapyTreatment(formData: FormData) {
     });
   });
 
+  await logClinicUsage("treatments", "update", { resourceType: "treatment", resourceId: id });
   revalidatePath(`${BASE}/treatments`);
   revalidatePath(`${BASE}/travel`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
@@ -2419,6 +2437,7 @@ export async function deleteTherapyTreatment(formData: FormData) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
   }
   await prisma.therapy_treatments.deleteMany({ where: { id, household_id: householdId } });
+  await logClinicUsage("treatments", "delete", { resourceType: "treatment", resourceId: id });
   revalidatePath(`${BASE}/treatments`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
 }
@@ -2631,6 +2650,7 @@ export async function createTherapyReceipt(formData: FormData) {
   if (payment_date) {
     revalidatePath(`${BASE}/treatments`);
   }
+  await logClinicUsage("receipts", "create", { resourceType: "receipt", resourceId: id });
   revalidatePath(`${BASE}/receipts`);
   const successParams = new URLSearchParams();
   successParams.set("modal", "edit");
@@ -3691,6 +3711,10 @@ export async function createTherapyAppointment(formData: FormData) {
     action: TherapyAppointmentAuditAction.create,
     metadata: { snapshot: appointmentToSnapshot(createdWithParticipants ?? created) },
   });
+  await logClinicUsage("appointments", "create", {
+    resourceType: "appointment",
+    resourceId: created.id,
+  });
 
   const actingUser = await prisma.users.findFirst({
     where: { id: userId, household_id: householdId },
@@ -4522,6 +4546,10 @@ export async function createTherapyConsultation(formData: FormData) {
     }
   });
 
+  await logClinicUsage("consultations", "create", {
+    resourceType: "consultation",
+    resourceId: consultationId,
+  });
   revalidatePath(`${BASE}/consultations`);
   redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }

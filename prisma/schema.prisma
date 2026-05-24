@@ -103,6 +103,8 @@ model households {
   therapy_client_relationships       therapy_client_relationships[]
   private_clinic_backup_snapshots    private_clinic_backup_snapshots[]
   general_audit_events               general_audit_events[]
+  user_feature_usage_events          user_feature_usage_events[]
+  user_feature_usage_rollups         user_feature_usage_rollups[]
   renewal_email_subscriptions        renewal_email_subscriptions[]
 }
 
@@ -1363,6 +1365,8 @@ model users {
   therapy_appointment_audits therapy_appointment_audits[]
   private_clinic_backup_snapshots_created private_clinic_backup_snapshots[]
   general_audit_events      general_audit_events[]
+  user_feature_usage_events user_feature_usage_events[]
+  user_feature_usage_rollups user_feature_usage_rollups[]
   renewal_email_subscription renewal_email_subscriptions?
 }
 
@@ -1405,6 +1409,47 @@ model general_audit_events {
   @@index([created_at(sort: Desc)])
   @@index([feature, created_at(sort: Desc)])
   @@index([household_id, created_at(sort: Desc)])
+}
+
+model user_feature_usage_events {
+  id            String   @id @default(uuid())
+  household_id  String
+  user_id       String
+  domain        String
+  feature       String
+  event_type    String
+  action        String?
+  resource_type String?
+  resource_id   String?
+  metadata      Json     @default("{}")
+  created_at    DateTime @default(now())
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([domain, feature, created_at(sort: Desc)])
+  @@index([household_id, user_id, created_at(sort: Desc)])
+  @@index([user_id, domain, feature, created_at(sort: Desc)])
+}
+
+model user_feature_usage_rollups {
+  id            String   @id @default(uuid())
+  household_id  String
+  user_id       String
+  domain        String
+  feature       String
+  event_type    String
+  first_used_at DateTime
+  last_used_at  DateTime
+  event_count   Int      @default(1)
+  updated_at    DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([household_id, user_id, domain, feature, event_type])
+  @@index([household_id, domain])
+  @@index([user_id, domain])
 }
 
 model user_enabled_sections {

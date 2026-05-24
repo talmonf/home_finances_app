@@ -25,6 +25,8 @@ export async function deleteCoreHouseholdScopedRowsInTransaction(tx: Tx, househo
   });
 
   await tx.general_audit_events.deleteMany({ where: { household_id: householdId } });
+  await tx.user_feature_usage_events.deleteMany({ where: { household_id: householdId } });
+  await tx.user_feature_usage_rollups.deleteMany({ where: { household_id: householdId } });
   await tx.private_clinic_backup_snapshots.deleteMany({ where: { household_id: householdId } });
 
   await tx.renewal_email_subscriptions.deleteMany({ where: { household_id: householdId } });

@@ -1,5 +1,6 @@
 import { getAuthSession } from "@/lib/auth";
 import { logGeneralAuditEvent } from "@/lib/general-audit";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import { importTherapyWorkbook } from "@/lib/therapy/import-workbook";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
@@ -47,6 +48,9 @@ export async function POST(req: Request) {
       summary: ok ? "Private clinic Excel import completed" : "Private clinic Excel import finished with errors",
       metadata: { imported, errorCount: errors.length },
     });
+    if (ok) {
+      await logPrivateClinicAction(session, "importExport", "import");
+    }
     return NextResponse.json({
       ok,
       imported,

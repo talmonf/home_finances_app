@@ -12,6 +12,7 @@ import {
 import { getPrivateClinicReminderBadgeCount } from "@/lib/private-clinic/reminder-badge";
 import PrivateClinicNavClient from "./private-clinic-nav-client";
 import { PrivateClinicNavPendingProvider } from "./private-clinic-nav-pending-context";
+import PrivateClinicUsageTracker from "./usage-tracker";
 
 export default async function PrivateClinicLayout({
   children,
@@ -63,6 +64,7 @@ export default async function PrivateClinicLayout({
     <div className="flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-5 sm:py-4 lg:px-8">
       <div className="w-full min-w-0 max-w-screen-2xl space-y-3 sm:space-y-4">
         <PrivateClinicNavPendingProvider>
+          <PrivateClinicUsageTracker />
           <header className="space-y-2">
             <PrivateClinicNavClient
               navAriaLabel={layoutCopy.navAriaLabel}

@@ -1,6 +1,7 @@
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/auth";
 import { logGeneralAuditEvent } from "@/lib/general-audit";
+import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import { analyzeTipulimImport, commitTipulimImport } from "@/lib/therapy/import-tipulim";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
@@ -200,6 +201,9 @@ export async function POST(req: Request) {
           warnings: result.warnings.length,
         },
       });
+      if (success) {
+        await logPrivateClinicAction(session, "importExport", "import_tipulim");
+      }
 
       return NextResponse.json({
         ok: success,

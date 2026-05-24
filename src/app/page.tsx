@@ -296,6 +296,20 @@ export default async function Home({ searchParams }: HomeProps) {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-slate-200">
+                  Feature usage
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">
+                  See which users use which private-clinic sections and key actions.
+                </p>
+                <Link
+                  href="/admin/feature-usage"
+                  className="inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+                >
+                  Open feature usage
+                </Link>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <h2 className="mb-2 text-sm font-semibold text-slate-200">
                   General audit log
                 </h2>
                 <p className="mb-3 text-xs text-slate-400">
