@@ -110,7 +110,10 @@ export async function sendRenewalEmailTestNow() {
     redirect("/dashboard/upcoming-renewals/email-settings?test=nosub");
   }
 
-  const result = await sendRenewalDigestForSubscription(sub, new Date(), { updateLastSentAt: false });
+  const result = await sendRenewalDigestForSubscription(sub, new Date(), {
+    updateLastSentAt: false,
+    isTest: true,
+  });
   if (!result.ok) {
     redirect(
       `/dashboard/upcoming-renewals/email-settings?test=fail&reason=${encodeURIComponent(result.reason.slice(0, 500))}`,

@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 117_renewal_email_deliveries_is_test.sql (2026-05-24)
 - [x] 116_jobs_start_date_nullable.sql (2026-05-15)
 - [x] 115_users_show_useful_links_default_false.sql (2026-05-15)
 - [x] 114_therapy_receipts_payment_date.sql (2026-05-14)
@@ -137,6 +138,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 117 | `117_renewal_email_deliveries_is_test.sql` (2026-05-24) | ALTER | `renewal_email_deliveries.is_test`: flag manual test sends vs cron-triggered scheduled digests. |
 | 116 | `116_jobs_start_date_nullable.sql` (2026-05-15) | ALTER | `jobs.start_date`: drop NOT NULL so clinic job forms can omit a start date. |
 | 115 | `115_users_show_useful_links_default_false.sql` (2026-05-15) | ALTER | `users.show_useful_links`: default `false` so new users (e.g. clinic household therapist) do not see the useful-links banner until enabled by super-admin. |
 | 114 | `114_therapy_receipts_payment_date.sql` (2026-05-14) | ALTER | `therapy_receipts`: optional `payment_date` (DATE) for when payment was received; propagated to linked treatments via app logic. |

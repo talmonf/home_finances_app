@@ -63,7 +63,7 @@ function resolveRecipientEmail(sub: RenewalSubscriptionWithRelations): string {
 export async function sendRenewalDigestForSubscription(
   sub: RenewalSubscriptionWithRelations,
   now: Date,
-  options: { updateLastSentAt: boolean },
+  options: { updateLastSentAt: boolean; isTest?: boolean },
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const recipient = resolveRecipientEmail(sub);
   const tz = sub.timezone || "Asia/Jerusalem";
@@ -89,6 +89,8 @@ export async function sendRenewalDigestForSubscription(
     today,
   });
 
+  const isTest = options.isTest === true;
+
   let providerId: string | undefined;
   try {
     const provider = getEmailProvider();
@@ -105,6 +107,7 @@ export async function sendRenewalDigestForSubscription(
         status,
         error_message: msg.slice(0, 2000),
         provider_msg_id: null,
+        is_test: isTest,
       },
     });
     return { ok: false, reason: msg };
@@ -118,6 +121,7 @@ export async function sendRenewalDigestForSubscription(
       status: "sent",
       error_message: null,
       provider_msg_id: providerId ?? null,
+      is_test: isTest,
     },
   });
 

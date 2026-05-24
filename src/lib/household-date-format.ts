@@ -117,6 +117,28 @@ export function formatHouseholdDateUtcWithTime(
   return `${datePart} ${hh}:${mm}`;
 }
 
+/** Date + time in Israel (Asia/Jerusalem), with an explicit timezone label. */
+export function formatInstantInIsraelTime(
+  d: Date | null | undefined,
+  format: HouseholdDateDisplayFormat,
+  options?: { isHebrew?: boolean },
+): string {
+  if (!d || Number.isNaN(d.getTime())) return "—";
+  const parts = getDateTimePartsInIsraelTime(d);
+  const secondParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ISRAEL_TIME_ZONE,
+    second: "2-digit",
+  }).formatToParts(d);
+  const ss = pad2(
+    Number(secondParts.find((p) => p.type === "second")?.value ?? "0"),
+  );
+  const datePart = formatYmdParts(parts.year, parts.month, parts.day, format);
+  const hh = pad2(parts.hour);
+  const mm = pad2(parts.minute);
+  const tzLabel = options?.isHebrew ? "שעון ישראל" : "Israel time";
+  return `${datePart} ${hh}:${mm}:${ss} (${tzLabel})`;
+}
+
 /** Like {@link formatHouseholdDateUtcWithTime} but omits time when the instant is UTC midnight (date-only). */
 export function formatHouseholdDateUtcWithOptionalTime(
   d: Date | null | undefined,

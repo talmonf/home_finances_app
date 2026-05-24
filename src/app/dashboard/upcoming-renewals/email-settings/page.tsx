@@ -1,4 +1,5 @@
-import { prisma, requireHouseholdMember, getAuthSession } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getAuthSession, getCurrentHouseholdDateDisplayFormat } from "@/lib/auth";
+import { formatInstantInIsraelTime } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -51,11 +52,16 @@ export default async function RenewalEmailSettingsPage({
           item_count: true,
           error_message: true,
           recipient_email: true,
+          is_test: true,
         },
       })
     : [];
 
   const isHebrew = user.ui_language === "he";
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const formatSentAt = (d: Date) => formatInstantInIsraelTime(d, dateDisplayFormat, { isHebrew });
+
+  const lastScheduledDelivery = recentDeliveries.find((d) => d.status === "sent" && !d.is_test);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -215,14 +221,21 @@ export default async function RenewalEmailSettingsPage({
             </h2>
             {sub.last_sent_at ? (
               <p className="text-xs text-slate-500">
-                {isHebrew ? "נשלח לאחרונה:" : "Last successful scheduled send:"}{" "}
-                {sub.last_sent_at.toISOString()}
+                {isHebrew ? "שליחה מתוזמנת אחרונה:" : "Last scheduled send:"}{" "}
+                {formatSentAt(sub.last_sent_at)}
+              </p>
+            ) : lastScheduledDelivery ? (
+              <p className="text-xs text-slate-500">
+                {isHebrew
+                  ? "טרם נרשמה שליחה מתוזמנת במערכת; השליחה המתוזמנת האחרונה בהיסטוריה:"
+                  : "No scheduled send timestamp stored yet; last scheduled delivery in history:"}{" "}
+                {formatSentAt(lastScheduledDelivery.sent_at)}
               </p>
             ) : (
               <p className="text-xs text-slate-500">
                 {isHebrew
-                  ? "טרם נשלח אימייל מתוזמן (שליחת בדיקה לא נספרת)."
-                  : "No scheduled send recorded yet (test sends do not count)."}
+                  ? "טרם נשלח אימייל מתוזמן. שליחות בדיקה מסומנות למטה."
+                  : "No scheduled send yet. Test sends are labeled below."}
               </p>
             )}
             {recentDeliveries.length === 0 ? (
@@ -237,18 +250,29 @@ export default async function RenewalEmailSettingsPage({
                     className="rounded-lg border border-slate-700/80 bg-slate-900/60 px-3 py-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-slate-300">{d.sent_at.toISOString()}</span>
-                      <span
-                        className={
-                          d.status === "sent"
-                            ? "text-emerald-400"
-                            : d.status === "skipped"
-                              ? "text-amber-400"
-                              : "text-rose-400"
-                        }
-                      >
-                        {d.status}
-                      </span>
+                      <span className="text-slate-300">{formatSentAt(d.sent_at)}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {d.is_test ? (
+                          <span className="text-xs font-medium text-sky-400/90">
+                            {isHebrew ? "בדיקה" : "Test"}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-500">
+                            {isHebrew ? "מתוזמן" : "Scheduled"}
+                          </span>
+                        )}
+                        <span
+                          className={
+                            d.status === "sent"
+                              ? "text-emerald-400"
+                              : d.status === "skipped"
+                                ? "text-amber-400"
+                                : "text-rose-400"
+                          }
+                        >
+                          {d.status}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-xs text-slate-500">
                       {d.recipient_email} · {d.item_count} {isHebrew ? "פריטים" : "items"}

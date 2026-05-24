@@ -1304,6 +1304,7 @@ model renewal_email_deliveries {
   status           String
   error_message    String?
   provider_msg_id  String?
+  is_test          Boolean  @default(false)
 
   subscription renewal_email_subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
 
