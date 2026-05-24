@@ -7,8 +7,10 @@ import {
   USAGE_EVENT_ACTION,
 } from "@/lib/usage-audit/catalog";
 
+export type BridgedUsageSource = "usage_event" | "appointment_audit" | "general_audit";
+
 export type BridgedUsageRow = {
-  source: "usage_event" | "appointment_audit" | "general_audit";
+  source: BridgedUsageSource;
   id: string;
   householdId: string;
   userId: string;
@@ -18,6 +20,7 @@ export type BridgedUsageRow = {
   action: string | null;
   resourceType: string | null;
   resourceId: string | null;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 };
 
@@ -200,6 +203,7 @@ export async function fetchBridgedUsageEvents(query: {
   offset: number;
 }): Promise<{ events: BridgedUsageRow[]; total: number }> {
   const { householdId, userId, feature, since, limit, offset } = query;
+  const poolSize = Math.min(500, limit + offset + 100);
 
   const usageWhere = {
     domain: USAGE_DOMAIN_PRIVATE_CLINIC,
@@ -209,14 +213,58 @@ export async function fetchBridgedUsageEvents(query: {
     ...(feature ? { feature } : {}),
   };
 
-  const [usageEvents, usageTotal] = await Promise.all([
+  const includeAppointmentAudits = !feature || feature === "appointments";
+  const includeGeneralAudits =
+    !feature || feature === "importExport" || feature === "reports";
+
+  const [usageEvents, usageTotal, aptAudits, generalAudits] = await Promise.all([
     prisma.user_feature_usage_events.findMany({
       where: usageWhere,
       orderBy: { created_at: "desc" },
-      skip: offset,
-      take: limit,
+      take: poolSize,
     }),
     prisma.user_feature_usage_events.count({ where: usageWhere }),
+    includeAppointmentAudits
+      ? prisma.therapy_appointment_audits.findMany({
+          where: {
+            created_at: { gte: since },
+            ...(householdId ? { household_id: householdId } : {}),
+            ...(userId ? { user_id: userId } : {}),
+          },
+          orderBy: { created_at: "desc" },
+          take: poolSize,
+          select: {
+            id: true,
+            household_id: true,
+            user_id: true,
+            appointment_id: true,
+            action: true,
+            created_at: true,
+          },
+        })
+      : Promise.resolve([]),
+    includeGeneralAudits
+      ? prisma.general_audit_events.findMany({
+          where: {
+            created_at: { gte: since },
+            actor_is_super_admin: false,
+            status: "success",
+            feature: { startsWith: "private_clinic_" },
+            ...(householdId ? { household_id: householdId } : {}),
+            ...(userId ? { actor_user_id: userId } : {}),
+          },
+          orderBy: { created_at: "desc" },
+          take: poolSize,
+          select: {
+            id: true,
+            household_id: true,
+            actor_user_id: true,
+            feature: true,
+            action: true,
+            created_at: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const bridged: BridgedUsageRow[] = usageEvents.map((e) => ({
@@ -230,49 +278,66 @@ export async function fetchBridgedUsageEvents(query: {
     action: e.action,
     resourceType: e.resource_type,
     resourceId: e.resource_id,
+    metadata:
+      e.metadata && typeof e.metadata === "object" && !Array.isArray(e.metadata)
+        ? (e.metadata as Record<string, unknown>)
+        : undefined,
     createdAt: e.created_at,
   }));
 
-  // When filtering by feature=appointments or no feature filter, include appointment audits in merged view
-  const includeAppointmentAudits = !feature || feature === "appointments";
-  if (includeAppointmentAudits && offset === 0) {
-    const aptAudits = await prisma.therapy_appointment_audits.findMany({
-      where: {
-        created_at: { gte: since },
-        ...(householdId ? { household_id: householdId } : {}),
-        ...(userId ? { user_id: userId } : {}),
-      },
-      orderBy: { created_at: "desc" },
-      take: Math.min(limit, 100),
-      select: {
-        id: true,
-        household_id: true,
-        user_id: true,
-        appointment_id: true,
-        action: true,
-        created_at: true,
-      },
+  for (const a of aptAudits) {
+    bridged.push({
+      source: "appointment_audit",
+      id: a.id,
+      householdId: a.household_id,
+      userId: a.user_id,
+      domain: USAGE_DOMAIN_PRIVATE_CLINIC,
+      feature: "appointments",
+      eventType: USAGE_EVENT_ACTION,
+      action: a.action,
+      resourceType: "appointment",
+      resourceId: a.appointment_id,
+      createdAt: a.created_at,
     });
-    for (const a of aptAudits) {
-      bridged.push({
-        source: "appointment_audit",
-        id: a.id,
-        householdId: a.household_id,
-        userId: a.user_id,
-        domain: USAGE_DOMAIN_PRIVATE_CLINIC,
-        feature: "appointments",
-        eventType: USAGE_EVENT_ACTION,
-        action: a.action,
-        resourceType: "appointment",
-        resourceId: a.appointment_id,
-        createdAt: a.created_at,
-      });
-    }
-    bridged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
+  for (const g of generalAudits) {
+    if (!g.household_id || !g.actor_user_id) continue;
+    const nav = generalAuditFeatureToPrivateClinicNav(g.feature);
+    if (!nav) continue;
+    if (feature && nav !== feature) continue;
+    bridged.push({
+      source: "general_audit",
+      id: g.id,
+      householdId: g.household_id,
+      userId: g.actor_user_id,
+      domain: USAGE_DOMAIN_PRIVATE_CLINIC,
+      feature: nav,
+      eventType: USAGE_EVENT_ACTION,
+      action: g.action,
+      resourceType: null,
+      resourceId: null,
+      createdAt: g.created_at,
+    });
+  }
+
+  bridged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
   return {
-    events: bridged.slice(0, limit),
-    total: usageTotal,
+    events: bridged.slice(offset, offset + limit),
+    total: usageTotal + aptAudits.length + generalAudits.length,
   };
+}
+
+export function usageAuditSourceLabel(source: BridgedUsageRow["source"]): string {
+  switch (source) {
+    case "usage_event":
+      return "Usage";
+    case "appointment_audit":
+      return "Appointment audit";
+    case "general_audit":
+      return "General audit";
+    default:
+      return source;
+  }
 }

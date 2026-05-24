@@ -56,7 +56,11 @@ const BASE = "/dashboard/private-clinic";
 async function logClinicUsage(
   feature: PrivateClinicNavKey,
   action: string,
-  opts?: { resourceType?: string; resourceId?: string },
+  opts?: {
+    resourceType?: string;
+    resourceId?: string;
+    metadata?: Record<string, unknown>;
+  },
 ) {
   const session = await getAuthSession();
   if (!session?.user) return;
@@ -2254,6 +2258,13 @@ export async function createTherapyTreatment(formData: FormData) {
   }
 
   await logClinicUsage("treatments", "create", { resourceType: "treatment", resourceId: treatmentId });
+  if (appointment_id) {
+    await logClinicUsage("upcomingVisits", "log_treatment", {
+      resourceType: "appointment",
+      resourceId: appointment_id,
+      metadata: { treatment_id: treatmentId },
+    });
+  }
   revalidatePath(`${BASE}/treatments`);
   revalidatePath(`${BASE}/travel`);
   if (appointmentToComplete) {
@@ -4195,10 +4206,18 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
     });
   }
 
+  await logClinicUsage("treatments", "create", { resourceType: "treatment", resourceId: treatmentId });
+  await logClinicUsage("upcomingVisits", "log_treatment", {
+    resourceType: "appointment",
+    resourceId: appointmentId,
+    metadata: { treatment_id: treatmentId },
+  });
+
   revalidatePath(`${BASE}/appointments`);
   revalidatePath(`${BASE}/treatments`);
   revalidatePath(`${BASE}/travel`);
   revalidatePath(`${BASE}/reports`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   redirect(`${BASE}/appointments/${appointmentId}/edit?saved=1`);
 }
 

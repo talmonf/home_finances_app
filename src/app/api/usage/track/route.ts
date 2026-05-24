@@ -14,6 +14,7 @@ type TrackBody = {
   feature?: string;
   event_type?: string;
   pathname?: string;
+  metadata?: Record<string, string>;
 };
 
 export async function POST(request: Request) {
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     domain: USAGE_DOMAIN_PRIVATE_CLINIC,
     feature: feature as Parameters<typeof logUsageEvent>[0]["feature"],
     eventType: USAGE_EVENT_VISIT,
+    metadata: body.metadata,
   });
 
   return NextResponse.json({ ok: true });

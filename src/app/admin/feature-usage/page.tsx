@@ -4,8 +4,11 @@ import { getAuthSession, prisma } from "@/lib/auth";
 import {
   fetchBridgedUsageEvents,
   fetchUsageMatrix,
+  usageAuditSourceLabel,
 } from "@/lib/usage-audit/bridge";
 import {
+  formatUsageAuditTimestamp,
+  formatUsageResourceLines,
   PRIVATE_CLINIC_FEATURE_KEYS,
   privateClinicFeatureLabel,
 } from "@/lib/usage-audit/catalog";
@@ -229,7 +232,7 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
             <table className="min-w-full text-left text-xs text-slate-200">
               <thead>
                 <tr className="border-b border-slate-700 uppercase text-slate-400">
-                  <th className="py-2 pr-3">When</th>
+                  <th className="py-2 pr-3">When (Israel)</th>
                   <th className="py-2 pr-3">Source</th>
                   <th className="py-2 pr-3">Feature</th>
                   <th className="py-2 pr-3">Type</th>
@@ -250,10 +253,10 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
                     const userRow = matrixRows.find((r) => r.userId === e.userId);
                     return (
                       <tr key={`${e.source}-${e.id}`} className="border-b border-slate-800 align-top last:border-0">
-                        <td className="py-2 pr-3 text-slate-300">
-                          {e.createdAt.toLocaleString("en-CA")}
+                        <td className="py-2 pr-3 text-slate-300 whitespace-nowrap">
+                          {formatUsageAuditTimestamp(e.createdAt)}
                         </td>
-                        <td className="py-2 pr-3 text-slate-400">{e.source}</td>
+                        <td className="py-2 pr-3 text-slate-400">{usageAuditSourceLabel(e.source)}</td>
                         <td className="py-2 pr-3">
                           <Link
                             href={filterBase({ feature: e.feature })}
@@ -264,10 +267,22 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
                         </td>
                         <td className="py-2 pr-3">{e.eventType}</td>
                         <td className="py-2 pr-3">{e.action ?? "—"}</td>
-                        <td className="py-2 pr-3 text-slate-400">
-                          {e.resourceType && e.resourceId
-                            ? `${e.resourceType}:${e.resourceId.slice(0, 8)}`
-                            : "—"}
+                        <td className="py-2 pr-3 font-mono text-[11px] text-slate-300">
+                          {(() => {
+                            const lines = formatUsageResourceLines(
+                              e.resourceType,
+                              e.resourceId,
+                              e.metadata,
+                            );
+                            if (lines.length === 0) return "—";
+                            return (
+                              <div className="space-y-0.5">
+                                {lines.map((line) => (
+                                  <div key={line}>{line}</div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="py-2 pr-3">
                           <Link

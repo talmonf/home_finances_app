@@ -8,6 +8,8 @@ import type { SectionId } from "@/lib/dashboard-sections";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
 import type { HomeFrequentLinkItem } from "@/lib/home-frequent-links";
+import { homeFrequentLinkToClinicFeature } from "@/lib/usage-audit/catalog";
+import { postPrivateClinicUsageVisit } from "@/lib/usage-audit/track-client";
 
 export type DashboardSetupTileProps = {
   id: SectionId;
@@ -167,6 +169,12 @@ export function HouseholdDashboardPanel({
 
                     // Allow the UI to show a loader immediately before navigation.
                     event.preventDefault();
+                    const clinicFeature = homeFrequentLinkToClinicFeature(link.key);
+                    if (clinicFeature) {
+                      postPrivateClinicUsageVisit(clinicFeature, normalizedHref, {
+                        from: "home_frequent_link",
+                      });
+                    }
                     setPendingHref(normalizedHref);
                     startTransition(() => {
                       router.push(link.href);

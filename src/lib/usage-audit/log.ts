@@ -10,7 +10,8 @@ import {
   type UsageEventType,
 } from "@/lib/usage-audit/catalog";
 
-const VISIT_DEBOUNCE_MS = 15 * 60 * 1000;
+/** Server-side guard against rapid duplicate visits (client debounces too). */
+const VISIT_DEBOUNCE_MS = 2 * 60 * 1000;
 
 export type LogUsageEventInput = {
   householdId: string;
@@ -36,6 +37,7 @@ function sanitizeMetadata(metadata: Record<string, unknown> | undefined): Prisma
     "client_id",
     "receipt_id",
     "treatment_id",
+    "from",
   ]);
   for (const [k, v] of Object.entries(metadata)) {
     if (!allowed.has(k)) continue;
