@@ -53,8 +53,8 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
     : `Upcoming renewals & deadlines (${rows.length})`;
 
   const intro = he
-    ? `להלן פריטים שפג תוקפם, באיחור, או עם תאריך חידוש/מועד בטווח של ${daysAhead} הימים הקרובים (כולל היום).`
-    : `The following items are overdue, past due, or have a renewal or deadline within the next ${daysAhead} days (including today).`;
+    ? `להלן פריטים עם תאריך חידוש/מועד בטווח של ${daysAhead} הימים הקרובים (כולל היום), ומשימות/תרומות פתוחות עם מועד שעבר.`
+    : `The following items have a renewal or deadline within the next ${daysAhead} days (including today), plus open tasks and donations with a past due date.`;
 
   const openDashboard = he ? "פתח את לוח החידושים" : "Open renewals dashboard";
   const dashboardUrl = `${baseUrl}/dashboard/upcoming-renewals`;

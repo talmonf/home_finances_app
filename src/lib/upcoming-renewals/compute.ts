@@ -54,6 +54,9 @@ export function addDaysLocal(base: Date, days: number): Date {
   return d;
 }
 
+/** Categories whose past-due rows appear on the dashboard even when `includePastDue` is false. */
+export const PAST_DUE_ALLOWED_CATEGORIES = new Set<string>(["Task", "Donation"]);
+
 /** Filter rows to renewal dates in [today, today + daysAhead] (local calendar days). */
 export function filterRenewalRowsByDaysAhead(
   rows: RenewalRow[],
@@ -67,7 +70,8 @@ export function filterRenewalRowsByDaysAhead(
     const rd = dateOnlyLocal(r.renewalDate);
     if (rd > end) return false;
     if (includePastDue) return true;
-    return rd >= today;
+    if (rd >= today) return true;
+    return PAST_DUE_ALLOWED_CATEGORIES.has(r.category);
   });
 }
 

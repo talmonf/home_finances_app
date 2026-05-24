@@ -73,7 +73,6 @@ export async function sendRenewalDigestForSubscription(
     householdId: sub.household_id,
     today,
     daysAhead: sub.days_ahead,
-    includePastDue: true,
     language,
   });
 
