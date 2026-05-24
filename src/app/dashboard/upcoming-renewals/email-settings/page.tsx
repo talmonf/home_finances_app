@@ -209,7 +209,7 @@ export default async function RenewalEmailSettingsPage({
         </div>
 
         {sub ? (
-          <motion.div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
             <h2 className="text-sm font-semibold text-slate-200">
               {isHebrew ? "שליחות אחרונות" : "Recent deliveries"}
             </h2>
