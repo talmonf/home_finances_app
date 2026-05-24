@@ -8,7 +8,6 @@ import {
 } from "@/lib/usage-audit/bridge";
 import {
   formatUsageAuditTimestamp,
-  formatUsageResourceLines,
   PRIVATE_CLINIC_FEATURE_KEYS,
   privateClinicFeatureLabel,
 } from "@/lib/usage-audit/catalog";
@@ -98,7 +97,8 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
           <h1 className="text-2xl font-semibold text-slate-50">Feature usage (private clinic)</h1>
           <p className="text-sm text-slate-400">
             Which household users visit clinic sections and perform key actions. Includes bridged
-            data from appointment and general audit logs.
+            data from appointment and general audit logs. New activity is recorded as it happens;
+            older sessions are not backfilled.
           </p>
         </header>
 
@@ -237,14 +237,13 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
                   <th className="py-2 pr-3">Feature</th>
                   <th className="py-2 pr-3">Type</th>
                   <th className="py-2 pr-3">Action</th>
-                  <th className="py-2 pr-3">Resource</th>
                   <th className="py-2 pr-3">User</th>
                 </tr>
               </thead>
               <tbody>
                 {eventsResult.events.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-slate-500">
+                    <td colSpan={6} className="py-4 text-center text-slate-500">
                       No events in range.
                     </td>
                   </tr>
@@ -267,23 +266,6 @@ export default async function FeatureUsageAdminPage({ searchParams }: PageProps)
                         </td>
                         <td className="py-2 pr-3">{e.eventType}</td>
                         <td className="py-2 pr-3">{e.action ?? "—"}</td>
-                        <td className="py-2 pr-3 font-mono text-[11px] text-slate-300">
-                          {(() => {
-                            const lines = formatUsageResourceLines(
-                              e.resourceType,
-                              e.resourceId,
-                              e.metadata,
-                            );
-                            if (lines.length === 0) return "—";
-                            return (
-                              <div className="space-y-0.5">
-                                {lines.map((line) => (
-                                  <div key={line}>{line}</div>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                        </td>
                         <td className="py-2 pr-3">
                           <Link
                             href={filterBase({ userId: e.userId })}

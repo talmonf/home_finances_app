@@ -16,6 +16,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { LogTreatmentLink } from "./log-treatment-link";
 
 export const dynamic = "force-dynamic";
 
@@ -391,12 +392,12 @@ export default async function UpcomingVisitsPage({
                           </td>
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
-                          <Link
+                          <LogTreatmentLink
                             href={treatmentLogHref(r.clientId, r.nextAppointment?.id)}
-                            className="font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            {uv.logTreatment}
-                          </Link>
+                            label={uv.logTreatment}
+                            clientId={r.clientId}
+                            appointmentId={r.nextAppointment?.id}
+                          />
                           {" · "}
                           {r.nextAppointment ? (
                             <Link
