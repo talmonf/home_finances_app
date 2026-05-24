@@ -4,7 +4,10 @@ import { getAppBaseUrl, renderRenewalsEmail } from "@/lib/email/render-renewals-
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import { computeUpcomingRenewals } from "@/lib/upcoming-renewals/compute";
-import { alreadySentOnSameLocalDay, startOfCalendarDayInTimeZone } from "@/lib/renewal-email/schedule";
+import {
+  alreadySentInDeliveryPeriod,
+  startOfCalendarDayInTimeZone,
+} from "@/lib/renewal-email/schedule";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type RenewalSubscriptionWithRelations = Prisma.renewal_email_subscriptionsGetPayload<{
@@ -132,5 +135,10 @@ export function shouldSkipDuplicateSend(
   sub: RenewalSubscriptionWithRelations,
   now: Date,
 ): boolean {
-  return alreadySentOnSameLocalDay(sub.last_sent_at, now, sub.timezone || "Asia/Jerusalem");
+  return alreadySentInDeliveryPeriod(
+    sub.frequency,
+    sub.last_sent_at,
+    now,
+    sub.timezone || "Asia/Jerusalem",
+  );
 }

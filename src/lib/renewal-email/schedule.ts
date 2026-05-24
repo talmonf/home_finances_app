@@ -6,6 +6,9 @@ export type RenewalScheduleFields = {
   day_of_month: number | null;
   send_hour: number;
   timezone: string;
+  /** Used for weekly/monthly catch-up when the scheduled slot was missed earlier in the period. */
+  last_sent_at?: Date | null;
+  created_at?: Date | null;
 };
 
 /** yyyy-MM-dd in the given IANA time zone. */
@@ -16,6 +19,11 @@ export function localDateKeyInTimeZone(utcDate: Date, timeZone: string): string 
     month: "2-digit",
     day: "2-digit",
   }).format(utcDate);
+}
+
+function normalizeLocalHour(hour: number): number {
+  if (!Number.isFinite(hour)) return 0;
+  return hour === 24 ? 0 : hour;
 }
 
 /** Local calendar year/month/day + hour in `timeZone` (weekday 0 = Sunday … 6 = Saturday). */
@@ -37,7 +45,7 @@ export function getLocalCalendarParts(
   const year = Number(get("year"));
   const month = Number(get("month"));
   const day = Number(get("day"));
-  const hour = Number(get("hour"));
+  const hour = normalizeLocalHour(Number(get("hour")));
   const wk = get("weekday").trim();
   const weekdayMap: Record<string, number> = {
     Sunday: 0,
@@ -50,6 +58,24 @@ export function getLocalCalendarParts(
   };
   const weekday = weekdayMap[wk] ?? 0;
   return { year, month, day, hour, weekday };
+}
+
+function weeklyCatchUpEligible(sub: RenewalScheduleFields, parts: ReturnType<typeof getLocalCalendarParts>, now: Date, tz: string): boolean {
+  const dow = sub.day_of_week;
+  if (dow == null || parts.weekday <= dow) return false;
+  if (sub.last_sent_at != null) return true;
+  if (!sub.created_at) return false;
+  const scheduledDay = startOfCalendarDayInTimeZone(now, tz);
+  scheduledDay.setDate(scheduledDay.getDate() - (parts.weekday - dow));
+  return sub.created_at < scheduledDay;
+}
+
+function monthlyCatchUpEligible(sub: RenewalScheduleFields, parts: ReturnType<typeof getLocalCalendarParts>, targetDay: number): boolean {
+  if (parts.day <= targetDay) return false;
+  if (sub.last_sent_at != null) return true;
+  if (!sub.created_at) return false;
+  const scheduledDay = new Date(parts.year, parts.month - 1, targetDay);
+  return sub.created_at < scheduledDay;
 }
 
 function daysInMonth(year: number, month1Based: number): number {
@@ -65,13 +91,19 @@ export function startOfCalendarDayInTimeZone(utcDate: Date, timeZone: string): D
   return new Date(year, month - 1, day);
 }
 
+/** Sunday-start week key (yyyy-MM-dd of the week's Sunday) in `timeZone`. */
+export function localWeekKeyInTimeZone(utcDate: Date, timeZone: string): string {
+  const parts = getLocalCalendarParts(utcDate, timeZone);
+  const anchor = startOfCalendarDayInTimeZone(utcDate, timeZone);
+  anchor.setDate(anchor.getDate() - parts.weekday);
+  return localDateKeyInTimeZone(anchor, timeZone);
+}
+
 /**
- * True when `now` falls on the subscription's scheduled local calendar day (by frequency)
- * and the user's local clock is at or after their preferred {@link RenewalScheduleFields.send_hour}.
+ * True when `now` falls in the subscription's scheduled send window.
  *
- * Used by Vercel cron: Hobby allows only daily-or-slower schedules, so we stagger several
- * UTC runs per day and treat `send_hour` as "earliest local hour" — the first matching tick
- * after that hour sends the digest; {@link alreadySentOnSameLocalDay} prevents duplicates.
+ * Vercel Hobby crons run once per day per job with loose timing, so weekly/monthly digests
+ * also catch up later in the same period if an earlier cron tick landed before `send_hour`.
  */
 export function shouldSendNow(sub: RenewalScheduleFields, now: Date): boolean {
   const tz = sub.timezone || "Asia/Jerusalem";
@@ -84,14 +116,16 @@ export function shouldSendNow(sub: RenewalScheduleFields, now: Date): boolean {
     case "weekly": {
       const dow = sub.day_of_week;
       if (dow == null) return false;
-      return parts.weekday === dow;
+      if (parts.weekday === dow) return true;
+      return weeklyCatchUpEligible(sub, parts, now, tz);
     }
     case "monthly": {
       const dom = sub.day_of_month;
       if (dom == null) return false;
       const dim = daysInMonth(parts.year, parts.month);
       const target = Math.min(dom, dim);
-      return parts.day === target;
+      if (parts.day === target) return true;
+      return monthlyCatchUpEligible(sub, parts, target);
     }
     default:
       return false;
@@ -106,4 +140,45 @@ export function alreadySentOnSameLocalDay(
 ): boolean {
   if (!lastSentAt) return false;
   return localDateKeyInTimeZone(lastSentAt, timeZone) === localDateKeyInTimeZone(now, timeZone);
+}
+
+/** Skip sending twice in the same delivery period (day / Sun-start week / calendar month). */
+export function alreadySentInDeliveryPeriod(
+  frequency: RenewalEmailFrequency,
+  lastSentAt: Date | null,
+  now: Date,
+  timeZone: string,
+): boolean {
+  if (!lastSentAt) return false;
+  const tz = timeZone || "Asia/Jerusalem";
+  switch (frequency) {
+    case "daily":
+      return alreadySentOnSameLocalDay(lastSentAt, now, tz);
+    case "weekly":
+      return localWeekKeyInTimeZone(lastSentAt, tz) === localWeekKeyInTimeZone(now, tz);
+    case "monthly": {
+      const last = getLocalCalendarParts(lastSentAt, tz);
+      const current = getLocalCalendarParts(now, tz);
+      return last.year === current.year && last.month === current.month;
+    }
+    default:
+      return false;
+  }
+}
+
+export type ShouldSendSkipReason =
+  | "not_scheduled"
+  | "already_sent_this_period"
+  | "inactive";
+
+export function explainShouldSendNow(
+  sub: RenewalScheduleFields & { is_active?: boolean },
+  now: Date,
+): { send: boolean; reason?: ShouldSendSkipReason } {
+  if (sub.is_active === false) return { send: false, reason: "inactive" };
+  if (alreadySentInDeliveryPeriod(sub.frequency, sub.last_sent_at ?? null, now, sub.timezone)) {
+    return { send: false, reason: "already_sent_this_period" };
+  }
+  if (!shouldSendNow(sub, now)) return { send: false, reason: "not_scheduled" };
+  return { send: true };
 }

@@ -39,6 +39,22 @@ export default async function RenewalEmailSettingsPage({
     where: { user_id: userId },
   });
 
+  const recentDeliveries = sub
+    ? await prisma.renewal_email_deliveries.findMany({
+        where: { subscription_id: sub.id },
+        orderBy: { sent_at: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          sent_at: true,
+          status: true,
+          item_count: true,
+          error_message: true,
+          recipient_email: true,
+        },
+      })
+    : [];
+
   const isHebrew = user.ui_language === "he";
 
   return (
@@ -191,6 +207,61 @@ export default async function RenewalEmailSettingsPage({
             </button>
           </form>
         </div>
+
+        {sub ? (
+          <motion.div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+            <h2 className="text-sm font-semibold text-slate-200">
+              {isHebrew ? "שליחות אחרונות" : "Recent deliveries"}
+            </h2>
+            {sub.last_sent_at ? (
+              <p className="text-xs text-slate-500">
+                {isHebrew ? "נשלח לאחרונה:" : "Last successful scheduled send:"}{" "}
+                {sub.last_sent_at.toISOString()}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                {isHebrew
+                  ? "טרם נשלח אימייל מתוזמן (שליחת בדיקה לא נספרת)."
+                  : "No scheduled send recorded yet (test sends do not count)."}
+              </p>
+            )}
+            {recentDeliveries.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                {isHebrew ? "אין היסטוריית שליחה." : "No delivery history yet."}
+              </p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {recentDeliveries.map((d) => (
+                  <li
+                    key={d.id}
+                    className="rounded-lg border border-slate-700/80 bg-slate-900/60 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-slate-300">{d.sent_at.toISOString()}</span>
+                      <span
+                        className={
+                          d.status === "sent"
+                            ? "text-emerald-400"
+                            : d.status === "skipped"
+                              ? "text-amber-400"
+                              : "text-rose-400"
+                        }
+                      >
+                        {d.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {d.recipient_email} · {d.item_count} {isHebrew ? "פריטים" : "items"}
+                    </p>
+                    {d.error_message ? (
+                      <p className="mt-1 text-xs text-rose-300/90">{d.error_message}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

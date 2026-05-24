@@ -39,7 +39,7 @@ test("filterRenewalRowsByDaysAhead includes only today..today+N inclusive", asyn
   const { filterRenewalRowsByDaysAhead } = await import("@/lib/upcoming-renewals/compute");
   const today = new Date(2026, 4, 8); // local date-only
   const rows: RenewalRow[] = [
-    row("past", "2026-05-07T00:00:00.000Z"),
+    { ...row("past", "2026-05-07T00:00:00.000Z"), category: "Insurance" },
     row("today", "2026-05-08T00:00:00.000Z"),
     row("within", "2026-05-10T00:00:00.000Z"),
     row("edge", "2026-05-11T00:00:00.000Z"),
@@ -67,15 +67,16 @@ test("filterRenewalRowsByDaysAhead with includePastDue adds overdue rows", async
   assert.deepEqual(filtered.map((r) => r.id), ["past", "today", "within"]);
 });
 
-test("filterRenewalRowsByDaysAhead without includePastDue keeps past-due tasks and donations only", async () => {
+test("filterRenewalRowsByDaysAhead without includePastDue keeps dashboard-style past-due rows", async () => {
   process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
   const { filterRenewalRowsByDaysAhead } = await import("@/lib/upcoming-renewals/compute");
   const today = new Date(2026, 4, 8);
+  const subscriptionRow = { ...row("sub-past", "2026-05-07T00:00:00.000Z"), category: "Subscription" };
   const taskRow = { ...row("task-past", "2026-05-07T00:00:00.000Z"), category: "Task" };
   const donationRow = { ...row("donation-past", "2026-05-06T00:00:00.000Z"), category: "Donation" };
   const insuranceRow = { ...row("insurance-past", "2026-05-07T00:00:00.000Z"), category: "Insurance" };
-  const rows: RenewalRow[] = [taskRow, donationRow, insuranceRow, row("today", "2026-05-08T00:00:00.000Z")];
+  const rows: RenewalRow[] = [subscriptionRow, taskRow, donationRow, insuranceRow, row("today", "2026-05-08T00:00:00.000Z")];
 
   const filtered = filterRenewalRowsByDaysAhead(rows, today, 3);
-  assert.deepEqual(filtered.map((r) => r.id), ["task-past", "donation-past", "today"]);
+  assert.deepEqual(filtered.map((r) => r.id), ["sub-past", "task-past", "donation-past", "today"]);
 });

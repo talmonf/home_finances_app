@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/auth";
-import { shouldSendNow } from "@/lib/renewal-email/schedule";
-import {
-  sendRenewalDigestForSubscription,
-  shouldSkipDuplicateSend,
-} from "@/lib/renewal-email/send-digest";
+import { explainShouldSendNow } from "@/lib/renewal-email/schedule";
+import { sendRenewalDigestForSubscription } from "@/lib/renewal-email/send-digest";
 
 export const dynamic = "force-dynamic";
 
@@ -33,16 +30,17 @@ export async function GET(req: Request) {
   let sent = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const skipReasons: Record<string, number> = {};
 
   for (const sub of subs) {
-    if (!shouldSendNow(sub, now)) {
+    const decision = explainShouldSendNow(sub, now);
+    if (!decision.send) {
       skipped += 1;
+      const key = decision.reason ?? "unknown";
+      skipReasons[key] = (skipReasons[key] ?? 0) + 1;
       continue;
     }
-    if (shouldSkipDuplicateSend(sub, now)) {
-      skipped += 1;
-      continue;
-    }
+
     const result = await sendRenewalDigestForSubscription(sub, now, { updateLastSentAt: true });
     if (result.ok) {
       sent += 1;
@@ -56,6 +54,7 @@ export async function GET(req: Request) {
     checked: subs.length,
     sent,
     skipped,
+    skipReasons,
     errors,
   });
 }
