@@ -24,12 +24,11 @@ export async function resolveAppPortal(params: {
   userId: string | null | undefined;
   uiLanguage: UiLanguage;
 }): Promise<AppPortal> {
-  if (
-    params.isAuthenticated &&
-    !params.isSuperAdmin &&
-    params.householdId &&
-    params.userId
-  ) {
+  if (params.isSuperAdmin) {
+    return "home";
+  }
+
+  if (params.isAuthenticated && params.householdId && params.userId) {
     const clinicOnly = await householdUserOnlyPrivateClinicSection(
       params.householdId,
       params.userId,
