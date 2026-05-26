@@ -1,20 +1,12 @@
 import { prisma } from "@/lib/auth";
+import { isAuthorizedRenewalCronRequest } from "@/lib/renewal-email/cron-auth";
 import { explainShouldSendNow } from "@/lib/renewal-email/schedule";
 import { sendRenewalDigestForSubscription } from "@/lib/renewal-email/send-digest";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorizedCronRequest(req: Request): boolean {
-  if (req.headers.get("x-vercel-cron") === "1") return true;
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return false;
-  return auth.slice(7) === secret;
-}
-
 export async function GET(req: Request) {
-  if (!isAuthorizedCronRequest(req)) {
+  if (!isAuthorizedRenewalCronRequest(req)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
