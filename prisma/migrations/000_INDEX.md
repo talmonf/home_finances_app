@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [ ] 119_family_hebrew_dates_and_marriages.sql (2026-05-26)
 - [x] 118_user_feature_usage_audit.sql (2026-05-24)
 - [x] 117_renewal_email_deliveries_is_test.sql (2026-05-24)
 - [x] 116_jobs_start_date_nullable.sql (2026-05-15)
@@ -139,6 +140,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 119 | `119_family_hebrew_dates_and_marriages.sql` (2026-05-26) | ALTER/CREATE | `family_members`: Hebrew DOB day/month/year; `family_marriages`: spouses, Gregorian and Hebrew wedding dates. |
 | 118 | `118_user_feature_usage_audit.sql` (2026-05-24) | CREATE | `user_feature_usage_events` and `user_feature_usage_rollups`: private-clinic (and future home-finance) feature visit/action telemetry for super-admin usage matrix. |
 | 117 | `117_renewal_email_deliveries_is_test.sql` (2026-05-24) | ALTER | `renewal_email_deliveries.is_test`: flag manual test sends vs cron-triggered scheduled digests. |
 | 116 | `116_jobs_start_date_nullable.sql` (2026-05-15) | ALTER | `jobs.start_date`: drop NOT NULL so clinic job forms can omit a start date. |

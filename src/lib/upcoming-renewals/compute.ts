@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { loadUpcomingFamilyEventRows } from "@/lib/family-events/upcoming";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 
 export type RenewalRow = {
@@ -79,6 +80,8 @@ export function filterRenewalRowsByDaysAhead(
 const RENEWAL_LOOKBACK_START = new Date(1900, 0, 1);
 
 export const RENEWAL_CATEGORY_ORDER = [
+  "Birthday",
+  "Anniversary",
   "Subscription",
   "Identity",
   "Credit card",
@@ -115,6 +118,12 @@ export async function computeUpcomingRenewals(
   const today = params.today ?? startOfToday();
   const isHebrew = language === "he";
   const windowStart = includePastDue === true ? RENEWAL_LOOKBACK_START : today;
+
+  const familyEventRows = await loadUpcomingFamilyEventRows({
+    householdId,
+    today,
+    language,
+  });
 
   const [
     subscriptions,
@@ -471,6 +480,7 @@ export async function computeUpcomingRenewals(
       }
       return parts;
     }),
+    ...familyEventRows,
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
 
   if (daysAhead !== undefined) {

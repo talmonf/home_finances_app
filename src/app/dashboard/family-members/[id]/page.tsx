@@ -1,6 +1,8 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FamilyMemberHebrewDobFields } from "@/components/hebrew-date-fields";
+import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
 import { updateFamilyMember } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -78,7 +80,7 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
-                Date of birth
+                {isHebrew ? "תאריך לידה (לועזי)" : "Date of birth (Gregorian)"}
               </label>
               <input
                 id="date_of_birth"
@@ -99,6 +101,17 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-400">
+              {isHebrew ? "תאריך לידה עברי" : "Hebrew birthday"}
+            </p>
+            <FamilyMemberHebrewDobFields
+              isHebrew={isHebrew}
+              defaultDay={member.hebrew_date_of_birth_day}
+              defaultMonth={member.hebrew_date_of_birth_month}
+              defaultYear={member.hebrew_date_of_birth_year}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -131,26 +144,10 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
                 Relationship
               </label>
-              <select
-                id="relationship"
-                name="relationship"
+              <FamilyRelationshipSelect
+                isHebrew={isHebrew}
                 defaultValue={member.relationship ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">—</option>
-                <option value="Son">Son</option>
-                <option value="Daughter">Daughter</option>
-                <option value="Grandson">Grandson</option>
-                <option value="Granddaughter">Granddaughter</option>
-                <option value="Wife">Wife</option>
-                <option value="Husband">Husband</option>
-                <option value="Partner">Partner</option>
-                <option value="Father">Father</option>
-                <option value="Mother">Mother</option>
-                <option value="Brother">Brother</option>
-                <option value="Sister">Sister</option>
-                <option value="Other">Other</option>
-              </select>
+              />
             </div>
             <div>
               <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">

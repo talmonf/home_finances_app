@@ -1,8 +1,13 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { parseHebrewDobFromFormData } from "@/lib/family-members/hebrew-dob-form";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+function hebrewDobRedirectError(path: string, message: string): never {
+  redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
 
 export async function createFamilyMember(formData: FormData) {
   await requireHouseholdMember();
@@ -25,6 +30,13 @@ export async function createFamilyMember(formData: FormData) {
 
   const date_of_birth = date_of_birth_raw ? new Date(date_of_birth_raw) : null;
 
+  let hebrewDob;
+  try {
+    hebrewDob = parseHebrewDobFromFormData(formData);
+  } catch {
+    hebrewDobRedirectError("/dashboard/family-members", "Hebrew birthday requires both day and month");
+  }
+
   const memberId = crypto.randomUUID();
 
   await prisma.$transaction(async (tx) => {
@@ -34,6 +46,7 @@ export async function createFamilyMember(formData: FormData) {
         household_id: householdId,
         full_name,
         date_of_birth,
+        ...hebrewDob,
         id_number,
         phone,
         email,
@@ -146,12 +159,20 @@ export async function updateFamilyMember(formData: FormData) {
 
   const date_of_birth = date_of_birth_raw ? new Date(date_of_birth_raw) : null;
 
+  let hebrewDob;
+  try {
+    hebrewDob = parseHebrewDobFromFormData(formData);
+  } catch {
+    hebrewDobRedirectError(`/dashboard/family-members/${id}`, "Hebrew birthday requires both day and month");
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.family_members.updateMany({
       where: { id, household_id: householdId },
       data: {
         full_name,
         date_of_birth,
+        ...hebrewDob,
         id_number,
         phone,
         email,

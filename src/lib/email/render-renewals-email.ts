@@ -49,14 +49,14 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
   const align = he ? "right" : "left";
 
   const subject = he
-    ? `חידושים ומועדים קרובים (${rows.length})`
-    : `Upcoming renewals & deadlines (${rows.length})`;
+    ? `חידושים, ימי הולדת ויום נישואין (${rows.length})`
+    : `Upcoming renewals, birthdays & anniversaries (${rows.length})`;
 
   const intro = he
-    ? `להלן פריטים עם תאריך חידוש/מועד בטווח של ${daysAhead} הימים הקרובים (כולל היום), ומנויים שנתיים/משימות/תרומות עם מועד שעבר.`
-    : `The following items have a renewal or deadline within the next ${daysAhead} days (including today), plus overdue annual subscriptions, open tasks, and donations with a past due date.`;
+    ? `להלן חידושים ומועדים, ימי הולדת ויום נישואין בטווח של ${daysAhead} הימים הקרובים (כולל היום), ומנויים שנתיים/משימות/תרומות עם מועד שעבר. תאריכים עבריים מוצגים לפי המופע הלועזי הקרוב בשנה הנוכחית.`
+    : `The following renewals and deadlines, birthdays, and anniversaries fall within the next ${daysAhead} days (including today), plus overdue annual subscriptions, open tasks, and donations with a past due date. Hebrew calendar dates are shown by their nearest Gregorian occurrence this year.`;
 
-  const openDashboard = he ? "פתח את לוח החידושים" : "Open renewals dashboard";
+  const openDashboard = he ? "פתח את לוח המועדים הקרובים" : "Open upcoming items dashboard";
   const dashboardUrl = `${baseUrl}/dashboard/upcoming-renewals`;
   const emptyMsg = he
     ? "אין פריטים בטווח שנבחר — הכול נקי לעת עתה."

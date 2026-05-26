@@ -14,6 +14,10 @@ import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { FamilyMemberHebrewDobFields } from "@/components/hebrew-date-fields";
+import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
+import { relationshipLabel } from "@/lib/family-members/relationship-options";
+import { formatHebrewDateLabel } from "@/lib/hebrew-calendar";
 import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -101,16 +105,22 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               />
             </div>
           </div>
-          {session?.user?.role === "admin" ? (
-            <div>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/dashboard/family-members/marriages"
+              className="text-sm font-medium text-sky-400 hover:text-sky-300"
+            >
+              {isHebrew ? "נישואין" : "Marriages"}
+            </Link>
+            {session?.user?.role === "admin" ? (
               <Link
                 href="/dashboard/household-settings"
                 className="text-sm font-medium text-sky-400 hover:text-sky-300"
               >
                 {isHebrew ? "הגדרות משק בית" : "Household settings"}
               </Link>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           {(resolvedSearchParams?.created ||
             resolvedSearchParams?.updated ||
@@ -189,9 +199,23 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   {members.map((m) => (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.relationship ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatHouseholdDate(m.date_of_birth, dateDisplayFormat)}
+                        {relationshipLabel(m.relationship, isHebrew)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        <div>{formatHouseholdDate(m.date_of_birth, dateDisplayFormat)}</div>
+                        {m.hebrew_date_of_birth_day != null && m.hebrew_date_of_birth_month != null ? (
+                          <div className="text-xs text-slate-500">
+                            {formatHebrewDateLabel(
+                              {
+                                day: m.hebrew_date_of_birth_day,
+                                month: m.hebrew_date_of_birth_month,
+                                year: m.hebrew_date_of_birth_year,
+                              },
+                              isHebrew ? "he" : "en",
+                            )}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
@@ -257,7 +281,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
               </div>
               <div>
                 <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
-                  Date of birth
+                  {isHebrew ? "תאריך לידה (לועזי)" : "Date of birth (Gregorian)"}
                 </label>
                 <input
                   id="date_of_birth"
@@ -265,6 +289,12 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   type="date"
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <p className="mb-2 text-xs text-slate-500">
+                  {isHebrew ? "תאריך לידה עברי (אופציונלי)" : "Hebrew birthday (optional)"}
+                </p>
+                <FamilyMemberHebrewDobFields isHebrew={isHebrew} />
               </div>
               <div>
                 <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">
@@ -305,25 +335,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
                   Relationship
                 </label>
-                <select
-                  id="relationship"
-                  name="relationship"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                >
-                  <option value="">—</option>
-                  <option value="Son">Son</option>
-                  <option value="Daughter">Daughter</option>
-                  <option value="Grandson">Grandson</option>
-                  <option value="Granddaughter">Granddaughter</option>
-                  <option value="Wife">Wife</option>
-                  <option value="Husband">Husband</option>
-                  <option value="Partner">Partner</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Brother">Brother</option>
-                  <option value="Sister">Sister</option>
-                  <option value="Other">Other</option>
-                </select>
+                <FamilyRelationshipSelect isHebrew={isHebrew} />
               </div>
               <div>
                 <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">

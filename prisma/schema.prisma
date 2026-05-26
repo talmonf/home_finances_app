@@ -106,6 +106,7 @@ model households {
   user_feature_usage_events          user_feature_usage_events[]
   user_feature_usage_rollups         user_feature_usage_rollups[]
   renewal_email_subscriptions        renewal_email_subscriptions[]
+  family_marriages                   family_marriages[]
 }
 
 model loans {
@@ -164,6 +165,9 @@ model family_members {
   household_id   String
   full_name      String
   date_of_birth  DateTime?
+  hebrew_date_of_birth_day   Int? @db.SmallInt
+  hebrew_date_of_birth_month Int? @db.SmallInt
+  hebrew_date_of_birth_year  Int? @db.SmallInt
   id_number      String?
   phone          String?
   email          String?
@@ -173,6 +177,8 @@ model family_members {
   updated_at     DateTime @updatedAt
 
   household           households     @relation(fields: [household_id], references: [id])
+  marriages_as_spouse_a family_marriages[] @relation("MarriageSpouseA")
+  marriages_as_spouse_b family_marriages[] @relation("MarriageSpouseB")
   credit_cards        credit_cards[]
   identities          identities[]
   studies_and_classes studies_and_classes[]
@@ -192,6 +198,26 @@ model family_members {
   insurance_policies   insurance_policies[]
   savings_policies     savings_policies[]
   private_clinic_reminders private_clinic_reminders[]
+}
+
+model family_marriages {
+  id                   String    @id @default(uuid())
+  household_id         String
+  spouse_a_id          String
+  spouse_b_id          String
+  wedding_date         DateTime? @db.Date
+  wedding_hebrew_day   Int?      @db.SmallInt
+  wedding_hebrew_month Int?      @db.SmallInt
+  wedding_hebrew_year  Int?      @db.SmallInt
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  household households     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  spouse_a  family_members @relation("MarriageSpouseA", fields: [spouse_a_id], references: [id], onDelete: Cascade)
+  spouse_b  family_members @relation("MarriageSpouseB", fields: [spouse_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([household_id, spouse_a_id, spouse_b_id])
+  @@index([household_id])
 }
 
 model bank_accounts {

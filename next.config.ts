@@ -19,6 +19,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@hebcal/hdate"],
   experimental: {
     turbopackUseSystemTlsCerts: true,
   },
