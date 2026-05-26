@@ -24,8 +24,15 @@ export async function GET(req: Request) {
   const errors: string[] = [];
   const skipReasons: Record<string, number> = {};
 
+  const decisions: Array<{ subscriptionId: string; send: boolean; reason?: string }> = [];
+
   for (const sub of subs) {
     const decision = explainShouldSendNow(sub, now);
+    decisions.push({
+      subscriptionId: sub.id,
+      send: decision.send,
+      reason: decision.reason,
+    });
     if (!decision.send) {
       skipped += 1;
       const key = decision.reason ?? "unknown";
@@ -48,5 +55,6 @@ export async function GET(req: Request) {
     skipped,
     skipReasons,
     errors,
+    decisions,
   });
 }

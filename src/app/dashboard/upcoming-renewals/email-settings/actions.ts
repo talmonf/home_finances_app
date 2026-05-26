@@ -121,3 +121,37 @@ export async function sendRenewalEmailTestNow() {
   }
   redirect("/dashboard/upcoming-renewals/email-settings?test=ok");
 }
+
+/** Sends the digest now using scheduled settings (updates last_sent_at; not a test). */
+export async function sendRenewalEmailScheduledNow() {
+  await requireHouseholdMember();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  const householdId = session?.user?.householdId;
+  if (!userId || !householdId || session.user.isSuperAdmin) {
+    redirect("/dashboard/upcoming-renewals/email-settings?scheduled=error");
+  }
+
+  const sub = await prisma.renewal_email_subscriptions.findUnique({
+    where: { user_id: userId },
+    include: {
+      user: { select: { email: true, full_name: true } },
+      household: { select: { date_display_format: true, ui_language: true } },
+    },
+  });
+
+  if (!sub) {
+    redirect("/dashboard/upcoming-renewals/email-settings?scheduled=nosub");
+  }
+
+  const result = await sendRenewalDigestForSubscription(sub, new Date(), {
+    updateLastSentAt: true,
+    isTest: false,
+  });
+  if (!result.ok) {
+    redirect(
+      `/dashboard/upcoming-renewals/email-settings?scheduled=fail&reason=${encodeURIComponent(result.reason.slice(0, 500))}`,
+    );
+  }
+  redirect("/dashboard/upcoming-renewals/email-settings?scheduled=ok");
+}
