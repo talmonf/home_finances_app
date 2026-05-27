@@ -2,6 +2,9 @@
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { orderSpouseIds } from "@/lib/hebrew-calendar";
+import {
+  gregorianDateToHebrewComponents,
+} from "@/lib/hebrew-calendar";
 import { parseWeddingHebrewFromFormData } from "@/lib/family-members/hebrew-dob-form";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -10,6 +13,25 @@ function parseWeddingDate(raw: string | null): Date | null {
   const trimmed = raw?.trim();
   if (!trimmed) return null;
   return new Date(trimmed);
+}
+
+function resolveWeddingHebrewForSave(
+  wedding: ReturnType<typeof parseWeddingHebrewFromFormData>,
+  wedding_date: Date | null,
+): ReturnType<typeof parseWeddingHebrewFromFormData> {
+  if (
+    wedding_date &&
+    wedding.wedding_hebrew_day == null &&
+    wedding.wedding_hebrew_month == null
+  ) {
+    const h = gregorianDateToHebrewComponents(wedding_date);
+    return {
+      wedding_hebrew_day: h.day,
+      wedding_hebrew_month: h.month,
+      wedding_hebrew_year: h.year ?? null,
+    };
+  }
+  return wedding;
 }
 
 export async function createFamilyMarriage(formData: FormData) {
@@ -35,6 +57,7 @@ export async function createFamilyMarriage(formData: FormData) {
   } catch {
     redirect("/dashboard/family-members/marriages/new?error=Invalid+Hebrew+wedding+date");
   }
+  hebrew = resolveWeddingHebrewForSave(hebrew, wedding_date);
 
   const [a, b] = await Promise.all([
     prisma.family_members.findFirst({
@@ -93,6 +116,7 @@ export async function updateFamilyMarriage(formData: FormData) {
   } catch {
     redirect(`/dashboard/family-members/marriages/${id}/edit?error=Invalid+Hebrew+wedding+date`);
   }
+  hebrew = resolveWeddingHebrewForSave(hebrew, wedding_date);
 
   await prisma.family_marriages.updateMany({
     where: { id, household_id: householdId },

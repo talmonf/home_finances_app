@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { HebrewDateFields } from "@/components/hebrew-date-fields";
+import { MarriageWeddingDateFields } from "@/components/marriage-wedding-date-fields";
 import { updateFamilyMarriage } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -89,24 +89,18 @@ export default async function EditFamilyMarriagePage({ params, searchParams }: P
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="wedding_date" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "תאריך נישואין (לועזי)" : "Wedding date (Gregorian)"}
-            </label>
-            <input
-              id="wedding_date"
-              name="wedding_date"
-              type="date"
-              defaultValue={marriage.wedding_date ? marriage.wedding_date.toISOString().slice(0, 10) : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <HebrewDateFields
-            prefix="wedding"
+          <MarriageWeddingDateFields
             isHebrew={isHebrew}
-            defaultDay={marriage.wedding_hebrew_day}
-            defaultMonth={marriage.wedding_hebrew_month}
-            defaultYear={marriage.wedding_hebrew_year}
+            formKind="edit"
+            hebrewPersistedInDb={
+              marriage.wedding_hebrew_day != null && marriage.wedding_hebrew_month != null
+            }
+            defaultGregorian={
+              marriage.wedding_date ? marriage.wedding_date.toISOString().slice(0, 10) : ""
+            }
+            defaultHebrewDay={marriage.wedding_hebrew_day}
+            defaultHebrewMonth={marriage.wedding_hebrew_month}
+            defaultHebrewYear={marriage.wedding_hebrew_year}
           />
           <button
             type="submit"

@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { HebrewDateFields } from "@/components/hebrew-date-fields";
+import { MarriageWeddingDateFields } from "@/components/marriage-wedding-date-fields";
 import { createFamilyMarriage } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -79,21 +79,7 @@ export default async function NewFamilyMarriagePage({ searchParams }: PageProps)
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="wedding_date" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "תאריך נישואין (לועזי)" : "Wedding date (Gregorian)"}
-            </label>
-            <input
-              id="wedding_date"
-              name="wedding_date"
-              type="date"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-          <p className="text-xs text-slate-500">
-            {isHebrew ? "תאריך עברי ליום נישואין (לתזכורות שנתיות)" : "Hebrew wedding date (for yearly reminders)"}
-          </p>
-          <HebrewDateFields prefix="wedding" isHebrew={isHebrew} />
+          <MarriageWeddingDateFields isHebrew={isHebrew} formKind="create" hebrewPersistedInDb={false} />
           <button
             type="submit"
             className="w-full rounded-lg bg-sky-500 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"

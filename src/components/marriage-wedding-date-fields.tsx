@@ -8,14 +8,15 @@ const fieldClass =
 
 type Props = {
   isHebrew: boolean;
-  /** True when Hebrew DOB day+month are already stored in the database. */
-  hebrewPersistedInDb?: boolean;
-  /** Wording for the save instruction in the auto-calculate prompt. */
-  formKind?: "create" | "edit";
   defaultGregorian?: string;
   defaultHebrewDay?: number | null;
   defaultHebrewMonth?: number | null;
   defaultHebrewYear?: number | null;
+
+  /** Wording for the save instruction in the auto-calculate prompt. */
+  formKind?: "create" | "edit";
+  /** True when Hebrew day+month are already stored in the DB. */
+  hebrewPersistedInDb?: boolean;
 };
 
 function hebrewFromGregorianInput(isoDate: string): {
@@ -31,14 +32,14 @@ function hebrewFromGregorianInput(isoDate: string): {
   return { day: h.day, month: h.month, year: h.year };
 }
 
-export function FamilyMemberBirthdateFields({
+export function MarriageWeddingDateFields({
   isHebrew,
-  hebrewPersistedInDb = false,
-  formKind = "edit",
   defaultGregorian = "",
   defaultHebrewDay,
   defaultHebrewMonth,
   defaultHebrewYear,
+  formKind = "edit",
+  hebrewPersistedInDb = false,
 }: Props) {
   const dayRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLSelectElement>(null);
@@ -62,28 +63,30 @@ export function FamilyMemberBirthdateFields({
   );
 
   const applyHebrew = useCallback(
-    (h: { day: number; month: number; year: number } | null, force = false) => {
+    (
+      h: { day: number; month: number; year: number } | null,
+      { force = false }: { force?: boolean } = {},
+    ) => {
       if (!h) return;
       if (hebrewTouchedRef.current && !force) return;
       if (dayRef.current) dayRef.current.value = String(h.day);
       if (monthRef.current) monthRef.current.value = String(h.month);
       if (yearRef.current) yearRef.current.value = String(h.year);
       setHebrewPreview(h);
-      if (!hebrewPersistedInDb) {
-        setAutoCalculatedPendingSave(true);
-      }
+      if (!hebrewPersistedInDb) setAutoCalculatedPendingSave(true);
     },
     [hebrewPersistedInDb],
   );
 
   const onGregorianChange = (iso: string) => {
-    const h = hebrewFromGregorianInput(iso);
     if (!iso) {
-      setAutoCalculatedPendingSave(false);
       setHebrewPreview(null);
+      setAutoCalculatedPendingSave(false);
       return;
     }
-    applyHebrew(h, !hebrewTouchedRef.current);
+    const h = hebrewFromGregorianInput(iso);
+    applyHebrew(h, { force: !hebrewTouchedRef.current });
+    setAutoCalculatedPendingSave(!hebrewPersistedInDb);
   };
 
   const markHebrewTouched = () => {
@@ -93,53 +96,57 @@ export function FamilyMemberBirthdateFields({
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-slate-400">
-        {isHebrew ? "תאריכי לידה" : "Birth dates"}
+        {isHebrew ? "תאריך נישואין" : "Wedding date"}
       </p>
+
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="min-w-[10.5rem] flex-1 sm:flex-none sm:max-w-[11rem]">
-          <label htmlFor="date_of_birth" className="mb-1 block text-xs text-slate-500">
+          <label htmlFor="wedding_date" className="mb-1 block text-xs text-slate-500">
             {isHebrew ? "לועזי" : "Gregorian"}
           </label>
           <input
-            id="date_of_birth"
-            name="date_of_birth"
+            id="wedding_date"
+            name="wedding_date"
             type="date"
             defaultValue={defaultGregorian}
             onChange={(e) => onGregorianChange(e.target.value)}
             className={`${fieldClass} w-full`}
           />
         </div>
+
         <div className="flex w-fit flex-wrap items-end gap-2">
           <span className="pb-2 text-xs text-slate-500">{isHebrew ? "עברי" : "Hebrew"}</span>
+
           <div className="shrink-0">
-            <label htmlFor="hebrew_date_of_birth_day" className="sr-only">
+            <label htmlFor="wedding_hebrew_day" className="sr-only">
               {isHebrew ? "יום" : "Day"}
             </label>
             <input
               ref={dayRef}
-              id="hebrew_date_of_birth_day"
-              name="hebrew_date_of_birth_day"
+              id="wedding_hebrew_day"
+              name="wedding_hebrew_day"
               type="number"
               min={1}
               max={30}
-              defaultValue={initialHebrew?.day ?? ""}
+              defaultValue={hebrewPreview?.day ?? ""}
               onChange={markHebrewTouched}
               className={`${fieldClass} w-14`}
-              aria-label={isHebrew ? "יום לידה עברי" : "Hebrew birthday day"}
+              aria-label={isHebrew ? "יום נישואין עברי" : "Hebrew wedding day"}
             />
           </div>
+
           <div className="shrink-0">
-            <label htmlFor="hebrew_date_of_birth_month" className="sr-only">
+            <label htmlFor="wedding_hebrew_month" className="sr-only">
               {isHebrew ? "חודש" : "Month"}
             </label>
             <select
               ref={monthRef}
-              id="hebrew_date_of_birth_month"
-              name="hebrew_date_of_birth_month"
-              defaultValue={initialHebrew?.month ?? ""}
+              id="wedding_hebrew_month"
+              name="wedding_hebrew_month"
+              defaultValue={hebrewPreview?.month ?? ""}
               onChange={markHebrewTouched}
               className={`${fieldClass} w-[9.5rem]`}
-              aria-label={isHebrew ? "חודש לידה עברי" : "Hebrew birthday month"}
+              aria-label={isHebrew ? "חודש נישואין עברי" : "Hebrew wedding month"}
             >
               <option value="">—</option>
               {HEBREW_MONTH_OPTIONS.map((m) => (
@@ -149,24 +156,26 @@ export function FamilyMemberBirthdateFields({
               ))}
             </select>
           </div>
+
           <div className="shrink-0">
-            <label htmlFor="hebrew_date_of_birth_year" className="sr-only">
+            <label htmlFor="wedding_hebrew_year" className="sr-only">
               {isHebrew ? "שנה" : "Year"}
             </label>
             <input
               ref={yearRef}
-              id="hebrew_date_of_birth_year"
-              name="hebrew_date_of_birth_year"
+              id="wedding_hebrew_year"
+              name="wedding_hebrew_year"
               type="number"
               min={1}
-              defaultValue={initialHebrew?.year ?? ""}
+              defaultValue={hebrewPreview?.year ?? ""}
               onChange={markHebrewTouched}
               className={`${fieldClass} w-[4.5rem]`}
-              aria-label={isHebrew ? "שנת לידה עברי" : "Hebrew birth year"}
+              aria-label={isHebrew ? "שנת נישואין עברי" : "Hebrew wedding year"}
             />
           </div>
         </div>
       </div>
+
       {autoCalculatedPendingSave && hebrewPreview && (
         <div
           role="alert"
@@ -174,20 +183,21 @@ export function FamilyMemberBirthdateFields({
         >
           <p className="font-medium">
             {isHebrew
-              ? "תאריך הלידה העברי חושב אוטומטית ועדיין לא נשמר"
-              : "Hebrew birth date was auto-calculated and is not saved yet"}
+              ? "תאריך הנישואין העברי חושב אוטומטית ועדיין לא נשמר"
+              : "Hebrew wedding date was auto-calculated and is not saved yet"}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-amber-100/90">
             {isHebrew
               ? formKind === "create"
-                ? "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «הוספת בן משפחה» כדי לשמור."
-                : "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «שמירת שינויים» בתחתית הטופס כדי לשמור."
+                ? "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «הוספת נישואין» כדי לשמור."
+                : "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «שמירת שינויים» כדי לשמור."
               : formKind === "create"
-                ? "Please check that the day, month, and year are correct, then click Add family member to save."
-                : "Please check that the day, month, and year are correct, then click Save changes at the bottom of the form."}
+                ? "Please check day/month/year, then click Add marriage to save."
+                : "Please check day/month/year, then click Save changes to save."}
           </p>
         </div>
       )}
+
       {hebrewPreview && hebrewPersistedInDb && (
         <p className="text-xs text-slate-500">
           {isHebrew
@@ -198,3 +208,4 @@ export function FamilyMemberBirthdateFields({
     </div>
   );
 }
+

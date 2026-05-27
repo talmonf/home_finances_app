@@ -280,7 +280,11 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 />
               </div>
               <div className="sm:col-span-2">
-                <FamilyMemberBirthdateFields isHebrew={isHebrew} />
+                <FamilyMemberBirthdateFields
+                  isHebrew={isHebrew}
+                  hebrewPersistedInDb={false}
+                  formKind="create"
+                />
               </div>
               <div>
                 <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">

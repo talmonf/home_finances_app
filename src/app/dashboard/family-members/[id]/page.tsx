@@ -79,6 +79,10 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
           </div>
           <FamilyMemberBirthdateFields
             isHebrew={isHebrew}
+            hebrewPersistedInDb={
+              member.hebrew_date_of_birth_day != null &&
+              member.hebrew_date_of_birth_month != null
+            }
             defaultGregorian={
               member.date_of_birth ? member.date_of_birth.toISOString().slice(0, 10) : ""
             }
