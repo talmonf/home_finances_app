@@ -58,7 +58,32 @@ export function addDaysLocal(base: Date, days: number): Date {
 /** Categories whose past-due rows appear on the dashboard even when `includePastDue` is false. */
 export const PAST_DUE_ALLOWED_CATEGORIES = new Set<string>(["Subscription", "Task", "Donation"]);
 
-/** Filter rows to renewal dates in [today, today + daysAhead] (local calendar days). */
+const FAMILY_EVENT_PAIR_CATEGORIES = new Set<string>(["Birthday", "Anniversary"]);
+
+/** `birthday-gregorian-{id}` / `anniversary-hebrew-{id}` share one logical event. */
+export function familyEventPairGroupKey(row: RenewalRow): string | null {
+  const m = row.id.match(/^(birthday|anniversary)-(gregorian|hebrew)-(.+)$/);
+  if (!m || !FAMILY_EVENT_PAIR_CATEGORIES.has(row.category)) return null;
+  return `${m[1]}-${m[3]}`;
+}
+
+function rowPassesDaysAheadFilter(
+  row: RenewalRow,
+  today: Date,
+  end: Date,
+  includePastDue: boolean,
+): boolean {
+  const rd = dateOnlyLocal(row.renewalDate);
+  if (rd > end) return false;
+  if (includePastDue) return true;
+  if (rd >= today) return true;
+  return PAST_DUE_ALLOWED_CATEGORIES.has(row.category);
+}
+
+/**
+ * Filter rows to renewal dates in [today, today + daysAhead] (local calendar days).
+ * Birthday/anniversary Gregorian + Hebrew rows are kept together when either date is in window.
+ */
 export function filterRenewalRowsByDaysAhead(
   rows: RenewalRow[],
   today: Date,
@@ -67,12 +92,18 @@ export function filterRenewalRowsByDaysAhead(
 ): RenewalRow[] {
   const end = addDaysLocal(today, daysAhead);
   const includePastDue = options?.includePastDue === true;
+  const passes = (r: RenewalRow) => rowPassesDaysAheadFilter(r, today, end, includePastDue);
+
+  const pairedGroupsInWindow = new Set<string>();
+  for (const r of rows) {
+    const key = familyEventPairGroupKey(r);
+    if (key && passes(r)) pairedGroupsInWindow.add(key);
+  }
+
   return rows.filter((r) => {
-    const rd = dateOnlyLocal(r.renewalDate);
-    if (rd > end) return false;
-    if (includePastDue) return true;
-    if (rd >= today) return true;
-    return PAST_DUE_ALLOWED_CATEGORIES.has(r.category);
+    const key = familyEventPairGroupKey(r);
+    if (key && pairedGroupsInWindow.has(key)) return true;
+    return passes(r);
   });
 }
 

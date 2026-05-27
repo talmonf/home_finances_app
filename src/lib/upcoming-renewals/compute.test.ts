@@ -80,3 +80,46 @@ test("filterRenewalRowsByDaysAhead without includePastDue keeps dashboard-style 
   const filtered = filterRenewalRowsByDaysAhead(rows, today, 3);
   assert.deepEqual(filtered.map((r) => r.id), ["sub-past", "task-past", "donation-past", "today"]);
 });
+
+test("filterRenewalRowsByDaysAhead keeps paired birthday/anniversary rows when either date is in window", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const { filterRenewalRowsByDaysAhead } = await import("@/lib/upcoming-renewals/compute");
+  const today = new Date(2026, 4, 27);
+  const rows: RenewalRow[] = [
+    {
+      id: "anniversary-gregorian-m1",
+      category: "Anniversary",
+      itemName: "A & B",
+      owner: "Household",
+      ownerId: null,
+      renewalDate: new Date(2026, 5, 21),
+      renewalType: "Anniversary",
+      href: "/dashboard/family-members/marriages",
+    },
+    {
+      id: "anniversary-hebrew-m1",
+      category: "Anniversary",
+      itemName: "A & B",
+      owner: "Household",
+      ownerId: null,
+      renewalDate: new Date(2026, 5, 26),
+      renewalType: "Hebrew: 12 Tammuz",
+      href: "/dashboard/family-members/marriages",
+    },
+    {
+      id: "anniversary-gregorian-m2",
+      category: "Anniversary",
+      itemName: "C & D",
+      owner: "Household",
+      ownerId: null,
+      renewalDate: new Date(2026, 7, 1),
+      renewalType: "Anniversary",
+      href: "/dashboard/family-members/marriages",
+    },
+  ];
+
+  // Gregorian (21 Jun) is inside 25 days; Hebrew (26 Jun) is outside — both should appear.
+  const filtered = filterRenewalRowsByDaysAhead(rows, today, 25);
+  assert.deepEqual(filtered.map((r) => r.id), ["anniversary-gregorian-m1", "anniversary-hebrew-m1"]);
+  assert.equal(filtered.length, 2);
+});
