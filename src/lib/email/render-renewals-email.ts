@@ -107,12 +107,21 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
       const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
       const n = daysFromToday(r.renewalDate, today);
       const timing = timingLabel(n, r.category);
-      const line = `${dateStr} · ${r.renewalType} · ${r.itemName} · ${r.owner} (${timing})`;
+      const showOwner = r.owner.trim() !== "" && r.owner !== r.itemName;
+      const line = showOwner
+        ? `${dateStr} · ${r.renewalType} · ${r.itemName} · ${r.owner} (${timing})`
+        : `${dateStr} · ${r.renewalType} · ${r.itemName} (${timing})`;
       textBody += `  - ${line}\n`;
       const timingStyle = n < 0 ? "color:#b91c1c;" : "";
-      htmlSections.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} · <span style="color:#555;">${escapeHtml(r.owner)}</span> <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
-      );
+      if (showOwner) {
+        htmlSections.push(
+          `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} · <span style="color:#555;">${escapeHtml(r.owner)}</span> <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
+        );
+      } else {
+        htmlSections.push(
+          `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
+        );
+      }
     }
     htmlSections.push(`</ul>`);
     textBody += "\n";

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   disableRenewalEmailSubscription,
-  sendRenewalEmailScheduledNow,
   sendRenewalEmailTestNow,
   upsertRenewalEmailSubscription,
 } from "./actions";
@@ -16,7 +15,6 @@ type Search = {
   saved?: string;
   disabled?: string;
   test?: string;
-  scheduled?: string;
   reason?: string;
 };
 
@@ -113,25 +111,6 @@ export default async function RenewalEmailSettingsPage({
                   : "Test send failed."}
           </p>
         ) : null}
-        {qp?.scheduled === "ok" ? (
-          <p className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
-            {isHebrew ? "אימייל מתוזמן נשלח." : "Scheduled digest sent."}
-          </p>
-        ) : null}
-        {qp?.scheduled === "fail" || qp?.scheduled === "error" || qp?.scheduled === "nosub" ? (
-          <p className="rounded-lg border border-rose-800/60 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
-            {qp.scheduled === "nosub"
-              ? isHebrew
-                ? "שמרו את ההגדרות לפני שליחה."
-                : "Save your settings before sending."
-              : qp.reason
-                ? `${isHebrew ? "שגיאה" : "Error"}: ${qp.reason}`
-                : isHebrew
-                  ? "שליחת האימייל המתוזמן נכשלה."
-                  : "Scheduled send failed."}
-          </p>
-        ) : null}
-
         <form action={upsertRenewalEmailSubscription} className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <label className="flex items-center gap-2 text-sm text-slate-200">
             <input type="checkbox" name="is_active" defaultChecked={sub?.is_active ?? true} className="rounded" />
@@ -222,14 +201,6 @@ export default async function RenewalEmailSettingsPage({
               className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
             >
               {isHebrew ? "שלח אימייל בדיקה עכשיו" : "Send test email now"}
-            </button>
-          </form>
-          <form action={sendRenewalEmailScheduledNow}>
-            <button
-              type="submit"
-              className="rounded-lg border border-sky-800/60 bg-sky-950/40 px-4 py-2 text-sm font-medium text-sky-200 hover:bg-sky-950/60"
-            >
-              {isHebrew ? "שלח אימייל מתוזמן עכשיו" : "Send scheduled digest now"}
             </button>
           </form>
           <form action={disableRenewalEmailSubscription}>

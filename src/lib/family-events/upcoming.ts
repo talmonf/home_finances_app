@@ -26,62 +26,108 @@ type MarriageRow = {
   spouse_b: { id: string; full_name: string };
 };
 
+function formatDateDDMMYYYY(d: Date) {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function formatFridayNightSaturdayLabel(language: "en" | "he", hebrewOccurrenceDate: Date) {
+  const eve = addDays(hebrewOccurrenceDate, -1);
+  const day = hebrewOccurrenceDate;
+  const eveLabel = formatDateDDMMYYYY(eve);
+  const dayLabel = formatDateDDMMYYYY(day);
+  if (language === "he") {
+    return `ליל שישי-שבת ${eveLabel}-${dayLabel}`;
+  }
+  return `Fri night-Sat ${eveLabel}-${dayLabel}`;
+}
+
+function joinDateDetails(
+  language: "en" | "he",
+  details: { gregorianDate?: Date | null; hebrewDate?: { label: string; occurrenceDate: Date } },
+) {
+  const parts: string[] = [];
+  if (details.gregorianDate) {
+    const d = formatDateDDMMYYYY(details.gregorianDate);
+    parts.push(language === "he" ? `לועזי: ${d}` : `Gregorian: ${d}`);
+  }
+  if (details.hebrewDate) {
+    const hebrewPart =
+      language === "he"
+        ? `עברי: ${details.hebrewDate.label} (${formatFridayNightSaturdayLabel(language, details.hebrewDate.occurrenceDate)})`
+        : `Hebrew: ${details.hebrewDate.label} (${formatFridayNightSaturdayLabel(language, details.hebrewDate.occurrenceDate)})`;
+    parts.push(hebrewPart);
+  }
+  return parts.join(language === "he" ? " | " : " | ");
+}
+
+function choosePrimaryDate(dates: Date[]): Date {
+  return [...dates].sort((a, b) => a.getTime() - b.getTime())[0];
+}
+
 function birthdayRowsForMember(
   member: FamilyMemberRow,
   today: Date,
   language: "en" | "he",
 ): RenewalRow[] {
   const he = language === "he";
-  const rows: RenewalRow[] = [];
+  let nextHebrew: Date | null = null;
+  let hebrewLabel: string | null = null;
+  let nextGregorian: Date | null = null;
 
   if (member.hebrew_date_of_birth_month != null && member.hebrew_date_of_birth_day != null) {
-    const next = nextGregorianOccurrenceForHebrewMonthDay({
+    nextHebrew = nextGregorianOccurrenceForHebrewMonthDay({
       month: member.hebrew_date_of_birth_month,
       day: member.hebrew_date_of_birth_day,
       fromDate: today,
     });
-    if (next) {
-      const label = formatHebrewDateLabel(
-        {
-          day: member.hebrew_date_of_birth_day,
-          month: member.hebrew_date_of_birth_month,
-          year: member.hebrew_date_of_birth_year,
-        },
-        language,
-      );
-      rows.push({
-        id: `birthday-hebrew-${member.id}`,
-        category: "Birthday",
-        itemName: member.full_name,
-        owner: member.full_name,
-        ownerId: member.id,
-        renewalDate: next,
-        renewalType: he ? `יום הולדת עברי (${label})` : `Hebrew birthday (${label})`,
-        href: `/dashboard/family-members/${member.id}`,
-      });
-    }
+    hebrewLabel = formatHebrewDateLabel(
+      {
+        day: member.hebrew_date_of_birth_day,
+        month: member.hebrew_date_of_birth_month,
+        year: member.hebrew_date_of_birth_year,
+      },
+      language,
+    );
   }
 
   if (member.date_of_birth) {
     const dob = calendarDateFromDb(member.date_of_birth);
-    const next = nextAnnualGregorianOccurrence(
+    nextGregorian = nextAnnualGregorianOccurrence(
       dob.getMonth(),
       dob.getDate(),
       today,
     );
-    rows.push({
-      id: `birthday-gregorian-${member.id}`,
-      category: "Birthday",
-      itemName: member.full_name,
-      owner: member.full_name,
-      ownerId: member.id,
-      renewalDate: next,
-      renewalType: he ? "יום הולדת" : "Birthday",
-      href: `/dashboard/family-members/${member.id}`,
-    });
   }
 
-  return rows;
+  const candidateDates = [nextGregorian, nextHebrew].filter((d): d is Date => Boolean(d));
+  if (candidateDates.length === 0) return [];
+  const renewalDate = choosePrimaryDate(candidateDates);
+  const details = joinDateDetails(language, {
+    gregorianDate: nextGregorian,
+    hebrewDate: nextHebrew && hebrewLabel ? { label: hebrewLabel, occurrenceDate: nextHebrew } : undefined,
+  });
+
+  return [
+    {
+      id: `birthday-${member.id}`,
+      category: "Birthday",
+      itemName: member.full_name,
+      owner: he ? "משק הבית" : "Household",
+      ownerId: member.id,
+      renewalDate,
+      renewalType: he ? `יום הולדת · ${details}` : `Birthday · ${details}`,
+      href: `/dashboard/family-members/${member.id}`,
+    },
+  ];
 }
 
 function anniversaryRowsForMarriage(
@@ -91,52 +137,51 @@ function anniversaryRowsForMarriage(
 ): RenewalRow[] {
   const he = language === "he";
   const names = `${marriage.spouse_a.full_name} & ${marriage.spouse_b.full_name}`;
-  const rows: RenewalRow[] = [];
+  let nextHebrew: Date | null = null;
+  let hebrewLabel: string | null = null;
+  let nextGregorian: Date | null = null;
 
   if (marriage.wedding_hebrew_month != null && marriage.wedding_hebrew_day != null) {
-    const next = nextGregorianOccurrenceForHebrewMonthDay({
+    nextHebrew = nextGregorianOccurrenceForHebrewMonthDay({
       month: marriage.wedding_hebrew_month,
       day: marriage.wedding_hebrew_day,
       fromDate: today,
     });
-    if (next) {
-      const label = formatHebrewDateLabel(
-        {
-          day: marriage.wedding_hebrew_day,
-          month: marriage.wedding_hebrew_month,
-          year: marriage.wedding_hebrew_year,
-        },
-        language,
-      );
-      rows.push({
-        id: `anniversary-hebrew-${marriage.id}`,
-        category: "Anniversary",
-        itemName: names,
-        owner: names,
-        ownerId: null,
-        renewalDate: next,
-        renewalType: he ? `יום נישואין עברי (${label})` : `Hebrew anniversary (${label})`,
-        href: "/dashboard/family-members/marriages",
-      });
-    }
+    hebrewLabel = formatHebrewDateLabel(
+      {
+        day: marriage.wedding_hebrew_day,
+        month: marriage.wedding_hebrew_month,
+        year: marriage.wedding_hebrew_year,
+      },
+      language,
+    );
   }
 
   if (marriage.wedding_date) {
     const wd = calendarDateFromDb(marriage.wedding_date);
-    const next = nextAnnualGregorianOccurrence(wd.getMonth(), wd.getDate(), today);
-    rows.push({
-      id: `anniversary-gregorian-${marriage.id}`,
-      category: "Anniversary",
-      itemName: names,
-      owner: names,
-      ownerId: null,
-      renewalDate: next,
-      renewalType: he ? "יום נישואין" : "Anniversary",
-      href: "/dashboard/family-members/marriages",
-    });
+    nextGregorian = nextAnnualGregorianOccurrence(wd.getMonth(), wd.getDate(), today);
   }
 
-  return rows;
+  const candidateDates = [nextGregorian, nextHebrew].filter((d): d is Date => Boolean(d));
+  if (candidateDates.length === 0) return [];
+  const renewalDate = choosePrimaryDate(candidateDates);
+  const details = joinDateDetails(language, {
+    gregorianDate: nextGregorian,
+    hebrewDate: nextHebrew && hebrewLabel ? { label: hebrewLabel, occurrenceDate: nextHebrew } : undefined,
+  });
+
+  return [
+    {
+      id: `anniversary-${marriage.id}`,
+      category: "Anniversary",
+      itemName: names,
+      owner: he ? "משק הבית" : "Household",
+      ownerId: null,
+      renewalDate,
+      renewalType: he ? `יום נישואין · ${details}` : `Anniversary · ${details}`,
+      href: "/dashboard/family-members/marriages",
+    },
+  ];
 }
 
 export async function loadUpcomingFamilyEventRows(params: {
