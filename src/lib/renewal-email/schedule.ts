@@ -182,3 +182,91 @@ export function explainShouldSendNow(
   if (!shouldSendNow(sub, now)) return { send: false, reason: "not_scheduled" };
   return { send: true };
 }
+
+/** Runtime diagnostics for cron / email-settings debugging (no PII). */
+export function debugScheduleEvaluation(
+  sub: RenewalScheduleFields & { is_active?: boolean },
+  now: Date,
+): {
+  nowUtc: string;
+  timezone: string;
+  local: ReturnType<typeof getLocalCalendarParts>;
+  sendHour: number;
+  frequency: string;
+  dayOfWeek: number | null;
+  hourAtOrAfterSendHour: boolean;
+  exactWeekdayMatch: boolean;
+  weeklyCatchUp: boolean;
+  alreadySentThisPeriod: boolean;
+  decision: ReturnType<typeof explainShouldSendNow>;
+} {
+  const tz = sub.timezone || "Asia/Jerusalem";
+  const parts = getLocalCalendarParts(now, tz);
+  const dow = sub.day_of_week;
+  const exactWeekdayMatch =
+    sub.frequency === "weekly" && dow != null && parts.weekday === dow;
+  const weeklyCatchUp =
+    sub.frequency === "weekly" ? weeklyCatchUpEligible(sub, parts, now, tz) : false;
+  const decision = explainShouldSendNow(sub, now);
+  const result = {
+    nowUtc: now.toISOString(),
+    timezone: tz,
+    local: parts,
+    sendHour: sub.send_hour,
+    frequency: sub.frequency,
+    dayOfWeek: dow,
+    hourAtOrAfterSendHour: parts.hour >= sub.send_hour,
+    exactWeekdayMatch,
+    weeklyCatchUp,
+    alreadySentThisPeriod: alreadySentInDeliveryPeriod(
+      sub.frequency,
+      sub.last_sent_at ?? null,
+      now,
+      tz,
+    ),
+    decision,
+  };
+  // #region agent log
+  fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fadee9" },
+    body: JSON.stringify({
+      sessionId: "fadee9",
+      hypothesisId: "B",
+      location: "schedule.ts:debugScheduleEvaluation",
+      message: "schedule evaluation",
+      data: result,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+  return result;
+}
+
+/** When each vercel.json UTC cron tick qualifies for send_hour in `timeZone` on the anchor date. */
+export function cronUtcSlotsQualification(
+  sendHour: number,
+  timeZone: string,
+  dayOfWeek: number,
+  anchorUtc: Date,
+) {
+  const utcHours = [5, 11, 17, 23];
+  const y = anchorUtc.getUTCFullYear();
+  const m = anchorUtc.getUTCMonth();
+  const d = anchorUtc.getUTCDate();
+  return utcHours.map((utcH) => {
+    const instant = new Date(Date.UTC(y, m, d, utcH, 0, 0));
+    const parts = getLocalCalendarParts(instant, timeZone);
+    return {
+      utcCron: `0 ${utcH} * * *`,
+      localHour: parts.hour,
+      localWeekday: parts.weekday,
+      localWeekdayName: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parts.weekday],
+      hourAtOrAfterSendHour: parts.hour >= sendHour,
+      exactWeekdayMatch: parts.weekday === dayOfWeek,
+      qualifies:
+        parts.hour >= sendHour &&
+        (parts.weekday === dayOfWeek || parts.weekday > dayOfWeek),
+    };
+  });
+}

@@ -1,7 +1,10 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
-import { parseHebrewDobFromFormData } from "@/lib/family-members/hebrew-dob-form";
+import {
+  parseHebrewDobFromFormData,
+  resolveHebrewDobForSave,
+} from "@/lib/family-members/hebrew-dob-form";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -36,6 +39,7 @@ export async function createFamilyMember(formData: FormData) {
   } catch {
     hebrewDobRedirectError("/dashboard/family-members", "Hebrew birthday requires both day and month");
   }
+  hebrewDob = resolveHebrewDobForSave(hebrewDob, date_of_birth);
 
   const memberId = crypto.randomUUID();
 
@@ -165,6 +169,7 @@ export async function updateFamilyMember(formData: FormData) {
   } catch {
     hebrewDobRedirectError(`/dashboard/family-members/${id}`, "Hebrew birthday requires both day and month");
   }
+  hebrewDob = resolveHebrewDobForSave(hebrewDob, date_of_birth);
 
   await prisma.$transaction(async (tx) => {
     await tx.family_members.updateMany({

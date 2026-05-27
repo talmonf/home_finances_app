@@ -14,7 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
-- [ ] 119_family_hebrew_dates_and_marriages.sql (2026-05-26)
+- [x] 119_family_hebrew_dates_and_marriages.sql (2026-05-26)
 - [x] 118_user_feature_usage_audit.sql (2026-05-24)
 - [x] 117_renewal_email_deliveries_is_test.sql (2026-05-24)
 - [x] 116_jobs_start_date_nullable.sql (2026-05-15)

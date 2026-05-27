@@ -14,7 +14,7 @@ import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
-import { FamilyMemberHebrewDobFields } from "@/components/hebrew-date-fields";
+import { FamilyMemberBirthdateFields } from "@/components/family-member-birthdate-fields";
 import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
 import { relationshipLabel } from "@/lib/family-members/relationship-options";
 import { formatHebrewDateLabel } from "@/lib/hebrew-calendar";
@@ -279,22 +279,8 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   placeholder="e.g. Jane Doe"
                 />
               </div>
-              <div>
-                <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
-                  {isHebrew ? "תאריך לידה (לועזי)" : "Date of birth (Gregorian)"}
-                </label>
-                <input
-                  id="date_of_birth"
-                  name="date_of_birth"
-                  type="date"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
               <div className="sm:col-span-2">
-                <p className="mb-2 text-xs text-slate-500">
-                  {isHebrew ? "תאריך לידה עברי (אופציונלי)" : "Hebrew birthday (optional)"}
-                </p>
-                <FamilyMemberHebrewDobFields isHebrew={isHebrew} />
+                <FamilyMemberBirthdateFields isHebrew={isHebrew} />
               </div>
               <div>
                 <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">

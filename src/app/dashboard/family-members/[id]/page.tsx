@@ -1,7 +1,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FamilyMemberHebrewDobFields } from "@/components/hebrew-date-fields";
+import { FamilyMemberBirthdateFields } from "@/components/family-member-birthdate-fields";
 import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
 import { updateFamilyMember } from "../actions";
 
@@ -77,19 +77,16 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
             />
           </div>
+          <FamilyMemberBirthdateFields
+            isHebrew={isHebrew}
+            defaultGregorian={
+              member.date_of_birth ? member.date_of_birth.toISOString().slice(0, 10) : ""
+            }
+            defaultHebrewDay={member.hebrew_date_of_birth_day}
+            defaultHebrewMonth={member.hebrew_date_of_birth_month}
+            defaultHebrewYear={member.hebrew_date_of_birth_year}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="date_of_birth" className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "תאריך לידה (לועזי)" : "Date of birth (Gregorian)"}
-              </label>
-              <input
-                id="date_of_birth"
-                name="date_of_birth"
-                type="date"
-                defaultValue={member.date_of_birth ? member.date_of_birth.toISOString().slice(0, 10) : ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
             <div>
               <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">
                 ID number
@@ -101,19 +98,6 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-400">
-              {isHebrew ? "תאריך לידה עברי" : "Hebrew birthday"}
-            </p>
-            <FamilyMemberHebrewDobFields
-              isHebrew={isHebrew}
-              defaultDay={member.hebrew_date_of_birth_day}
-              defaultMonth={member.hebrew_date_of_birth_month}
-              defaultYear={member.hebrew_date_of_birth_year}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
                 Phone

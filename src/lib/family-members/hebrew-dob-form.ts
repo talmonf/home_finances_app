@@ -1,4 +1,5 @@
 import {
+  gregorianDateToHebrewComponents,
   parseHebrewDayFromForm,
   parseHebrewMonthFromForm,
   parseHebrewYearFromForm,
@@ -32,6 +33,26 @@ export function parseHebrewDobFromFormData(formData: FormData): ParsedHebrewDob 
     hebrew_date_of_birth_month: month,
     hebrew_date_of_birth_year: year,
   };
+}
+
+/** When Hebrew day/month are omitted but Gregorian DOB is set, derive Hebrew components. */
+export function resolveHebrewDobForSave(
+  hebrewDob: ParsedHebrewDob,
+  date_of_birth: Date | null,
+): ParsedHebrewDob {
+  if (
+    date_of_birth &&
+    hebrewDob.hebrew_date_of_birth_day == null &&
+    hebrewDob.hebrew_date_of_birth_month == null
+  ) {
+    const h = gregorianDateToHebrewComponents(date_of_birth);
+    return {
+      hebrew_date_of_birth_day: h.day,
+      hebrew_date_of_birth_month: h.month,
+      hebrew_date_of_birth_year: h.year ?? null,
+    };
+  }
+  return hebrewDob;
 }
 
 export function parseWeddingHebrewFromFormData(formData: FormData, prefix: string): {

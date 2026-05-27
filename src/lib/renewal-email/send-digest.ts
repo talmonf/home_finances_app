@@ -91,6 +91,21 @@ export async function sendRenewalDigestForSubscription(
 
   const isTest = options.isTest === true;
 
+  // #region agent log
+  fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fadee9" },
+    body: JSON.stringify({
+      sessionId: "fadee9",
+      hypothesisId: "E",
+      location: "send-digest.ts:beforeResend",
+      message: "calling resend",
+      data: { isTest, itemCount: rows.length, updateLastSentAt: options.updateLastSentAt },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   let providerId: string | undefined;
   try {
     const provider = getEmailProvider();
