@@ -167,7 +167,7 @@ export function FamilyMemberBirthdateFields({
           </div>
         </div>
       </div>
-      {autoCalculatedPendingSave && hebrewPreview && (
+      {formKind === "edit" && autoCalculatedPendingSave && hebrewPreview && (
         <div
           role="alert"
           className="rounded-lg border border-amber-600/80 bg-amber-950/50 px-3 py-2.5 text-sm text-amber-100"
@@ -179,12 +179,8 @@ export function FamilyMemberBirthdateFields({
           </p>
           <p className="mt-1 text-xs leading-relaxed text-amber-100/90">
             {isHebrew
-              ? formKind === "create"
-                ? "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «הוספת בן משפחה» כדי לשמור."
-                : "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «שמירת שינויים» בתחתית הטופס כדי לשמור."
-              : formKind === "create"
-                ? "Please check that the day, month, and year are correct, then click Add family member to save."
-                : "Please check that the day, month, and year are correct, then click Save changes at the bottom of the form."}
+              ? "בדקו שהיום, החודש והשנה נכונים. לאחר מכן לחצו «שמירת שינויים» בתחתית הטופס כדי לשמור."
+              : "Please check that the day, month, and year are correct, then click Save changes at the bottom of the form."}
           </p>
         </div>
       )}
