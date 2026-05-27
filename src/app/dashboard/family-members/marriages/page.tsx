@@ -54,7 +54,7 @@ export default async function FamilyMarriagesPage({ searchParams }: PageProps) {
               href="/dashboard/family-members/marriages/new"
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
             >
-              {isHebrew ? "הוספת נישואין" : "Add marriage"}
+              {isHebrew ? "הוספת רשומת נישואין" : "Add marriage record"}
             </Link>
           </div>
           {resolved?.error && (

@@ -44,7 +44,7 @@ export default async function EditFamilyMarriagePage({ params, searchParams }: P
           {isHebrew ? "חזרה →" : "← Back"}
         </Link>
         <h1 className="text-2xl font-semibold text-slate-50">
-          {isHebrew ? "עריכת נישואין" : "Edit marriage"}
+          {isHebrew ? "עריכת רשומת נישואין" : "Edit marriage record"}
         </h1>
         {resolved?.error && (
           <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
