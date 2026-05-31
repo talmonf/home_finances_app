@@ -1,5 +1,6 @@
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { renewalEmailMiddleSegments } from "@/lib/email/renewal-email-line";
 import { dateOnlyLocal, RENEWAL_CATEGORY_ORDER, type RenewalRow } from "@/lib/upcoming-renewals/compute";
 import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
 
@@ -107,21 +108,22 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
       const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
       const n = daysFromToday(r.renewalDate, today);
       const timing = timingLabel(n, r.category);
-      const showOwner = r.owner.trim() !== "" && r.owner !== r.itemName;
-      const line = showOwner
-        ? `${dateStr} · ${r.renewalType} · ${r.itemName} · ${r.owner} (${timing})`
-        : `${dateStr} · ${r.renewalType} · ${r.itemName} (${timing})`;
+      const middle = renewalEmailMiddleSegments(r);
+      const middleText = middle.join(" · ");
+      const line = `${dateStr} · ${middleText} (${timing})`;
       textBody += `  - ${line}\n`;
       const timingStyle = n < 0 ? "color:#b91c1c;" : "";
-      if (showOwner) {
-        htmlSections.push(
-          `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} · <span style="color:#555;">${escapeHtml(r.owner)}</span> <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
-        );
-      } else {
-        htmlSections.push(
-          `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${escapeHtml(r.renewalType)} · ${escapeHtml(r.itemName)} <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
-        );
-      }
+      const middleHtml = middle
+        .map((part, i) => {
+          const isOwner = i === middle.length - 1 && part === r.owner.trim() && part !== r.itemName;
+          return isOwner
+            ? `<span style="color:#555;">${escapeHtml(part)}</span>`
+            : escapeHtml(part);
+        })
+        .join(" · ");
+      htmlSections.push(
+        `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${middleHtml} <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
+      );
     }
     htmlSections.push(`</ul>`);
     textBody += "\n";
