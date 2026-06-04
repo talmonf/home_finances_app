@@ -106,6 +106,7 @@ model households {
   user_feature_usage_events          user_feature_usage_events[]
   user_feature_usage_rollups         user_feature_usage_rollups[]
   renewal_email_subscriptions        renewal_email_subscriptions[]
+  clinic_digest_email_subscriptions  clinic_digest_email_subscriptions[]
   family_marriages                   family_marriages[]
 }
 
@@ -1339,6 +1340,43 @@ model renewal_email_deliveries {
   @@index([subscription_id, sent_at(sort: Desc)])
 }
 
+model clinic_digest_email_subscriptions {
+  id               String                 @id @default(uuid())
+  user_id          String                 @unique
+  household_id     String
+  is_active        Boolean                @default(false)
+  recipient_email  String?
+  frequency        RenewalEmailFrequency
+  day_of_week      Int?
+  day_of_month     Int?
+  send_hour        Int                    @default(18)
+  timezone         String                 @default("Asia/Jerusalem")
+  days_ahead       Int                    @default(90)
+  last_sent_at     DateTime?
+  created_at       DateTime               @default(now())
+  updated_at       DateTime               @updatedAt
+
+  user       users                          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  household  households                     @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  deliveries clinic_digest_email_deliveries[]
+}
+
+model clinic_digest_email_deliveries {
+  id               String   @id @default(uuid())
+  subscription_id  String
+  sent_at          DateTime @default(now())
+  recipient_email  String
+  item_count       Int
+  status           String
+  error_message    String?
+  provider_msg_id  String?
+  is_test          Boolean  @default(false)
+
+  subscription clinic_digest_email_subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@index([subscription_id, sent_at(sort: Desc)])
+}
+
 model super_admins {
   id                    String    @id @default(uuid())
   email                 String    @unique
@@ -1394,6 +1432,7 @@ model users {
   user_feature_usage_events user_feature_usage_events[]
   user_feature_usage_rollups user_feature_usage_rollups[]
   renewal_email_subscription renewal_email_subscriptions?
+  clinic_digest_email_subscription clinic_digest_email_subscriptions?
 }
 
 model private_clinic_backup_snapshots {

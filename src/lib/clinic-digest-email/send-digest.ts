@@ -1,22 +1,30 @@
 import { prisma } from "@/lib/auth";
 import { getEmailProvider, isMissingEmailConfigError } from "@/lib/email/provider";
 import { getAppBaseUrl } from "@/lib/email/app-base-url";
-import { renderRenewalsEmail } from "@/lib/email/render-renewals-email";
+import { renderClinicDigestEmail } from "@/lib/email/render-clinic-digest-email";
 import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
-import { normalizeUiLanguage } from "@/lib/ui-language";
-import { computeUpcomingRenewals } from "@/lib/upcoming-renewals/compute";
 import {
-  alreadySentInDeliveryPeriod,
-  startOfCalendarDayInTimeZone,
-} from "@/lib/digest-email/schedule";
+  privateClinicAppointments,
+  privateClinicClients,
+  privateClinicCommon,
+  privateClinicSettings,
+  privateClinicUpcomingVisits,
+} from "@/lib/private-clinic-i18n";
+import {
+  computeClinicDigestData,
+  digestItemCount,
+  resolveFamilyMemberIdForUser,
+} from "@/lib/private-clinic/compute-clinic-digest";
+import { normalizeUiLanguage } from "@/lib/ui-language";
 import type { Prisma } from "@/generated/prisma/client";
 
-export type RenewalSubscriptionWithRelations = Prisma.renewal_email_subscriptionsGetPayload<{
-  include: {
-    user: { select: { email: true; full_name: true } };
-    household: { select: { date_display_format: true; ui_language: true } };
-  };
-}>;
+export type ClinicDigestSubscriptionWithRelations =
+  Prisma.clinic_digest_email_subscriptionsGetPayload<{
+    include: {
+      user: { select: { email: true; full_name: true } };
+      household: { select: { date_display_format: true; ui_language: true } };
+    };
+  }>;
 
 async function resolveDateDisplayFormat(
   userId: string,
@@ -51,61 +59,89 @@ async function resolveUiLanguage(userId: string, householdId: string) {
   return normalizeUiLanguage(row?.ui_language);
 }
 
-function resolveRecipientEmail(sub: RenewalSubscriptionWithRelations): string {
+function resolveRecipientEmail(sub: ClinicDigestSubscriptionWithRelations): string {
   const override = sub.recipient_email?.trim();
   if (override) return override;
   return sub.user.email.trim();
 }
 
-/**
- * Builds the renewal list, renders email, sends via provider, writes delivery row.
- * On success, updates `last_sent_at` unless `options.updateLastSentAt` is false (test sends).
- */
-export async function sendRenewalDigestForSubscription(
-  sub: RenewalSubscriptionWithRelations,
+function buildEmailCopy(lang: ReturnType<typeof normalizeUiLanguage>) {
+  const language = lang === "he" ? "he" : "en";
+  const uiLang = lang === "he" ? "he" : "en";
+  const st = privateClinicSettings(uiLang);
+  const uv = privateClinicUpcomingVisits(uiLang);
+  const ap = privateClinicAppointments(uiLang);
+  const c = privateClinicCommon(uiLang);
+  const cl = privateClinicClients(uiLang);
+  return {
+    language: language as "en" | "he",
+    copy: {
+      intro: st.digestIntro,
+      sectionAppointments: st.digestSectionAppointments,
+      sectionVisits: uv.pageTitle,
+      sectionNeedsFirstVisit: uv.sectionNeedsFirstVisit,
+      sectionNeedsFirstVisitHint: uv.sectionNeedsFirstVisitHint,
+      colStart: ap.startCol,
+      colClient: c.client,
+      colJob: c.job,
+      colVisitType: ap.visitTypeCol,
+      colNextDue: uv.colNextDue,
+      colLastVisit: uv.colLastVisit,
+      colProgram: uv.colProgram,
+      overdue: uv.overdue,
+      dueToday: uv.dueToday,
+      scheduledOn: uv.scheduledOn,
+      noneAppointments: st.digestNoneAppointments,
+      noneVisits: st.digestNoneVisits,
+      allClear: st.digestAllClear,
+      openAppointments: st.digestOpenAppointments,
+      openUpcomingVisits: st.digestOpenUpcomingVisits,
+    },
+    kupatLabels: {
+      none: c.none,
+      clalit: cl.kupatClalit,
+      maccabi: cl.kupatMaccabi,
+      meuhedet: cl.kupatMeuhedet,
+      leumit: cl.kupatLeumit,
+    },
+    noneLabel: c.none,
+  };
+}
+
+export async function sendClinicDigestForSubscription(
+  sub: ClinicDigestSubscriptionWithRelations,
   now: Date,
   options: { updateLastSentAt: boolean; isTest?: boolean },
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const recipient = resolveRecipientEmail(sub);
   const tz = sub.timezone || "Asia/Jerusalem";
-  const today = startOfCalendarDayInTimeZone(now, tz);
   const lang = await resolveUiLanguage(sub.user_id, sub.household_id);
-  const language = lang === "he" ? "he" : "en";
+  const { language, copy, kupatLabels, noneLabel } = buildEmailCopy(lang);
   const dateDisplayFormat = await resolveDateDisplayFormat(sub.user_id, sub.household_id);
+  const familyMemberId = await resolveFamilyMemberIdForUser(sub.user_id, sub.household_id);
 
-  const rows = await computeUpcomingRenewals({
+  const data = await computeClinicDigestData({
     householdId: sub.household_id,
-    today,
+    familyMemberId,
+    now,
     daysAhead: sub.days_ahead,
-    language,
+    timezone: tz,
+    kupatLabels,
+    noneLabel,
   });
 
+  const itemCount = digestItemCount(data);
   const baseUrl = getAppBaseUrl();
-  const { subject, html, text } = renderRenewalsEmail({
-    rows,
+  const { subject, html, text } = renderClinicDigestEmail({
+    data,
     dateDisplayFormat,
     language,
     baseUrl,
     daysAhead: sub.days_ahead,
-    today,
+    copy,
   });
 
   const isTest = options.isTest === true;
-
-  // #region agent log
-  fetch("http://127.0.0.1:7621/ingest/adff46cd-7c3b-47a7-be95-a9a2c6036576", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fadee9" },
-    body: JSON.stringify({
-      sessionId: "fadee9",
-      hypothesisId: "E",
-      location: "send-digest.ts:beforeResend",
-      message: "calling resend",
-      data: { isTest, itemCount: rows.length, updateLastSentAt: options.updateLastSentAt },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   let providerId: string | undefined;
   try {
@@ -115,11 +151,11 @@ export async function sendRenewalDigestForSubscription(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const status = isMissingEmailConfigError(e) ? "skipped" : "failed";
-    await prisma.renewal_email_deliveries.create({
+    await prisma.clinic_digest_email_deliveries.create({
       data: {
         subscription_id: sub.id,
         recipient_email: recipient,
-        item_count: rows.length,
+        item_count: itemCount,
         status,
         error_message: msg.slice(0, 2000),
         provider_msg_id: null,
@@ -129,11 +165,11 @@ export async function sendRenewalDigestForSubscription(
     return { ok: false, reason: msg };
   }
 
-  await prisma.renewal_email_deliveries.create({
+  await prisma.clinic_digest_email_deliveries.create({
     data: {
       subscription_id: sub.id,
       recipient_email: recipient,
-      item_count: rows.length,
+      item_count: itemCount,
       status: "sent",
       error_message: null,
       provider_msg_id: providerId ?? null,
@@ -142,23 +178,11 @@ export async function sendRenewalDigestForSubscription(
   });
 
   if (options.updateLastSentAt) {
-    await prisma.renewal_email_subscriptions.update({
+    await prisma.clinic_digest_email_subscriptions.update({
       where: { id: sub.id },
       data: { last_sent_at: now },
     });
   }
 
   return { ok: true };
-}
-
-export function shouldSkipDuplicateSend(
-  sub: RenewalSubscriptionWithRelations,
-  now: Date,
-): boolean {
-  return alreadySentInDeliveryPeriod(
-    sub.frequency,
-    sub.last_sent_at,
-    now,
-    sub.timezone || "Asia/Jerusalem",
-  );
 }

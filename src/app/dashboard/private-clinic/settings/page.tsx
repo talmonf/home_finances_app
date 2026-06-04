@@ -25,10 +25,17 @@ import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { updateMyGoogleCalendarSettings } from "@/app/dashboard/user-preferences-actions";
 import { GoogleCalendarConnectionControls } from "./google-calendar-connection-controls";
+import { ClinicDigestEmailSection } from "./clinic-digest-email-section";
 
 export const dynamic = "force-dynamic";
 
-type Search = { saved?: string; error?: string; modal?: string };
+type Search = {
+  saved?: string;
+  error?: string;
+  modal?: string;
+  digest?: string;
+  reason?: string;
+};
 
 export default async function PrivateClinicSettingsPage({
   searchParams,
@@ -174,6 +181,17 @@ export default async function PrivateClinicSettingsPage({
           </div>
         </form>
       </section>
+
+      {session?.user?.isSuperAdmin ? null : (
+        <ClinicDigestEmailSection
+          searchParams={{
+            digest: sp.digest,
+            reason: sp.reason,
+          }}
+          userEmail={currentUser?.email ?? ""}
+          uiLanguage={uiLanguage === "he" ? "he" : "en"}
+        />
+      )}
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.pageTitle}</h2>

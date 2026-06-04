@@ -3,6 +3,7 @@ import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { renewalEmailMiddleSegments } from "@/lib/email/renewal-email-line";
 import { dateOnlyLocal, RENEWAL_CATEGORY_ORDER, type RenewalRow } from "@/lib/upcoming-renewals/compute";
 import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
+export { getAppBaseUrl } from "@/lib/email/app-base-url";
 
 export type RenderRenewalsEmailParams = {
   rows: RenewalRow[];
@@ -29,14 +30,6 @@ function sortCategories(cats: string[]): string[] {
     if (ib === -1) return -1;
     return ia - ib;
   });
-}
-
-export function getAppBaseUrl(): string {
-  const fromAuth = process.env.NEXTAUTH_URL?.trim().replace(/\/$/, "");
-  if (fromAuth) return fromAuth;
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://localhost:3000";
 }
 
 export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {

@@ -1,0 +1,239 @@
+import { prisma } from "@/lib/auth";
+import { endOfDaysAheadWindow } from "@/lib/digest-email/schedule";
+import { formatJobDisplayLabel } from "@/lib/job-label";
+import {
+  jobWherePrivateClinicScoped,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
+import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
+import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import type { TherapyVisitType } from "@/generated/prisma/client";
+
+export type ClinicDigestAppointmentRow = {
+  id: string;
+  startAt: Date;
+  clientName: string;
+  jobLabel: string;
+  visitType: TherapyVisitType;
+};
+
+export type ClinicDigestVisitRow = {
+  clientId: string;
+  name: string;
+  jobLabel: string;
+  programLabel: string;
+  kupatHolimLabel: string;
+  familyName: string | null;
+  lastVisit: Date | null;
+  nextDue: Date;
+  isOverdue: boolean;
+  isDueToday: boolean;
+  nextAppointment: { id: string; startAt: Date } | null;
+};
+
+export type ClinicDigestNeedsFirstVisitRow = {
+  clientId: string;
+  name: string;
+  nextAppointment: { id: string; startAt: Date } | null;
+};
+
+export type ClinicDigestData = {
+  appointments: ClinicDigestAppointmentRow[];
+  visits: ClinicDigestVisitRow[];
+  needsFirstVisit: ClinicDigestNeedsFirstVisitRow[];
+};
+
+const APPOINTMENTS_CAP = 100;
+
+function clientDisplayName(firstName: string, lastName: string | null): string {
+  return [firstName, lastName].filter(Boolean).join(" ") || firstName;
+}
+
+function kupatHolimLabel(
+  kupat: string | null,
+  labels: { none: string; clalit: string; maccabi: string; meuhedet: string; leumit: string },
+): string {
+  switch (kupat) {
+    case "clalit":
+      return labels.clalit;
+    case "maccabi":
+      return labels.maccabi;
+    case "meuhedet":
+      return labels.meuhedet;
+    case "leumit":
+      return labels.leumit;
+    default:
+      return labels.none;
+  }
+}
+
+export async function computeClinicDigestData(args: {
+  householdId: string;
+  familyMemberId: string | null;
+  now: Date;
+  daysAhead: number;
+  timezone: string;
+  kupatLabels: {
+    none: string;
+    clalit: string;
+    maccabi: string;
+    meuhedet: string;
+    leumit: string;
+  };
+  noneLabel: string;
+}): Promise<ClinicDigestData> {
+  const { householdId, familyMemberId, now, daysAhead, timezone, kupatLabels, noneLabel } = args;
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
+  const windowEnd = endOfDaysAheadWindow(now, daysAhead, timezone);
+
+  const appointmentsRaw = await prisma.therapy_appointments.findMany({
+    where: {
+      household_id: householdId,
+      job: jobScope,
+      status: "scheduled",
+      start_at: { gte: now, lte: windowEnd },
+    },
+    orderBy: { start_at: "asc" },
+    take: APPOINTMENTS_CAP,
+    include: { client: true, job: true },
+  });
+
+  const appointments: ClinicDigestAppointmentRow[] = appointmentsRaw.map((a) => ({
+    id: a.id,
+    startAt: a.start_at,
+    clientName: clientDisplayName(a.client.first_name, a.client.last_name),
+    jobLabel: formatJobDisplayLabel(a.job),
+    visitType: a.visit_type,
+  }));
+
+  const clients = await prisma.therapy_clients.findMany({
+    where: {
+      household_id: householdId,
+      is_active: true,
+      visits_per_period_count: { not: null },
+      visits_per_period_weeks: { not: null },
+      ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+    },
+    orderBy: [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }],
+    include: {
+      default_job: true,
+      default_program: true,
+      family: true,
+    },
+  });
+
+  const today = startOfTodayLocal();
+  const clientIds = clients.map((x) => x.id);
+
+  const scheduledAppointments =
+    clientIds.length > 0
+      ? await prisma.therapy_appointments.findMany({
+          where: {
+            household_id: householdId,
+            client_id: { in: clientIds },
+            status: "scheduled",
+          },
+          orderBy: [{ start_at: "asc" }],
+          select: { id: true, client_id: true, start_at: true },
+        })
+      : [];
+
+  const nextAppointmentByClientId = new Map<string, { id: string; startAt: Date }>();
+  for (const appointment of scheduledAppointments) {
+    if (!nextAppointmentByClientId.has(appointment.client_id)) {
+      nextAppointmentByClientId.set(appointment.client_id, {
+        id: appointment.id,
+        startAt: appointment.start_at,
+      });
+    }
+  }
+
+  const lastTreatmentRows =
+    clientIds.length > 0
+      ? await prisma.therapy_treatments.groupBy({
+          by: ["client_id"],
+          where: {
+            household_id: householdId,
+            client_id: { in: clientIds },
+          },
+          _max: { occurred_at: true },
+        })
+      : [];
+
+  const lastVisitAtByClientId = new Map(
+    lastTreatmentRows.map((row) => [row.client_id, row._max.occurred_at]),
+  );
+
+  const visits: ClinicDigestVisitRow[] = [];
+  const needsFirstVisit: ClinicDigestNeedsFirstVisitRow[] = [];
+
+  for (const row of clients) {
+    const vc = row.visits_per_period_count;
+    const vw = row.visits_per_period_weeks;
+    if (vc == null || vw == null) continue;
+
+    const name = clientDisplayName(row.first_name, row.last_name);
+    const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+    const lastAt = lastVisitAtByClientId.get(row.id);
+
+    if (!lastAt) {
+      if (!row.start_date) {
+        needsFirstVisit.push({ clientId: row.id, name, nextAppointment });
+        continue;
+      }
+
+      const nextDue = dateOnlyLocal(row.start_date);
+      const nextDay = dateOnlyLocal(nextDue);
+      visits.push({
+        clientId: row.id,
+        name,
+        jobLabel: formatJobDisplayLabel(row.default_job),
+        programLabel: row.default_program?.name ?? noneLabel,
+        kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
+        familyName: row.family?.name ?? null,
+        lastVisit: null,
+        nextDue,
+        isOverdue: nextDay.getTime() < today.getTime(),
+        isDueToday: nextDay.getTime() === today.getTime(),
+        nextAppointment,
+      });
+      continue;
+    }
+
+    const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
+    const nextDay = dateOnlyLocal(nextDue);
+    visits.push({
+      clientId: row.id,
+      name,
+      jobLabel: formatJobDisplayLabel(row.default_job),
+      programLabel: row.default_program?.name ?? noneLabel,
+      kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
+      familyName: row.family?.name ?? null,
+      lastVisit: lastAt,
+      nextDue,
+      isOverdue: nextDay.getTime() < today.getTime(),
+      isDueToday: nextDay.getTime() === today.getTime(),
+      nextAppointment,
+    });
+  }
+
+  visits.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+
+  return { appointments, visits, needsFirstVisit };
+}
+
+/** Resolve family member id for digest scoping. */
+export async function resolveFamilyMemberIdForUser(
+  userId: string,
+  householdId: string,
+): Promise<string | null> {
+  const user = await prisma.users.findFirst({
+    where: { id: userId, household_id: householdId, is_active: true },
+    select: { family_member_id: true },
+  });
+  return user?.family_member_id ?? null;
+}
+
+export function digestItemCount(data: ClinicDigestData): number {
+  return data.appointments.length + data.visits.length + data.needsFirstVisit.length;
+}
