@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { renderClinicDigestEmail } from "@/lib/email/render-clinic-digest-email";
 
 const copy = {
-  intro: "Intro",
   sectionAppointments: "Appointments",
   sectionVisits: "Upcoming visits",
   sectionNeedsFirstVisit: "Needs first visit",

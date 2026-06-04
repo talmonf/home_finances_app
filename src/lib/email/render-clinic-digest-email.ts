@@ -13,7 +13,6 @@ export type RenderClinicDigestEmailParams = {
   baseUrl: string;
   daysAhead: number;
   copy: {
-    intro: string;
     sectionAppointments: string;
     sectionVisits: string;
     sectionNeedsFirstVisit: string;
@@ -71,16 +70,15 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
   const totalItems = apptCount + data.visits.length + data.needsFirstVisit.length;
   if (totalItems === 0) {
     const html = `<!DOCTYPE html><html dir="${dir}"><head><meta charset="utf-8"></head><body style="font-family:system-ui,sans-serif;margin:16px;text-align:${align};direction:${dir};">
-<p>${escapeHtml(copy.intro)}</p>
 <p><strong>${escapeHtml(copy.allClear)}</strong></p>
 <p><a href="${escapeAttr(appointmentsUrl)}">${escapeHtml(copy.openAppointments)}</a> · <a href="${escapeAttr(visitsUrl)}">${escapeHtml(copy.openUpcomingVisits)}</a></p>
 </body></html>`;
-    const text = `${copy.intro}\n\n${copy.allClear}\n\n${copy.openAppointments}: ${appointmentsUrl}\n${copy.openUpcomingVisits}: ${visitsUrl}\n`;
+    const text = `${copy.allClear}\n\n${copy.openAppointments}: ${appointmentsUrl}\n${copy.openUpcomingVisits}: ${visitsUrl}\n`;
     return { subject, html, text };
   }
 
-  let textBody = `${copy.intro}\n\n`;
-  const htmlParts: string[] = [`<p>${escapeHtml(copy.intro)}</p>`];
+  let textBody = "";
+  const htmlParts: string[] = [];
   htmlParts.push(
     `<p style="font-size:13px;color:#555;">${escapeHtml(he ? `תורים בטווח ${daysAhead} הימים הקרובים.` : `Appointments within the next ${daysAhead} days.`)}</p>`,
   );

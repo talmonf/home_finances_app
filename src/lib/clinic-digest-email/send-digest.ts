@@ -76,7 +76,6 @@ function buildEmailCopy(lang: ReturnType<typeof normalizeUiLanguage>) {
   return {
     language: language as "en" | "he",
     copy: {
-      intro: st.digestIntro,
       sectionAppointments: st.digestSectionAppointments,
       sectionVisits: uv.pageTitle,
       sectionNeedsFirstVisit: uv.sectionNeedsFirstVisit,
