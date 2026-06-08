@@ -732,6 +732,10 @@ export function privateClinicReceipts(lang: UiLanguage) {
     receiptNumber: p("Receipt #", "מס׳ קבלה"),
     totalAmount: p("Total amount", "סכום כולל"),
     grossAmount: p("Gross amount", "סכום ברוטו"),
+    grossAmountHint: p(
+      "Usually same as net; for employees, the amount on the salary receipt before deductions.",
+      "לרוב זהה לנטו; לשכירים — הסכום על קבלת השכר לפני ניכויים.",
+    ),
     netAmount: p("Net amount (bank deposit)", "סכום נטו (הפקדה לבנק)"),
     netAmountHint: p(
       "Gross should match allocated treatments/consultations/travel. Net should match the actual bank transaction.",

@@ -23,6 +23,7 @@ export type ReceiptModalLabels = {
   receiptNumber: string;
   date: string;
   grossAmount: string;
+  grossAmountHint: string;
   netAmount: string;
   netAmountHint: string;
   receiptKind: string;
@@ -249,6 +250,7 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.grossAmount}</label>
+            <p className="mt-0.5 text-xs text-slate-500">{labels.grossAmountHint}</p>
             <input
               name="total_amount"
               required

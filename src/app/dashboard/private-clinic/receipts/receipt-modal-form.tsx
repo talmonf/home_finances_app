@@ -58,6 +58,7 @@ export async function ReceiptModalForm({
     receiptNumber: labels.receiptNumber,
     date: labels.date,
     grossAmount: labels.grossAmount,
+    grossAmountHint: labels.grossAmountHint,
     netAmount: labels.netAmount,
     netAmountHint: labels.netAmountHint,
     receiptKind: labels.receiptKind,
