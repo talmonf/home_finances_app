@@ -31,6 +31,7 @@ import { ConsultationsAddButton } from "./consultations-add-button";
 import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
+import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
 
@@ -78,6 +79,11 @@ export async function ConsultationsPageContent({
   const c = privateClinicCommon(uiLanguage);
   const co = privateClinicConsultations(uiLanguage);
   const sp = searchParams ? await searchParams : {};
+  const clinicOnly = await householdUserOnlyPrivateClinicSection(
+    householdId,
+    session.user.id,
+    uiLanguage,
+  );
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
   const filters: ConsultationsListFilters = {
     job: sp.job?.trim() || "",
@@ -372,6 +378,7 @@ export async function ConsultationsPageContent({
             notes: c.notes,
             txNoneLinked: c.txNoneLinked,
           }}
+          clinicOnly={clinicOnly}
         />
       ) : null}
       {modalMode === "edit" && editConsultation ? (
@@ -431,6 +438,7 @@ export async function ConsultationsPageContent({
             notes: c.notes,
             txNoneLinked: c.txNoneLinked,
           }}
+          clinicOnly={clinicOnly}
         />
       ) : null}
       <PrivateClinicNavSegmentReporter path="/dashboard/private-clinic/consultations" />

@@ -17,6 +17,7 @@ import {
   isoYmdToHouseholdInputDisplay,
   parseHouseholdDateInputToIsoYmd,
 } from "@/lib/household-date-format";
+import { useUiLanguage } from "@/components/household-preferences-context";
 
 function isIsoYmd(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s.trim());
@@ -61,6 +62,8 @@ function HouseholdDateCalendarLauncher({
   allowEmptyPick: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const uiLanguage = useUiLanguage();
+  const todayLabel = uiLanguage === "he" ? "היום" : "Today";
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -124,6 +127,18 @@ function HouseholdDateCalendarLauncher({
               }}
               className="household-day-picker rounded-md text-sm"
             />
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-700"
+                onClick={() => {
+                  onPick(localDateToIsoYmd(new Date()));
+                  setOpen(false);
+                }}
+              >
+                {todayLabel}
+              </button>
+            </div>
           </div>,
           document.body,
         )

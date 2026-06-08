@@ -58,6 +58,7 @@ export function ConsultationModalForm({
   transactionOptions,
   labels,
   initial,
+  clinicOnly = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   deleteAction?: (formData: FormData) => void | Promise<void>;
@@ -74,9 +75,16 @@ export function ConsultationModalForm({
   transactionOptions: TherapyTransactionOption[];
   labels: Labels;
   initial?: InitialConsultation;
+  /** When true, omit bank link UI (clinic-only households). */
+  clinicOnly?: boolean;
 }) {
   return (
-    <DashboardModal title={labels.title} closeHref={closeHref} closeLabel={labels.cancel} maxWidthClassName="max-w-screen-2xl">
+    <DashboardModal
+      title={labels.title}
+      closeHref={closeHref}
+      closeLabel={labels.cancel}
+      maxWidthClassName="max-w-3xl"
+    >
       <GlobalFormSubmitFeedback />
       <form action={action} className="grid gap-3 md:grid-cols-2">
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
@@ -89,9 +97,9 @@ export function ConsultationModalForm({
             name="job_id"
             required
             defaultValue={defaultClinicJobId(jobs, initial?.job_id)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{labels.job}</option>
+            <option value="">{uiLanguage === "he" ? "בחר..." : "Select..."}</option>
             {jobs.map((job) => (
               <option key={job.id} value={job.id}>
                 {job.label}
@@ -105,9 +113,9 @@ export function ConsultationModalForm({
             name="consultation_type_id"
             required
             defaultValue={initial?.consultation_type_id ?? ""}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
-            <option value="">{labels.type}</option>
+            <option value="">{uiLanguage === "he" ? "בחר..." : "Select..."}</option>
             {types.map((type) => (
               <option key={type.id} value={type.id}>
                 {therapyLocalizedCategoryName(type, uiLanguage)}
@@ -147,16 +155,6 @@ export function ConsultationModalForm({
             />
           </div>
         </div>
-        <div className="md:col-span-2">
-          <TherapyTransactionLinkSelect
-            name="linked_transaction_id"
-            householdId={householdId}
-            currentId={initial?.linked_transaction_id || null}
-            label={labels.linkedTx}
-            noneOptionLabel={labels.txNoneLinked}
-            transactionOptions={transactionOptions}
-          />
-        </div>
         <ConsultationModalParticipantsPicker
           clients={clients}
           initialParticipantIds={initial?.participant_ids ?? []}
@@ -175,6 +173,20 @@ export function ConsultationModalForm({
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </div>
+        {!clinicOnly ? (
+          <div className="md:col-span-2">
+            <TherapyTransactionLinkSelect
+              name="linked_transaction_id"
+              householdId={householdId}
+              currentId={initial?.linked_transaction_id || null}
+              label={labels.linkedTx}
+              noneOptionLabel={labels.txNoneLinked}
+              transactionOptions={transactionOptions}
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="linked_transaction_id" value={initial?.linked_transaction_id ?? ""} />
+        )}
         <div className="md:col-span-2 flex flex-wrap items-center gap-3">
           <PendingSubmitButtonWithSpinner
             label={labels.save}

@@ -63,6 +63,14 @@ export function ConsultationsListClient({
 
   const rowCount = useMemo(() => rows.length, [rows]);
 
+  // When navigating (e.g. after submitting the modal), Next may update props without
+  // fully remounting this client component. Keep the list state in sync.
+  useEffect(() => {
+    setRows(initialRows);
+    setCursor(initialCursor);
+    setHasMore(Boolean(initialCursor));
+  }, [initialRows, initialCursor]);
+
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !cursor) return;
     setLoadingMore(true);
