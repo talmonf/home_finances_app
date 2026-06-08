@@ -6,7 +6,10 @@ import { getHouseholdEnabledSections } from "@/lib/household-sections";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { mergePrivateClinicNavVisibility, PRIVATE_CLINIC_NAV_ITEMS } from "@/lib/private-clinic-nav";
 import { UI_LANGUAGES, UI_LANGUAGE_LABELS } from "@/lib/ui-language";
+import { Suspense } from "react";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
+import { ConsultationTypeDeleteForm } from "@/app/dashboard/private-clinic/settings/consultation-type-delete-form";
+import { SettingsConsultationTypeFlashPopup } from "@/app/dashboard/private-clinic/settings/settings-consultation-type-flash-popup";
 import {
   createTherapyConsultationType,
   createTherapyExpenseCategory,
@@ -99,7 +102,8 @@ export default async function EditHouseholdPage({
     }),
     prisma.therapy_consultation_types.findMany({
       where: { household_id: householdId },
-      orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      orderBy: [{ is_active: "desc" }, { sort_order: "asc" }, { name: "asc" }],
+      include: { _count: { select: { consultations: true } } },
     }),
     prisma.therapy_expense_categories.findMany({
       where: { household_id: householdId },
@@ -141,6 +145,17 @@ export default async function EditHouseholdPage({
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
+      <Suspense fallback={null}>
+        <SettingsConsultationTypeFlashPopup
+          messages={{
+            saved: "Consultation type saved.",
+            savedRemoved: "Consultation type removed.",
+            savedArchived:
+              "Consultation type archived. It is hidden from new consultations; existing records are unchanged.",
+            error: "Could not complete the action.",
+          }}
+        />
+      </Suspense>
       <HouseholdEditStatusPortal saved={Boolean(resolvedSearchParams?.saved)} />
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <header className="space-y-3">
@@ -612,7 +627,7 @@ export default async function EditHouseholdPage({
                 {consultationTypes.map((row) => (
                   <li
                     key={row.id}
-                    className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2"
+                    className={`flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2${row.is_active ? "" : " opacity-60"}`}
                   >
                     <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="household_id" value={householdId} />
@@ -643,14 +658,22 @@ export default async function EditHouseholdPage({
                     </form>
                     {row.is_system ? (
                       <span className="text-xs text-slate-600">(default)</span>
+                    ) : !row.is_active ? (
+                      <span className="text-xs text-slate-600">(archived)</span>
                     ) : (
-                      <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+                      <ConsultationTypeDeleteForm
+                        action={deleteTherapyConsultationType}
+                        usageCount={row._count.consultations}
+                        confirmRemove="Remove this consultation type? This cannot be undone."
+                        confirmArchive="This type is used by existing consultations. It will be archived: hidden from new consultations, but kept on past records."
+                        className="inline"
+                      >
                         <input type="hidden" name="household_id" value={householdId} />
                         <input type="hidden" name="id" value={row.id} />
                         <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                           Remove
                         </button>
-                      </ConfirmDeleteForm>
+                      </ConsultationTypeDeleteForm>
                     )}
                   </li>
                 ))}

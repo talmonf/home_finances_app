@@ -343,6 +343,7 @@ export async function GET() {
         name_he: c.name_he ?? "",
         sort_order: c.sort_order,
         is_system: c.is_system,
+        is_active: c.is_active,
       })),
     ),
     sheet(

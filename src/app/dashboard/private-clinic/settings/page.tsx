@@ -20,12 +20,15 @@ import {
   updateTherapyExpenseCategory,
   updateTherapyNoteLabelsFromDashboard,
 } from "../actions";
+import { Suspense } from "react";
 import { privateClinicCommon, privateClinicSettings } from "@/lib/private-clinic-i18n";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { updateMyGoogleCalendarSettings } from "@/app/dashboard/user-preferences-actions";
 import { GoogleCalendarConnectionControls } from "./google-calendar-connection-controls";
 import { ClinicDigestEmailSection } from "./clinic-digest-email-section";
+import { ConsultationTypeDeleteForm } from "./consultation-type-delete-form";
+import { SettingsConsultationTypeFlashPopup } from "./settings-consultation-type-flash-popup";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +76,8 @@ export default async function PrivateClinicSettingsPage({
     }),
     prisma.therapy_consultation_types.findMany({
       where: { household_id: householdId },
-      orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+      orderBy: [{ is_active: "desc" }, { sort_order: "asc" }, { name: "asc" }],
+      include: { _count: { select: { consultations: true } } },
     }),
     prisma.therapy_expense_categories.findMany({
       where: { household_id: householdId },
@@ -108,9 +112,7 @@ export default async function PrivateClinicSettingsPage({
       : sp.error === "cat-in-use"
         ? ({ kind: "err" as const, text: st.errCatInUse })
         : sp.error === "ctype"
-          ? ({ kind: "err" as const, text: st.errGeneric })
-          : sp.error === "ctype-in-use"
-            ? ({ kind: "err" as const, text: st.errCtypeInUse })
+          ? null
             : sp.saved === "google-connected"
               ? ({ kind: "ok" as const, text: st.googleConnectedSuccess })
               : sp.saved === "google"
@@ -119,12 +121,22 @@ export default async function PrivateClinicSettingsPage({
               ? ({ kind: "ok" as const, text: c.saved })
               : sp.saved === "cat"
                 ? ({ kind: "ok" as const, text: st.savedExpenseCat })
-                : sp.saved === "ctype"
-                  ? ({ kind: "ok" as const, text: st.savedConsultType })
+                : sp.saved === "ctype" || sp.saved === "ctype-archived" || sp.saved === "ctype-removed"
+                  ? null
                   : null;
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <SettingsConsultationTypeFlashPopup
+          messages={{
+            saved: st.savedConsultType,
+            savedRemoved: st.savedConsultTypeRemoved,
+            savedArchived: st.savedConsultTypeArchived,
+            error: st.errGeneric,
+          }}
+        />
+      </Suspense>
       {flash ? (
         <p
           className={
@@ -294,7 +306,7 @@ export default async function PrivateClinicSettingsPage({
           {consultationTypes.map((row) => (
             <li
               key={row.id}
-              className="rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:p-3"
+              className={`rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:p-3${row.is_active ? "" : " opacity-60"}`}
             >
               <form
                 action={updateTherapyConsultationType}
@@ -328,13 +340,21 @@ export default async function PrivateClinicSettingsPage({
               <div className="mt-1.5 flex items-center justify-between sm:mt-2">
                 {row.is_system ? (
                   <span className="text-xs text-slate-600">{st.defaultTag}</span>
+                ) : !row.is_active ? (
+                  <span className="text-xs text-slate-600">{st.archivedTag}</span>
                 ) : (
-                  <ConfirmDeleteForm action={deleteTherapyConsultationType} className="inline">
+                  <ConsultationTypeDeleteForm
+                    action={deleteTherapyConsultationType}
+                    usageCount={row._count.consultations}
+                    confirmRemove={st.confirmRemoveConsultType}
+                    confirmArchive={st.confirmArchiveConsultType}
+                    className="inline"
+                  >
                     <input type="hidden" name="id" value={row.id} />
                     <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
                       {st.remove}
                     </button>
-                  </ConfirmDeleteForm>
+                  </ConsultationTypeDeleteForm>
                 )}
               </div>
             </li>

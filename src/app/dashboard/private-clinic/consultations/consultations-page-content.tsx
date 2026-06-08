@@ -139,9 +139,19 @@ export async function ConsultationsPageContent({
     prisma.therapy_consultation_types.findMany({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, name_he: true },
+      select: { id: true, name: true, name_he: true, is_active: true },
     }),
   ]);
+
+  const activeConsultationTypes = consultationTypes.filter((t) => t.is_active);
+  const consultationTypesForPicker = (currentTypeId?: string) => {
+    if (!currentTypeId) return activeConsultationTypes;
+    const current = consultationTypes.find((t) => t.id === currentTypeId);
+    if (current && !current.is_active && !activeConsultationTypes.some((t) => t.id === current.id)) {
+      return [...activeConsultationTypes, current];
+    }
+    return activeConsultationTypes;
+  };
 
   const editId = sp.edit_id?.trim() || "";
   const editConsultation =
@@ -374,7 +384,7 @@ export async function ConsultationsPageContent({
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
           programs={modalPrograms.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
-          types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          types={consultationTypesForPicker().map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
           clients={modalClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
@@ -422,7 +432,11 @@ export async function ConsultationsPageContent({
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
           programs={modalPrograms.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
-          types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          types={consultationTypesForPicker(editConsultation.consultation_type_id).map((t) => ({
+            id: t.id,
+            name: t.name,
+            name_he: t.name_he,
+          }))}
           clients={modalClients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),

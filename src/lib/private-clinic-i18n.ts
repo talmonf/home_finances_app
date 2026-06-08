@@ -1255,11 +1255,21 @@ export function privateClinicSettings(lang: UiLanguage) {
     addExpenseCategoryBtn: p("Add category", "הוספת קטגוריה"),
     newCatName: p("New category name", "שם קטגוריה חדשה"),
     savedConsultType: p("Consultation type saved.", "סוג הייעוץ נשמר."),
-    savedExpenseCat: p("Expense category saved.", "קטגוריית ההוצאה נשמרה."),
-    errCtypeInUse: p(
-      "Cannot delete consultation type because it is already used by one or more consultations.",
-      "לא ניתן למחוק את סוג הייעוץ כי הוא כבר בשימוש.",
+    savedConsultTypeRemoved: p("Consultation type removed.", "סוג הייעוץ הוסר."),
+    savedConsultTypeArchived: p(
+      "Consultation type archived. It is hidden from new consultations; existing records are unchanged.",
+      "סוג הייעוץ הועבר לארכיון. הוא לא יופיע בייעוצים חדשים; הרשומות הקיימות נשארות ללא שינוי.",
     ),
+    archivedTag: p("(archived)", "(בארכיון)"),
+    confirmRemoveConsultType: p(
+      "Remove this consultation type? This cannot be undone.",
+      "להסיר את סוג הייעוץ? לא ניתן לבטל פעולה זו.",
+    ),
+    confirmArchiveConsultType: p(
+      "This type is used by existing consultations. It will be archived: hidden from new consultations, but kept on past records.",
+      "סוג זה בשימוש בייעוצים קיימים. הוא יועבר לארכיון: לא יופיע בייעוצים חדשים, אך יישמר ברשומות קודמות.",
+    ),
+    savedExpenseCat: p("Expense category saved.", "קטגוריית ההוצאה נשמרה."),
     errCatInUse: p(
       "Cannot delete expense category because it is already used by one or more expenses.",
       "לא ניתן למחוק את קטגוריית ההוצאה כי היא כבר בשימוש.",

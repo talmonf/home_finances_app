@@ -33,7 +33,7 @@ export async function importTherapyWorkbook(params: {
 
   const assertConsultationType = async (typeId: string) => {
     const t = await prisma.therapy_consultation_types.findFirst({
-      where: { id: typeId, household_id: householdId },
+      where: { id: typeId, household_id: householdId, is_active: true },
       select: { id: true },
     });
     return t?.id ?? null;
@@ -479,11 +479,13 @@ export async function importTherapyWorkbook(params: {
             name_he: str(r.name_he) || null,
             sort_order: Number(r.sort_order) || 0,
             is_system: str(r.is_system) === "true",
+            is_active: str(r.is_active) !== "false",
           },
           update: {
             name,
             name_he: str(r.name_he) || null,
             sort_order: Number(r.sort_order) || 0,
+            is_active: str(r.is_active) !== "false",
           },
         });
       } else {

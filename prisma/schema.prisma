@@ -2288,6 +2288,7 @@ model therapy_consultation_types {
   name_he      String?
   sort_order   Int      @default(0)
   is_system    Boolean  @default(false)
+  is_active    Boolean  @default(true)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
