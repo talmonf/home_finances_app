@@ -1237,8 +1237,8 @@ export function privateClinicSettings(lang: UiLanguage) {
       p(`Note ${n} label`, `כותרת להערה ${n}`),
     consultTypesTitle: p("Consultation / meeting types", "סוגי ייעוץ / פגישה"),
     consultTypesHelp: p(
-      "Used when logging meetings on the Consultations page (separate from visit types on sessions).",
-      "משמש ברישום פגישות בעמוד ייעוצים (נפרד מסוגי ביקור במפגשים).",
+      "Used when logging meetings on the Consultations page (separate from visit types on sessions). The English label is shown as entered when the interface language is English.",
+      "משמש ברישום פגישות בעמוד ייעוצים (נפרד מסוגי ביקור במפגשים). התווית באנגלית מוצגת כפי שהוזנה כששפת הממשק היא אנגלית.",
     ),
     defaultTag: p("(default)", "(ברירת מחדל)"),
     remove: p("Remove", "הסרה"),
@@ -1246,8 +1246,8 @@ export function privateClinicSettings(lang: UiLanguage) {
     newTypeName: p("New type name", "שם סוג חדש"),
     expenseCatsTitle: p("Expense categories", "קטגוריות הוצאה"),
     expenseCatsHelp: p(
-      "English names are used in exports; Hebrew is shown when the household interface language is Hebrew.",
-      "שמות באנגלית משמשים בייצוא; עברית מוצגת כששפת הממשק של המשקה היא עברית.",
+      "English labels are shown as entered when the interface language is English; Hebrew when it is Hebrew.",
+      "תוויות באנגלית מוצגות כפי שהוזנו כששפת הממשק היא אנגלית; בעברית כששפת הממשק היא עברית.",
     ),
     fieldEnglish: p("English", "אנגלית"),
     fieldHebrew: p("Hebrew", "עברית"),

@@ -1,6 +1,6 @@
 import type { UiLanguage } from "@/lib/ui-language";
 
-/** Consultation types and expense categories: show Hebrew when UI is Hebrew and `name_he` is set. */
+/** Consultation types and expense categories: show Hebrew when UI is Hebrew and `name_he` is set; otherwise English as stored. */
 export function therapyLocalizedCategoryName(
   row: { name: string | null | undefined; name_he: string | null },
   lang: UiLanguage,
@@ -10,12 +10,7 @@ export function therapyLocalizedCategoryName(
     const h = row.name_he?.trim();
     if (h) return h;
   }
-  if (!canonical) return "—";
-  return canonical
-    .replaceAll("_", " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return canonical || "—";
 }
 
 /** Treatment note field titles: English is canonical; Hebrew optional for Hebrew UI. */
