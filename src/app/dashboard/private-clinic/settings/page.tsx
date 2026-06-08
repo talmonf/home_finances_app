@@ -14,9 +14,7 @@ import { redirect } from "next/navigation";
 import {
   createTherapyConsultationType,
   createTherapyExpenseCategory,
-  deleteTherapyConsultationType,
   deleteTherapyExpenseCategory,
-  updateTherapyConsultationType,
   updateTherapyExpenseCategory,
   updateTherapyNoteLabelsFromDashboard,
 } from "../actions";
@@ -27,7 +25,7 @@ import { DashboardModal } from "@/components/dashboard-modal";
 import { updateMyGoogleCalendarSettings } from "@/app/dashboard/user-preferences-actions";
 import { GoogleCalendarConnectionControls } from "./google-calendar-connection-controls";
 import { ClinicDigestEmailSection } from "./clinic-digest-email-section";
-import { ConsultationTypeDeleteForm } from "./consultation-type-delete-form";
+import { ConsultationTypeEditRow } from "./consultation-type-edit-row";
 import { SettingsConsultationTypeFlashPopup } from "./settings-consultation-type-flash-popup";
 
 export const dynamic = "force-dynamic";
@@ -304,60 +302,29 @@ export default async function PrivateClinicSettingsPage({
 
         <ul className="mb-3 mt-3 space-y-2 text-sm sm:mb-4 sm:mt-4">
           {consultationTypes.map((row) => (
-            <li
+            <ConsultationTypeEditRow
               key={row.id}
-              className={`rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 sm:p-3${row.is_active ? "" : " opacity-60"}`}
-            >
-              <form
-                action={updateTherapyConsultationType}
-                className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-              >
-                <input type="hidden" name="id" value={row.id} />
-                <div>
-                  <label className="mb-1 block text-xs text-slate-500">{st.fieldEnglish}</label>
-                  <input
-                    name="name"
-                    defaultValue={row.name}
-                    required
-                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-500">{st.fieldHebrew}</label>
-                  <input
-                    name="name_he"
-                    defaultValue={row.name_he ?? ""}
-                    className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-slate-600 sm:mt-auto"
-                >
-                  {c.save}
-                </button>
-              </form>
-              <div className="mt-1.5 flex items-center justify-between sm:mt-2">
-                {row.is_system ? (
-                  <span className="text-xs text-slate-600">{st.defaultTag}</span>
-                ) : !row.is_active ? (
-                  <span className="text-xs text-slate-600">{st.archivedTag}</span>
-                ) : (
-                  <ConsultationTypeDeleteForm
-                    action={deleteTherapyConsultationType}
-                    usageCount={row._count.consultations}
-                    confirmRemove={st.confirmRemoveConsultType}
-                    confirmArchive={st.confirmArchiveConsultType}
-                    className="inline"
-                  >
-                    <input type="hidden" name="id" value={row.id} />
-                    <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                      {st.remove}
-                    </button>
-                  </ConsultationTypeDeleteForm>
-                )}
-              </div>
-            </li>
+              id={row.id}
+              initialName={row.name}
+              initialNameHe={row.name_he ?? ""}
+              isActive={row.is_active}
+              isSystem={row.is_system}
+              usageCount={row._count.consultations}
+              labels={{
+                fieldEnglish: st.fieldEnglish,
+                fieldHebrew: st.fieldHebrew,
+                save: c.save,
+                remove: st.remove,
+                defaultTag: st.defaultTag,
+                archivedTag: st.archivedTag,
+                unsavedChanges: st.unsavedTypeChanges,
+                saved: c.saved,
+                saveFailed: st.errGeneric,
+                saving: st.savingType,
+                confirmRemove: st.confirmRemoveConsultType,
+                confirmArchive: st.confirmArchiveConsultType,
+              }}
+            />
           ))}
         </ul>
         <a

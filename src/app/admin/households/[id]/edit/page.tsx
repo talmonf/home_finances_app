@@ -8,14 +8,12 @@ import { mergePrivateClinicNavVisibility, PRIVATE_CLINIC_NAV_ITEMS } from "@/lib
 import { UI_LANGUAGES, UI_LANGUAGE_LABELS } from "@/lib/ui-language";
 import { Suspense } from "react";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { ConsultationTypeDeleteForm } from "@/app/dashboard/private-clinic/settings/consultation-type-delete-form";
+import { ConsultationTypeEditRow } from "@/app/dashboard/private-clinic/settings/consultation-type-edit-row";
 import { SettingsConsultationTypeFlashPopup } from "@/app/dashboard/private-clinic/settings/settings-consultation-type-flash-popup";
 import {
   createTherapyConsultationType,
   createTherapyExpenseCategory,
-  deleteTherapyConsultationType,
   deleteTherapyExpenseCategory,
-  updateTherapyConsultationType,
   updateTherapyExpenseCategory,
 } from "@/app/dashboard/private-clinic/actions";
 import {
@@ -625,57 +623,31 @@ export default async function EditHouseholdPage({
               </p>
               <ul className="mb-4 space-y-2 text-sm">
                 {consultationTypes.map((row) => (
-                  <li
+                  <ConsultationTypeEditRow
                     key={row.id}
-                    className={`flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2${row.is_active ? "" : " opacity-60"}`}
-                  >
-                    <form action={updateTherapyConsultationType} className="flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="household_id" value={householdId} />
-                      <input type="hidden" name="id" value={row.id} />
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-500">English</label>
-                        <input
-                          name="name"
-                          defaultValue={row.name}
-                          required
-                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-500">Hebrew</label>
-                        <input
-                          name="name_he"
-                          defaultValue={row.name_he ?? ""}
-                          className="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-600"
-                      >
-                        Save
-                      </button>
-                    </form>
-                    {row.is_system ? (
-                      <span className="text-xs text-slate-600">(default)</span>
-                    ) : !row.is_active ? (
-                      <span className="text-xs text-slate-600">(archived)</span>
-                    ) : (
-                      <ConsultationTypeDeleteForm
-                        action={deleteTherapyConsultationType}
-                        usageCount={row._count.consultations}
-                        confirmRemove="Remove this consultation type? This cannot be undone."
-                        confirmArchive="This type is used by existing consultations. It will be archived: hidden from new consultations, but kept on past records."
-                        className="inline"
-                      >
-                        <input type="hidden" name="household_id" value={householdId} />
-                        <input type="hidden" name="id" value={row.id} />
-                        <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                          Remove
-                        </button>
-                      </ConsultationTypeDeleteForm>
-                    )}
-                  </li>
+                    id={row.id}
+                    initialName={row.name}
+                    initialNameHe={row.name_he ?? ""}
+                    isActive={row.is_active}
+                    isSystem={row.is_system}
+                    usageCount={row._count.consultations}
+                    householdId={householdId}
+                    labels={{
+                      fieldEnglish: "English",
+                      fieldHebrew: "Hebrew",
+                      save: "Save",
+                      remove: "Remove",
+                      defaultTag: "(default)",
+                      archivedTag: "(archived)",
+                      unsavedChanges: "Unsaved changes",
+                      saved: "Saved.",
+                      saveFailed: "Could not complete the action.",
+                      saving: "Saving…",
+                      confirmRemove: "Remove this consultation type? This cannot be undone.",
+                      confirmArchive:
+                        "This type is used by existing consultations. It will be archived: hidden from new consultations, but kept on past records.",
+                    }}
+                  />
                 ))}
               </ul>
               <form action={createTherapyConsultationType} className="flex flex-wrap items-end gap-2">

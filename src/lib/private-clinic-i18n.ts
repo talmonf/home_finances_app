@@ -1261,6 +1261,8 @@ export function privateClinicSettings(lang: UiLanguage) {
       "סוג הייעוץ הועבר לארכיון. הוא לא יופיע בייעוצים חדשים; הרשומות הקיימות נשארות ללא שינוי.",
     ),
     archivedTag: p("(archived)", "(בארכיון)"),
+    unsavedTypeChanges: p("Unsaved changes", "יש שינויים שלא נשמרו"),
+    savingType: p("Saving…", "שומר…"),
     confirmRemoveConsultType: p(
       "Remove this consultation type? This cannot be undone.",
       "להסיר את סוג הייעוץ? לא ניתן לבטל פעולה זו.",

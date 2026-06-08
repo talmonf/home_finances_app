@@ -4479,15 +4479,53 @@ export async function updateTherapyConsultationType(formData: FormData) {
   redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=1");
 }
 
+export async function saveTherapyConsultationTypeInline(
+  id: string,
+  name: string,
+  name_he: string | null,
+  householdIdForAdmin?: string,
+): Promise<{ ok: true } | { ok: false }> {
+  const session = await getAuthSession();
+  let householdId: string;
+  let isSuperAdminContext = false;
+
+  if (session?.user?.isSuperAdmin && householdIdForAdmin) {
+    await requireSuperAdmin();
+    householdId = householdIdForAdmin;
+    isSuperAdminContext = true;
+  } else {
+    await requireHouseholdMember();
+    const currentHouseholdId = await getCurrentHouseholdId();
+    if (!currentHouseholdId) return { ok: false };
+    householdId = currentHouseholdId;
+  }
+
+  const trimmedName = name.trim();
+  if (!id || !trimmedName) return { ok: false };
+
+  const updated = await prisma.therapy_consultation_types.updateMany({
+    where: { id, household_id: householdId },
+    data: { name: trimmedName, name_he: name_he?.trim() || null },
+  });
+  if (updated.count === 0) return { ok: false };
+
+  revalidatePath(`${BASE}/consultations`);
+  revalidatePath(`${BASE}/settings`);
+  if (isSuperAdminContext) {
+    revalidatePath(`${ADMIN_HOUSEHOLDS}/${householdId}/edit`);
+  }
+  return { ok: true };
+}
+
 export async function deleteTherapyConsultationType(formData: FormData) {
   const { householdId, isSuperAdminContext } = await householdIdForTherapyHouseholdScopedForms(formData);
   const id = (formData.get("id") as string)?.trim() || "";
   if (!id) redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
   const type = await prisma.therapy_consultation_types.findFirst({
     where: { id, household_id: householdId },
-    select: { id: true, is_system: true, is_active: true },
+    select: { id: true, is_active: true },
   });
-  if (!type || type.is_system || !type.is_active) {
+  if (!type || !type.is_active) {
     redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "error=ctype");
   }
 
@@ -4496,7 +4534,7 @@ export async function deleteTherapyConsultationType(formData: FormData) {
   });
   if (usageCount > 0) {
     await prisma.therapy_consultation_types.updateMany({
-      where: { id, household_id: householdId, is_system: false },
+      where: { id, household_id: householdId },
       data: { is_active: false },
     });
     revalidatePath(`${BASE}/consultations`);
@@ -4508,7 +4546,7 @@ export async function deleteTherapyConsultationType(formData: FormData) {
   }
 
   await prisma.therapy_consultation_types.deleteMany({
-    where: { id, household_id: householdId, is_system: false },
+    where: { id, household_id: householdId },
   });
   revalidatePath(`${BASE}/consultations`);
   revalidatePath(`${BASE}/settings`);
