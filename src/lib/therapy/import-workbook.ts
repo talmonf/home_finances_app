@@ -507,17 +507,29 @@ export async function importTherapyWorkbook(params: {
   // Consultations
   for (const r of sheetRows(workbook, "Consultations")) {
     const job_id = str(r.job_id);
+    const program_id = str(r.program_id) || null;
     const consultation_type_id = str(r.consultation_type_id);
     const occurred_at = str(r.occurred_at);
     if (!job_id || !consultation_type_id || !occurred_at) continue;
     if (!(await assertJob(job_id))) continue;
     if (!(await assertConsultationType(consultation_type_id))) continue;
+    if (program_id) {
+      const prog = await prisma.therapy_service_programs.findFirst({
+        where: { id: program_id, household_id: householdId, job_id },
+        select: { id: true },
+      });
+      if (!prog) {
+        errors.push(`Consultations: program not found for job ${program_id}`);
+        continue;
+      }
+    }
     const incomeStr = str(r.income_amount);
     const costStr = str(r.cost_amount);
     try {
       const data = {
         household_id: householdId,
         job_id,
+        program_id,
         consultation_type_id,
         occurred_at: new Date(occurred_at),
         income_amount: incomeStr ? incomeStr : null,

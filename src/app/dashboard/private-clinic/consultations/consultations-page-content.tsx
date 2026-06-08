@@ -6,7 +6,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { privateClinicCommon, privateClinicConsultations } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicConsultations, privateClinicReceipts } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
   createTherapyConsultation,
@@ -16,7 +16,11 @@ import {
 import type { TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
-import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import {
+  jobWhereInPrivateClinicModule,
+  jobWherePrivateClinicScoped,
+  jobsWhereActiveForPrivateClinicPickers,
+} from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import {
   loadConsultationsCursorPage,
@@ -78,6 +82,7 @@ export async function ConsultationsPageContent({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const co = privateClinicConsultations(uiLanguage);
+  const r = privateClinicReceipts(uiLanguage);
   const sp = searchParams ? await searchParams : {};
   const clinicOnly = await householdUserOnlyPrivateClinicSection(
     householdId,
@@ -138,10 +143,20 @@ export async function ConsultationsPageContent({
     }),
   ]);
 
+  const editId = sp.edit_id?.trim() || "";
+  const editConsultation =
+    modalMode === "edit" && editId
+      ? await prisma.therapy_consultations.findFirst({
+          where: { id: editId, household_id: householdId, job: jobScope },
+          include: { participants: true },
+        })
+      : null;
+
   let modalClients: Array<{ id: string; first_name: string; last_name: string | null; is_active: boolean }> = [];
+  let modalPrograms: Array<{ id: string; job_id: string; name: string }> = [];
   let transactionOptions: ConsultationModalTxnRow[] = [];
   if (modalMode === "new" || modalMode === "edit") {
-    const [clientsR, txRows] = await Promise.all([
+    const [clientsR, programsR, txRows] = await Promise.all([
       prisma.therapy_clients.findMany({
         where: {
           household_id: householdId,
@@ -149,6 +164,23 @@ export async function ConsultationsPageContent({
         },
         orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
         select: { id: true, first_name: true, last_name: true, is_active: true },
+      }),
+      prisma.therapy_service_programs.findMany({
+        where: {
+          household_id: householdId,
+          OR: [
+            {
+              job: {
+                ...jobWhereInPrivateClinicModule,
+                ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+              },
+              is_active: true,
+            },
+            ...(editConsultation?.program_id ? [{ id: editConsultation.program_id }] : []),
+          ],
+        },
+        orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+        select: { id: true, job_id: true, name: true },
       }),
       prisma.transactions.findMany({
         where: { household_id: householdId },
@@ -164,6 +196,7 @@ export async function ConsultationsPageContent({
       }),
     ]);
     modalClients = clientsR;
+    modalPrograms = programsR;
     transactionOptions = txRows as ConsultationModalTxnRow[];
   }
   const filteredReceipt = filters.receipt
@@ -172,14 +205,6 @@ export async function ConsultationsPageContent({
         select: { id: true, receipt_number: true },
       })
     : null;
-  const editId = sp.edit_id?.trim() || "";
-  const editConsultation =
-    modalMode === "edit" && editId
-      ? await prisma.therapy_consultations.findFirst({
-          where: { id: editId, household_id: householdId, job: jobScope },
-          include: { participants: true },
-        })
-      : null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -322,6 +347,7 @@ export async function ConsultationsPageContent({
               when: c.when,
               type: c.type,
               job: c.job,
+              program: c.program,
               clients: co.clients,
               amount: c.amount,
               receipt: co.receipt,
@@ -347,6 +373,7 @@ export async function ConsultationsPageContent({
           householdId={householdId}
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          programs={modalPrograms.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
           types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
           clients={modalClients.map((cl) => ({
             id: cl.id,
@@ -367,6 +394,9 @@ export async function ConsultationsPageContent({
             deleting: uiLanguage === "he" ? "מוחק..." : "Deleting...",
             delete: c.delete,
             job: c.job,
+            program: c.program,
+            programOptionalEmpty: r.programOptionalEmpty,
+            select: c.select,
             type: c.type,
             dateTime: co.dateTime,
             amountLabel: co.amountLabel,
@@ -392,6 +422,7 @@ export async function ConsultationsPageContent({
           householdId={householdId}
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          programs={modalPrograms.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
           types={consultationTypes.map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
           clients={modalClients.map((cl) => ({
             id: cl.id,
@@ -407,6 +438,7 @@ export async function ConsultationsPageContent({
           initial={{
             id: editConsultation.id,
             job_id: editConsultation.job_id,
+            program_id: editConsultation.program_id ?? "",
             consultation_type_id: editConsultation.consultation_type_id,
             occurred_at: editConsultation.occurred_at.toISOString().slice(0, 16),
             amount: editConsultation.amount?.toString() ?? editConsultation.income_amount?.toString() ?? "",
@@ -427,6 +459,9 @@ export async function ConsultationsPageContent({
             deleting: uiLanguage === "he" ? "מוחק..." : "Deleting...",
             delete: c.delete,
             job: c.job,
+            program: c.program,
+            programOptionalEmpty: r.programOptionalEmpty,
+            select: c.select,
             type: c.type,
             dateTime: co.dateTime,
             amountLabel: co.amountLabel,

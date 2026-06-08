@@ -1810,6 +1810,7 @@ model therapy_service_programs {
   appointments        therapy_appointments[]
   visit_type_default_amounts therapy_visit_type_default_amounts[]
   therapy_receipts    therapy_receipts[]
+  consultations       therapy_consultations[]
 }
 
 model therapy_visit_type_default_amounts {
@@ -2300,6 +2301,7 @@ model therapy_consultations {
   id                    String   @id @default(uuid())
   household_id          String
   job_id                String
+  program_id            String?
   consultation_type_id  String
   occurred_at           DateTime
   amount                Decimal? @db.Decimal(15, 2)
@@ -2317,6 +2319,7 @@ model therapy_consultations {
 
   household          households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   job                jobs       @relation(fields: [job_id], references: [id], onDelete: Restrict)
+  program            therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: Restrict)
   consultation_type  therapy_consultation_types @relation(fields: [consultation_type_id], references: [id], onDelete: Restrict)
   linked_transaction transactions? @relation("TherapyConsultationTx", fields: [linked_transaction_id], references: [id], onDelete: SetNull)
   linked_income_tx   transactions? @relation("TherapyConsultationIncomeTx", fields: [linked_income_transaction_id], references: [id], onDelete: SetNull)

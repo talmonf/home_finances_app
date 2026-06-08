@@ -22,6 +22,8 @@ export type ConsultationListRowDto = {
   id: string;
   job_id: string;
   job_label: string;
+  program_id: string | null;
+  program_label: string | null;
   consultation_type_id: string;
   consultation_type_name: string;
   consultation_type_name_he: string | null;
@@ -42,6 +44,7 @@ export type ConsultationsCursorPage = {
 
 const CONSULTATIONS_LIST_INCLUDE = {
   job: true,
+  program: { select: { id: true, name: true } },
   consultation_type: true,
   receipt_allocations: {
     include: {
@@ -135,6 +138,8 @@ function mapConsultationListRow(row: ConsultationListPrismaRow): ConsultationLis
     id: row.id,
     job_id: row.job_id,
     job_label: row.job ? formatJobDisplayLabel(row.job) : "—",
+    program_id: row.program_id,
+    program_label: row.program?.name ?? null,
     consultation_type_id: row.consultation_type_id,
     consultation_type_name: row.consultation_type?.name ?? "",
     consultation_type_name_he: row.consultation_type?.name_he ?? null,

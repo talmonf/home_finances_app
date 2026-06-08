@@ -1,19 +1,21 @@
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
-import { DashboardModal } from "@/components/dashboard-modal";
 import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
+import { ConsultationModalJobProgramFields } from "./consultation-modal-job-program-fields";
 import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
-import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { ConsultationModalCancelLink, ConsultationModalShell } from "./consultation-modal-shell";
 
 type JobOption = { id: string; label: string };
+type ProgramOption = { id: string; jobId: string; label: string };
 type TypeOption = { id: string; name: string; name_he: string | null };
 
 type InitialConsultation = {
   id: string;
   job_id: string;
+  program_id: string;
   consultation_type_id: string;
   occurred_at: string;
   amount: string;
@@ -31,6 +33,9 @@ type Labels = {
   deleting: string;
   delete: string;
   job: string;
+  program: string;
+  programOptionalEmpty: string;
+  select: string;
   type: string;
   dateTime: string;
   amountLabel: string;
@@ -53,6 +58,7 @@ export function ConsultationModalForm({
   householdId,
   uiLanguage,
   jobs,
+  programs,
   types,
   clients,
   transactionOptions,
@@ -70,6 +76,7 @@ export function ConsultationModalForm({
   householdId: string;
   uiLanguage: "en" | "he";
   jobs: JobOption[];
+  programs: ProgramOption[];
   types: TypeOption[];
   clients: Array<{ id: string; label: string }>;
   transactionOptions: TherapyTransactionOption[];
@@ -79,34 +86,25 @@ export function ConsultationModalForm({
   clinicOnly?: boolean;
 }) {
   return (
-    <DashboardModal
-      title={labels.title}
-      closeHref={closeHref}
-      closeLabel={labels.cancel}
-      maxWidthClassName="max-w-3xl"
-    >
+    <ConsultationModalShell title={labels.title} closeHref={closeHref} closeLabel={labels.cancel}>
       <GlobalFormSubmitFeedback />
       <form action={action} className="grid gap-3 md:grid-cols-2">
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
         <input type="hidden" name="redirect_on_error" value={redirectOnError} />
         {initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
 
-        <div>
-          <label className="block text-xs text-slate-400">{labels.job}</label>
-          <select
-            name="job_id"
-            required
-            defaultValue={defaultClinicJobId(jobs, initial?.job_id)}
-            className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{uiLanguage === "he" ? "בחר..." : "Select..."}</option>
-            {jobs.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ConsultationModalJobProgramFields
+          jobs={jobs}
+          programs={programs}
+          initialJobId={initial?.job_id}
+          initialProgramId={initial?.program_id}
+          labels={{
+            job: labels.job,
+            program: labels.program,
+            programOptionalEmpty: labels.programOptionalEmpty,
+            select: labels.select,
+          }}
+        />
         <div>
           <label className="block text-xs text-slate-400">{labels.type}</label>
           <select
@@ -193,9 +191,7 @@ export function ConsultationModalForm({
             pendingLabel={labels.saving}
             className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60"
           />
-          <a href={closeHref} className="text-sm text-slate-300 hover:text-slate-100">
-            {labels.cancel}
-          </a>
+          <ConsultationModalCancelLink label={labels.cancel} className="text-sm text-slate-300 hover:text-slate-100" />
         </div>
       </form>
       {initial?.id && deleteAction ? (
@@ -213,6 +209,6 @@ export function ConsultationModalForm({
           />
         </ConfirmDeleteForm>
       ) : null}
-    </DashboardModal>
+    </ConsultationModalShell>
   );
 }

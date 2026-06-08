@@ -16,6 +16,7 @@ type Labels = {
   when: string;
   type: string;
   job: string;
+  program: string;
   clients: string;
   amount: string;
   receipt: string;
@@ -190,6 +191,7 @@ export function ConsultationsListClient({
                   {sortArrow("job")}
                 </button>
               </th>
+              <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               <th className="px-3 py-2 text-slate-300">{labels.clients}</th>
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
@@ -215,6 +217,7 @@ export function ConsultationsListClient({
                   )}
                 </td>
                 <td className="px-3 py-2 text-slate-400">{row.job_label}</td>
+                <td className="px-3 py-2 text-slate-400">{row.program_label ?? "—"}</td>
                 <td className="px-3 py-2 text-slate-400">
                   {row.clients.length > 0
                     ? row.clients.map((client) => formatClientNameForDisplay(obfuscate, client.name, null)).join(", ")

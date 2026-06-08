@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 121_therapy_consultations_program_id.sql (2026-06-08)
 - [x] 120_clinic_digest_email_subscriptions.sql (2026-06-04)
 - [x] 119_family_hebrew_dates_and_marriages.sql (2026-05-26)
 - [x] 118_user_feature_usage_audit.sql (2026-05-24)
@@ -141,6 +142,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 121 | `121_therapy_consultations_program_id.sql` (2026-06-08) | ALTER | `therapy_consultations`: optional `program_id` FK to `therapy_service_programs` (same pattern as treatments). |
 | 120 | `120_clinic_digest_email_subscriptions.sql` (2026-06-04) | CREATE | `clinic_digest_email_subscriptions` and `clinic_digest_email_deliveries`: per-user scheduled private-clinic digest (appointments + upcoming visits). |
 | 119 | `119_family_hebrew_dates_and_marriages.sql` (2026-05-26) | ALTER/CREATE | `family_members`: Hebrew DOB day/month/year; `family_marriages`: spouses, Gregorian and Hebrew wedding dates. |
 | 118 | `118_user_feature_usage_audit.sql` (2026-05-24) | CREATE | `user_feature_usage_events` and `user_feature_usage_rollups`: private-clinic (and future home-finance) feature visit/action telemetry for super-admin usage matrix. |

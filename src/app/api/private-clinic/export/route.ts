@@ -350,6 +350,7 @@ export async function GET() {
       consultations.map((c) => ({
         id: c.id,
         job_id: c.job_id,
+        program_id: c.program_id ?? "",
         consultation_type_id: c.consultation_type_id,
         occurred_at: c.occurred_at.toISOString(),
         income_amount: c.income_amount?.toString() ?? "",

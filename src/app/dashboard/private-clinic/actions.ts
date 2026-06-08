@@ -1204,14 +1204,16 @@ export async function deleteTherapyProgram(formData: FormData) {
   if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
   }
-  const [treatmentsCount, receiptsCount, seriesCount, appointmentsCount, clientsCount] = await Promise.all([
+  const [treatmentsCount, receiptsCount, seriesCount, appointmentsCount, clientsCount, consultationsCount] =
+    await Promise.all([
     prisma.therapy_treatments.count({ where: { household_id: householdId, program_id: id } }),
     prisma.therapy_receipts.count({ where: { household_id: householdId, program_id: id } }),
     prisma.therapy_appointment_series.count({ where: { household_id: householdId, program_id: id } }),
     prisma.therapy_appointments.count({ where: { household_id: householdId, program_id: id } }),
     prisma.therapy_clients.count({ where: { household_id: householdId, default_program_id: id } }),
+    prisma.therapy_consultations.count({ where: { household_id: householdId, program_id: id } }),
   ]);
-  if (treatmentsCount || receiptsCount || seriesCount || appointmentsCount || clientsCount) {
+  if (treatmentsCount || receiptsCount || seriesCount || appointmentsCount || clientsCount || consultationsCount) {
     redirectPrivateClinicScoped(formData, "error", `${BASE}/programs/${id}/edit`, "linked");
   }
   revalidatePath(`${BASE}/programs/${id}/edit`);
@@ -4505,6 +4507,7 @@ export async function createTherapyConsultation(formData: FormData) {
   const fallbackSuccess = `${BASE}/consultations?created=1`;
   const fallbackError = `${BASE}/consultations`;
   const job_id = (formData.get("job_id") as string)?.trim() || "";
+  const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const consultation_type_id = (formData.get("consultation_type_id") as string)?.trim() || "";
   const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
   if (!job_id || !consultation_type_id || !occurred_at_raw) {
@@ -4515,6 +4518,17 @@ export async function createTherapyConsultation(formData: FormData) {
   }
   if (!(await assertConsultationType(householdId, consultation_type_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
+  }
+  const programCountForJob = await prisma.therapy_service_programs.count({
+    where: { household_id: householdId, job_id },
+  });
+  const program_id: string | null = program_id_raw || null;
+  if (programCountForJob > 0) {
+    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  }
+  if (program_id) {
+    const prog = await assertProgram(householdId, program_id);
+    if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
   }
 
   const occurred_at = new Date(occurred_at_raw);
@@ -4539,6 +4553,7 @@ export async function createTherapyConsultation(formData: FormData) {
         id: consultationId,
         household_id: householdId,
         job_id,
+        program_id,
         consultation_type_id,
         occurred_at,
         amount: amountStr,
@@ -4588,6 +4603,7 @@ export async function updateTherapyConsultation(formData: FormData) {
   }
 
   const job_id = (formData.get("job_id") as string)?.trim() || "";
+  const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const consultation_type_id = (formData.get("consultation_type_id") as string)?.trim() || "";
   const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
   if (!job_id || !consultation_type_id || !occurred_at_raw) {
@@ -4598,6 +4614,17 @@ export async function updateTherapyConsultation(formData: FormData) {
   }
   if (!(await assertConsultationType(householdId, consultation_type_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
+  }
+  const programCountForJob = await prisma.therapy_service_programs.count({
+    where: { household_id: householdId, job_id },
+  });
+  const program_id: string | null = program_id_raw || null;
+  if (programCountForJob > 0) {
+    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  }
+  if (program_id) {
+    const prog = await assertProgram(householdId, program_id);
+    if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
   }
 
   const occurred_at = new Date(occurred_at_raw);
@@ -4620,6 +4647,7 @@ export async function updateTherapyConsultation(formData: FormData) {
       where: { id },
       data: {
         job_id,
+        program_id,
         consultation_type_id,
         occurred_at,
         amount: amountStr ?? null,
