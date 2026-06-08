@@ -1,4 +1,6 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateCreditCard } from "../actions";
@@ -47,6 +49,9 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
   if (!card) {
     redirect("/dashboard/credit-cards?error=Not+found");
   }
+
+  const dateInputClass =
+    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -214,12 +219,11 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="issue_date" className="mb-1 block text-xs font-medium text-slate-400">
               Issue date (optional)
             </label>
-            <input
+            <HouseholdDateField
               id="issue_date"
               name="issue_date"
-              type="date"
-              defaultValue={card.issue_date ? card.issue_date.toISOString().slice(0, 10) : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              defaultIsoYmd={utcDateToHtmlDateInputValue(card.issue_date)}
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -239,12 +243,11 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="no_charge_policy_valid_until" className="mb-1 block text-xs font-medium text-slate-400">
               No-charge policy valid until
             </label>
-            <input
+            <HouseholdDateField
               id="no_charge_policy_valid_until"
               name="no_charge_policy_valid_until"
-              type="date"
-              defaultValue={card.no_charge_policy_valid_until ? card.no_charge_policy_valid_until.toISOString().slice(0, 10) : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              defaultIsoYmd={utcDateToHtmlDateInputValue(card.no_charge_policy_valid_until)}
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -302,12 +305,11 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="cancelled_at" className="mb-1 block text-xs font-medium text-slate-400">
               Cancellation date
             </label>
-            <input
+            <HouseholdDateField
               id="cancelled_at"
               name="cancelled_at"
-              type="date"
-              defaultValue={card.cancelled_at ? card.cancelled_at.toISOString().slice(0, 10) : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              defaultIsoYmd={utcDateToHtmlDateInputValue(card.cancelled_at)}
+              className={dateInputClass}
             />
           </div>
           <div className="sm:col-span-2 lg:col-span-4">

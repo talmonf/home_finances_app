@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
@@ -638,10 +639,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <label htmlFor="issue_date" className="mb-1 block text-xs font-medium text-slate-400">
                     Issue date (optional)
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="issue_date"
                     name="issue_date"
-                    type="date"
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
@@ -661,10 +661,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <label htmlFor="no_charge_policy_valid_until" className="mb-1 block text-xs font-medium text-slate-400">
                     No-charge policy valid until
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="no_charge_policy_valid_until"
                     name="no_charge_policy_valid_until"
-                    type="date"
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
