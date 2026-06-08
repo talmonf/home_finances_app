@@ -34,7 +34,6 @@ type Labels = {
   delete: string;
   job: string;
   program: string;
-  programOptionalEmpty: string;
   select: string;
   type: string;
   dateTime: string;
@@ -101,7 +100,6 @@ export function ConsultationModalForm({
           labels={{
             job: labels.job,
             program: labels.program,
-            programOptionalEmpty: labels.programOptionalEmpty,
             select: labels.select,
           }}
         />

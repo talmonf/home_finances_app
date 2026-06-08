@@ -20,7 +20,6 @@ export function ConsultationModalJobProgramFields({
   labels: {
     job: string;
     program: string;
-    programOptionalEmpty: string;
     select: string;
   };
 }) {
@@ -69,7 +68,7 @@ export function ConsultationModalJobProgramFields({
           onChange={(e) => setProgramId(e.target.value)}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="">{labels.programOptionalEmpty}</option>
+          <option value="">{labels.select}</option>
           {programsForJob.map((program) => (
             <option key={program.id} value={program.id}>
               {program.label}
