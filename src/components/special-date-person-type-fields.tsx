@@ -23,11 +23,11 @@ export function SpecialDatePersonTypeFields({
   members,
   defaultFamilyMemberId = "",
   defaultDisplayName = "",
-  defaultEventType = "death",
+  defaultEventType,
   defaultEventTypeOther = "",
 }: Props) {
   const [familyMemberId, setFamilyMemberId] = useState(defaultFamilyMemberId ?? "");
-  const [eventType, setEventType] = useState<FamilySpecialDateEventType>(defaultEventType);
+  const [eventType, setEventType] = useState<FamilySpecialDateEventType | "">(defaultEventType ?? "");
 
   const showDisplayName = !familyMemberId;
 
@@ -84,9 +84,10 @@ export function SpecialDatePersonTypeFields({
           name="event_type"
           required
           value={eventType}
-          onChange={(e) => setEventType(e.target.value as FamilySpecialDateEventType)}
+          onChange={(e) => setEventType(e.target.value as FamilySpecialDateEventType | "")}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
+          <option value="">{isHebrew ? "בחרו סוג מועד" : "Select event type"}</option>
           {FAMILY_SPECIAL_DATE_EVENT_TYPE_VALUES.map((t) => (
             <option key={t} value={t}>
               {getFamilySpecialDateEventTypeLabel(t, isHebrew ? "he" : "en")}
