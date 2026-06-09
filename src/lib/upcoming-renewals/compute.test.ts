@@ -123,3 +123,44 @@ test("filterRenewalRowsByDaysAhead keeps paired birthday/anniversary rows when e
   assert.deepEqual(filtered.map((r) => r.id), ["anniversary-gregorian-m1", "anniversary-hebrew-m1"]);
   assert.equal(filtered.length, 2);
 });
+
+test("filterRenewalRowsByDaysAhead keeps paired special-date rows when either date is in window", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const { filterRenewalRowsByDaysAhead } = await import("@/lib/upcoming-renewals/compute");
+  const today = new Date(2026, 4, 27);
+  const rows: RenewalRow[] = [
+    {
+      id: "special-date-gregorian-s1",
+      category: "Special date",
+      itemName: "Grandfather Moshe",
+      owner: "Grandfather Moshe",
+      ownerId: null,
+      renewalDate: new Date(2026, 5, 10),
+      renewalType: "Death",
+      href: "/dashboard/family-members/special-dates/s1/edit",
+    },
+    {
+      id: "special-date-hebrew-s1",
+      category: "Special date",
+      itemName: "Grandfather Moshe",
+      owner: "Grandfather Moshe",
+      ownerId: null,
+      renewalDate: new Date(2026, 5, 15),
+      renewalType: "Hebrew: 28 Sivan",
+      href: "/dashboard/family-members/special-dates/s1/edit",
+    },
+    {
+      id: "special-date-gregorian-s2",
+      category: "Special date",
+      itemName: "Rachel",
+      owner: "Rachel",
+      ownerId: "m1",
+      renewalDate: new Date(2026, 8, 1),
+      renewalType: "Bar mitzvah",
+      href: "/dashboard/family-members/special-dates/s2/edit",
+    },
+  ];
+
+  const filtered = filterRenewalRowsByDaysAhead(rows, today, 14);
+  assert.deepEqual(filtered.map((r) => r.id), ["special-date-gregorian-s1", "special-date-hebrew-s1"]);
+});

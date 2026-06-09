@@ -27,3 +27,29 @@ test("renewalEmailLineSegments omits redundant type and Household", () => {
     ["A & B", "Hebrew: 12 Tammuz 5786 (Fri night-Sat 26/06/2026-27/06/2026)"],
   );
 });
+
+test("renewalEmailLineSegments shows event type for special dates", () => {
+  const specialDateRow = (partial: Partial<RenewalRow> & Pick<RenewalRow, "renewalType">): RenewalRow => ({
+    id: "special-date-gregorian-s1",
+    category: "Special date",
+    itemName: "Grandfather Moshe",
+    owner: "Grandfather Moshe",
+    ownerId: null,
+    renewalDate: new Date(2026, 5, 10),
+    href: "/dashboard/family-members/special-dates/s1/edit",
+    ...partial,
+  });
+
+  assert.deepEqual(
+    renewalEmailLineSegments(specialDateRow({ renewalType: "Death" })),
+    ["Grandfather Moshe", "Death"],
+  );
+  assert.deepEqual(
+    renewalEmailLineSegments(
+      specialDateRow({
+        renewalType: "Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)",
+      }),
+    ),
+    ["Grandfather Moshe", "Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)"],
+  );
+});

@@ -9,7 +9,7 @@ const REDUNDANT_FAMILY_RENEWAL_TYPES = new Set([
 
 const HIDDEN_EMAIL_OWNERS = new Set(["Household", "משק הבית"]);
 
-const FAMILY_EVENT_CATEGORIES = new Set(["Birthday", "Anniversary"]);
+const FAMILY_EVENT_CATEGORIES = new Set(["Birthday", "Anniversary", "Special date"]);
 
 /** Middle segments after the date for birthday/anniversary rows. */
 export function renewalEmailLineSegments(row: RenewalRow): string[] {

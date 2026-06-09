@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/auth";
 import {
+  resolveSpecialDateDisplayName,
+  resolveSpecialDateEventTypeLabel,
+} from "@/lib/family-special-dates/event-type-labels";
+import type { FamilySpecialDateEventType } from "@/generated/prisma/enums";
+import {
   calendarDateFromDb,
   formatHebrewDateLabel,
   gregorianDateToHebrewComponents,
@@ -25,6 +30,18 @@ type MarriageRow = {
   wedding_hebrew_year: number | null;
   spouse_a: { id: string; full_name: string };
   spouse_b: { id: string; full_name: string };
+};
+
+type SpecialDateRow = {
+  id: string;
+  display_name: string | null;
+  event_type: FamilySpecialDateEventType;
+  event_type_other: string | null;
+  gregorian_date: Date | null;
+  hebrew_day: number | null;
+  hebrew_month: number | null;
+  hebrew_year: number | null;
+  family_member: { id: string; full_name: string; is_active: boolean } | null;
 };
 
 function addDays(base: Date, days: number): Date {
@@ -175,6 +192,72 @@ function anniversaryRowsForMarriage(
   return rows;
 }
 
+function specialDateRowsForRecord(
+  record: SpecialDateRow,
+  today: Date,
+  language: "en" | "he",
+): RenewalRow[] {
+  if (record.family_member && !record.family_member.is_active) {
+    return [];
+  }
+
+  const itemName = resolveSpecialDateDisplayName({
+    display_name: record.display_name,
+    family_member: record.family_member,
+  });
+  const eventTypeLabel = resolveSpecialDateEventTypeLabel({
+    event_type: record.event_type,
+    event_type_other: record.event_type_other,
+    language,
+  });
+  const href = `/dashboard/family-members/special-dates/${record.id}/edit`;
+  const ownerId = record.family_member?.id ?? null;
+  const owner = itemName;
+  const rows: RenewalRow[] = [];
+
+  if (record.gregorian_date) {
+    const gd = calendarDateFromDb(record.gregorian_date);
+    const nextGregorian = nextAnnualGregorianOccurrence(gd.getMonth(), gd.getDate(), today);
+    rows.push({
+      id: `special-date-gregorian-${record.id}`,
+      category: "Special date",
+      itemName,
+      owner,
+      ownerId,
+      renewalDate: nextGregorian,
+      renewalType: eventTypeLabel,
+      href,
+    });
+  }
+
+  if (record.hebrew_month != null && record.hebrew_day != null) {
+    const nextHebrew = nextGregorianOccurrenceForHebrewMonthDay({
+      month: record.hebrew_month,
+      day: record.hebrew_day,
+      fromDate: today,
+    });
+    if (nextHebrew) {
+      rows.push({
+        id: `special-date-hebrew-${record.id}`,
+        category: "Special date",
+        itemName,
+        owner,
+        ownerId,
+        renewalDate: nextHebrew,
+        renewalType: hebrewOccurrenceRenewalType(
+          language,
+          record.hebrew_month,
+          record.hebrew_day,
+          nextHebrew,
+        ),
+        href,
+      });
+    }
+  }
+
+  return rows;
+}
+
 export async function loadUpcomingFamilyEventRows(params: {
   householdId: string;
   today: Date;
@@ -182,7 +265,7 @@ export async function loadUpcomingFamilyEventRows(params: {
 }): Promise<RenewalRow[]> {
   const { householdId, today, language } = params;
 
-  const [members, marriages] = await Promise.all([
+  const [members, marriages, specialDates] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       select: {
@@ -201,6 +284,12 @@ export async function loadUpcomingFamilyEventRows(params: {
         spouse_b: { select: { id: true, full_name: true } },
       },
     }),
+    prisma.family_special_dates.findMany({
+      where: { household_id: householdId },
+      include: {
+        family_member: { select: { id: true, full_name: true, is_active: true } },
+      },
+    }),
   ]);
 
   const rows: RenewalRow[] = [];
@@ -209,6 +298,9 @@ export async function loadUpcomingFamilyEventRows(params: {
   }
   for (const marriage of marriages) {
     rows.push(...anniversaryRowsForMarriage(marriage, today, language));
+  }
+  for (const record of specialDates) {
+    rows.push(...specialDateRowsForRecord(record, today, language));
   }
   return rows;
 }

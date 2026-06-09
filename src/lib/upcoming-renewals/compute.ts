@@ -58,11 +58,11 @@ export function addDaysLocal(base: Date, days: number): Date {
 /** Categories whose past-due rows appear on the dashboard even when `includePastDue` is false. */
 export const PAST_DUE_ALLOWED_CATEGORIES = new Set<string>(["Subscription", "Task", "Donation"]);
 
-const FAMILY_EVENT_PAIR_CATEGORIES = new Set<string>(["Birthday", "Anniversary"]);
+const FAMILY_EVENT_PAIR_CATEGORIES = new Set<string>(["Birthday", "Anniversary", "Special date"]);
 
 /** `birthday-gregorian-{id}` / `anniversary-hebrew-{id}` share one logical event. */
 export function familyEventPairGroupKey(row: RenewalRow): string | null {
-  const m = row.id.match(/^(birthday|anniversary)-(gregorian|hebrew)-(.+)$/);
+  const m = row.id.match(/^(birthday|anniversary|special-date)-(gregorian|hebrew)-(.+)$/);
   if (!m || !FAMILY_EVENT_PAIR_CATEGORIES.has(row.category)) return null;
   return `${m[1]}-${m[3]}`;
 }
@@ -113,6 +113,7 @@ const RENEWAL_LOOKBACK_START = new Date(1900, 0, 1);
 export const RENEWAL_CATEGORY_ORDER = [
   "Birthday",
   "Anniversary",
+  "Special date",
   "Subscription",
   "Identity",
   "Credit card",

@@ -112,6 +112,12 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
             >
               {isHebrew ? "נישואין" : "Marriages"}
             </Link>
+            <Link
+              href="/dashboard/family-members/special-dates"
+              className="text-sm font-medium text-sky-400 hover:text-sky-300"
+            >
+              {isHebrew ? "מועדים מיוחדים" : "Special dates"}
+            </Link>
             {session?.user?.role === "admin" ? (
               <Link
                 href="/dashboard/household-settings"

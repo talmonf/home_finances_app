@@ -43,12 +43,12 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
   const align = he ? "right" : "left";
 
   const subject = he
-    ? `חידושים, ימי הולדת ויום נישואין (${rows.length})`
-    : `Upcoming renewals, birthdays & anniversaries (${rows.length})`;
+    ? `חידושים, ימי הולדת, יום נישואין ומועדים מיוחדים (${rows.length})`
+    : `Upcoming renewals, birthdays, anniversaries & special dates (${rows.length})`;
 
   const intro = he
-    ? `להלן חידושים ומועדים, ימי הולדת ויום נישואין בטווח של ${daysAhead} הימים הקרובים (כולל היום), ומנויים שנתיים/משימות/תרומות עם מועד שעבר. תאריכים עבריים מוצגים לפי המופע הלועזי הקרוב בשנה הנוכחית.`
-    : `The following renewals and deadlines, birthdays, and anniversaries fall within the next ${daysAhead} days (including today), plus overdue annual subscriptions, open tasks, and donations with a past due date. Hebrew calendar dates are shown by their nearest Gregorian occurrence this year.`;
+    ? `להלן חידושים ומועדים, ימי הולדת, יום נישואין ומועדים מיוחדים בטווח של ${daysAhead} הימים הקרובים (כולל היום), ומנויים שנתיים/משימות/תרומות עם מועד שעבר. תאריכים עבריים מוצגים לפי המופע הלועזי הקרוב בשנה הנוכחית.`
+    : `The following renewals and deadlines, birthdays, anniversaries, and special dates fall within the next ${daysAhead} days (including today), plus overdue annual subscriptions, open tasks, and donations with a past due date. Hebrew calendar dates are shown by their nearest Gregorian occurrence this year.`;
 
   const openDashboard = he ? "פתח את לוח המועדים הקרובים" : "Open upcoming items dashboard";
   const dashboardUrl = `${baseUrl}/dashboard/upcoming-renewals`;

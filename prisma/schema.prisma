@@ -108,6 +108,7 @@ model households {
   renewal_email_subscriptions        renewal_email_subscriptions[]
   clinic_digest_email_subscriptions  clinic_digest_email_subscriptions[]
   family_marriages                   family_marriages[]
+  family_special_dates               family_special_dates[]
 }
 
 model loans {
@@ -199,6 +200,41 @@ model family_members {
   insurance_policies   insurance_policies[]
   savings_policies     savings_policies[]
   private_clinic_reminders private_clinic_reminders[]
+  family_special_dates     family_special_dates[]
+}
+
+enum FamilySpecialDateEventType {
+  death
+  bar_mitzvah
+  bat_mitzvah
+  engagement
+  aliyah
+  graduation
+  other
+
+  @@map("family_special_date_event_type")
+}
+
+model family_special_dates {
+  id               String                     @id @default(uuid())
+  household_id     String
+  family_member_id String?
+  display_name     String?
+  event_type       FamilySpecialDateEventType
+  event_type_other String?
+  gregorian_date   DateTime?                  @db.Date
+  hebrew_day       Int?                       @db.SmallInt
+  hebrew_month     Int?                       @db.SmallInt
+  hebrew_year      Int?                       @db.SmallInt
+  notes            String?
+  created_at       DateTime                   @default(now())
+  updated_at       DateTime                   @updatedAt
+
+  household     households      @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  family_member family_members? @relation(fields: [family_member_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id])
+  @@index([family_member_id])
 }
 
 model family_marriages {
