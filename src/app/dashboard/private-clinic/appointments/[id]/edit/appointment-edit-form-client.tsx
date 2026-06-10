@@ -260,7 +260,7 @@ export function AppointmentEditFormClient(props: Props) {
       </label>
       <div className="space-y-1">
         <span className="block text-xs text-slate-300">{props.labels.startDateTime}</span>
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
+        <div className="grid gap-2 sm:grid-cols-[11.5rem_8.5rem]">
           <HouseholdDateIsoControl
             valueIso={startDate}
             onIsoChange={(nextStartDate) => {
@@ -329,13 +329,13 @@ export function AppointmentEditFormClient(props: Props) {
           className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </label>
-      <label className="space-y-1 md:col-span-2">
+      <div className="space-y-1">
         <span className="block text-xs text-slate-300">{props.labels.endOptional}</span>
-        <div className="grid max-w-md gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
+        <div className="grid gap-2 sm:grid-cols-[11.5rem_8.5rem]">
           <HouseholdDateIsoControl
             valueIso={endDate}
             onIsoChange={setEndDate}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="w-full self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             aria-label={props.labels.endOptional}
           />
           <div className="grid grid-cols-2 gap-2">
@@ -365,7 +365,7 @@ export function AppointmentEditFormClient(props: Props) {
             </select>
           </div>
         </div>
-      </label>
+      </div>
       <button
         type="submit"
         className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
