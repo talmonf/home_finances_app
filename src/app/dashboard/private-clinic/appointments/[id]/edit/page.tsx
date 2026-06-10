@@ -179,7 +179,9 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         initialJobId={apt.job_id}
         initialProgramId={apt.program_id ?? ""}
         initialClientId={apt.client_id}
-        initialAdditionalClientIds={apt.participants.map((p) => p.client_id)}
+        initialAdditionalClientIds={apt.participants
+          .map((p) => p.client_id)
+          .filter((participantClientId) => participantClientId !== apt.client_id)}
         initialVisitType={apt.visit_type}
         initialStatus={apt.status}
         initialCancellationReason={apt.cancellation_reason ?? ""}

@@ -56,7 +56,9 @@ export function ReportTreatmentFormClient({ action, appointmentId, clients, labe
         className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 md:col-span-2"
       />
       <div className="space-y-2 md:col-span-2">
-        <span className="block text-sm text-slate-300">{labels.additionalClients}</span>
+        {additionalParticipantIds.length > 0 ? (
+          <span className="block text-sm text-slate-300">{labels.additionalClients}</span>
+        ) : null}
         {additionalParticipantIds.map((clientId, index) => (
           <div key={`participant-${index}`} className="flex items-center gap-2">
             <select

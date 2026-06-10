@@ -12,6 +12,7 @@ export function therapyClientFormErrorMessage(error: string | undefined, cl: ClS
     "visit-type": cl.errVisitType,
     notfound: cl.errNotfound,
     range: cl.errRange,
+    "end-reason": cl.errEndReason,
     "save-failed": cl.errSaveFailed,
     "has-treatments": cl.errHasTreatments,
     "rel-missing": cl.errRelMissing,

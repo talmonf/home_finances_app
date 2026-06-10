@@ -169,6 +169,7 @@ export type HouseholdDateFieldProps = {
   required?: boolean;
   className?: string;
   "aria-label"?: string;
+  onIsoChange?: (iso: string) => void;
 };
 
 /**
@@ -181,6 +182,7 @@ export function HouseholdDateField({
   required = false,
   className,
   "aria-label": ariaLabel,
+  onIsoChange,
 }: HouseholdDateFieldProps) {
   const format = useHouseholdDateFormat();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -194,9 +196,13 @@ export function HouseholdDateField({
 
   textRef.current = text;
 
-  const syncHidden = useCallback((iso: string) => {
-    if (hiddenRef.current) hiddenRef.current.value = iso;
-  }, []);
+  const syncHidden = useCallback(
+    (iso: string) => {
+      if (hiddenRef.current) hiddenRef.current.value = iso;
+      onIsoChange?.(iso);
+    },
+    [onIsoChange],
+  );
 
   useEffect(() => {
     const initial = defaultIsoYmd && isIsoYmd(defaultIsoYmd) ? defaultIsoYmd.trim() : "";

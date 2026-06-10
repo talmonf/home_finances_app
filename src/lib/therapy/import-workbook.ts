@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { parseTherapyClientEndReason } from "@/lib/therapy/client-end-reason";
 import * as XLSX from "xlsx";
 
 type Row = Record<string, string | number | boolean | undefined>;
@@ -174,6 +175,7 @@ export async function importTherapyWorkbook(params: {
         id_number: str(r.id_number) || null,
         start_date: str(r.start_date) ? new Date(str(r.start_date)) : null,
         end_date: str(r.end_date) ? new Date(str(r.end_date)) : null,
+        end_reason: parseTherapyClientEndReason(str(r.end_reason)),
         notes: str(r.notes) || null,
         default_job_id,
         default_program_id,

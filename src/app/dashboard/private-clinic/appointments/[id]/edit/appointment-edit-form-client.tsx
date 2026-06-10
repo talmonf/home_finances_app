@@ -135,7 +135,9 @@ export function AppointmentEditFormClient(props: Props) {
         </select>
       </label>
       <div className="space-y-2 md:col-span-2">
-        <span className="block text-sm text-slate-300">{props.labels.additionalClients}</span>
+        {additionalClientIds.length > 0 ? (
+          <span className="block text-sm text-slate-300">{props.labels.additionalClients}</span>
+        ) : null}
         {additionalClientIds.map((clientId, index) => (
           <div key={`additional-client-${index}`} className="flex items-center gap-2">
             <select

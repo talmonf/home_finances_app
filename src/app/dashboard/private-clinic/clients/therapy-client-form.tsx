@@ -2,8 +2,10 @@ import { HouseholdDateField } from "@/components/household-date-field";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
+import type { TherapyClientEndReason } from "@/lib/therapy/client-end-reason";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
+import { TherapyClientCareEndFields } from "./therapy-client-care-end-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 
@@ -19,6 +21,7 @@ export type TherapyClientFormEditRow = {
   id_number: string | null;
   start_date: Date | null;
   end_date: Date | null;
+  end_reason: TherapyClientEndReason | null;
   email: string | null;
   phones: string | null;
   address: string | null;
@@ -55,6 +58,7 @@ export function TherapyClientForm({
   families,
   cl,
   c,
+  uiLanguage,
   redirectOnError,
   pendingLabel,
   client,
@@ -66,6 +70,7 @@ export function TherapyClientForm({
   families: TherapyClientFamilyOption[];
   cl: ClStrings;
   c: CommonStrings;
+  uiLanguage: "en" | "he";
   redirectOnError: string;
   pendingLabel: string;
   client?: TherapyClientFormEditRow;
@@ -307,17 +312,18 @@ export function TherapyClientForm({
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_end_date`} className="block text-xs text-slate-400">
-          {cl.endDate}
-        </label>
-        <HouseholdDateField
-          id={`${idPrefix}_end_date`}
-          name="end_date"
-          defaultIsoYmd={utcDateToHtmlDateInputValue(client?.end_date ?? null)}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-      </div>
+      <TherapyClientCareEndFields
+        endDateInputId={`${idPrefix}_end_date`}
+        defaultEndDateIso={utcDateToHtmlDateInputValue(client?.end_date ?? null)}
+        defaultProgramId={client?.default_program_id}
+        defaultEndReason={client?.end_reason ?? null}
+        programs={programs}
+        endDateLabel={cl.endDate}
+        endReasonLabel={cl.endReason}
+        selectPlaceholder={c.select}
+        uiLanguage={uiLanguage}
+        dateFieldClassName="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+      />
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_disability_status`} className="block text-xs text-slate-400">

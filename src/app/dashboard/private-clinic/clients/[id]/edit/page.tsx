@@ -104,6 +104,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         families={families}
         cl={cl}
         c={c}
+        uiLanguage={uiLanguage}
         redirectOnError={editRedirectPath}
         client={client}
         pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}

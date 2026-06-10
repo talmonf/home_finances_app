@@ -72,6 +72,7 @@ export default async function PrivateClinicNewClientPage({ searchParams }: PageP
         families={families}
         cl={cl}
         c={c}
+        uiLanguage={uiLanguage}
         redirectOnError={NEW_PATH}
         pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
       />

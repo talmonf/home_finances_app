@@ -401,6 +401,7 @@ export function privateClinicClients(lang: UiLanguage) {
       "מופיע גם תחת המשרות הבאות (כולל ברירת המחדל)",
     ),
     endDate: p("End date (optional)", "תאריך סיום (אופציונלי)"),
+    endReason: p("End reason", "סיבת סיום"),
     statusLabel: p("Status: Active", "סטטוס: פעיל"),
     statusHelp: p(
       "Uncheck for inactive — client is hidden from default lists and end-date reminders are not shown.",
@@ -452,6 +453,10 @@ export function privateClinicClients(lang: UiLanguage) {
     errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
     errRange: p("End date cannot be before start date.", "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה."),
+    errEndReason: p(
+      "End reason is required when an end date is set for this program.",
+      "סיבת סיום נדרשת כשמוגדר תאריך סיום לתכנית זו.",
+    ),
     errSaveFailed: p("Could not save the client. Please try again.", "לא ניתן היה לשמור את הלקוח. נסו שוב."),
     errHasTreatments: p("Client cannot be deleted because treatments are associated with them.", "אי אפשר למחוק לקוח כי משויכים אליו טיפולים."),
     deleteClient: p("Delete client", "מחיקת לקוח"),

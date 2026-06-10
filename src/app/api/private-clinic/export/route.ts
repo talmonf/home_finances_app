@@ -179,6 +179,7 @@ export async function GET() {
         id_number: c.id_number ?? "",
         start_date: c.start_date ? String(c.start_date) : "",
         end_date: c.end_date ? String(c.end_date) : "",
+        end_reason: c.end_reason ?? "",
         notes: c.notes ?? "",
         default_job_id: c.default_job_id,
         default_program_id: c.default_program_id,

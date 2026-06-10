@@ -1763,6 +1763,15 @@ enum TherapyClientRelationshipType {
   @@map("therapy_client_relationship_type")
 }
 
+enum TherapyClientEndReason {
+  death_at_home
+  death_in_hospital
+  transfer_to_inpatient_hospice
+  other
+
+  @@map("therapy_client_end_reason")
+}
+
 model private_clinic_reminders {
   id               String   @id @default(uuid())
   household_id     String
@@ -1881,6 +1890,7 @@ model therapy_clients {
   rehab_basket_status String?
   start_date         DateTime? @db.Date
   end_date           DateTime? @db.Date
+  end_reason         TherapyClientEndReason?
   notes              String?
   default_job_id     String
   default_program_id String?

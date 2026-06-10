@@ -17,6 +17,11 @@ import {
 } from "@/lib/therapy/appointment-audit";
 import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
+import {
+  parseTherapyClientEndReason,
+  programNameShowsEndReason,
+  type TherapyClientEndReason,
+} from "@/lib/therapy/client-end-reason";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import {
   getSystemDefaultSessionMinutes,
@@ -100,6 +105,31 @@ const CLIENT_STATUS_OPTIONS = new Set([
   "filed_appeal",
   "filed_worsening",
 ]);
+
+async function resolveTherapyClientEndReasonForSave(params: {
+  householdId: string;
+  endDate: Date | null;
+  defaultProgramId: string | null;
+  endReasonRaw: string;
+  formData: FormData;
+  fallbackPath: string;
+}): Promise<TherapyClientEndReason | null> {
+  const { householdId, endDate, defaultProgramId, endReasonRaw, formData, fallbackPath } = params;
+  if (!endDate || !defaultProgramId) return null;
+
+  const program = await prisma.therapy_service_programs.findFirst({
+    where: { id: defaultProgramId, household_id: householdId },
+    select: { name: true },
+  });
+  if (!program || !programNameShowsEndReason(program.name)) return null;
+
+  const end_reason = parseTherapyClientEndReason(endReasonRaw);
+  if (!end_reason) {
+    redirectTherapyClientFormError(formData, fallbackPath, "end-reason");
+  }
+  return end_reason;
+}
+
 const APPOINTMENT_CHANGE_REASON_OTHER = "other";
 
 function parseAppointmentChangeReason(
@@ -1403,6 +1433,19 @@ export async function createTherapyClient(formData: FormData) {
   const rehab_basket_status_raw = (formData.get("rehab_basket_status") as string)?.trim() || "";
   const disability_status = CLIENT_STATUS_OPTIONS.has(disability_status_raw) ? disability_status_raw : null;
   const rehab_basket_status = CLIENT_STATUS_OPTIONS.has(rehab_basket_status_raw) ? rehab_basket_status_raw : null;
+  const startDate = parseDate((formData.get("start_date") as string) || null);
+  const endDate = parseDate((formData.get("end_date") as string) || null);
+  if (startDate && endDate && endDate < startDate) {
+    redirectTherapyClientFormError(formData, fallbackErrorPath, "range");
+  }
+  const end_reason = await resolveTherapyClientEndReasonForSave({
+    householdId,
+    endDate,
+    defaultProgramId: default_program_id,
+    endReasonRaw: (formData.get("end_reason") as string) || "",
+    formData,
+    fallbackPath: fallbackErrorPath,
+  });
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.create({
@@ -1412,8 +1455,9 @@ export async function createTherapyClient(formData: FormData) {
         first_name,
         last_name: (formData.get("last_name") as string)?.trim() || null,
         id_number: (formData.get("id_number") as string)?.trim() || null,
-        start_date: parseDate((formData.get("start_date") as string) || null),
-        end_date: parseDate((formData.get("end_date") as string) || null),
+        start_date: startDate,
+        end_date: endDate,
+        end_reason,
         notes: (formData.get("notes") as string)?.trim() || null,
         default_job_id,
         default_program_id,
@@ -1507,6 +1551,14 @@ export async function updateTherapyClient(formData: FormData) {
   if (startDate && endDate && endDate < startDate) {
     redirectTherapyClientFormError(formData, `${BASE}/clients/${id}/edit`, "range");
   }
+  const end_reason = await resolveTherapyClientEndReasonForSave({
+    householdId,
+    endDate,
+    defaultProgramId: default_program_id,
+    endReasonRaw: (formData.get("end_reason") as string) || "",
+    formData,
+    fallbackPath: `${BASE}/clients/${id}/edit`,
+  });
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -1518,6 +1570,7 @@ export async function updateTherapyClient(formData: FormData) {
           id_number: (formData.get("id_number") as string)?.trim() || null,
           start_date: startDate,
           end_date: endDate,
+          end_reason,
           notes: (formData.get("notes") as string)?.trim() || null,
           default_job_id,
           default_program_id,
@@ -3388,7 +3441,8 @@ async function syncAppointmentParticipants(params: {
   primaryClientId: string;
   participantIdsRaw: string[];
 }) {
-  const participantIds = [...new Set([params.primaryClientId, ...params.participantIdsRaw])];
+  const additionalIds = params.participantIdsRaw.filter((id) => id !== params.primaryClientId);
+  const participantIds = [...new Set([params.primaryClientId, ...additionalIds])];
   await prisma.therapy_appointment_participants.deleteMany({
     where: { household_id: params.householdId, appointment_id: params.appointmentId },
   });
@@ -3951,7 +4005,9 @@ export async function updateTherapyAppointment(formData: FormData) {
   const program_id = (formData.get("program_id") as string)?.trim() || "";
   const visit_type = parseVisitType((formData.get("visit_type") as string)?.trim() || null);
   const status = parseAppointmentStatus((formData.get("status") as string)?.trim() || null);
-  const additionalClientIds = parseUniqueIds(formData.getAll("additional_client_ids"));
+  const additionalClientIds = parseUniqueIds(formData.getAll("additional_client_ids")).filter(
+    (id) => id !== client_id,
+  );
   const start_at_raw = (formData.get("start_at") as string)?.trim() || "";
   const appointmentDurationMinutesInput = parsePositiveInt(
     (formData.get("duration_minutes") as string | null) ?? null,
