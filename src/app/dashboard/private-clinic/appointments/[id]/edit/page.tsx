@@ -190,11 +190,14 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         initialDurationMinutes={apt.duration_minutes ? String(apt.duration_minutes) : ""}
         labels={{
           client: c.client,
+          job: c.job,
           additionalClients: ap.additionalClients,
           addAdditionalClient: ap.addAdditionalClient,
           remove: ap.remove,
           programOptional: ap.programOptional,
-          start: ap.startCol,
+          visitType: ap.visitTypeCol,
+          status: c.status,
+          startDateTime: ap.startDateTime,
           endOptional: ap.endOptional,
           startDate: ap.startDate,
           startTime: ap.startTime,
@@ -223,7 +226,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
 
       <section
         id="report-treatment"
-        className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+        className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900/60 p-4"
       >
         <div className="space-y-1">
           <h3 className="text-sm font-semibold text-slate-200">{ap.reportTreatmentTitle}</h3>

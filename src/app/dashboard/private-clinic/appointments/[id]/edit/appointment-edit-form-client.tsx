@@ -24,11 +24,14 @@ type Props = {
   initialDurationMinutes: string;
   labels: {
     client: string;
+    job: string;
     additionalClients: string;
     addAdditionalClient: string;
     remove: string;
     programOptional: string;
-    start: string;
+    visitType: string;
+    status: string;
+    startDateTime: string;
     endOptional: string;
     startDate: string;
     startTime: string;
@@ -46,6 +49,10 @@ type Props = {
 };
 
 export function AppointmentEditFormClient(props: Props) {
+  const timeHourSuffix =
+    props.labels.startTime.includes("שעה") || props.labels.startDateTime.includes("שעה") ? "שעה" : "hour";
+  const timeMinuteSuffix =
+    props.labels.startTime.includes("שעה") || props.labels.startDateTime.includes("שעה") ? "דקות" : "minute";
   const [jobId, setJobId] = useState(props.initialJobId);
   const [programId, setProgramId] = useState(props.initialProgramId);
   const [additionalClientIds, setAdditionalClientIds] = useState(
@@ -112,21 +119,21 @@ export function AppointmentEditFormClient(props: Props) {
   return (
     <form
       action={props.action}
-      className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
+      className="grid w-full max-w-3xl gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
     >
       <input type="hidden" name="id" value={props.id} />
       <input type="hidden" name="redirect_on_success" value={props.redirectOnSuccess} />
       <input type="hidden" name="start_at" value={startAtValue} />
       <input type="hidden" name="end_at" value={endAtValue} />
-      <label className="grid gap-1 text-sm text-slate-300">
-        <span>{props.labels.client}</span>
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.client}</span>
         <select
           name="client_id"
           required
           defaultValue={props.initialClientId}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
-          <option value="">{props.labels.client}</option>
+          <option value=""></option>
           {props.clients.map((cl) => (
             <option key={cl.id} value={cl.id}>
               {cl.label}
@@ -136,7 +143,7 @@ export function AppointmentEditFormClient(props: Props) {
       </label>
       <div className="space-y-2 md:col-span-2">
         {additionalClientIds.length > 0 ? (
-          <span className="block text-sm text-slate-300">{props.labels.additionalClients}</span>
+          <span className="block text-xs text-slate-300">{props.labels.additionalClients}</span>
         ) : null}
         {additionalClientIds.map((clientId, index) => (
           <div key={`additional-client-${index}`} className="flex items-center gap-2">
@@ -148,9 +155,9 @@ export function AppointmentEditFormClient(props: Props) {
                 next[index] = e.target.value;
                 setAdditionalClientIds(next);
               }}
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{props.labels.client}</option>
+              <option value=""></option>
               {props.clients.map((cl) => (
                 <option
                   key={cl.id}
@@ -180,68 +187,80 @@ export function AppointmentEditFormClient(props: Props) {
           {props.labels.addAdditionalClient}
         </button>
       </div>
-      <select
-        name="job_id"
-        required
-        value={jobId}
-        onChange={(e) => {
-          setJobId(e.target.value);
-          setProgramId("");
-        }}
-        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-      >
-        {props.jobs.map((j) => (
-          <option key={j.id} value={j.id}>
-            {j.label}
-          </option>
-        ))}
-      </select>
-      <select
-        name="program_id"
-        value={selectedProgramId}
-        onChange={(e) => setProgramId(e.target.value)}
-        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-      >
-        <option value="">{props.labels.programOptional}</option>
-        {programsForJob.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-      <select
-        name="visit_type"
-        required
-        defaultValue={props.initialVisitType}
-        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-      >
-        {props.visitOptions.map((v) => (
-          <option key={v.value} value={v.value}>
-            {v.label}
-          </option>
-        ))}
-      </select>
-      <select
-        name="status"
-        required
-        defaultValue={props.initialStatus}
-        className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-      >
-        <option value="scheduled">{props.labels.statusScheduled}</option>
-        <option value="completed">{props.labels.statusCompleted}</option>
-        <option value="cancelled">{props.labels.statusCancelled}</option>
-      </select>
-      <label className="grid gap-1 text-sm text-slate-300">
-        <span>{props.labels.cancellationReason}</span>
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.job}</span>
+        <select
+          name="job_id"
+          required
+          value={jobId}
+          onChange={(e) => {
+            setJobId(e.target.value);
+            setProgramId("");
+          }}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          {props.jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.programOptional}</span>
+        <select
+          name="program_id"
+          value={selectedProgramId}
+          onChange={(e) => setProgramId(e.target.value)}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value=""></option>
+          {programsForJob.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.visitType}</span>
+        <select
+          name="visit_type"
+          required
+          defaultValue={props.initialVisitType}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          {props.visitOptions.map((v) => (
+            <option key={v.value} value={v.value}>
+              {v.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.status}</span>
+        <select
+          name="status"
+          required
+          defaultValue={props.initialStatus}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        >
+          <option value="scheduled">{props.labels.statusScheduled}</option>
+          <option value="completed">{props.labels.statusCompleted}</option>
+          <option value="cancelled">{props.labels.statusCancelled}</option>
+        </select>
+      </label>
+      <label className="space-y-1 md:col-span-2">
+        <span className="block text-xs text-slate-300">{props.labels.cancellationReason}</span>
         <input
           name="cancellation_reason"
           defaultValue={props.initialCancellationReason}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </label>
-      <div className="space-y-1 md:col-span-2">
-        <span className="block text-sm text-slate-300">{props.labels.start}</span>
-        <div className="flex flex-wrap items-end gap-2">
+      <div className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.startDateTime}</span>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
           <HouseholdDateIsoControl
             valueIso={startDate}
             onIsoChange={(nextStartDate) => {
@@ -254,10 +273,10 @@ export function AppointmentEditFormClient(props: Props) {
               );
             }}
             required
-            className="w-[11.5rem] rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none ring-slate-700/80 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            className="w-full self-end rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             aria-label={props.labels.startDate}
           />
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="grid grid-cols-2 gap-2">
             <select
               value={startTimeHour}
               onChange={(e) => {
@@ -265,8 +284,8 @@ export function AppointmentEditFormClient(props: Props) {
                 setStartTimeHour(nextHour);
                 recalculateEndFromStart(startDate, nextHour, startTimeMinute, durationMinutes);
               }}
-              className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${props.labels.startTime} hour`}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              aria-label={`${props.labels.startTime} ${timeHourSuffix}`}
             >
               {timeHourOptions.map((hour) => (
                 <option key={hour} value={hour}>
@@ -274,7 +293,6 @@ export function AppointmentEditFormClient(props: Props) {
                 </option>
               ))}
             </select>
-            <span className="text-slate-300">:</span>
             <select
               value={startTimeMinute}
               onChange={(e) => {
@@ -282,8 +300,8 @@ export function AppointmentEditFormClient(props: Props) {
                 setStartTimeMinute(nextMinute);
                 recalculateEndFromStart(startDate, startTimeHour, nextMinute, durationMinutes);
               }}
-              className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${props.labels.startTime} minute`}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              aria-label={`${props.labels.startTime} ${timeMinuteSuffix}`}
             >
               {timeMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
@@ -292,40 +310,40 @@ export function AppointmentEditFormClient(props: Props) {
               ))}
             </select>
           </div>
-          <label className="grid gap-1 text-sm text-slate-300 sm:min-w-[8rem]">
-            <span className="text-xs leading-tight">{props.labels.durationMinutes}</span>
-            <input
-              name="duration_minutes"
-              type="number"
-              min={1}
-              max={999}
-              step={1}
-              value={durationMinutes}
-              onChange={(e) => {
-                const nextDuration = e.target.value;
-                setDurationMinutes(nextDuration);
-                recalculateEndFromStart(startDate, startTimeHour, startTimeMinute, nextDuration);
-              }}
-              className="w-[7rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </label>
         </div>
       </div>
-      <div className="space-y-1 md:col-span-2">
-        <span className="block text-sm text-slate-300">{props.labels.endOptional}</span>
-        <div className="flex flex-wrap items-center gap-2">
+      <label className="space-y-1">
+        <span className="block text-xs text-slate-300">{props.labels.durationMinutes}</span>
+        <input
+          name="duration_minutes"
+          type="number"
+          min={1}
+          max={999}
+          step={1}
+          value={durationMinutes}
+          onChange={(e) => {
+            const nextDuration = e.target.value;
+            setDurationMinutes(nextDuration);
+            recalculateEndFromStart(startDate, startTimeHour, startTimeMinute, nextDuration);
+          }}
+          className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </label>
+      <label className="space-y-1 md:col-span-2">
+        <span className="block text-xs text-slate-300">{props.labels.endOptional}</span>
+        <div className="grid max-w-md gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
           <HouseholdDateIsoControl
             valueIso={endDate}
             onIsoChange={setEndDate}
-            className="w-[11.5rem] rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none ring-slate-700/80 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             aria-label={props.labels.endOptional}
           />
-          <div className="flex items-center gap-1">
+          <div className="grid grid-cols-2 gap-2">
             <select
               value={endTimeHour}
               onChange={(e) => setEndTimeHour(e.target.value)}
-              className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${props.labels.endOptional} hour`}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              aria-label={`${props.labels.endOptional} ${timeHourSuffix}`}
             >
               {timeHourOptions.map((hour) => (
                 <option key={hour} value={hour}>
@@ -333,12 +351,11 @@ export function AppointmentEditFormClient(props: Props) {
                 </option>
               ))}
             </select>
-            <span className="text-slate-300">:</span>
             <select
               value={endTimeMinute}
               onChange={(e) => setEndTimeMinute(e.target.value)}
-              className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              aria-label={`${props.labels.endOptional} minute`}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              aria-label={`${props.labels.endOptional} ${timeMinuteSuffix}`}
             >
               {timeMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
@@ -348,7 +365,7 @@ export function AppointmentEditFormClient(props: Props) {
             </select>
           </div>
         </div>
-      </div>
+      </label>
       <button
         type="submit"
         className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
