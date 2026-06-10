@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { gregorianDateToHebrewComponents, HEBREW_MONTH_OPTIONS } from "@/lib/hebrew-calendar";
+import {
+  gregorianDateToHebrewComponents,
+  hebrewComponentsToGregorian,
+  HEBREW_MONTH_OPTIONS,
+  parseHebrewDayFromForm,
+  parseHebrewMonthFromForm,
+  parseHebrewYearFromForm,
+} from "@/lib/hebrew-calendar";
 
 const fieldClass =
   "rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100";
@@ -29,6 +36,21 @@ function hebrewFromGregorianInput(isoDate: string): {
   return { day: h.day, month: h.month, year: h.year };
 }
 
+function formatLocalDateForInput(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function gregorianFromHebrewInput(day: number, month: number, year: number): string | null {
+  try {
+    return formatLocalDateForInput(hebrewComponentsToGregorian({ day, month, year }));
+  } catch {
+    return null;
+  }
+}
+
 export function SpecialDateFields({
   isHebrew,
   defaultGregorian = "",
@@ -38,6 +60,7 @@ export function SpecialDateFields({
   formKind = "edit",
   hebrewPersistedInDb = false,
 }: Props) {
+  const gregorianRef = useRef<HTMLInputElement>(null);
   const dayRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLSelectElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
@@ -51,13 +74,15 @@ export function SpecialDateFields({
         : null;
 
   const [hebrewPreview, setHebrewPreview] = useState(initialHebrew);
-  const [autoCalculatedPendingSave, setAutoCalculatedPendingSave] = useState(
+  const [hebrewAutoCalculatedPendingSave, setHebrewAutoCalculatedPendingSave] = useState(
     () =>
       !hebrewPersistedInDb &&
       Boolean(defaultGregorian) &&
       (defaultHebrewDay == null || defaultHebrewMonth == null) &&
       initialHebrew != null,
   );
+  const [gregorianAutoCalculatedPendingSave, setGregorianAutoCalculatedPendingSave] =
+    useState(false);
 
   const applyHebrew = useCallback(
     (
@@ -70,24 +95,50 @@ export function SpecialDateFields({
       if (monthRef.current) monthRef.current.value = String(h.month);
       if (yearRef.current) yearRef.current.value = String(h.year);
       setHebrewPreview(h);
-      if (!hebrewPersistedInDb) setAutoCalculatedPendingSave(true);
+      if (!hebrewPersistedInDb) setHebrewAutoCalculatedPendingSave(true);
     },
     [hebrewPersistedInDb],
   );
 
   const onGregorianChange = (iso: string) => {
+    setGregorianAutoCalculatedPendingSave(false);
     if (!iso) {
       setHebrewPreview(null);
-      setAutoCalculatedPendingSave(false);
+      setHebrewAutoCalculatedPendingSave(false);
       return;
     }
     const h = hebrewFromGregorianInput(iso);
     applyHebrew(h, { force: !hebrewTouchedRef.current });
-    setAutoCalculatedPendingSave(!hebrewPersistedInDb);
+    setHebrewAutoCalculatedPendingSave(!hebrewPersistedInDb && !hebrewTouchedRef.current);
   };
 
-  const markHebrewTouched = () => {
+  const onHebrewChange = () => {
     hebrewTouchedRef.current = true;
+    setHebrewAutoCalculatedPendingSave(false);
+
+    const day = parseHebrewDayFromForm(dayRef.current?.value ?? null);
+    const month = parseHebrewMonthFromForm(monthRef.current?.value ?? null);
+    const year = parseHebrewYearFromForm(yearRef.current?.value ?? null);
+
+    if (day != null && month != null) {
+      setHebrewPreview({ day, month, year: year ?? 0 });
+    } else {
+      setHebrewPreview(null);
+      setGregorianAutoCalculatedPendingSave(false);
+      return;
+    }
+
+    if (day != null && month != null && year != null) {
+      const iso = gregorianFromHebrewInput(day, month, year);
+      if (iso && gregorianRef.current) {
+        gregorianRef.current.value = iso;
+        setGregorianAutoCalculatedPendingSave(true);
+      } else {
+        setGregorianAutoCalculatedPendingSave(false);
+      }
+    } else {
+      setGregorianAutoCalculatedPendingSave(false);
+    }
   };
 
   return (
@@ -102,6 +153,7 @@ export function SpecialDateFields({
             {isHebrew ? "לועזי" : "Gregorian"}
           </label>
           <input
+            ref={gregorianRef}
             id="gregorian_date"
             name="gregorian_date"
             type="date"
@@ -126,7 +178,7 @@ export function SpecialDateFields({
               min={1}
               max={30}
               defaultValue={hebrewPreview?.day ?? ""}
-              onChange={markHebrewTouched}
+              onChange={onHebrewChange}
               className={`${fieldClass} w-14`}
               aria-label={isHebrew ? "יום עברי" : "Hebrew day"}
             />
@@ -141,7 +193,7 @@ export function SpecialDateFields({
               id="event_hebrew_month"
               name="event_hebrew_month"
               defaultValue={hebrewPreview?.month ?? ""}
-              onChange={markHebrewTouched}
+              onChange={onHebrewChange}
               className={`${fieldClass} w-[9.5rem]`}
               aria-label={isHebrew ? "חודש עברי" : "Hebrew month"}
             >
@@ -165,7 +217,7 @@ export function SpecialDateFields({
               type="number"
               min={1}
               defaultValue={hebrewPreview?.year ?? ""}
-              onChange={markHebrewTouched}
+              onChange={onHebrewChange}
               className={`${fieldClass} w-[4.5rem]`}
               aria-label={isHebrew ? "שנה עברית" : "Hebrew year"}
             />
@@ -175,11 +227,11 @@ export function SpecialDateFields({
 
       <p className="text-xs text-slate-500">
         {isHebrew
-          ? "יש להזין לפחות תאריך לועזי או תאריך עברי (יום וחודש)."
-          : "Enter at least a Gregorian date or a Hebrew date (day and month)."}
+          ? "יש להזין לפחות תאריך לועזי או תאריך עברי (יום וחודש). לחישוב לועזי מתאריך עברי נדרשת גם שנה."
+          : "Enter at least a Gregorian date or a Hebrew date (day and month). A Hebrew year is required to calculate the Gregorian date."}
       </p>
 
-      {formKind === "edit" && autoCalculatedPendingSave && hebrewPreview && (
+      {formKind === "edit" && hebrewAutoCalculatedPendingSave && hebrewPreview && (
         <div
           role="alert"
           className="rounded-lg border border-amber-600/80 bg-amber-950/50 px-3 py-2.5 text-sm text-amber-100"
@@ -197,13 +249,29 @@ export function SpecialDateFields({
         </div>
       )}
 
-      {hebrewPreview && hebrewPersistedInDb && (
-        <p className="text-xs text-slate-500">
-          {isHebrew
-            ? "שינוי בתאריך הלועזי מעדכן את התאריך העברי; ניתן לערוך ידנית."
-            : "Changing the Gregorian date updates the Hebrew date; you can edit it manually."}
-        </p>
+      {formKind === "edit" && gregorianAutoCalculatedPendingSave && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-600/80 bg-amber-950/50 px-3 py-2.5 text-sm text-amber-100"
+        >
+          <p className="font-medium">
+            {isHebrew
+              ? "התאריך הלועזי חושב אוטומטית ועדיין לא נשמר"
+              : "Gregorian date was auto-calculated and is not saved yet"}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-100/90">
+            {isHebrew
+              ? "בדקו שהתאריך נכון. לאחר מכן לחצו «שמירת שינויים» כדי לשמור."
+              : "Please check the date, then click Save changes to save."}
+          </p>
+        </div>
       )}
+
+      <p className="text-xs text-slate-500">
+        {isHebrew
+          ? "שינוי בתאריך הלועזי מעדכן את התאריך העברי; שינוי בעברי (כולל שנה) מעדכן את הלועזי. ניתן לערוך ידנית."
+          : "Changing the Gregorian date updates the Hebrew date; changing Hebrew (with year) updates the Gregorian date. You can edit either manually."}
+      </p>
     </div>
   );
 }

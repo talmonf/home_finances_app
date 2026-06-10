@@ -3,7 +3,7 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import { parseFamilySpecialDateEventType } from "@/lib/family-special-dates/event-type-labels";
 import { parseWeddingHebrewFromFormData } from "@/lib/family-members/hebrew-dob-form";
-import { gregorianDateToHebrewComponents } from "@/lib/hebrew-calendar";
+import { gregorianDateToHebrewComponents, hebrewComponentsToGregorian } from "@/lib/hebrew-calendar";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -41,6 +41,25 @@ function resolveEventHebrewForSave(
   return hebrew;
 }
 
+function resolveGregorianForSave(
+  gregorian_date: Date | null,
+  hebrew: ReturnType<typeof parseEventHebrewFromFormData>,
+): Date | null {
+  if (gregorian_date) return gregorian_date;
+  if (hebrew.hebrew_day == null || hebrew.hebrew_month == null || hebrew.hebrew_year == null) {
+    return null;
+  }
+  try {
+    return hebrewComponentsToGregorian({
+      day: hebrew.hebrew_day,
+      month: hebrew.hebrew_month,
+      year: hebrew.hebrew_year,
+    });
+  } catch {
+    return null;
+  }
+}
+
 type ParsedSpecialDateForm = {
   family_member_id: string | null;
   display_name: string | null;
@@ -74,7 +93,7 @@ async function parseSpecialDateForm(
     redirect(`${errorRedirect}?error=Display+name+required+when+no+family+member`);
   }
 
-  const gregorian_date = parseGregorianDate(formData.get("gregorian_date") as string | null);
+  let gregorian_date = parseGregorianDate(formData.get("gregorian_date") as string | null);
 
   let hebrew;
   try {
@@ -83,6 +102,7 @@ async function parseSpecialDateForm(
     redirect(`${errorRedirect}?error=Invalid+Hebrew+date`);
   }
   hebrew = resolveEventHebrewForSave(hebrew, gregorian_date);
+  gregorian_date = resolveGregorianForSave(gregorian_date, hebrew);
 
   if (!gregorian_date && (hebrew.hebrew_day == null || hebrew.hebrew_month == null)) {
     redirect(`${errorRedirect}?error=At+least+one+date+required`);
