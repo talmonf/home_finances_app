@@ -351,23 +351,19 @@ export default async function ClientsPage({
 
   const today = startOfTodayLocal();
   const activeClientIds = clients.filter((c) => c.is_active).map((c) => c.id);
-  const scheduledAppointments =
+  const { getUpcomingAppointmentsForHousehold } = await import("@/lib/therapy/series-occurrences");
+  const allUpcoming =
     activeClientIds.length > 0
-      ? await prisma.therapy_appointments.findMany({
-          where: {
-            household_id: householdId,
-            client_id: { in: activeClientIds },
-            status: "scheduled",
-            start_at: { gte: today },
-          },
-          orderBy: [{ start_at: "asc" }],
-          select: { client_id: true, start_at: true },
+      ? await getUpcomingAppointmentsForHousehold({
+          householdId,
+          clientIds: activeClientIds,
         })
       : [];
   const nextScheduledAppointmentByClientId = new Map<string, Date>();
-  for (const appointment of scheduledAppointments) {
-    if (!nextScheduledAppointmentByClientId.has(appointment.client_id)) {
-      nextScheduledAppointmentByClientId.set(appointment.client_id, appointment.start_at);
+  for (const appointment of allUpcoming) {
+    if (appointment.status !== "scheduled" || appointment.startAt < today) continue;
+    if (!nextScheduledAppointmentByClientId.has(appointment.clientId)) {
+      nextScheduledAppointmentByClientId.set(appointment.clientId, appointment.startAt);
     }
   }
 

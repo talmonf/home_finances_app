@@ -89,6 +89,7 @@ model households {
   therapy_receipt_travel_allocations       therapy_receipt_travel_allocations[]
   therapy_job_expenses              therapy_job_expenses[]
   therapy_appointment_series        therapy_appointment_series[]
+  therapy_appointment_series_exceptions therapy_appointment_series_exceptions[]
   therapy_appointments              therapy_appointments[]
   therapy_appointment_participants  therapy_appointment_participants[]
   therapy_consultation_types        therapy_consultation_types[]
@@ -2247,7 +2248,12 @@ model therapy_appointment_series {
   time_of_day  DateTime @db.Time
   start_date   DateTime @db.Date
   end_date     DateTime? @db.Date
+  duration_minutes Int?
   is_active    Boolean  @default(true)
+  google_calendar_event_id String?
+  google_calendar_last_synced_at DateTime?
+  google_calendar_last_error String?
+  google_calendar_last_error_at DateTime?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
@@ -2256,6 +2262,25 @@ model therapy_appointment_series {
   job       jobs            @relation(fields: [job_id], references: [id], onDelete: Cascade)
   program   therapy_service_programs? @relation(fields: [program_id], references: [id], onDelete: SetNull)
   appointments therapy_appointments[]
+  exceptions therapy_appointment_series_exceptions[]
+}
+
+model therapy_appointment_series_exceptions {
+  id              String   @id @default(uuid()) @db.Uuid
+  household_id    String   @db.Uuid
+  series_id       String
+  occurrence_date DateTime @db.Date
+  kind            String   @default("skip")
+  appointment_id  String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household   households                 @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  series      therapy_appointment_series @relation(fields: [series_id], references: [id], onDelete: Cascade)
+  appointment therapy_appointments?      @relation(fields: [appointment_id], references: [id], onDelete: SetNull)
+
+  @@unique([series_id, occurrence_date])
+  @@index([household_id, series_id])
 }
 
 model therapy_appointments {
@@ -2266,6 +2291,7 @@ model therapy_appointments {
   job_id       String
   program_id   String?
   series_id    String?
+  occurrence_date DateTime? @db.Date
   visit_type   TherapyVisitType
   start_at     DateTime
   end_at       DateTime?
@@ -2290,6 +2316,7 @@ model therapy_appointments {
   treatment  therapy_treatments? @relation(fields: [treatment_id], references: [id], onDelete: SetNull)
   appointment_audits therapy_appointment_audits[]
   participants      therapy_appointment_participants[]
+  series_exceptions therapy_appointment_series_exceptions[]
 
   @@index([household_id, start_at])
   @@index([family_id])

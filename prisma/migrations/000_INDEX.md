@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 125_therapy_appointment_series_virtual.sql (2026-06-10)
 - [x] 124_therapy_clients_end_reason.sql (2026-06-10)
 - [x] 123_family_special_dates.sql (2026-06-09)
 - [x] 122_therapy_consultation_types_is_active.sql (2026-06-08)
@@ -145,6 +146,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 125 | `125_therapy_appointment_series_virtual.sql` (2026-06-10) | CREATE/ALTER | Virtual recurrence: `therapy_appointment_series_exceptions`; series `duration_minutes` + Google sync fields; `therapy_appointments.occurrence_date`; delete future scheduled series appointment rows. |
 | 124 | `124_therapy_clients_end_reason.sql` (2026-06-10) | ALTER | `therapy_clients`: optional enum `end_reason` (`death_at_home`, `death_in_hospital`, `transfer_to_inpatient_hospice`, `other`) for hospice-related programs when care ends. |
 | 123 | `123_family_special_dates.sql` (2026-06-09) | CREATE | Enum `family_special_date_event_type` + table `family_special_dates` (optional family member, dual Gregorian/Hebrew dates, event type). |
 | 122 | `122_therapy_consultation_types_is_active.sql` (2026-06-08) | ALTER | `therapy_consultation_types`: `is_active` for soft-archiving types still referenced by consultations. |

@@ -28,8 +28,12 @@ import {
 } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { dateToDatetimeLocalValue, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { addDays } from "@/lib/private-clinic/reminders-logic";
+import { getUpcomingAppointmentsForHousehold, isoDateOnly } from "@/lib/therapy/series-occurrences";
+import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { AppointmentEditFormClient } from "./appointment-edit-form-client";
 import { ReportTreatmentFormClient } from "./report-treatment-form-client";
+import { EditSeriesRecurrenceForm } from "./edit-series-recurrence-form";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +112,46 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
   }));
 
   const redirectOnSuccess = `${LIST}/${id}/edit?saved=1`;
+  const now = new Date();
+  const clientUpcoming = await getUpcomingAppointmentsForHousehold({
+    householdId,
+    jobWhere: jobScope,
+    clientIds: [apt.client_id],
+  });
+  const hasOtherFutureAppointment = clientUpcoming.some(
+    (row) => row.status === "scheduled" && row.startAt > now && row.id !== apt.id,
+  );
+  const israelParts = (d: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jerusalem",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((p) => p.type === type)?.value ?? "00";
+    return { hour: get("hour"), minute: get("minute") };
+  };
+  const aptTime = israelParts(apt.start_at);
+  const visitsCount =
+    apt.program?.visits_per_period_count ??
+    apt.client.visits_per_period_count ??
+    null;
+  const visitsWeeks =
+    apt.program?.visits_per_period_weeks ?? apt.client.visits_per_period_weeks ?? null;
+  const defaultNextDate =
+    visitsCount && visitsWeeks
+      ? isoDateOnly(nextVisitDueDateAfterLastTreatment(apt.start_at, visitsCount, visitsWeeks))
+      : isoDateOnly(addDays(apt.start_at, 7));
+  const defaultDurationMinutes = String(
+    apt.duration_minutes ??
+      apt.program?.default_session_length_minutes ??
+      apt.job.default_session_length_minutes ??
+      50,
+  );
 
   return (
     <div className="space-y-8">
@@ -121,6 +165,46 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
       {apt.series_id && apt.series ? (
         <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100/90">
           <p className="font-medium">{ap.partOfSeries}</p>
+          {apt.series.google_calendar_last_error ? (
+            <p className="mt-2 text-xs text-rose-200">
+              {ap.googleSeriesSyncError}: {apt.series.google_calendar_last_error}
+            </p>
+          ) : null}
+          <EditSeriesRecurrenceForm
+            seriesId={apt.series_id}
+            effectiveDate={
+              apt.occurrence_date
+                ? isoDateOnly(new Date(apt.occurrence_date))
+                : isoDateOnly(apt.start_at)
+            }
+            initialRecurrence={apt.series.recurrence}
+            initialDayOfWeek={apt.series.day_of_week}
+            initialTimeOfDay={`${String(new Date(apt.series.time_of_day).getUTCHours()).padStart(2, "0")}:${String(new Date(apt.series.time_of_day).getUTCMinutes()).padStart(2, "0")}`}
+            initialEndDate={apt.series.end_date ? isoDateOnly(new Date(apt.series.end_date)) : ""}
+            initialDurationMinutes={String(apt.series.duration_minutes ?? defaultDurationMinutes)}
+            redirectOnSuccess={redirectOnSuccess}
+            dow={[
+              { v: 0, label: uiLanguage === "he" ? "ראשון" : "Sunday" },
+              { v: 1, label: uiLanguage === "he" ? "שני" : "Monday" },
+              { v: 2, label: uiLanguage === "he" ? "שלישי" : "Tuesday" },
+              { v: 3, label: uiLanguage === "he" ? "רביעי" : "Wednesday" },
+              { v: 4, label: uiLanguage === "he" ? "חמישי" : "Thursday" },
+              { v: 5, label: uiLanguage === "he" ? "שישי" : "Friday" },
+              { v: 6, label: uiLanguage === "he" ? "שבת" : "Saturday" },
+            ]}
+            labels={{
+              editRecurrence: ap.editRecurrence,
+              editRecurrenceTitle: ap.editRecurrenceTitle,
+              recurrence: ap.recurringRules,
+              dayOfWeek: ap.dayOfWeek,
+              timeOfDay: ap.timeOfDay,
+              seriesEndDateOptional: ap.seriesEndDateOptional,
+              durationMinutes: ap.durationMinutes,
+              weekly: ap.weekly,
+              biweekly: ap.biweekly,
+              save: ap.save,
+            }}
+          />
           <div className="mt-3 flex flex-wrap gap-2">
             <ConfirmDeleteForm
               action={endTherapyRecurringSeries}
@@ -163,6 +247,14 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
       {query.error === "linked" ? (
         <div className="rounded-xl border border-rose-700/50 bg-rose-950/30 px-4 py-3 text-sm text-rose-100/90">
           {ap.reportTreatmentBlocked}
+        </div>
+      ) : null}
+
+      {query.error === "next_appt" ? (
+        <div className="rounded-xl border border-rose-700/50 bg-rose-950/30 px-4 py-3 text-sm text-rose-100/90">
+          {uiLanguage === "he"
+            ? "לא ניתן לקבוע תור הבא — בדקו תאריך, שעה ומשך."
+            : "Could not schedule next appointment — check date, time, and duration."}
         </div>
       ) : null}
 
@@ -248,6 +340,11 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           <ReportTreatmentFormClient
             action={reportTreatmentFromAppointment}
             appointmentId={apt.id}
+            showScheduleNext={!hasOtherFutureAppointment}
+            defaultNextDate={defaultNextDate}
+            defaultNextHour={aptTime.hour}
+            defaultNextMinute={aptTime.minute}
+            defaultDurationMinutes={defaultDurationMinutes}
             clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}
             labels={{
               amount: c.amount,
@@ -258,6 +355,11 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
               addAdditionalClient: ap.addAdditionalClient,
               remove: ap.remove,
               submit: ap.reportTreatmentSubmit,
+              scheduleNextAppointment: ap.scheduleNextAppointment,
+              scheduleNextAppointmentHint: ap.scheduleNextAppointmentHint,
+              startDate: ap.startDate,
+              startTime: ap.startTime,
+              durationMinutes: ap.durationMinutes,
               travel: {
                 section: tr.treatmentTravelSection,
                 checkbox: tr.treatmentTravelCheckbox,

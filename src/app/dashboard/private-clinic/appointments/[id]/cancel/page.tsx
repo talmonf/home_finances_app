@@ -45,7 +45,7 @@ export default async function CancelAppointmentPage({
       household_id: householdId,
       job: jobScope,
     },
-    include: { client: true },
+    include: { client: true, series: true },
   });
 
   if (!apt) notFound();
@@ -62,6 +62,19 @@ export default async function CancelAppointmentPage({
       <form action={cancelTherapyAppointment} className="grid gap-3">
         <input type="hidden" name="id" value={apt.id} />
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
+        {apt.series_id ? (
+          <fieldset className="space-y-2 rounded-lg border border-slate-600 p-3">
+            <legend className="px-1 text-xs text-slate-300">{ap.partOfSeries}</legend>
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input type="radio" name="cancel_scope" value="this_only" defaultChecked className="rounded border-slate-600" />
+              {ap.cancelScopeThisOnly}
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input type="radio" name="cancel_scope" value="this_and_future" className="rounded border-slate-600" />
+              {ap.cancelScopeThisAndFuture}
+            </label>
+          </fieldset>
+        ) : null}
         <AppointmentChangeReasonFields
           reasonFieldName="cancellation_reason"
           notesFieldName="cancellation_notes"

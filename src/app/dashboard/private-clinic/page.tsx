@@ -11,6 +11,7 @@ import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import PrivateClinicOverviewCardsClient from "./private-clinic-overview-cards-client";
+import { getUpcomingAppointmentsForHousehold } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
@@ -73,14 +74,14 @@ export default async function PrivateClinicOverviewPage({
       prisma.therapy_job_expenses.count({
         where: { household_id: householdId, job: jobScope },
       }),
-      prisma.therapy_appointments.count({
-        where: {
-          household_id: householdId,
-          job: jobScope,
-          status: "scheduled",
-          start_at: { gte: new Date() },
-        },
-      }),
+      (async () => {
+        const rows = await getUpcomingAppointmentsForHousehold({
+          householdId,
+          jobWhere: jobScope,
+        });
+        const now = new Date();
+        return rows.filter((r) => r.status === "scheduled" && r.startAt >= now).length;
+      })(),
       prisma.therapy_consultations.count({
         where: { household_id: householdId, job: jobScope },
       }),

@@ -54,6 +54,7 @@ export async function GET() {
     settings,
     appointments,
     series,
+    seriesExceptions,
     consultationTypes,
     consultations,
     travelEntries,
@@ -101,6 +102,10 @@ export async function GET() {
     prisma.therapy_appointment_series.findMany({
       where: { household_id: householdId, job: jobScope },
       orderBy: { start_date: "desc" },
+    }),
+    prisma.therapy_appointment_series_exceptions.findMany({
+      where: { household_id: householdId, series: { job: jobScope } },
+      orderBy: { occurrence_date: "asc" },
     }),
     prisma.therapy_consultation_types.findMany({
       where: { household_id: householdId },
@@ -315,7 +320,19 @@ export async function GET() {
         time_of_day: s.time_of_day.toISOString(),
         start_date: String(s.start_date),
         end_date: s.end_date ? String(s.end_date) : "",
+        duration_minutes: s.duration_minutes ?? "",
         is_active: s.is_active,
+        google_calendar_event_id: s.google_calendar_event_id ?? "",
+      })),
+    ),
+    sheet(
+      "AppointmentSeriesExceptions",
+      seriesExceptions.map((e) => ({
+        id: e.id,
+        series_id: e.series_id,
+        occurrence_date: String(e.occurrence_date),
+        kind: e.kind,
+        appointment_id: e.appointment_id ?? "",
       })),
     ),
     sheet(
@@ -327,6 +344,7 @@ export async function GET() {
         job_id: a.job_id,
         program_id: a.program_id ?? "",
         series_id: a.series_id ?? "",
+        occurrence_date: a.occurrence_date ? String(a.occurrence_date) : "",
         visit_type: a.visit_type,
         start_at: a.start_at.toISOString(),
         end_at: a.end_at?.toISOString() ?? "",

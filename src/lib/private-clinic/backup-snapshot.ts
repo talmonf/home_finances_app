@@ -41,6 +41,9 @@ export async function buildPrivateClinicSnapshot(householdId: string): Promise<{
     }),
     therapy_job_expenses: await prisma.therapy_job_expenses.findMany({ where: { household_id: householdId } }),
     therapy_appointment_series: await prisma.therapy_appointment_series.findMany({ where: { household_id: householdId } }),
+    therapy_appointment_series_exceptions: await prisma.therapy_appointment_series_exceptions.findMany({
+      where: { household_id: householdId },
+    }),
     therapy_appointments: await prisma.therapy_appointments.findMany({ where: { household_id: householdId } }),
     therapy_appointment_participants: await prisma.therapy_appointment_participants.findMany({
       where: { household_id: householdId },
@@ -87,6 +90,7 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     await tx.therapy_consultations.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_consultation_types.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_appointments.deleteMany({ where: { household_id: householdId } });
+    await tx.therapy_appointment_series_exceptions.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_appointment_series.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_job_expenses.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_receipts.deleteMany({ where: { household_id: householdId } });
@@ -169,6 +173,12 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     if (Array.isArray(d.therapy_appointment_series) && d.therapy_appointment_series.length) {
       await tx.therapy_appointment_series.createMany({
         data: d.therapy_appointment_series as never[],
+        skipDuplicates: true,
+      });
+    }
+    if (Array.isArray(d.therapy_appointment_series_exceptions) && d.therapy_appointment_series_exceptions.length) {
+      await tx.therapy_appointment_series_exceptions.createMany({
+        data: d.therapy_appointment_series_exceptions as never[],
         skipDuplicates: true,
       });
     }

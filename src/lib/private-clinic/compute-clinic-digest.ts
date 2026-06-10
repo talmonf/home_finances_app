@@ -28,13 +28,13 @@ export type ClinicDigestVisitRow = {
   nextDue: Date;
   isOverdue: boolean;
   isDueToday: boolean;
-  nextAppointment: { id: string; startAt: Date } | null;
+  nextAppointment: { id: string | null; startAt: Date } | null;
 };
 
 export type ClinicDigestNeedsFirstVisitRow = {
   clientId: string;
   name: string;
-  nextAppointment: { id: string; startAt: Date } | null;
+  nextAppointment: { id: string | null; startAt: Date } | null;
 };
 
 export type ClinicDigestData = {
@@ -86,25 +86,23 @@ export async function computeClinicDigestData(args: {
   const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const windowEnd = endOfDaysAheadWindow(now, daysAhead, timezone);
 
-  const appointmentsRaw = await prisma.therapy_appointments.findMany({
-    where: {
-      household_id: householdId,
-      job: jobScope,
-      status: "scheduled",
-      start_at: { gte: now, lte: windowEnd },
-    },
-    orderBy: { start_at: "asc" },
-    take: APPOINTMENTS_CAP,
-    include: { client: true, job: true },
+  const { getUpcomingAppointmentsForHousehold } = await import("@/lib/therapy/series-occurrences");
+  const mergedUpcoming = await getUpcomingAppointmentsForHousehold({
+    householdId,
+    jobWhere: jobScope,
   });
-
-  const appointments: ClinicDigestAppointmentRow[] = appointmentsRaw.map((a) => ({
-    id: a.id,
-    startAt: a.start_at,
-    clientName: clientDisplayName(a.client.first_name, a.client.last_name),
-    jobLabel: formatJobDisplayLabel(a.job),
-    visitType: a.visit_type,
-  }));
+  const appointments: ClinicDigestAppointmentRow[] = mergedUpcoming
+    .filter((a) => a.status === "scheduled" && a.startAt >= now && a.startAt <= windowEnd)
+    .slice(0, APPOINTMENTS_CAP)
+    .map((a) => ({
+      id: a.id ?? `series:${a.seriesId}:${a.occurrenceDate}`,
+      startAt: a.startAt,
+      clientName: a.client
+        ? clientDisplayName(a.client.first_name, a.client.last_name)
+        : "—",
+      jobLabel: a.job ? formatJobDisplayLabel({ job_title: a.job.job_title, employer_name: null }) : "—",
+      visitType: a.visitType,
+    }));
 
   const clients = await prisma.therapy_clients.findMany({
     where: {
@@ -125,25 +123,21 @@ export async function computeClinicDigestData(args: {
   const today = startOfTodayLocal();
   const clientIds = clients.map((x) => x.id);
 
-  const scheduledAppointments =
+  const clientUpcoming =
     clientIds.length > 0
-      ? await prisma.therapy_appointments.findMany({
-          where: {
-            household_id: householdId,
-            client_id: { in: clientIds },
-            status: "scheduled",
-          },
-          orderBy: [{ start_at: "asc" }],
-          select: { id: true, client_id: true, start_at: true },
+      ? await getUpcomingAppointmentsForHousehold({
+          householdId,
+          clientIds,
         })
       : [];
 
-  const nextAppointmentByClientId = new Map<string, { id: string; startAt: Date }>();
-  for (const appointment of scheduledAppointments) {
-    if (!nextAppointmentByClientId.has(appointment.client_id)) {
-      nextAppointmentByClientId.set(appointment.client_id, {
+  const nextAppointmentByClientId = new Map<string, { id: string | null; startAt: Date }>();
+  for (const appointment of clientUpcoming) {
+    if (appointment.status !== "scheduled") continue;
+    if (!nextAppointmentByClientId.has(appointment.clientId)) {
+      nextAppointmentByClientId.set(appointment.clientId, {
         id: appointment.id,
-        startAt: appointment.start_at,
+        startAt: appointment.startAt,
       });
     }
   }

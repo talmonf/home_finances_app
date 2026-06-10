@@ -1,21 +1,21 @@
 import Link from "next/link";
 import {
-  prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
+  prisma,
 } from "@/lib/auth";
 import { formatClientNameForDisplay } from "@/lib/privacy-display";
 import { privateClinicAppointments, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import {
-  jobWherePrivateClinicScoped,
-} from "@/lib/private-clinic/jobs-scope";
+import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
+import { getUpcomingAppointmentsForHousehold } from "@/lib/therapy/series-occurrences";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { AppointmentRowActions } from "./appointment-row-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,20 +39,25 @@ export default async function AppointmentsPage() {
   const c = privateClinicCommon(uiLanguage);
   const ap = privateClinicAppointments(uiLanguage);
   const now = new Date();
-  const upcoming = await prisma.therapy_appointments.findMany({
-    where: {
-      household_id: householdId,
-      job: jobScope,
-      status: "scheduled",
-    },
-    orderBy: { start_at: "asc" },
+
+  const upcoming = await getUpcomingAppointmentsForHousehold({
+    householdId,
+    jobWhere: jobScope,
     take: 100,
-    include: { client: true, job: true },
   });
-  const futureAppointments = upcoming.filter((a) => a.start_at >= now);
+
+  const futureAppointments = upcoming.filter((a) => a.status === "scheduled" && a.startAt >= now);
   const pastAppointments = upcoming
-    .filter((a) => a.start_at < now)
-    .sort((a, b) => b.start_at.getTime() - a.start_at.getTime());
+    .filter((a) => a.status === "scheduled" && a.startAt < now)
+    .sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
+
+  const actionLabels = {
+    edit: ap.edit,
+    logTreatment: ap.logTreatment,
+    reschedule: ap.reschedule,
+    cancel: ap.cancel,
+  };
+
   const renderAppointmentsTable = (appointments: typeof upcoming) => (
     <div className="overflow-x-auto rounded-xl border border-slate-700">
       <table className="w-full text-left text-sm">
@@ -67,50 +72,29 @@ export default async function AppointmentsPage() {
         </thead>
         <tbody>
           {appointments.map((a) => (
-            <tr key={a.id} className="border-b border-slate-700/80">
+            <tr
+              key={a.id ?? `virtual-${a.seriesId}-${a.occurrenceDate}`}
+              className="border-b border-slate-700/80"
+            >
               <td className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                {formatHouseholdDateUtcWithTime(a.start_at, dateDisplayFormat)}
+                {formatHouseholdDateUtcWithTime(a.startAt, dateDisplayFormat)}
+                {a.kind === "virtual" ? (
+                  <span className="ml-2 text-xs text-amber-400/80">↻</span>
+                ) : null}
               </td>
               <td className="px-3 py-2 text-slate-100">
-                {formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)}
+                {a.client
+                  ? formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)
+                  : "—"}
               </td>
-              <td className="px-3 py-2 text-slate-400">{formatJobDisplayLabel(a.job)}</td>
               <td className="px-3 py-2 text-slate-400">
-                {therapyVisitTypeLabel(uiLanguage, a.visit_type)}
+                {a.job ? formatJobDisplayLabel({ job_title: a.job.job_title, employer_name: null }) : "—"}
+              </td>
+              <td className="px-3 py-2 text-slate-400">
+                {therapyVisitTypeLabel(uiLanguage, a.visitType)}
               </td>
               <td className="px-3 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`${LIST}/${a.id}/edit`}
-                    className="inline-flex items-center text-xs leading-none text-slate-300 hover:text-slate-100"
-                  >
-                    {ap.edit}
-                  </Link>
-                  {a.treatment_id ? (
-                    <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
-                      {ap.logTreatment}
-                    </span>
-                  ) : (
-                    <Link
-                      href={`${LIST}/${a.id}/edit#report-treatment`}
-                      className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
-                    >
-                      {ap.logTreatment}
-                    </Link>
-                  )}
-                  <Link
-                    href={`${LIST}/${a.id}/reschedule`}
-                    className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
-                  >
-                    {ap.reschedule}
-                  </Link>
-                  <Link
-                    href={`${LIST}/${a.id}/cancel`}
-                    className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
-                  >
-                    {ap.cancel}
-                  </Link>
-                </div>
+                <AppointmentRowActions listBase={LIST} labels={actionLabels} row={a} />
               </td>
             </tr>
           ))}

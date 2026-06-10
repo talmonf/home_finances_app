@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { HouseholdDateIsoControl } from "@/components/household-date-field";
 import { TreatmentTravelSessionFields } from "../../../treatments/treatment-travel-session-fields";
 
 type ClientOption = { id: string; label: string };
@@ -9,6 +10,11 @@ type Props = {
   action: (formData: FormData) => void | Promise<void>;
   appointmentId: string;
   clients: ClientOption[];
+  showScheduleNext: boolean;
+  defaultNextDate: string;
+  defaultNextHour: string;
+  defaultNextMinute: string;
+  defaultDurationMinutes: string;
   labels: {
     amount: string;
     currency: string;
@@ -18,6 +24,11 @@ type Props = {
     addAdditionalClient: string;
     remove: string;
     submit: string;
+    scheduleNextAppointment: string;
+    scheduleNextAppointmentHint: string;
+    startDate: string;
+    startTime: string;
+    durationMinutes: string;
     travel: {
       section: string;
       checkbox: string;
@@ -28,12 +39,41 @@ type Props = {
   };
 };
 
-export function ReportTreatmentFormClient({ action, appointmentId, clients, labels }: Props) {
+export function ReportTreatmentFormClient({
+  action,
+  appointmentId,
+  clients,
+  showScheduleNext,
+  defaultNextDate,
+  defaultNextHour,
+  defaultNextMinute,
+  defaultDurationMinutes,
+  labels,
+}: Props) {
   const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>([]);
+  const [scheduleNext, setScheduleNext] = useState(showScheduleNext);
+  const [nextDate, setNextDate] = useState(defaultNextDate);
+  const [nextHour, setNextHour] = useState(defaultNextHour);
+  const [nextMinute, setNextMinute] = useState(defaultNextMinute);
+  const [durationMinutes, setDurationMinutes] = useState(defaultDurationMinutes);
+
   const selectedAdditionalIds = useMemo(
     () => new Set(additionalParticipantIds.filter(Boolean)),
     [additionalParticipantIds],
   );
+
+  const hourOptions = useMemo(
+    () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
+    [],
+  );
+  const minuteOptions = useMemo(
+    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
+    [],
+  );
+  const nextStartAt = useMemo(() => {
+    if (!nextDate || !nextHour || !nextMinute) return "";
+    return `${nextDate}T${nextHour}:${nextMinute}`;
+  }, [nextDate, nextHour, nextMinute]);
 
   return (
     <form action={action} className="mt-3 grid gap-3 md:grid-cols-2">
@@ -104,6 +144,85 @@ export function ReportTreatmentFormClient({ action, appointmentId, clients, labe
         </button>
       </div>
       <TreatmentTravelSessionFields labels={labels.travel} />
+
+      {showScheduleNext ? (
+        <div className="space-y-3 rounded-lg border border-slate-600 bg-slate-800/40 p-3 md:col-span-2">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              name="schedule_next"
+              value="1"
+              checked={scheduleNext}
+              onChange={(e) => setScheduleNext(e.target.checked)}
+              className="rounded border-slate-600"
+            />
+            {labels.scheduleNextAppointment}
+          </label>
+          <p className="text-xs text-slate-400">{labels.scheduleNextAppointmentHint}</p>
+          {scheduleNext ? (
+            <>
+              <input type="hidden" name="next_start_at" value={nextStartAt} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <span className="block text-xs text-slate-300">{labels.startDate}</span>
+                  <HouseholdDateIsoControl
+                    valueIso={nextDate}
+                    onIsoChange={setNextDate}
+                    required={scheduleNext}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    aria-label={labels.startDate}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="block text-xs text-slate-300">{labels.startTime}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      required={scheduleNext}
+                      value={nextHour}
+                      onChange={(e) => setNextHour(e.target.value)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">--</option>
+                      {hourOptions.map((hour) => (
+                        <option key={hour} value={hour}>
+                          {hour}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      required={scheduleNext}
+                      value={nextMinute}
+                      onChange={(e) => setNextMinute(e.target.value)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">--</option>
+                      {minuteOptions.map((minute) => (
+                        <option key={minute} value={minute}>
+                          {minute}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <label className="space-y-1">
+                  <span className="block text-xs text-slate-300">{labels.durationMinutes}</span>
+                  <input
+                    name="next_duration_minutes"
+                    type="number"
+                    min={1}
+                    max={999}
+                    required={scheduleNext}
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(e.target.value)}
+                    className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  />
+                </label>
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       <button
         type="submit"
         className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
