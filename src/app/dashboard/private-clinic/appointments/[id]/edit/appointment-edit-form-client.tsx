@@ -368,7 +368,7 @@ export function AppointmentEditFormClient(props: Props) {
       </div>
       <button
         type="submit"
-        className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+        className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 md:col-span-2"
       >
         {props.labels.save}
       </button>
