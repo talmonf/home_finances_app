@@ -106,6 +106,61 @@ export function nextGregorianOccurrenceForHebrewMonthDay(params: {
   return null;
 }
 
+const WEEKDAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const WEEKDAY_NAMES_HE = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] as const;
+
+function formatDdMmYyyy(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/** Hebrew calendar days begin the prior civil evening; label that night-to-day range. */
+export function formatHebrewNightDayRangeLabel(
+  language: "en" | "he",
+  hebrewOccurrenceDate: Date,
+): string {
+  const day = dateOnlyLocal(hebrewOccurrenceDate);
+  const eve = new Date(day);
+  eve.setDate(eve.getDate() - 1);
+  const eveLabel = formatDdMmYyyy(eve);
+  const dayLabel = formatDdMmYyyy(day);
+  if (language === "he") {
+    const eveName = WEEKDAY_NAMES_HE[eve.getDay()];
+    const dayName = WEEKDAY_NAMES_HE[day.getDay()];
+    return `ליל ${eveName}-${dayName} ${eveLabel}-${dayLabel}`;
+  }
+  const eveName = WEEKDAY_SHORT_EN[eve.getDay()];
+  const dayName = WEEKDAY_SHORT_EN[day.getDay()];
+  return `${eveName} night-${dayName} ${eveLabel}-${dayLabel}`;
+}
+
+/** This Hebrew year's occurrence when it already fell before `today`. */
+export function passedHebrewOccurrenceThisCycle(
+  month: number,
+  day: number,
+  today: Date,
+): Date | null {
+  const from = dateOnlyLocal(today);
+  const hy = new HDate(from).getFullYear();
+  const g = tryHebrewToGregorian(day, month, hy);
+  if (g && g < from) return g;
+  return null;
+}
+
+/** This Gregorian year's occurrence when it already fell before `today`. */
+export function passedGregorianOccurrenceThisCycle(
+  monthZeroBased: number,
+  day: number,
+  today: Date,
+): Date | null {
+  const from = dateOnlyLocal(today);
+  const g = dateOnlyLocal(new Date(from.getFullYear(), monthZeroBased, day));
+  if (g < from) return g;
+  return null;
+}
+
 export function nextAnnualGregorianOccurrence(monthZeroBased: number, day: number, fromDate: Date): Date {
   const from = dateOnlyLocal(fromDate);
   let year = from.getFullYear();

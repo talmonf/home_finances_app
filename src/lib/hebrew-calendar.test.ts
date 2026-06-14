@@ -5,6 +5,9 @@ import {
   hebrewComponentsToGregorian,
   nextGregorianOccurrenceForHebrewMonthDay,
   nextAnnualGregorianOccurrence,
+  formatHebrewNightDayRangeLabel,
+  passedHebrewOccurrenceThisCycle,
+  passedGregorianOccurrenceThisCycle,
 } from "@/lib/hebrew-calendar";
 
 test("gregorianDateToHebrewComponents uses UTC calendar date", () => {
@@ -37,4 +40,40 @@ test("nextAnnualGregorianOccurrence rolls to next year", () => {
   assert.equal(next.getFullYear(), 2027);
   assert.equal(next.getMonth(), 2);
   assert.equal(next.getDate(), 15);
+});
+
+test("formatHebrewNightDayRangeLabel uses actual weekdays", () => {
+  const naama = new Date(2026, 5, 12);
+  assert.equal(
+    formatHebrewNightDayRangeLabel("en", naama),
+    "Thu night-Fri 11/06/2026-12/06/2026",
+  );
+  const anniversary = new Date(2026, 5, 27);
+  assert.equal(
+    formatHebrewNightDayRangeLabel("en", anniversary),
+    "Fri night-Sat 26/06/2026-27/06/2026",
+  );
+});
+
+test("passedHebrewOccurrenceThisCycle returns date when already passed", () => {
+  const today = new Date(2026, 5, 11);
+  const passed = passedHebrewOccurrenceThisCycle(3, 23, today);
+  assert.ok(passed);
+  assert.equal(passed.getFullYear(), 2026);
+  assert.equal(passed.getMonth(), 5);
+  assert.equal(passed.getDate(), 8);
+});
+
+test("passedHebrewOccurrenceThisCycle returns null when still upcoming", () => {
+  const today = new Date(2026, 5, 11);
+  const passed = passedHebrewOccurrenceThisCycle(3, 27, today);
+  assert.equal(passed, null);
+});
+
+test("passedGregorianOccurrenceThisCycle returns date when already passed", () => {
+  const today = new Date(2026, 5, 15);
+  const passed = passedGregorianOccurrenceThisCycle(5, 12, today);
+  assert.ok(passed);
+  assert.equal(passed.getDate(), 12);
+  assert.equal(passed.getMonth(), 5);
 });

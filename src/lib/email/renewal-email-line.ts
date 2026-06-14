@@ -18,6 +18,9 @@ export function renewalEmailLineSegments(row: RenewalRow): string[] {
   if (renewalType && !REDUNDANT_FAMILY_RENEWAL_TYPES.has(renewalType)) {
     segments.push(renewalType);
   }
+  if (row.extraEmailSegments?.length) {
+    segments.push(...row.extraEmailSegments);
+  }
   const owner = row.owner.trim();
   if (owner && owner !== row.itemName && !HIDDEN_EMAIL_OWNERS.has(owner)) {
     segments.push(owner);

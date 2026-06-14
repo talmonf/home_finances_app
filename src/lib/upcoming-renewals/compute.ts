@@ -11,6 +11,8 @@ export type RenewalRow = {
   renewalDate: Date;
   renewalType: string;
   href: string;
+  /** Extra middle segments for email/dashboard (e.g. alternate calendar already passed). */
+  extraEmailSegments?: string[];
 };
 
 const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
