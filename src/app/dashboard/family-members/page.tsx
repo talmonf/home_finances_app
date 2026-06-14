@@ -217,8 +217,18 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                         {isGrandchildRelationship(m.relationship) &&
                         (m.parent_a?.full_name || m.parent_b?.full_name) ? (
                           <div className="text-xs text-slate-500">
-                            {isHebrew ? "הורים: " : "Parents: "}
-                            {[m.parent_a?.full_name, m.parent_b?.full_name].filter(Boolean).join(", ")}
+                            {m.parent_a?.full_name ? (
+                              <div>
+                                {isHebrew ? "אב: " : "Father: "}
+                                {m.parent_a.full_name}
+                              </div>
+                            ) : null}
+                            {m.parent_b?.full_name ? (
+                              <div>
+                                {isHebrew ? "אם: " : "Mother: "}
+                                {m.parent_b.full_name}
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                       </td>

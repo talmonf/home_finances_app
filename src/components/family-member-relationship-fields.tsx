@@ -53,7 +53,7 @@ export function FamilyMemberRelationshipFields({
         <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
           <div>
             <label htmlFor="parent_a_family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "הורה א'" : "Parent 1"}
+              {isHebrew ? "אב" : "Father"}
             </label>
             <select
               id="parent_a_family_member_id"
@@ -71,7 +71,7 @@ export function FamilyMemberRelationshipFields({
           </div>
           <div>
             <label htmlFor="parent_b_family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "הורה ב'" : "Parent 2"}
+              {isHebrew ? "אם" : "Mother"}
             </label>
             <select
               id="parent_b_family_member_id"
