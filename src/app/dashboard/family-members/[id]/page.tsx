@@ -2,7 +2,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLang
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FamilyMemberBirthdateFields } from "@/components/family-member-birthdate-fields";
-import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
+import { FamilyMemberRelationshipFields } from "@/components/family-member-relationship-fields";
 import { updateFamilyMember } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +22,18 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [member, users] = await Promise.all([
+  const [member, users, allMembers] = await Promise.all([
     prisma.family_members.findFirst({
       where: { id, household_id: householdId },
       include: { users: true },
     }),
     prisma.users.findMany({
       where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId },
+      select: { id: true, full_name: true },
       orderBy: { full_name: "asc" },
     }),
   ]);
@@ -128,15 +133,14 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
-                Relationship
-              </label>
-              <FamilyRelationshipSelect
-                isHebrew={isHebrew}
-                defaultValue={member.relationship ?? ""}
-              />
-            </div>
+            <FamilyMemberRelationshipFields
+              isHebrew={isHebrew}
+              members={allMembers}
+              excludeMemberId={member.id}
+              defaultRelationship={member.relationship ?? ""}
+              defaultParentAId={member.parent_a_family_member_id}
+              defaultParentBId={member.parent_b_family_member_id}
+            />
             <div>
               <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">
                 Linked user (optional)
@@ -155,6 +159,18 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
                 ))}
               </select>
             </div>
+          </div>
+          <div>
+            <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+              {isHebrew ? "הערות" : "Notes"}
+            </label>
+            <textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              defaultValue={member.notes ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Link

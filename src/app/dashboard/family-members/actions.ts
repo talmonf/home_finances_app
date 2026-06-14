@@ -5,11 +5,39 @@ import {
   parseHebrewDobFromFormData,
   resolveHebrewDobForSave,
 } from "@/lib/family-members/hebrew-dob-form";
+import { parseGrandchildParentIds } from "@/lib/family-members/grandchild-parents";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function hebrewDobRedirectError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+async function resolveGrandchildParents(
+  householdId: string,
+  memberId: string | null,
+  relationship: string | null,
+  parentAId: string | null,
+  parentBId: string | null,
+  errorPath: string,
+) {
+  const parsed = parseGrandchildParentIds(relationship, parentAId, parentBId);
+  const ids = [parsed.parent_a_family_member_id, parsed.parent_b_family_member_id].filter(
+    (id): id is string => id != null,
+  );
+  if (memberId && ids.includes(memberId)) {
+    hebrewDobRedirectError(errorPath, "A family member cannot be their own parent");
+  }
+  if (ids.length === 0) return parsed;
+
+  const found = await prisma.family_members.findMany({
+    where: { household_id: householdId, id: { in: ids } },
+    select: { id: true },
+  });
+  if (found.length !== ids.length) {
+    hebrewDobRedirectError(errorPath, "Selected parent is not a valid family member");
+  }
+  return parsed;
 }
 
 export async function createFamilyMember(formData: FormData) {
@@ -25,6 +53,7 @@ export async function createFamilyMember(formData: FormData) {
   const phone = (formData.get("phone") as string | null)?.trim() || null;
   const email = (formData.get("email") as string | null)?.trim() || null;
   const relationship = (formData.get("relationship") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
   const user_id = (formData.get("user_id") as string | null)?.trim() || null;
 
   if (!full_name) {
@@ -42,6 +71,14 @@ export async function createFamilyMember(formData: FormData) {
   hebrewDob = resolveHebrewDobForSave(hebrewDob, date_of_birth);
 
   const memberId = crypto.randomUUID();
+  const parents = await resolveGrandchildParents(
+    householdId,
+    memberId,
+    relationship,
+    formData.get("parent_a_family_member_id") as string | null,
+    formData.get("parent_b_family_member_id") as string | null,
+    "/dashboard/family-members",
+  );
 
   await prisma.$transaction(async (tx) => {
     await tx.family_members.create({
@@ -55,6 +92,8 @@ export async function createFamilyMember(formData: FormData) {
         phone,
         email,
         relationship,
+        notes,
+        ...parents,
       },
     });
 
@@ -155,6 +194,7 @@ export async function updateFamilyMember(formData: FormData) {
   const phone = (formData.get("phone") as string | null)?.trim() || null;
   const email = (formData.get("email") as string | null)?.trim() || null;
   const relationship = (formData.get("relationship") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
   const user_id = (formData.get("user_id") as string | null)?.trim() || null;
 
   if (!full_name) {
@@ -171,6 +211,15 @@ export async function updateFamilyMember(formData: FormData) {
   }
   hebrewDob = resolveHebrewDobForSave(hebrewDob, date_of_birth);
 
+  const parents = await resolveGrandchildParents(
+    householdId,
+    id,
+    relationship,
+    formData.get("parent_a_family_member_id") as string | null,
+    formData.get("parent_b_family_member_id") as string | null,
+    `/dashboard/family-members/${id}`,
+  );
+
   await prisma.$transaction(async (tx) => {
     await tx.family_members.updateMany({
       where: { id, household_id: householdId },
@@ -182,6 +231,8 @@ export async function updateFamilyMember(formData: FormData) {
         phone,
         email,
         relationship,
+        notes,
+        ...parents,
       },
     });
 

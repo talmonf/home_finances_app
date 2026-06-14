@@ -175,11 +175,18 @@ model family_members {
   phone          String?
   email          String?
   relationship   String?
+  notes          String?
+  parent_a_family_member_id String?
+  parent_b_family_member_id String?
   is_active      Boolean  @default(true)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
   household           households     @relation(fields: [household_id], references: [id])
+  parent_a            family_members? @relation("FamilyMemberParentA", fields: [parent_a_family_member_id], references: [id], onDelete: SetNull)
+  parent_b            family_members? @relation("FamilyMemberParentB", fields: [parent_b_family_member_id], references: [id], onDelete: SetNull)
+  children_as_parent_a family_members[] @relation("FamilyMemberParentA")
+  children_as_parent_b family_members[] @relation("FamilyMemberParentB")
   marriages_as_spouse_a family_marriages[] @relation("MarriageSpouseA")
   marriages_as_spouse_b family_marriages[] @relation("MarriageSpouseB")
   credit_cards        credit_cards[]

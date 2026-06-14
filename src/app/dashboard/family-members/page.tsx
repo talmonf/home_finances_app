@@ -15,8 +15,9 @@ import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { FamilyMemberBirthdateFields } from "@/components/family-member-birthdate-fields";
-import { FamilyRelationshipSelect } from "@/components/family-relationship-select";
+import { FamilyMemberRelationshipFields } from "@/components/family-member-relationship-fields";
 import { relationshipLabel } from "@/lib/family-members/relationship-options";
+import { isGrandchildRelationship } from "@/lib/family-members/grandchild-parents";
 import { formatHebrewDateLabel } from "@/lib/hebrew-calendar";
 import { createFamilyMember, toggleFamilyMemberActive } from "./actions";
 
@@ -69,7 +70,11 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
   const [members, householdUsers, familyMembersSetupDone] = await Promise.all([
     prisma.family_members.findMany({
       where: { household_id: householdId },
-      include: { users: true },
+      include: {
+        users: true,
+        parent_a: { select: { full_name: true } },
+        parent_b: { select: { full_name: true } },
+      },
       orderBy,
     }),
     prisma.users.findMany({
@@ -78,6 +83,8 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
     }),
     getSetupSectionIsDone(householdId, "familyMembers"),
   ]);
+
+  const parentPickerMembers = members.map((m) => ({ id: m.id, full_name: m.full_name }));
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -206,7 +213,14 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {relationshipLabel(m.relationship, isHebrew)}
+                        <div>{relationshipLabel(m.relationship, isHebrew)}</div>
+                        {isGrandchildRelationship(m.relationship) &&
+                        (m.parent_a?.full_name || m.parent_b?.full_name) ? (
+                          <div className="text-xs text-slate-500">
+                            {isHebrew ? "הורים: " : "Parents: "}
+                            {[m.parent_a?.full_name, m.parent_b?.full_name].filter(Boolean).join(", ")}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         <div>{formatHouseholdDate(m.date_of_birth, dateDisplayFormat)}</div>
@@ -327,11 +341,23 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   placeholder="Optional"
                 />
               </div>
-              <div>
-                <label htmlFor="relationship" className="mb-1 block text-xs font-medium text-slate-400">
-                  Relationship
+              <div className="sm:col-span-2">
+                <FamilyMemberRelationshipFields
+                  isHebrew={isHebrew}
+                  members={parentPickerMembers}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
+                  {isHebrew ? "הערות" : "Notes"}
                 </label>
-                <FamilyRelationshipSelect isHebrew={isHebrew} />
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={2}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder={isHebrew ? "אופציונלי" : "Optional"}
+                />
               </div>
               <div>
                 <label htmlFor="user_id" className="mb-1 block text-xs font-medium text-slate-400">
