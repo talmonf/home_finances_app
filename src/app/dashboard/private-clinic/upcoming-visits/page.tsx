@@ -37,11 +37,11 @@ function visitDueFlags(
 ) {
   const nextDay = dateOnlyLocal(nextDue);
   const visitDueOverdue = nextDay.getTime() < today.getTime();
-  const appointmentPassed =
+  const appointmentOverdue =
     nextAppointment != null && nextAppointment.startAt.getTime() < now.getTime();
-  const isOverdue = visitDueOverdue || appointmentPassed;
-  const isDueToday = !isOverdue && nextDay.getTime() === today.getTime();
-  return { isOverdue, isDueToday };
+  const isOverdue = visitDueOverdue || appointmentOverdue;
+  const isDueToday = !visitDueOverdue && nextDay.getTime() === today.getTime();
+  return { visitDueOverdue, appointmentOverdue, isOverdue, isDueToday };
 }
 
 export default async function UpcomingVisitsPage({
@@ -161,7 +161,12 @@ export default async function UpcomingVisitsPage({
 
       const nextDue = dateOnlyLocal(row.start_date);
       const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
-      const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
+      const { isOverdue, isDueToday } = visitDueFlags(
+        nextDue,
+        today,
+        now,
+        nextAppointment,
+      );
 
       const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
       scheduled.push({
@@ -191,7 +196,12 @@ export default async function UpcomingVisitsPage({
 
     const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
     const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
-    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
+    const { isOverdue, isDueToday } = visitDueFlags(
+      nextDue,
+      today,
+      now,
+      nextAppointment,
+    );
 
     const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
     scheduled.push({
@@ -220,7 +230,8 @@ export default async function UpcomingVisitsPage({
 
   scheduled.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
 
-  const showScheduledAppointmentColumn = scheduled.some((row) => row.nextAppointment != null);
+  const showScheduledColumn = scheduled.some((row) => row.nextAppointment != null);
+  const showOverdueColumn = scheduled.some((row) => row.isOverdue);
 
   const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
@@ -312,12 +323,20 @@ export default async function UpcomingVisitsPage({
                       >
                         {uv.colNextDue}
                       </th>
-                      {showScheduledAppointmentColumn ? (
+                      {showScheduledColumn ? (
                         <th
                           scope="col"
                           className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
                         >
-                          {uv.colScheduledAppointment}
+                          {uv.colScheduled}
+                        </th>
+                      ) : null}
+                      {showOverdueColumn ? (
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                        >
+                          {uv.colOverdue}
                         </th>
                       ) : null}
                       <th
@@ -382,17 +401,13 @@ export default async function UpcomingVisitsPage({
                           <span className="font-medium text-slate-100">
                             {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
                           </span>
-                          {r.isOverdue ? (
-                            <span className="ms-2 rounded bg-rose-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
-                              {uv.overdue}
-                            </span>
-                          ) : r.isDueToday ? (
+                          {r.isDueToday ? (
                             <span className="ms-2 rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-950">
                               {uv.dueToday}
                             </span>
                           ) : null}
                         </td>
-                        {showScheduledAppointmentColumn ? (
+                        {showScheduledColumn ? (
                           <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                             {r.nextAppointment ? (
                               formatHouseholdDateUtcWithTime(
@@ -402,6 +417,15 @@ export default async function UpcomingVisitsPage({
                             ) : (
                               "—"
                             )}
+                          </td>
+                        ) : null}
+                        {showOverdueColumn ? (
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {r.isOverdue ? (
+                              <span className="rounded bg-rose-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
+                                {uv.overdue}
+                              </span>
+                            ) : null}
                           </td>
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2 text-slate-200">
