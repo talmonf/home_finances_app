@@ -198,9 +198,10 @@ function limitMergedAppointmentsForTake(
 export function mergeAppointmentsWithSeriesExpansion(
   realRows: UpcomingAppointmentRow[],
   virtualRows: VirtualSeriesOccurrence[],
+  occupiedSeriesRows?: UpcomingAppointmentRow[],
 ): UpcomingAppointmentRow[] {
   const realBySeriesDate = new Map<string, UpcomingAppointmentRow>();
-  for (const row of realRows) {
+  for (const row of occupiedSeriesRows ?? realRows) {
     if (row.seriesId && row.occurrenceDate) {
       realBySeriesDate.set(`${row.seriesId}:${row.occurrenceDate}`, row);
     }
@@ -342,6 +343,168 @@ export async function insertSeriesSkipException(params: {
       appointment_id: params.appointmentId ?? null,
     },
   });
+}
+
+export type AppointmentListStatusFilter = "scheduled" | "all" | "completed" | "cancelled";
+
+export function parseAppointmentListStatusFilter(
+  raw: string | undefined,
+): AppointmentListStatusFilter {
+  if (raw === "all" || raw === "completed" || raw === "cancelled") return raw;
+  return "scheduled";
+}
+
+export function sortAppointmentListRows(
+  rows: UpcomingAppointmentRow[],
+  now: Date,
+  statusFilter: AppointmentListStatusFilter,
+): UpcomingAppointmentRow[] {
+  if (statusFilter === "scheduled") {
+    const overdue = rows
+      .filter((row) => row.status === "scheduled" && row.startAt < now)
+      .sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
+    const upcoming = rows
+      .filter((row) => row.status === "scheduled" && row.startAt >= now)
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    return [...overdue, ...upcoming];
+  }
+  return [...rows].sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
+}
+
+export async function listAppointmentsForHousehold(params: {
+  householdId: string;
+  jobWhere?: object;
+  statusFilter?: AppointmentListStatusFilter;
+  pastLookbackMonths?: number;
+  horizonMonths?: number;
+}): Promise<UpcomingAppointmentRow[]> {
+  const statusFilter = params.statusFilter ?? "scheduled";
+  if (statusFilter === "scheduled") {
+    return getUpcomingAppointmentsForHousehold({
+      householdId: params.householdId,
+      jobWhere: params.jobWhere,
+      pastLookbackMonths: params.pastLookbackMonths,
+      horizonMonths: params.horizonMonths,
+    });
+  }
+
+  const now = new Date();
+  const horizonEnd = addMonths(now, params.horizonMonths ?? DEFAULT_LIST_HORIZON_MONTHS);
+  const pastStart = addMonths(
+    now,
+    -(params.pastLookbackMonths ?? DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS),
+  );
+
+  const realAppointments = await prisma.therapy_appointments.findMany({
+    where: {
+      household_id: params.householdId,
+      ...(params.jobWhere ? { job: params.jobWhere } : {}),
+      start_at: { gte: pastStart, lte: horizonEnd },
+      ...(statusFilter === "all"
+        ? { status: { in: ["scheduled", "completed", "cancelled"] } }
+        : { status: statusFilter }),
+    },
+    include: { client: true, job: true },
+    orderBy: { start_at: "desc" },
+  });
+
+  const realRows: UpcomingAppointmentRow[] = realAppointments.map((a) => ({
+    kind: "instance",
+    id: a.id,
+    seriesId: a.series_id,
+    occurrenceDate: a.occurrence_date ? isoDateOnly(new Date(a.occurrence_date)) : null,
+    startAt: a.start_at,
+    clientId: a.client_id,
+    jobId: a.job_id,
+    programId: a.program_id,
+    visitType: a.visit_type,
+    durationMinutes: a.duration_minutes,
+    status: a.status,
+    treatmentId: a.treatment_id,
+    client: a.client,
+    job: { job_title: a.job.job_title, id: a.job.id },
+  }));
+
+  if (statusFilter !== "all") {
+    return realRows;
+  }
+
+  const activeSeries = await prisma.therapy_appointment_series.findMany({
+    where: {
+      household_id: params.householdId,
+      is_active: true,
+      ...(params.jobWhere ? { job: params.jobWhere } : {}),
+    },
+    include: { client: true, job: true },
+  });
+
+  const seriesIds = activeSeries.map((s) => s.id);
+  const exceptions =
+    seriesIds.length > 0
+      ? await prisma.therapy_appointment_series_exceptions.findMany({
+          where: {
+            household_id: params.householdId,
+            series_id: { in: seriesIds },
+            kind: "skip",
+          },
+        })
+      : [];
+
+  const skipBySeries = new Map<string, Set<string>>();
+  for (const ex of exceptions) {
+    const set = skipBySeries.get(ex.series_id) ?? new Set<string>();
+    set.add(isoDateOnly(new Date(ex.occurrence_date)));
+    skipBySeries.set(ex.series_id, set);
+  }
+
+  const virtualRows: VirtualSeriesOccurrence[] = [];
+  const virtualMeta = new Map<
+    string,
+    { client: { first_name: string; last_name: string | null }; job: { job_title: string; id: string } }
+  >();
+  for (const series of activeSeries) {
+    const skips = skipBySeries.get(series.id) ?? new Set<string>();
+    const expanded = expandSeriesOccurrences(
+      {
+        id: series.id,
+        household_id: series.household_id,
+        client_id: series.client_id,
+        job_id: series.job_id,
+        program_id: series.program_id,
+        visit_type: series.visit_type,
+        recurrence: series.recurrence,
+        day_of_week: series.day_of_week,
+        time_of_day: series.time_of_day,
+        start_date: series.start_date,
+        end_date: series.end_date,
+        duration_minutes: series.duration_minutes,
+        is_active: series.is_active,
+      },
+      pastStart,
+      horizonEnd,
+      skips,
+    );
+    for (const row of expanded) {
+      virtualMeta.set(`${row.seriesId}:${row.occurrenceDate}`, {
+        client: series.client,
+        job: { job_title: series.job.job_title, id: series.job.id },
+      });
+    }
+    virtualRows.push(...expanded);
+  }
+
+  const scheduledReal = realRows.filter((row) => row.status === "scheduled");
+  const merged = mergeAppointmentsWithSeriesExpansion(scheduledReal, virtualRows, realRows).map((row) => {
+    if (row.kind === "virtual" && row.seriesId && row.occurrenceDate) {
+      const meta = virtualMeta.get(`${row.seriesId}:${row.occurrenceDate}`);
+      if (meta) {
+        return { ...row, client: meta.client, job: meta.job };
+      }
+    }
+    return row;
+  });
+  const terminal = realRows.filter((row) => row.status !== "scheduled");
+  return [...merged, ...terminal];
 }
 
 export async function getUpcomingAppointmentsForHousehold(params: {
