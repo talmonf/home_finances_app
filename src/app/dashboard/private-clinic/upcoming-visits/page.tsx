@@ -15,7 +15,7 @@ import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/house
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
-import { getUpcomingAppointmentsForHousehold } from "@/lib/therapy/series-occurrences";
+import { getUpcomingAppointmentsForHousehold, nextScheduledAppointmentByClientId } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { openSeriesOccurrence } from "../actions";
 import { LogTreatmentLink } from "./log-treatment-link";
@@ -88,21 +88,7 @@ export default async function UpcomingVisitsPage({
         })
       : [];
 
-  const nextAppointmentByClientId = new Map<
-    string,
-    { id: string | null; seriesId: string | null; occurrenceDate: string | null; startAt: Date }
-  >();
-  for (const appointment of allUpcoming) {
-    if (appointment.status !== "scheduled") continue;
-    if (!nextAppointmentByClientId.has(appointment.clientId)) {
-      nextAppointmentByClientId.set(appointment.clientId, {
-        id: appointment.id,
-        seriesId: appointment.seriesId,
-        occurrenceDate: appointment.occurrenceDate,
-        startAt: appointment.startAt,
-      });
-    }
-  }
+  const nextAppointmentByClientId = nextScheduledAppointmentByClientId(allUpcoming);
 
   const lastTreatmentRows =
     clientIds.length > 0

@@ -86,7 +86,8 @@ export async function computeClinicDigestData(args: {
   const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const windowEnd = endOfDaysAheadWindow(now, daysAhead, timezone);
 
-  const { getUpcomingAppointmentsForHousehold } = await import("@/lib/therapy/series-occurrences");
+  const { getUpcomingAppointmentsForHousehold, nextScheduledAppointmentByClientId } =
+    await import("@/lib/therapy/series-occurrences");
   const mergedUpcoming = await getUpcomingAppointmentsForHousehold({
     householdId,
     jobWhere: jobScope,
@@ -131,16 +132,7 @@ export async function computeClinicDigestData(args: {
         })
       : [];
 
-  const nextAppointmentByClientId = new Map<string, { id: string | null; startAt: Date }>();
-  for (const appointment of clientUpcoming) {
-    if (appointment.status !== "scheduled") continue;
-    if (!nextAppointmentByClientId.has(appointment.clientId)) {
-      nextAppointmentByClientId.set(appointment.clientId, {
-        id: appointment.id,
-        startAt: appointment.startAt,
-      });
-    }
-  }
+  const nextAppointmentByClientId = nextScheduledAppointmentByClientId(clientUpcoming);
 
   const lastTreatmentRows =
     clientIds.length > 0

@@ -6,8 +6,11 @@ import {
   logTherapyAppointmentAudit,
 } from "@/lib/therapy/appointment-audit";
 
+import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
+
 const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
 const DEFAULT_LIST_HORIZON_MONTHS = 6;
+const DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS = 6;
 
 export type SeriesRuleInput = {
   id: string;
@@ -139,6 +142,57 @@ export function expandSeriesOccurrences(
     d = addDays(d, step);
   }
   return results;
+}
+
+export type NextScheduledAppointmentRef = {
+  id: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+  startAt: Date;
+};
+
+/** Earliest scheduled from today onward, else the most recent past scheduled (still actionable). */
+export function nextScheduledAppointmentByClientId(
+  appointments: Iterable<UpcomingAppointmentRow>,
+  todayStart: Date = startOfTodayLocal(),
+): Map<string, NextScheduledAppointmentRef> {
+  const byClient = new Map<string, UpcomingAppointmentRow[]>();
+  for (const appointment of appointments) {
+    if (appointment.status !== "scheduled") continue;
+    const list = byClient.get(appointment.clientId) ?? [];
+    list.push(appointment);
+    byClient.set(appointment.clientId, list);
+  }
+
+  const result = new Map<string, NextScheduledAppointmentRef>();
+  for (const [clientId, list] of byClient) {
+    list.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    const fromToday = list.filter((a) => a.startAt >= todayStart);
+    const pick = fromToday[0] ?? list[list.length - 1];
+    result.set(clientId, {
+      id: pick.id,
+      seriesId: pick.seriesId,
+      occurrenceDate: pick.occurrenceDate,
+      startAt: pick.startAt,
+    });
+  }
+  return result;
+}
+
+function limitMergedAppointmentsForTake(
+  merged: UpcomingAppointmentRow[],
+  now: Date,
+  take: number,
+): UpcomingAppointmentRow[] {
+  const scheduled = merged.filter((row) => row.status === "scheduled");
+  const future = scheduled.filter((row) => row.startAt >= now);
+  const past = scheduled
+    .filter((row) => row.startAt < now)
+    .sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
+  const pastBudget = Math.max(0, take - future.length);
+  return [...future, ...past.slice(0, pastBudget)].sort(
+    (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+  );
 }
 
 export function mergeAppointmentsWithSeriesExpansion(
@@ -296,10 +350,15 @@ export async function getUpcomingAppointmentsForHousehold(params: {
   clientIds?: string[];
   from?: Date;
   horizonMonths?: number;
+  pastLookbackMonths?: number;
   take?: number;
 }): Promise<UpcomingAppointmentRow[]> {
   const now = params.from ?? new Date();
   const horizonEnd = addMonths(now, params.horizonMonths ?? DEFAULT_LIST_HORIZON_MONTHS);
+  const pastStart = addMonths(
+    now,
+    -(params.pastLookbackMonths ?? DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS),
+  );
 
   const realAppointments = await prisma.therapy_appointments.findMany({
     where: {
@@ -307,7 +366,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
       ...(params.jobWhere ? { job: params.jobWhere } : {}),
       ...(params.clientIds ? { client_id: { in: params.clientIds } } : {}),
       OR: [
-        { status: "scheduled", start_at: { gte: now } },
+        { status: "scheduled", start_at: { gte: pastStart } },
         { status: { in: ["completed", "cancelled"] }, start_at: { gte: now, lte: horizonEnd } },
       ],
     },
@@ -381,7 +440,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
         duration_minutes: series.duration_minutes,
         is_active: series.is_active,
       },
-      now,
+      pastStart,
       horizonEnd,
       skips,
     );
@@ -394,7 +453,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
     virtualRows.push(...expanded);
   }
 
-  const scheduledReal = realRows.filter((r) => r.status === "scheduled" && r.startAt >= now);
+  const scheduledReal = realRows.filter((r) => r.status === "scheduled");
   const merged = mergeAppointmentsWithSeriesExpansion(scheduledReal, virtualRows).map((row) => {
     if (row.kind === "virtual" && row.seriesId && row.occurrenceDate) {
       const meta = virtualMeta.get(`${row.seriesId}:${row.occurrenceDate}`);
@@ -404,8 +463,12 @@ export async function getUpcomingAppointmentsForHousehold(params: {
     }
     return row;
   });
-  if (params.take) return merged.slice(0, params.take);
+  if (params.take) return limitMergedAppointmentsForTake(merged, now, params.take);
   return merged;
 }
 
-export { APPOINTMENT_TIME_ZONE, DEFAULT_LIST_HORIZON_MONTHS };
+export {
+  APPOINTMENT_TIME_ZONE,
+  DEFAULT_LIST_HORIZON_MONTHS,
+  DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS,
+};
