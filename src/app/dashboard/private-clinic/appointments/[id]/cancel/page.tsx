@@ -49,6 +49,8 @@ export default async function CancelAppointmentPage({
   });
 
   if (!apt) notFound();
+  if (apt.status !== "scheduled") redirect(`${LIST}/${apt.id}/edit`);
+
   const fromUpcoming = sp.fromUpcoming === "1";
   const redirectOnSuccess = fromUpcoming ? `${UPCOMING_VISITS}?updated=1` : `${LIST}?updated=1`;
   const closeHref = fromUpcoming ? UPCOMING_VISITS : LIST;

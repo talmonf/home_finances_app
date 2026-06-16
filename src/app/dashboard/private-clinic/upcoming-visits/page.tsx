@@ -9,7 +9,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { OBFUSCATED } from "@/lib/privacy-display";
-import { privateClinicClients, privateClinicCommon, privateClinicUpcomingVisits } from "@/lib/private-clinic-i18n";
+import { privateClinicAppointments, privateClinicClients, privateClinicCommon, privateClinicUpcomingVisits } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
@@ -17,10 +17,32 @@ import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import { getUpcomingAppointmentsForHousehold, nextScheduledAppointmentByClientId } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
-import { openSeriesOccurrence } from "../actions";
 import { LogTreatmentLink } from "./log-treatment-link";
+import { UpcomingVisitAppointmentActions } from "./upcoming-visit-appointment-actions";
 
 export const dynamic = "force-dynamic";
+
+type NextAppointmentRef = {
+  id: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+  startAt: Date;
+};
+
+function visitDueFlags(
+  nextDue: Date,
+  today: Date,
+  now: Date,
+  nextAppointment: NextAppointmentRef | null,
+) {
+  const nextDay = dateOnlyLocal(nextDue);
+  const visitDueOverdue = nextDay.getTime() < today.getTime();
+  const appointmentPassed =
+    nextAppointment != null && nextAppointment.startAt.getTime() < now.getTime();
+  const isOverdue = visitDueOverdue || appointmentPassed;
+  const isDueToday = !isOverdue && nextDay.getTime() === today.getTime();
+  return { isOverdue, isDueToday };
+}
 
 export default async function UpcomingVisitsPage({
   searchParams,
@@ -36,6 +58,7 @@ export default async function UpcomingVisitsPage({
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const uv = privateClinicUpcomingVisits(uiLanguage);
+  const ap = privateClinicAppointments(uiLanguage);
   const cl = privateClinicClients(uiLanguage);
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const anyFamilyLabel = uiLanguage === "he" ? "כל משפחה" : "Any family";
@@ -78,6 +101,7 @@ export default async function UpcomingVisitsPage({
   });
 
   const today = startOfTodayLocal();
+  const now = new Date();
   const clientIds = clients.map((x) => x.id);
   const clientById = new Map(clients.map((row) => [row.id, row]));
   const allUpcoming =
@@ -117,12 +141,7 @@ export default async function UpcomingVisitsPage({
     nextDue: Date;
     isOverdue: boolean;
     isDueToday: boolean;
-    nextAppointment: {
-      id: string | null;
-      seriesId: string | null;
-      occurrenceDate: string | null;
-      startAt: Date;
-    } | null;
+    nextAppointment: NextAppointmentRef | null;
   };
 
   const scheduled: ScheduledRow[] = [];
@@ -141,9 +160,8 @@ export default async function UpcomingVisitsPage({
       }
 
       const nextDue = dateOnlyLocal(row.start_date);
-      const nextDay = dateOnlyLocal(nextDue);
-      const isOverdue = nextDay.getTime() < today.getTime();
-      const isDueToday = nextDay.getTime() === today.getTime();
+      const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+      const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
 
       const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
       scheduled.push({
@@ -166,15 +184,14 @@ export default async function UpcomingVisitsPage({
         nextDue,
         isOverdue,
         isDueToday,
-        nextAppointment: nextAppointmentByClientId.get(row.id) ?? null,
+        nextAppointment,
       });
       continue;
     }
 
     const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
-    const nextDay = dateOnlyLocal(nextDue);
-    const isOverdue = nextDay.getTime() < today.getTime();
-    const isDueToday = nextDay.getTime() === today.getTime();
+    const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
 
     const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
     scheduled.push({
@@ -197,11 +214,13 @@ export default async function UpcomingVisitsPage({
       nextDue,
       isOverdue,
       isDueToday,
-      nextAppointment: nextAppointmentByClientId.get(row.id) ?? null,
+      nextAppointment,
     });
   }
 
   scheduled.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+
+  const showScheduledAppointmentColumn = scheduled.some((row) => row.nextAppointment != null);
 
   const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
@@ -217,6 +236,24 @@ export default async function UpcomingVisitsPage({
   const toDateLocalInput = (date: Date) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 10);
+  };
+
+  const scheduleAppointmentHref = (clientId: string, nextDue: Date, isOverdue: boolean) => {
+    const client = clientById.get(clientId);
+    const qp = new URLSearchParams({
+      fromUpcoming: "1",
+      client: clientId,
+      job: client?.default_job_id ?? "",
+      program: client?.default_program_id ?? "",
+      visitType: client?.default_visit_type ?? "clinic",
+      startDate: toDateLocalInput(isOverdue ? today : nextDue),
+      durationMinutes: String(
+        client?.default_program?.default_session_length_minutes ??
+          client?.default_job?.default_session_length_minutes ??
+          "",
+      ),
+    });
+    return `${appointmentNewBase}?${qp.toString()}`;
   };
 
   return (
@@ -275,6 +312,14 @@ export default async function UpcomingVisitsPage({
                       >
                         {uv.colNextDue}
                       </th>
+                      {showScheduledAppointmentColumn ? (
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                        >
+                          {uv.colScheduledAppointment}
+                        </th>
+                      ) : null}
                       <th
                         scope="col"
                         className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
@@ -347,6 +392,18 @@ export default async function UpcomingVisitsPage({
                             </span>
                           ) : null}
                         </td>
+                        {showScheduledAppointmentColumn ? (
+                          <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                            {r.nextAppointment ? (
+                              formatHouseholdDateUtcWithTime(
+                                r.nextAppointment.startAt,
+                                dateDisplayFormat,
+                              )
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        ) : null}
                         <td className="whitespace-nowrap px-3 py-2 text-slate-200">
                           {obfuscate ? (
                             OBFUSCATED
@@ -393,43 +450,17 @@ export default async function UpcomingVisitsPage({
                             appointmentId={r.nextAppointment?.id}
                           />
                           {" · "}
-                          {r.nextAppointment ? (
-                            r.nextAppointment.id ? (
-                              <Link
-                                href={`/dashboard/private-clinic/appointments/${encodeURIComponent(r.nextAppointment.id)}/reschedule?fromUpcoming=1`}
-                                className="font-medium text-sky-400 hover:text-sky-300"
-                              >
-                                {uv.scheduledOn(
-                                  formatHouseholdDateUtcWithTime(r.nextAppointment.startAt, dateDisplayFormat),
-                                )}
-                              </Link>
-                            ) : r.nextAppointment.seriesId && r.nextAppointment.occurrenceDate ? (
-                              <form action={openSeriesOccurrence} className="inline">
-                                <input type="hidden" name="series_id" value={r.nextAppointment.seriesId} />
-                                <input
-                                  type="hidden"
-                                  name="occurrence_date"
-                                  value={r.nextAppointment.occurrenceDate}
-                                />
-                                <input type="hidden" name="redirect_target" value="edit" />
-                                <button
-                                  type="submit"
-                                  className="font-medium text-sky-400 hover:text-sky-300"
-                                >
-                                  {uv.scheduledOn(
-                                    formatHouseholdDateUtcWithTime(r.nextAppointment.startAt, dateDisplayFormat),
-                                  )}
-                                </button>
-                              </form>
-                            ) : null
-                          ) : (
-                            <Link
-                              href={`${appointmentNewBase}?fromUpcoming=1&client=${encodeURIComponent(r.clientId)}&job=${encodeURIComponent(clientById.get(r.clientId)?.default_job_id ?? "")}&program=${encodeURIComponent(clientById.get(r.clientId)?.default_program_id ?? "")}&visitType=${encodeURIComponent(clientById.get(r.clientId)?.default_visit_type ?? "clinic")}&startDate=${encodeURIComponent(toDateLocalInput(r.isOverdue ? today : r.nextDue))}&durationMinutes=${encodeURIComponent(String(clientById.get(r.clientId)?.default_program?.default_session_length_minutes ?? clientById.get(r.clientId)?.default_job?.default_session_length_minutes ?? ""))}`}
-                              className="font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {uv.scheduleAppointment}
-                            </Link>
-                          )}
+                          <UpcomingVisitAppointmentActions
+                            nextAppointment={r.nextAppointment}
+                            scheduleAppointmentHref={scheduleAppointmentHref(
+                              r.clientId,
+                              r.nextDue,
+                              r.isOverdue,
+                            )}
+                            scheduleAppointmentLabel={uv.scheduleAppointment}
+                            rescheduleLabel={ap.reschedule}
+                            cancelLabel={ap.cancel}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -459,31 +490,13 @@ export default async function UpcomingVisitsPage({
                         {uv.logTreatment}
                       </Link>
                       {" · "}
-                      {nextAppointment ? (
-                        nextAppointment.id ? (
-                          <Link
-                            href={`/dashboard/private-clinic/appointments/${encodeURIComponent(nextAppointment.id)}/reschedule?fromUpcoming=1`}
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {uv.scheduledOn(
-                              formatHouseholdDateUtcWithTime(nextAppointment.startAt, dateDisplayFormat),
-                            )}
-                          </Link>
-                        ) : (
-                          <span className="text-sky-400/90">
-                            {uv.scheduledOn(
-                              formatHouseholdDateUtcWithTime(nextAppointment.startAt, dateDisplayFormat),
-                            )}
-                          </span>
-                        )
-                      ) : (
-                        <Link
-                          href={`${appointmentNewBase}?fromUpcoming=1&client=${encodeURIComponent(row.id)}&job=${encodeURIComponent(row.default_job_id ?? "")}&program=${encodeURIComponent(row.default_program_id ?? "")}&visitType=${encodeURIComponent(row.default_visit_type ?? "clinic")}&startDate=${encodeURIComponent(toDateLocalInput(today))}&durationMinutes=${encodeURIComponent(String(row.default_program?.default_session_length_minutes ?? row.default_job?.default_session_length_minutes ?? ""))}`}
-                          className="text-sky-400 hover:text-sky-300"
-                        >
-                          {uv.scheduleAppointment}
-                        </Link>
-                      )}
+                      <UpcomingVisitAppointmentActions
+                        nextAppointment={nextAppointment}
+                        scheduleAppointmentHref={scheduleAppointmentHref(row.id, today, false)}
+                        scheduleAppointmentLabel={uv.scheduleAppointment}
+                        rescheduleLabel={ap.reschedule}
+                        cancelLabel={ap.cancel}
+                      />
                       {" · "}
                       <Link
                         href={`/dashboard/private-clinic/clients/${row.id}/edit?fromUpcoming=1&modal=1`}

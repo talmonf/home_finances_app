@@ -3912,6 +3912,7 @@ export async function cancelTherapyAppointment(formData: FormData) {
     include: { ...APPOINTMENT_AUDIT_INCLUDE, series: true },
   });
   if (!before) redirect(`${BASE}/appointments?error=notfound`);
+  if (before.status !== "scheduled") redirect(`${BASE}/appointments/${id}/edit`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, before.job_id))) {
     redirect(`${BASE}/appointments?error=job`);
   }
@@ -4113,6 +4114,8 @@ export async function openSeriesOccurrence(formData: FormData) {
   const seriesId = (formData.get("series_id") as string)?.trim() || "";
   const occurrenceDate = (formData.get("occurrence_date") as string)?.trim() || "";
   const redirectTarget = (formData.get("redirect_target") as string)?.trim() || "edit";
+  const fromUpcoming = (formData.get("from_upcoming") as string)?.trim() === "1";
+  const fromUpcomingQuery = fromUpcoming ? "?fromUpcoming=1" : "";
   if (!seriesId || !occurrenceDate) redirect(`${BASE}/appointments?error=missing`);
 
   const instance = await ensureAppointmentInstance({
@@ -4122,13 +4125,18 @@ export async function openSeriesOccurrence(formData: FormData) {
     userId,
   });
   if (!instance) redirect(`${BASE}/appointments?error=notfound`);
+  if (instance.status !== "scheduled") {
+    redirect(`${BASE}/appointments/${instance.id}/edit`);
+  }
 
   const path =
     redirectTarget === "cancel"
-      ? `${BASE}/appointments/${instance.id}/cancel`
-      : redirectTarget === "report"
-        ? `${BASE}/appointments/${instance.id}/edit#report-treatment`
-        : `${BASE}/appointments/${instance.id}/edit`;
+      ? `${BASE}/appointments/${instance.id}/cancel${fromUpcomingQuery}`
+      : redirectTarget === "reschedule"
+        ? `${BASE}/appointments/${instance.id}/reschedule${fromUpcomingQuery}`
+        : redirectTarget === "report"
+          ? `${BASE}/appointments/${instance.id}/edit#report-treatment`
+          : `${BASE}/appointments/${instance.id}/edit`;
   redirect(path);
 }
 
@@ -4160,6 +4168,7 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
     include: APPOINTMENT_AUDIT_INCLUDE,
   });
   if (!before) redirect(`${BASE}/appointments?error=notfound`);
+  if (before.status !== "scheduled") redirect(`${BASE}/appointments/${id}/edit`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, before.job_id))) {
     redirect(`${BASE}/appointments?error=job`);
   }
@@ -4395,6 +4404,7 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
     },
   });
   if (!appointment) redirect(`${BASE}/appointments?error=notfound`);
+  if (appointment.status !== "scheduled") redirect(`${BASE}/appointments/${appointmentId}/edit`);
   if (!(await assertJobForCurrentUserScope(householdId, userFm, appointment.job_id))) {
     redirect(`${BASE}/appointments?error=job`);
   }

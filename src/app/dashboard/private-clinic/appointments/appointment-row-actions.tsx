@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { openSeriesOccurrence } from "../actions";
 
+type AppointmentActionStatus = "scheduled" | "completed" | "cancelled";
+
+function isAppointmentActionable(status: AppointmentActionStatus): boolean {
+  return status === "scheduled";
+}
+
 type Props = {
   listBase: string;
   labels: {
@@ -15,10 +21,13 @@ type Props = {
     seriesId: string | null;
     occurrenceDate: string | null;
     treatmentId: string | null;
+    status: AppointmentActionStatus;
   };
 };
 
 export function AppointmentRowActions({ listBase, labels, row }: Props) {
+  const actionable = isAppointmentActionable(row.status);
+
   if (row.kind === "virtual" && row.seriesId && row.occurrenceDate) {
     const hidden = (
       <>
@@ -70,30 +79,34 @@ export function AppointmentRowActions({ listBase, labels, row }: Props) {
       >
         {labels.edit}
       </Link>
-      {row.treatmentId ? (
-        <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
-          {labels.logTreatment}
-        </span>
-      ) : (
-        <Link
-          href={`${listBase}/${row.id}/edit#report-treatment`}
-          className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
-        >
-          {labels.logTreatment}
-        </Link>
-      )}
-      <Link
-        href={`${listBase}/${row.id}/reschedule`}
-        className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
-      >
-        {labels.reschedule}
-      </Link>
-      <Link
-        href={`${listBase}/${row.id}/cancel`}
-        className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
-      >
-        {labels.cancel}
-      </Link>
+      {actionable ? (
+        <>
+          {row.treatmentId ? (
+            <span className="inline-flex items-center text-xs leading-none text-emerald-400/80">
+              {labels.logTreatment}
+            </span>
+          ) : (
+            <Link
+              href={`${listBase}/${row.id}/edit#report-treatment`}
+              className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
+            >
+              {labels.logTreatment}
+            </Link>
+          )}
+          <Link
+            href={`${listBase}/${row.id}/reschedule`}
+            className="inline-flex items-center text-xs leading-none text-sky-400 hover:text-sky-300"
+          >
+            {labels.reschedule}
+          </Link>
+          <Link
+            href={`${listBase}/${row.id}/cancel`}
+            className="inline-flex items-center text-xs leading-none text-rose-400 hover:text-rose-300"
+          >
+            {labels.cancel}
+          </Link>
+        </>
+      ) : null}
     </div>
   );
 }

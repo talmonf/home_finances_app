@@ -306,16 +306,22 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         visitOptions={visitOptions}
       />
       <p className="text-xs text-slate-500">
-        {ap.startCol}: {formatHouseholdDateUtcWithTime(apt.start_at, dateDisplayFormat)} —{" "}
-        <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
-          {ap.reschedule}
-        </Link>
-        {" · "}
-        <Link href={`${LIST}/${apt.id}/cancel`} className="text-rose-400 hover:text-rose-300">
-          {ap.cancel}
-        </Link>
+        {ap.startCol}: {formatHouseholdDateUtcWithTime(apt.start_at, dateDisplayFormat)}
+        {apt.status === "scheduled" ? (
+          <>
+            {" — "}
+            <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
+              {ap.reschedule}
+            </Link>
+            {" · "}
+            <Link href={`${LIST}/${apt.id}/cancel`} className="text-rose-400 hover:text-rose-300">
+              {ap.cancel}
+            </Link>
+          </>
+        ) : null}
       </p>
 
+      {apt.status === "scheduled" ? (
       <section
         id="report-treatment"
         className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900/60 p-4"
@@ -371,6 +377,21 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           />
         )}
       </section>
+      ) : apt.status === "completed" && apt.treatment_id ? (
+        <section className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-3 text-sm text-amber-100/90">
+            <p>{ap.reportTreatmentAlreadyLinked}</p>
+            {apt.treatment ? (
+              <Link
+                href={`/dashboard/private-clinic/treatments?edit=${apt.treatment.id}`}
+                className="mt-2 inline-flex text-xs text-amber-200 underline-offset-2 hover:underline"
+              >
+                {ap.viewLinkedTreatment}
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -50,6 +50,7 @@ export default async function RescheduleAppointmentPage({
   });
 
   if (!apt) notFound();
+  if (apt.status !== "scheduled") redirect(`${LIST}/${apt.id}/edit`);
 
   const fromUpcoming = sp.fromUpcoming === "1";
   const redirectOnSuccess = fromUpcoming ? UPCOMING_VISITS : LIST;

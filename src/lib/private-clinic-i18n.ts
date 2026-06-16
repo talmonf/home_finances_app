@@ -502,6 +502,7 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
     colClient: p("Client", "לקוח"),
     colLastVisit: p("Last visit", "ביקור אחרון"),
     colNextDue: cl.colNextVisitDue,
+    colScheduledAppointment: p("Scheduled appointment", "תור מתוזמן"),
     colJob: cl.colJob,
     colProgram: cl.colProgram,
     colKupatHolim: cl.colKupatHolim,
