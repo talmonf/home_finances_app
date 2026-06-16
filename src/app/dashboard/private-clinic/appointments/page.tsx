@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import {
   requireHouseholdMember,
@@ -13,14 +14,20 @@ import { privateClinicAppointments, privateClinicCommon } from "@/lib/private-cl
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
 import { formatJobDisplayLabel } from "@/lib/job-label";
-import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import {
-  listAppointmentsForHousehold,
-  parseAppointmentListStatusFilter,
-  sortAppointmentListRows,
+  jobWherePrivateClinicScoped,
+  jobsWhereActiveForPrivateClinicPickers,
+  therapyClientsWhereLinkedPrivateClinicJobs,
+} from "@/lib/private-clinic/jobs-scope";
+import {
   type AppointmentListStatusFilter,
 } from "@/lib/therapy/series-occurrences";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import {
+  appointmentsListHasActiveFilters,
+  loadAppointmentListRows,
+  parseAppointmentListFilters,
+} from "./appointments-list-data";
 import { AppointmentRowActions } from "./appointment-row-actions";
 
 export const dynamic = "force-dynamic";
@@ -44,14 +51,20 @@ function appointmentStatusLabel(
 export default async function AppointmentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string }>;
+  searchParams?: Promise<{
+    status?: string;
+    job?: string;
+    client?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
 
   const sp = searchParams ? await searchParams : {};
-  const statusFilter = parseAppointmentListStatusFilter(sp.status);
+  const filters = parseAppointmentListFilters(sp);
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -67,15 +80,30 @@ export default async function AppointmentsPage({
   const ap = privateClinicAppointments(uiLanguage);
   const now = new Date();
 
-  const rows = sortAppointmentListRows(
-    await listAppointmentsForHousehold({
+  const [jobs, clients, rows] = await Promise.all([
+    prisma.jobs.findMany({
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        familyMemberId,
+        includeJobIds: filters.job ? [filters.job] : [],
+      }),
+      orderBy: { start_date: "desc" },
+    }),
+    prisma.therapy_clients.findMany({
+      where: {
+        household_id: householdId,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+        OR: [{ is_active: true }, ...(filters.client ? [{ id: filters.client }] : [])],
+      },
+      orderBy: [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }],
+    }),
+    loadAppointmentListRows({
       householdId,
       jobWhere: jobScope,
-      statusFilter,
+      filters,
+      now,
     }),
-    now,
-    statusFilter,
-  );
+  ]);
 
   const actionLabels = {
     edit: ap.edit,
@@ -84,7 +112,8 @@ export default async function AppointmentsPage({
     cancel: ap.cancel,
   };
 
-  const showStatusColumn = statusFilter !== "scheduled";
+  const showStatusColumn = filters.status !== "scheduled";
+  const hasActiveFilters = appointmentsListHasActiveFilters(filters);
 
   return (
     <div className="space-y-8">
@@ -102,18 +131,65 @@ export default async function AppointmentsPage({
         method="get"
         className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3 sm:gap-x-3 sm:p-4"
       >
-        <div className="min-w-0 flex-1 basis-[12rem]">
+        <div className="w-[8.5rem] shrink-0">
           <label className="mb-1 block text-xs text-slate-400">{ap.filterStatusLabel}</label>
           <select
             name="status"
-            defaultValue={statusFilter}
-            className="w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
+            defaultValue={filters.status}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
           >
             <option value="scheduled">{ap.filterStatusScheduled}</option>
             <option value="all">{ap.filterStatusAll}</option>
             <option value="completed">{ap.filterStatusCompleted}</option>
             <option value="cancelled">{ap.filterStatusCancelled}</option>
           </select>
+        </div>
+        <div className="min-w-0 max-w-xs grow-0 basis-[11.5rem]">
+          <label className="mb-1 block text-xs text-slate-400">{c.job}</label>
+          <select
+            name="job"
+            defaultValue={filters.job}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
+          >
+            <option value="">{c.any}</option>
+            {jobs.map((job) => (
+              <option key={job.id} value={job.id}>
+                {formatJobDisplayLabel(job)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-0 max-w-xs grow-0 basis-[11.5rem]">
+          <label className="mb-1 block text-xs text-slate-400">{c.client}</label>
+          <select
+            name="client"
+            defaultValue={filters.client}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-normal text-slate-100"
+          >
+            <option value="">{c.any}</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {formatClientNameForDisplay(obfuscate, client.first_name, client.last_name)}
+                {!client.is_active ? ` (${c.inactive})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="w-[11.25rem] shrink-0">
+          <label className="mb-1 block text-xs text-slate-400">{c.from}</label>
+          <HouseholdDateField
+            name="from"
+            defaultIsoYmd={filters.from}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
+          />
+        </div>
+        <div className="w-[11.25rem] shrink-0">
+          <label className="mb-1 block text-xs text-slate-400">{c.to}</label>
+          <HouseholdDateField
+            name="to"
+            defaultIsoYmd={filters.to}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm font-normal text-slate-100"
+          />
         </div>
         <div className="flex shrink-0 items-end gap-2">
           <button
@@ -122,7 +198,7 @@ export default async function AppointmentsPage({
           >
             {c.apply}
           </button>
-          {statusFilter !== "scheduled" ? (
+          {hasActiveFilters ? (
             <PrivateClinicFilterResetButton href={LIST} label={c.filterReset} />
           ) : null}
         </div>

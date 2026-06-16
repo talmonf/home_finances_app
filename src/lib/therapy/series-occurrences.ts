@@ -371,35 +371,65 @@ export function sortAppointmentListRows(
   return [...rows].sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
 }
 
+function resolveAppointmentListRange(
+  now: Date,
+  fromDate?: Date | null,
+  toDate?: Date | null,
+  pastLookbackMonths: number = DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS,
+  horizonMonths: number = DEFAULT_LIST_HORIZON_MONTHS,
+): { rangeStart: Date; rangeEnd: Date } {
+  return {
+    rangeStart: fromDate ?? addMonths(now, -pastLookbackMonths),
+    rangeEnd: toDate ?? addMonths(now, horizonMonths),
+  };
+}
+
 export async function listAppointmentsForHousehold(params: {
   householdId: string;
   jobWhere?: object;
   statusFilter?: AppointmentListStatusFilter;
+  jobId?: string;
+  clientId?: string;
+  fromDate?: Date | null;
+  toDate?: Date | null;
   pastLookbackMonths?: number;
   horizonMonths?: number;
 }): Promise<UpcomingAppointmentRow[]> {
   const statusFilter = params.statusFilter ?? "scheduled";
+  const listQuery = {
+    householdId: params.householdId,
+    jobWhere: params.jobWhere,
+    jobId: params.jobId,
+    clientId: params.clientId,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    pastLookbackMonths: params.pastLookbackMonths,
+    horizonMonths: params.horizonMonths,
+  };
+
   if (statusFilter === "scheduled") {
     return getUpcomingAppointmentsForHousehold({
-      householdId: params.householdId,
-      jobWhere: params.jobWhere,
-      pastLookbackMonths: params.pastLookbackMonths,
-      horizonMonths: params.horizonMonths,
+      ...listQuery,
+      clientIds: params.clientId ? [params.clientId] : undefined,
     });
   }
 
   const now = new Date();
-  const horizonEnd = addMonths(now, params.horizonMonths ?? DEFAULT_LIST_HORIZON_MONTHS);
-  const pastStart = addMonths(
+  const { rangeStart, rangeEnd } = resolveAppointmentListRange(
     now,
-    -(params.pastLookbackMonths ?? DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS),
+    params.fromDate,
+    params.toDate,
+    params.pastLookbackMonths,
+    params.horizonMonths,
   );
 
   const realAppointments = await prisma.therapy_appointments.findMany({
     where: {
       household_id: params.householdId,
       ...(params.jobWhere ? { job: params.jobWhere } : {}),
-      start_at: { gte: pastStart, lte: horizonEnd },
+      ...(params.jobId ? { job_id: params.jobId } : {}),
+      ...(params.clientId ? { client_id: params.clientId } : {}),
+      start_at: { gte: rangeStart, lte: rangeEnd },
       ...(statusFilter === "all"
         ? { status: { in: ["scheduled", "completed", "cancelled"] } }
         : { status: statusFilter }),
@@ -433,6 +463,8 @@ export async function listAppointmentsForHousehold(params: {
     where: {
       household_id: params.householdId,
       is_active: true,
+      ...(params.jobId ? { job_id: params.jobId } : {}),
+      ...(params.clientId ? { client_id: params.clientId } : {}),
       ...(params.jobWhere ? { job: params.jobWhere } : {}),
     },
     include: { client: true, job: true },
@@ -480,8 +512,8 @@ export async function listAppointmentsForHousehold(params: {
         duration_minutes: series.duration_minutes,
         is_active: series.is_active,
       },
-      pastStart,
-      horizonEnd,
+      rangeStart,
+      rangeEnd,
       skips,
     );
     for (const row of expanded) {
@@ -510,27 +542,36 @@ export async function listAppointmentsForHousehold(params: {
 export async function getUpcomingAppointmentsForHousehold(params: {
   householdId: string;
   jobWhere?: object;
+  jobId?: string;
   clientIds?: string[];
+  clientId?: string;
+  fromDate?: Date | null;
+  toDate?: Date | null;
   from?: Date;
   horizonMonths?: number;
   pastLookbackMonths?: number;
   take?: number;
 }): Promise<UpcomingAppointmentRow[]> {
   const now = params.from ?? new Date();
-  const horizonEnd = addMonths(now, params.horizonMonths ?? DEFAULT_LIST_HORIZON_MONTHS);
-  const pastStart = addMonths(
+  const { rangeStart, rangeEnd } = resolveAppointmentListRange(
     now,
-    -(params.pastLookbackMonths ?? DEFAULT_PAST_SCHEDULED_LOOKBACK_MONTHS),
+    params.fromDate,
+    params.toDate,
+    params.pastLookbackMonths,
+    params.horizonMonths,
   );
+  const clientIds =
+    params.clientIds ?? (params.clientId ? [params.clientId] : undefined);
 
   const realAppointments = await prisma.therapy_appointments.findMany({
     where: {
       household_id: params.householdId,
       ...(params.jobWhere ? { job: params.jobWhere } : {}),
-      ...(params.clientIds ? { client_id: { in: params.clientIds } } : {}),
+      ...(params.jobId ? { job_id: params.jobId } : {}),
+      ...(clientIds ? { client_id: { in: clientIds } } : {}),
       OR: [
-        { status: "scheduled", start_at: { gte: pastStart } },
-        { status: { in: ["completed", "cancelled"] }, start_at: { gte: now, lte: horizonEnd } },
+        { status: "scheduled", start_at: { gte: rangeStart, lte: rangeEnd } },
+        { status: { in: ["completed", "cancelled"] }, start_at: { gte: rangeStart, lte: rangeEnd } },
       ],
     },
     include: { client: true, job: true },
@@ -558,7 +599,8 @@ export async function getUpcomingAppointmentsForHousehold(params: {
     where: {
       household_id: params.householdId,
       is_active: true,
-      ...(params.clientIds ? { client_id: { in: params.clientIds } } : {}),
+      ...(params.jobId ? { job_id: params.jobId } : {}),
+      ...(clientIds ? { client_id: { in: clientIds } } : {}),
       ...(params.jobWhere ? { job: params.jobWhere } : {}),
     },
     include: { client: true, job: true },
@@ -603,8 +645,8 @@ export async function getUpcomingAppointmentsForHousehold(params: {
         duration_minutes: series.duration_minutes,
         is_active: series.is_active,
       },
-      pastStart,
-      horizonEnd,
+      rangeStart,
+      rangeEnd,
       skips,
     );
     for (const row of expanded) {
