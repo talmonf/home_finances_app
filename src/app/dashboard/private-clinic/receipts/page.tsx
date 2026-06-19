@@ -67,6 +67,12 @@ function receiptKindDefaultByEmploymentType(
   return employmentType === "employee" ? "salary_fictitious" : "regular";
 }
 
+function shouldDefaultCoveredPeriodToPreviousMonth(
+  employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company",
+): boolean {
+  return employmentType !== "self_employed";
+}
+
 function clientOptionJobIds(row: {
   default_job_id: string;
   client_jobs: { job_id: string }[];
@@ -682,6 +688,7 @@ export default async function ReceiptsPage({
             id: j.id,
             label: formatJobDisplayLabel(j),
             defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+            defaultCoveredPeriodToPreviousMonth: shouldDefaultCoveredPeriodToPreviousMonth(j.employment_type),
           }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
@@ -705,7 +712,7 @@ export default async function ReceiptsPage({
             client: c.client,
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
-            date: c.date,
+            date: r.submittedDate,
             grossAmount: r.grossAmount,
             grossAmountHint: r.grossAmountHint,
             netAmount: r.netAmount,
@@ -766,6 +773,7 @@ export default async function ReceiptsPage({
             id: j.id,
             label: formatJobDisplayLabel(j),
             defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+            defaultCoveredPeriodToPreviousMonth: shouldDefaultCoveredPeriodToPreviousMonth(j.employment_type),
           }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
@@ -789,7 +797,7 @@ export default async function ReceiptsPage({
             client: c.client,
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
-            date: c.date,
+            date: r.submittedDate,
             grossAmount: r.grossAmount,
             grossAmountHint: r.grossAmountHint,
             netAmount: r.netAmount,
