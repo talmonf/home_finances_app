@@ -125,6 +125,8 @@ export function ReceiptModalFormClient({
   const [receiptKind, setReceiptKind] = useState<string>(initial?.receipt_kind ?? "");
   const [coveredPeriodStart, setCoveredPeriodStart] = useState(initial?.covered_period_start ?? "");
   const [coveredPeriodEnd, setCoveredPeriodEnd] = useState(initial?.covered_period_end ?? "");
+  const [isDirty, setIsDirty] = useState(mode === "create");
+  const canSubmit = mode === "create" || isDirty;
 
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
@@ -170,7 +172,7 @@ export function ReceiptModalFormClient({
             {labels.cancel}
           </a>
         </div>
-        <form action={action} className="grid gap-3 md:grid-cols-2">
+        <form action={action} onChangeCapture={() => setIsDirty(true)} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
           {mode === "edit" && initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
@@ -401,7 +403,8 @@ export function ReceiptModalFormClient({
           <div className="md:col-span-2 flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+              disabled={!canSubmit}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
               {labels.save}
             </button>
