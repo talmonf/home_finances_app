@@ -5,10 +5,6 @@ import { useCallback, useMemo, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
-import {
-  formatListAmountTotalLine,
-  type AmountTotalsByCurrency,
-} from "@/lib/private-clinic/list-amount-totals";
 import type { UiLanguage } from "@/lib/ui-language";
 
 type SortKey = "occurred_at" | "type" | "job" | "amount";
@@ -41,8 +37,6 @@ type Labels = {
   linked: string;
   unlinked: string;
   noDate: string;
-  total: string;
-  records: string;
 };
 
 function amountValue(text: string | null): number {
@@ -58,8 +52,6 @@ export function TravelListClient({
   uiLanguage,
   obfuscate,
   labels,
-  amountTotalsByCurrency,
-  recordCount,
 }: {
   rows: TravelListRowDto[];
   listBaseHref: string;
@@ -67,8 +59,6 @@ export function TravelListClient({
   uiLanguage: UiLanguage;
   obfuscate: boolean;
   labels: Labels;
-  amountTotalsByCurrency: AmountTotalsByCurrency;
-  recordCount: number;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -119,29 +109,10 @@ export function TravelListClient({
     });
   }, [rows, sortDir, sortKey]);
 
-  const totalLine = formatListAmountTotalLine(
-    obfuscate,
-    labels.total,
-    recordCount,
-    labels.records,
-    amountTotalsByCurrency,
-    uiLanguage,
-  );
-
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-700">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr>
-            <th colSpan={3} className="border-0 bg-transparent p-0" aria-hidden="true" />
-            <th
-              colSpan={1}
-              className="border-0 bg-transparent px-3 pb-2 pt-0 text-right text-sm font-medium text-slate-200"
-            >
-              {totalLine}
-            </th>
-            <th colSpan={2} className="border-0 bg-transparent p-0" aria-hidden="true" />
-          </tr>
           <tr className="border-b border-slate-700 bg-slate-800/80">
             <th className="px-3 py-2 text-slate-300">
               <button type="button" onClick={() => onSort("occurred_at")} className="hover:text-slate-100">

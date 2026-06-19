@@ -22,6 +22,7 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
+import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
@@ -403,9 +404,23 @@ export default async function TreatmentsPage({
       </section>
 
       <section className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
-          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="shrink-0 text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
+          {firstPage.rows.length > 0 ? (
+            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+              {formatListAmountTotalLine(
+                obfuscate,
+                c.total,
+                recordCount,
+                c.records,
+                amountTotalsByCurrency,
+                uiLanguage,
+              )}
+            </p>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <div className="grid w-full shrink-0 gap-2 sm:flex sm:w-auto sm:items-center">
             <OpenPrivateClinicTreatmentsImportButton
               label={tr.importBtn}
               importPath="/dashboard/private-clinic/treatments/import"
@@ -446,13 +461,9 @@ export default async function TreatmentsPage({
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
-              total: c.total,
-              records: c.records,
             }}
             showExternalReporting={showExternalReporting}
             showFamily={Boolean(settings?.family_therapy_enabled)}
-            amountTotalsByCurrency={amountTotalsByCurrency}
-            recordCount={recordCount}
           />
         )}
       </section>

@@ -22,6 +22,7 @@ import {
   jobsWhereActiveForPrivateClinicPickers,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import {
   loadConsultationsCursorPage,
   loadConsultationsAmountTotal,
@@ -351,9 +352,25 @@ export async function ConsultationsPageContent({
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
-          <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="shrink-0 text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
+          {firstPage.rows.length > 0 ? (
+            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+              {formatListAmountTotalLine(
+                obfuscate,
+                c.total,
+                recordCount,
+                c.records,
+                amountTotalsByCurrency,
+                uiLanguage,
+              )}
+            </p>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <div className="shrink-0">
+            <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
+          </div>
         </div>
         {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
@@ -380,12 +397,8 @@ export async function ConsultationsPageContent({
               loadingMore: co.loadingMore,
               noMoreRows: co.noMoreRows,
               loadMore: co.loadMore,
-              total: c.total,
-              records: c.records,
             }}
             obfuscate={obfuscate}
-            amountTotalsByCurrency={amountTotalsByCurrency}
-            recordCount={recordCount}
           />
         )}
       </section>
