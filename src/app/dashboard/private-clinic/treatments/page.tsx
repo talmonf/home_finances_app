@@ -29,6 +29,7 @@ import { TreatmentsListClient } from "./treatments-list-client";
 import { TreatmentsFiltersForm } from "./treatments-filters-form";
 import {
   loadTreatmentsCursorPage,
+  loadTreatmentsAmountTotal,
   parseTreatmentsPaidFilter,
   parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
@@ -128,7 +129,7 @@ export default async function TreatmentsPage({
   const linkedClientIds = linkedClientRows.map((r) => r.client_id);
   const linkedFamilyIds = linkedFamilyRows.map((r) => r.family_id).filter((x): x is string => Boolean(x));
 
-  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage] =
+  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage, amountTotalsByCurrency] =
     await Promise.all([
       prisma.jobs.findMany({
       where: {
@@ -214,6 +215,7 @@ export default async function TreatmentsPage({
       orderBy: { name: "asc" },
     }),
       loadTreatmentsCursorPage({ householdId, familyMemberId, filters, take: 50 }),
+      loadTreatmentsAmountTotal({ householdId, familyMemberId, filters }),
   ]);
 
   const visitDefaults = visitDefaultsRows.map((r) => ({
@@ -442,9 +444,11 @@ export default async function TreatmentsPage({
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
+              total: c.total,
             }}
             showExternalReporting={showExternalReporting}
             showFamily={Boolean(settings?.family_therapy_enabled)}
+            amountTotalsByCurrency={amountTotalsByCurrency}
           />
         )}
       </section>

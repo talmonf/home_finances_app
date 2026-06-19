@@ -149,6 +149,7 @@ export function privateClinicCommon(lang: UiLanguage) {
     client: p("Client", "לקוח"),
     category: p("Category", "קטגוריה"),
     amount: p("Amount", "סכום"),
+    total: p("Total", "סה״כ"),
     currency: p("Currency", "מטבע"),
     type: p("Type", "סוג"),
     status: p("Status", "סטטוס"),

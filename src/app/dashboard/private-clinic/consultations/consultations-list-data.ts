@@ -1,4 +1,10 @@
 import { prisma } from "@/lib/auth";
+import {
+  addAmountToTotalsByCurrency,
+  normalizeListAmountCurrency,
+  sortAmountTotalsByCurrency,
+  type AmountTotalsByCurrency,
+} from "@/lib/private-clinic/list-amount-totals";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import type { Prisma } from "@/generated/prisma/client";
@@ -212,4 +218,55 @@ export async function loadConsultationsCursorPage(params: {
   const rows = chunk.map(mapConsultationListRow);
   const nextCursor = chunk.length === take ? (chunk[chunk.length - 1]?.id ?? null) : null;
   return { rows, nextCursor };
+}
+
+function consultationAmountNumber(row: {
+  amount: { toString(): string } | null;
+  income_amount: { toString(): string } | null;
+  cost_amount: { toString(): string } | null;
+}): number {
+  const raw = row.amount?.toString() ?? row.income_amount?.toString() ?? row.cost_amount?.toString();
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function consultationAmountCurrency(row: {
+  currency: string | null;
+  income_currency: string | null;
+  cost_currency: string | null;
+  amount: { toString(): string } | null;
+  income_amount: { toString(): string } | null;
+  cost_amount: { toString(): string } | null;
+}): string {
+  if (row.amount != null) return normalizeListAmountCurrency(row.currency);
+  if (row.income_amount != null) return normalizeListAmountCurrency(row.income_currency ?? row.currency);
+  if (row.cost_amount != null) return normalizeListAmountCurrency(row.cost_currency ?? row.currency);
+  return normalizeListAmountCurrency(row.currency ?? row.income_currency ?? row.cost_currency);
+}
+
+export async function loadConsultationsAmountTotal(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: ConsultationsListFilters;
+}): Promise<AmountTotalsByCurrency> {
+  const where = whereForConsultationsList(params);
+  const rows = await prisma.therapy_consultations.findMany({
+    where,
+    select: {
+      amount: true,
+      income_amount: true,
+      cost_amount: true,
+      currency: true,
+      income_currency: true,
+      cost_currency: true,
+    },
+  });
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const amount = consultationAmountNumber(row);
+    if (amount === 0 && row.amount == null && row.income_amount == null && row.cost_amount == null) continue;
+    addAmountToTotalsByCurrency(totals, amount, consultationAmountCurrency(row));
+  }
+  return sortAmountTotalsByCurrency(totals);
 }

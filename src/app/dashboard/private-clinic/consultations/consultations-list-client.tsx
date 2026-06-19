@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { OBFUSCATED, formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
+import { formatAmountTotalsByCurrencyForDisplay, type AmountTotalsByCurrency } from "@/lib/private-clinic/list-amount-totals";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { ConsultationListRowDto } from "./consultations-list-data";
@@ -27,6 +28,7 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
+  total: string;
 };
 
 function amountValue(text: string | null): number {
@@ -44,6 +46,7 @@ export function ConsultationsListClient({
   uiLanguage,
   dateDisplayFormat,
   obfuscate,
+  amountTotalsByCurrency,
 }: {
   initialRows: ConsultationListRowDto[];
   initialCursor: string | null;
@@ -53,6 +56,7 @@ export function ConsultationsListClient({
   uiLanguage: UiLanguage;
   dateDisplayFormat: HouseholdDateDisplayFormat;
   obfuscate: boolean;
+  amountTotalsByCurrency: AmountTotalsByCurrency;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -169,6 +173,9 @@ export function ConsultationsListClient({
 
   return (
     <div>
+      <p className="mb-3 text-sm font-medium text-slate-200">
+        {labels.total}: {formatAmountTotalsByCurrencyForDisplay(obfuscate, amountTotalsByCurrency, uiLanguage)}
+      </p>
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
           <thead>

@@ -24,6 +24,7 @@ import {
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import {
   loadConsultationsCursorPage,
+  loadConsultationsAmountTotal,
   parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
@@ -125,7 +126,7 @@ export async function ConsultationsPageContent({
   apiListParams.set("take", "50");
   const apiHrefBase = `/api/private-clinic/consultations?${apiListParams.toString()}`;
 
-  const [jobs, firstPage, consultationTypes] = await Promise.all([
+  const [jobs, firstPage, consultationTypes, amountTotalsByCurrency] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -140,6 +141,11 @@ export async function ConsultationsPageContent({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       select: { id: true, name: true, name_he: true, is_active: true },
+    }),
+    loadConsultationsAmountTotal({
+      householdId,
+      familyMemberId,
+      filters,
     }),
   ]);
 
@@ -368,8 +374,10 @@ export async function ConsultationsPageContent({
               loadingMore: co.loadingMore,
               noMoreRows: co.noMoreRows,
               loadMore: co.loadMore,
+              total: c.total,
             }}
             obfuscate={obfuscate}
+            amountTotalsByCurrency={amountTotalsByCurrency}
           />
         )}
       </section>

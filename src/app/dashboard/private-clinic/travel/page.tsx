@@ -28,7 +28,7 @@ import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { TravelAddButton } from "./travel-add-button";
 import { TravelListClient } from "./travel-list-client";
 import { TravelModalForm } from "./travel-modal-form";
-import { loadTravelRows, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
+import { loadTravelRows, loadTravelAmountTotal, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
 
 export const dynamic = "force-dynamic";
 const TRAVEL_BASE = "/dashboard/private-clinic/travel";
@@ -92,7 +92,7 @@ export default async function TravelPage({
     Boolean(filters.to) ||
     filters.received !== "all";
 
-  const [jobs, clients, treatments, consultations, rows] = await Promise.all([
+  const [jobs, clients, treatments, consultations, rows, amountTotalsByCurrency] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -126,6 +126,11 @@ export default async function TravelPage({
       familyMemberId,
       filters,
       take: 500,
+    }),
+    loadTravelAmountTotal({
+      householdId,
+      familyMemberId,
+      filters,
     }),
   ]);
   const filteredReceipt = filters.receipt
@@ -308,7 +313,9 @@ export default async function TravelPage({
               linked: tv.receivedLinked,
               unlinked: tv.receivedUnlinked,
               noDate: c.noDate,
+              total: c.total,
             }}
+            amountTotalsByCurrency={amountTotalsByCurrency}
           />
         )}
       </section>
