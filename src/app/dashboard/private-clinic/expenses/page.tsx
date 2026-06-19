@@ -20,7 +20,9 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { jobWherePrivateClinicScoped, jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
+import { loadExpensesAmountTotal, loadExpensesRecordCount } from "./expenses-list-data";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +54,7 @@ export default async function ExpensesPage({
   const resolved = searchParams ? await searchParams : undefined;
   const modalMode = resolved?.modal === "new" ? "new" : null;
 
-  const [jobs, categories, expenses] = await Promise.all([
+  const [jobs, categories, expenses, amountTotalsByCurrency, recordCount] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -67,6 +69,8 @@ export default async function ExpensesPage({
       take: 200,
       include: { job: true, category: true },
     }),
+    loadExpensesAmountTotal({ householdId, familyMemberId }),
+    loadExpensesRecordCount({ householdId, familyMemberId }),
   ]);
 
   return (
@@ -83,11 +87,25 @@ export default async function ExpensesPage({
       )}
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="shrink-0 text-lg font-medium text-slate-200">{ex.expensesHeading}</h2>
+          {recordCount > 0 ? (
+            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+              {formatListAmountTotalLine(
+                obfuscate,
+                c.total,
+                recordCount,
+                c.records,
+                amountTotalsByCurrency,
+                uiLanguage,
+              )}
+            </p>
+          ) : (
+            <div className="flex-1" />
+          )}
           <Link
             href={`${EXPENSES_BASE}?modal=new`}
-            className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
+            className="w-full shrink-0 rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
           >
             {ex.addExpense}
           </Link>

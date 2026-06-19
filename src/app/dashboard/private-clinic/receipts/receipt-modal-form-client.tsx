@@ -150,6 +150,8 @@ export function ReceiptModalFormClient({
       const previousMonth = previousMonthPeriod();
       setCoveredPeriodStart(previousMonth.start);
       setCoveredPeriodEnd(previousMonth.end);
+      setRecipientType("organization");
+      setClientId("");
     }
   }
 
