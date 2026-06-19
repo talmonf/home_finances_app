@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
+import {
+  formatListAmountTotalLine,
+  type AmountTotalsByCurrency,
+} from "@/lib/private-clinic/list-amount-totals";
 import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
@@ -32,6 +36,8 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
+  total: string;
+  records: string;
 };
 
 type ColumnSortKey = "occurred_at" | "client" | "job" | "amount" | "paid" | "receipt" | "payment_details" | "edit";
@@ -48,6 +54,8 @@ export function TreatmentsListClient({
   labels,
   showExternalReporting,
   showFamily,
+  amountTotalsByCurrency,
+  recordCount,
 }: {
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
@@ -59,6 +67,8 @@ export function TreatmentsListClient({
   labels: Labels;
   showExternalReporting: boolean;
   showFamily: boolean;
+  amountTotalsByCurrency: AmountTotalsByCurrency;
+  recordCount: number;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -164,7 +174,16 @@ export function TreatmentsListClient({
     [sortDir, sortKey],
   );
 
-  const rowCount = useMemo(() => rows.length, [rows]);
+  const colsBeforeAmount = 5 + (showFamily ? 1 : 0);
+  const colsAfterAmount = 4 + (showExternalReporting ? 1 : 0);
+  const totalLine = formatListAmountTotalLine(
+    obfuscate,
+    labels.total,
+    recordCount,
+    labels.records,
+    amountTotalsByCurrency,
+    uiLanguage,
+  );
 
   return (
     <div className="space-y-3">
@@ -190,6 +209,16 @@ export function TreatmentsListClient({
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
           <thead>
+            <tr>
+              <th colSpan={colsBeforeAmount} className="border-0 bg-transparent p-0" aria-hidden="true" />
+              <th
+                colSpan={1}
+                className="border-0 bg-transparent px-3 pb-2 pt-0 text-right text-sm font-medium text-slate-200"
+              >
+                {totalLine}
+              </th>
+              <th colSpan={colsAfterAmount} className="border-0 bg-transparent p-0" aria-hidden="true" />
+            </tr>
             <tr className="border-b border-slate-700 bg-slate-800/80">
               <th className="px-3 py-2 text-slate-300" />
               <th className="px-3 py-2 text-slate-300">
@@ -212,7 +241,7 @@ export function TreatmentsListClient({
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               {showFamily ? <th className="px-3 py-2 text-slate-300">{labels.family}</th> : null}
-              <th className="px-3 py-2 text-slate-300">
+              <th className="px-3 py-2 text-right text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
                   {sortArrow("amount")}
@@ -281,7 +310,7 @@ export function TreatmentsListClient({
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
                   <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
                   {showFamily ? <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td> : null}
-                  <td className="px-3 py-2 text-slate-200">
+                  <td className="px-3 py-2 text-right text-slate-200">
                     {t.amount != null && t.amount !== ""
                       ? formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)
                       : "—"}
@@ -345,8 +374,7 @@ export function TreatmentsListClient({
         </table>
       </div>
       <div ref={sentinelRef} />
-      <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-        <span>{rowCount}</span>
+      <div className="flex items-center justify-end px-1 text-xs text-slate-500">
         {hasMore ? (
           <button
             type="button"

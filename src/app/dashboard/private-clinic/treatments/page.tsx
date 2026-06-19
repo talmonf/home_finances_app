@@ -22,7 +22,6 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
-import { formatAmountTotalsByCurrencyForDisplay } from "@/lib/private-clinic/list-amount-totals";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
@@ -31,6 +30,7 @@ import { TreatmentsFiltersForm } from "./treatments-filters-form";
 import {
   loadTreatmentsCursorPage,
   loadTreatmentsAmountTotal,
+  loadTreatmentsListRecordCount,
   parseTreatmentsPaidFilter,
   parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
@@ -130,7 +130,7 @@ export default async function TreatmentsPage({
   const linkedClientIds = linkedClientRows.map((r) => r.client_id);
   const linkedFamilyIds = linkedFamilyRows.map((r) => r.family_id).filter((x): x is string => Boolean(x));
 
-  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage, amountTotalsByCurrency] =
+  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage, amountTotalsByCurrency, recordCount] =
     await Promise.all([
       prisma.jobs.findMany({
       where: {
@@ -217,6 +217,7 @@ export default async function TreatmentsPage({
     }),
       loadTreatmentsCursorPage({ householdId, familyMemberId, filters, take: 50 }),
       loadTreatmentsAmountTotal({ householdId, familyMemberId, filters }),
+      loadTreatmentsListRecordCount({ householdId, familyMemberId, filters }),
   ]);
 
   const visitDefaults = visitDefaultsRows.map((r) => ({
@@ -402,16 +403,9 @@ export default async function TreatmentsPage({
       </section>
 
       <section className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="shrink-0 text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
-          {firstPage.rows.length > 0 ? (
-            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
-              {c.total}: {formatAmountTotalsByCurrencyForDisplay(obfuscate, amountTotalsByCurrency, uiLanguage)}
-            </p>
-          ) : (
-            <div className="flex-1" />
-          )}
-          <div className="grid w-full shrink-0 gap-2 sm:flex sm:w-auto sm:items-center">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-medium text-slate-200">{tr.treatmentsTitle}</h2>
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:items-center">
             <OpenPrivateClinicTreatmentsImportButton
               label={tr.importBtn}
               importPath="/dashboard/private-clinic/treatments/import"
@@ -452,9 +446,13 @@ export default async function TreatmentsPage({
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
               loadMore: tr.loadMore,
+              total: c.total,
+              records: c.records,
             }}
             showExternalReporting={showExternalReporting}
             showFamily={Boolean(settings?.family_therapy_enabled)}
+            amountTotalsByCurrency={amountTotalsByCurrency}
+            recordCount={recordCount}
           />
         )}
       </section>

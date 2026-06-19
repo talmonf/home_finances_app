@@ -290,3 +290,79 @@ export async function loadTreatmentsAmountTotal(params: {
 
   return sortAmountTotalsByCurrency(totals);
 }
+
+export async function loadTreatmentsListRecordCount(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TreatmentsListFilters;
+}): Promise<number> {
+  const { householdId, familyMemberId, filters } = params;
+  const from = parseDateFilter(filters.from);
+  const to = parseDateFilter(filters.to);
+
+  const baseWhere: Prisma.therapy_treatmentsWhereInput = {
+    household_id: householdId,
+    job: jobWherePrivateClinicScoped(familyMemberId),
+    ...(filters.job ? { job_id: filters.job } : {}),
+    ...(filters.program ? { program_id: filters.program } : {}),
+    ...(filters.client ? { client_id: filters.client } : {}),
+    ...(filters.family ? { family_id: filters.family } : {}),
+    ...(filters.receipt
+      ? {
+          receipt_allocations: {
+            some: {
+              receipt_id: filters.receipt,
+            },
+          },
+        }
+      : {}),
+    ...(from || to
+      ? {
+          occurred_at: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {}),
+    ...(filters.reported === "all"
+      ? {}
+      : {
+          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
+          reported_to_external_system: filters.reported === "reported",
+        }),
+  };
+
+  if (filters.paid === "all") {
+    return prisma.therapy_treatments.count({ where: baseWhere });
+  }
+
+  const chunkSize = 200;
+  let cursorId: string | undefined;
+  let count = 0;
+
+  for (;;) {
+    const chunk = await prisma.therapy_treatments.findMany({
+      where: baseWhere,
+      orderBy: [{ occurred_at: "desc" }, { id: "desc" }],
+      ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+      take: chunkSize,
+      select: {
+        id: true,
+        amount: true,
+        receipt_allocations: { select: { amount: true } },
+      },
+    });
+    if (chunk.length === 0) break;
+
+    for (const t of chunk) {
+      const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
+      const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+      if (paymentStatus === filters.paid) count += 1;
+    }
+
+    if (chunk.length < chunkSize) break;
+    cursorId = chunk[chunk.length - 1]?.id;
+  }
+
+  return count;
+}

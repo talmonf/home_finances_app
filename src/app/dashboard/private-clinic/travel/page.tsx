@@ -25,11 +25,10 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
-import { formatAmountTotalsByCurrencyForDisplay } from "@/lib/private-clinic/list-amount-totals";
 import { TravelAddButton } from "./travel-add-button";
 import { TravelListClient } from "./travel-list-client";
 import { TravelModalForm } from "./travel-modal-form";
-import { loadTravelRows, loadTravelAmountTotal, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
+import { loadTravelRows, loadTravelAmountTotal, loadTravelListRecordCount, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
 
 export const dynamic = "force-dynamic";
 const TRAVEL_BASE = "/dashboard/private-clinic/travel";
@@ -93,7 +92,7 @@ export default async function TravelPage({
     Boolean(filters.to) ||
     filters.received !== "all";
 
-  const [jobs, clients, treatments, consultations, rows, amountTotalsByCurrency] = await Promise.all([
+  const [jobs, clients, treatments, consultations, rows, amountTotalsByCurrency, recordCount] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -129,6 +128,11 @@ export default async function TravelPage({
       take: 500,
     }),
     loadTravelAmountTotal({
+      householdId,
+      familyMemberId,
+      filters,
+    }),
+    loadTravelListRecordCount({
       householdId,
       familyMemberId,
       filters,
@@ -288,15 +292,8 @@ export default async function TravelPage({
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="shrink-0 text-lg font-medium text-slate-200">{tv.travelReports}</h2>
-          {rows.length > 0 ? (
-            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
-              {c.total}: {formatAmountTotalsByCurrencyForDisplay(obfuscate, amountTotalsByCurrency, uiLanguage)}
-            </p>
-          ) : (
-            <div className="flex-1" />
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-medium text-slate-200">{tv.travelReports}</h2>
           <TravelAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={tv.addTravel} />
         </div>
         {rows.length === 0 ? (
@@ -321,7 +318,11 @@ export default async function TravelPage({
               linked: tv.receivedLinked,
               unlinked: tv.receivedUnlinked,
               noDate: c.noDate,
+              total: c.total,
+              records: c.records,
             }}
+            amountTotalsByCurrency={amountTotalsByCurrency}
+            recordCount={recordCount}
           />
         )}
       </section>

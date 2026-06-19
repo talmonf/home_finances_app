@@ -150,6 +150,7 @@ export function privateClinicCommon(lang: UiLanguage) {
     category: p("Category", "קטגוריה"),
     amount: p("Amount", "סכום"),
     total: p("Total", "סה״כ"),
+    records: p("records", "רשומות"),
     currency: p("Currency", "מטבע"),
     type: p("Type", "סוג"),
     status: p("Status", "סטטוס"),

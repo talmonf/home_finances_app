@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { OBFUSCATED, formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
+import {
+  formatListAmountTotalLine,
+  type AmountTotalsByCurrency,
+} from "@/lib/private-clinic/list-amount-totals";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { ConsultationListRowDto } from "./consultations-list-data";
@@ -27,6 +31,8 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
+  total: string;
+  records: string;
 };
 
 function amountValue(text: string | null): number {
@@ -44,6 +50,8 @@ export function ConsultationsListClient({
   uiLanguage,
   dateDisplayFormat,
   obfuscate,
+  amountTotalsByCurrency,
+  recordCount,
 }: {
   initialRows: ConsultationListRowDto[];
   initialCursor: string | null;
@@ -53,6 +61,8 @@ export function ConsultationsListClient({
   uiLanguage: UiLanguage;
   dateDisplayFormat: HouseholdDateDisplayFormat;
   obfuscate: boolean;
+  amountTotalsByCurrency: AmountTotalsByCurrency;
+  recordCount: number;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -61,8 +71,14 @@ export function ConsultationsListClient({
   const [sortKey, setSortKey] = useState<ColumnSortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const rowCount = useMemo(() => rows.length, [rows]);
+  const totalLine = formatListAmountTotalLine(
+    obfuscate,
+    labels.total,
+    recordCount,
+    labels.records,
+    amountTotalsByCurrency,
+    uiLanguage,
+  );
 
   // When navigating (e.g. after submitting the modal), Next may update props without
   // fully remounting this client component. Keep the list state in sync.
@@ -172,6 +188,16 @@ export function ConsultationsListClient({
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
           <thead>
+            <tr>
+              <th colSpan={5} className="border-0 bg-transparent p-0" aria-hidden="true" />
+              <th
+                colSpan={1}
+                className="border-0 bg-transparent px-3 pb-2 pt-0 text-right text-sm font-medium text-slate-200"
+              >
+                {totalLine}
+              </th>
+              <th colSpan={3} className="border-0 bg-transparent p-0" aria-hidden="true" />
+            </tr>
             <tr className="border-b border-slate-700 bg-slate-800/80">
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("occurred_at")} className="hover:text-slate-100">
@@ -193,7 +219,7 @@ export function ConsultationsListClient({
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               <th className="px-3 py-2 text-slate-300">{labels.clients}</th>
-              <th className="px-3 py-2 text-slate-300">
+              <th className="px-3 py-2 text-right text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
                   {sortArrow("amount")}
@@ -223,7 +249,7 @@ export function ConsultationsListClient({
                     ? row.clients.map((client) => formatClientNameForDisplay(obfuscate, client.name, null)).join(", ")
                     : "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2 text-right text-slate-300">
                   {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
                 </td>
                 <td className="px-3 py-2 text-slate-400">
@@ -263,8 +289,7 @@ export function ConsultationsListClient({
         </table>
       </div>
       <div ref={sentinelRef} />
-      <div className="mt-2 flex items-center justify-between px-1 text-xs text-slate-500">
-        <span>{rowCount}</span>
+      <div className="mt-2 flex items-center justify-end px-1 text-xs text-slate-500">
         {hasMore ? (
           <button
             type="button"

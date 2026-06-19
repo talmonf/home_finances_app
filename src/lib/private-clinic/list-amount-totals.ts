@@ -38,3 +38,16 @@ export function formatAmountTotalsByCurrencyForDisplay(
     .map(({ currency, total }) => formatMoneyLineForDisplay(false, total.toFixed(2), currency, uiLanguage))
     .join(", ");
 }
+
+export function formatListAmountTotalLine(
+  obfuscate: boolean,
+  totalLabel: string,
+  recordCount: number,
+  recordsLabel: string,
+  totals: AmountTotalsByCurrency,
+  uiLanguage: UiLanguage,
+): string {
+  if (obfuscate) return OBFUSCATED;
+  const amounts = formatAmountTotalsByCurrencyForDisplay(false, totals, uiLanguage);
+  return `${totalLabel} (${recordCount} ${recordsLabel}): ${amounts}`;
+}

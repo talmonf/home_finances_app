@@ -116,6 +116,14 @@ export async function loadTravelAmountTotal(params: {
   return sortAmountTotalsByCurrency(totals);
 }
 
+export async function loadTravelListRecordCount(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TravelListFilters;
+}): Promise<number> {
+  return prisma.therapy_travel_entries.count({ where: whereForTravelList(params) });
+}
+
 export async function loadTravelRows(params: {
   householdId: string;
   familyMemberId?: string | null;

@@ -270,3 +270,11 @@ export async function loadConsultationsAmountTotal(params: {
   }
   return sortAmountTotalsByCurrency(totals);
 }
+
+export async function loadConsultationsListRecordCount(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: ConsultationsListFilters;
+}): Promise<number> {
+  return prisma.therapy_consultations.count({ where: whereForConsultationsList(params) });
+}
