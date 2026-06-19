@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from "react";
 import { formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { formatClientNameForDisplay, formatMoneyLineForDisplay } from "@/lib/privacy-display";
-import { formatAmountTotalsByCurrencyForDisplay, type AmountTotalsByCurrency } from "@/lib/private-clinic/list-amount-totals";
 import type { UiLanguage } from "@/lib/ui-language";
 
 type SortKey = "occurred_at" | "type" | "job" | "amount";
@@ -38,7 +37,6 @@ type Labels = {
   linked: string;
   unlinked: string;
   noDate: string;
-  total: string;
 };
 
 function amountValue(text: string | null): number {
@@ -54,7 +52,6 @@ export function TravelListClient({
   uiLanguage,
   obfuscate,
   labels,
-  amountTotalsByCurrency,
 }: {
   rows: TravelListRowDto[];
   listBaseHref: string;
@@ -62,7 +59,6 @@ export function TravelListClient({
   uiLanguage: UiLanguage;
   obfuscate: boolean;
   labels: Labels;
-  amountTotalsByCurrency: AmountTotalsByCurrency;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -114,11 +110,7 @@ export function TravelListClient({
   }, [rows, sortDir, sortKey]);
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-medium text-slate-200">
-        {labels.total}: {formatAmountTotalsByCurrencyForDisplay(obfuscate, amountTotalsByCurrency, uiLanguage)}
-      </p>
-      <div className="overflow-x-auto rounded-xl border border-slate-700">
+    <div className="overflow-x-auto rounded-xl border border-slate-700">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-slate-700 bg-slate-800/80">
@@ -193,7 +185,6 @@ export function TravelListClient({
           ))}
         </tbody>
       </table>
-    </div>
     </div>
   );
 }

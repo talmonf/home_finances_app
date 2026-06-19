@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatClientNameForDisplay, formatDecimalAmountForDisplay } from "@/lib/privacy-display";
-import { formatAmountTotalsByCurrencyForDisplay, type AmountTotalsByCurrency } from "@/lib/private-clinic/list-amount-totals";
 import { formatHouseholdDate, formatHouseholdDateUtcWithOptionalTime } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
@@ -33,7 +32,6 @@ type Labels = {
   loadingMore: string;
   noMoreRows: string;
   loadMore: string;
-  total: string;
 };
 
 type ColumnSortKey = "occurred_at" | "client" | "job" | "amount" | "paid" | "receipt" | "payment_details" | "edit";
@@ -50,7 +48,6 @@ export function TreatmentsListClient({
   labels,
   showExternalReporting,
   showFamily,
-  amountTotalsByCurrency,
 }: {
   initialRows: TreatmentListRowDto[];
   initialCursor: string | null;
@@ -62,7 +59,6 @@ export function TreatmentsListClient({
   labels: Labels;
   showExternalReporting: boolean;
   showFamily: boolean;
-  amountTotalsByCurrency: AmountTotalsByCurrency;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(initialCursor);
@@ -191,9 +187,6 @@ export function TreatmentsListClient({
           </button>
         </form>
       ) : null}
-      <p className="text-sm font-medium text-slate-200">
-        {labels.total}: {formatAmountTotalsByCurrencyForDisplay(obfuscate, amountTotalsByCurrency, uiLanguage)}
-      </p>
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
           <thead>
