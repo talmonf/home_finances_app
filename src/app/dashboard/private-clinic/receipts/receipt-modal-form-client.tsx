@@ -241,7 +241,7 @@ export function ReceiptModalFormClient({
               }}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{labels.selectRecipient}</option>
+              <option value=""></option>
               <option value="client">{labels.recipientClient}</option>
               <option value="organization">{labels.recipientOrg}</option>
             </select>
@@ -283,7 +283,6 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
-            <p className="mt-0.5 text-xs text-slate-500">{labels.paymentDateHint}</p>
             <div className="mt-1">
               <HouseholdDateField
                 name="payment_date"
@@ -306,13 +305,13 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.netAmount}</label>
+            <p className="mt-0.5 text-xs text-slate-500">{labels.netAmountHint}</p>
             <input
               name="net_amount"
               required
               defaultValue={initial?.net_amount ?? initial?.total_amount ?? ""}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
-            <p className="mt-1 text-xs text-slate-500">{labels.netAmountHint}</p>
           </div>
 
           <div>
