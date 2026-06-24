@@ -6,45 +6,54 @@ import {
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ConfirmDeleteForm, ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
-import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
-import RentalContractUpload from "../RentalContractUpload";
-import {
-  createRental,
-  updateRental,
-  deleteRental,
-  createRentalTenant,
-  updateRentalTenant,
-  deleteRentalTenant,
-  deleteRentalContract,
-} from "../../actions";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatRentalTypeLabel } from "@/lib/rental-labels";
+import { AddRentalForm } from "./add-rental-form";
+import { RentalDetailPanel } from "./rental-detail-panel";
+import { RentalsTableClient, type RentalTableRow } from "./rentals-table-client";
+import { RENTAL_PAYMENT_METHODS } from "./rental-form-constants";
 
 export const dynamic = "force-dynamic";
 
-const RENTAL_TYPES: Record<string, string> = {
-  lease_monthly: "Lease (monthly rent)",
-  short_stay: "Short stay (total for period)",
-};
-
-const RENTAL_PAYMENT_METHODS: Record<string, string> = {
-  cash: "Cash",
-  credit_card: "Credit card",
-  bank_account: "Bank account",
-  other: "Other",
-};
-
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ rentalId?: string }>;
 };
 
-export default async function PropertyRentalsPage({ params }: PageProps) {
+function sortRentalsNewestFirst<
+  T extends { start_date: Date | null; created_at: Date },
+>(rentals: T[]): T[] {
+  return [...rentals].sort((a, b) => {
+    const aPrimary = a.start_date?.getTime() ?? a.created_at.getTime();
+    const bPrimary = b.start_date?.getTime() ?? b.created_at.getTime();
+    if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+    return b.created_at.getTime() - a.created_at.getTime();
+  });
+}
+
+function formatPaymentLabel(rental: {
+  rental_type: string;
+  monthly_payment: { toString(): string } | null;
+  period_total_payment: { toString(): string } | null;
+  currency: string;
+}): string {
+  if (rental.rental_type === "lease_monthly" && rental.monthly_payment) {
+    return `${rental.monthly_payment.toString()} ${rental.currency}/mo`;
+  }
+  if (rental.rental_type === "short_stay" && rental.period_total_payment) {
+    return `${rental.period_total_payment.toString()} ${rental.currency}`;
+  }
+  return "—";
+}
+
+export default async function PropertyRentalsPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
 
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const [property, bankAccounts, creditCards, transactions] = await Promise.all([
     prisma.properties.findFirst({
@@ -79,12 +88,39 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
   ]);
 
   if (!property) redirect("/dashboard/properties?error=Not+found");
-  const rentalsSortedDesc = [...property.rentals].sort((a, b) => {
-    const aPrimary = a.start_date?.getTime() ?? a.created_at.getTime();
-    const bPrimary = b.start_date?.getTime() ?? b.created_at.getTime();
-    if (aPrimary !== bPrimary) return bPrimary - aPrimary;
-    return b.created_at.getTime() - a.created_at.getTime();
-  });
+
+  const rentalsSortedDesc = sortRentalsNewestFirst(property.rentals);
+
+  const requestedRentalId = resolvedSearchParams?.rentalId?.trim();
+  const selectedRentalId =
+    requestedRentalId && rentalsSortedDesc.some((r) => r.id === requestedRentalId)
+      ? requestedRentalId
+      : (rentalsSortedDesc[0]?.id ?? null);
+
+  const selectedRental = selectedRentalId
+    ? rentalsSortedDesc.find((r) => r.id === selectedRentalId) ?? null
+    : null;
+
+  const tableRows: RentalTableRow[] = rentalsSortedDesc.map((rental) => ({
+    id: rental.id,
+    rentalTypeLabel: formatRentalTypeLabel(rental.rental_type),
+    tenantNames:
+      rental.tenants
+        .map((t) => t.full_name)
+        .filter(Boolean)
+        .join(", ") || "—",
+    startDateLabel: rental.start_date
+      ? formatHouseholdDate(rental.start_date, dateDisplayFormat)
+      : "—",
+    endDateLabel: rental.end_date
+      ? formatHouseholdDate(rental.end_date, dateDisplayFormat)
+      : "—",
+    paymentLabel: formatPaymentLabel(rental),
+    paymentMethodLabel: rental.payment_method
+      ? (RENTAL_PAYMENT_METHODS[rental.payment_method] ?? rental.payment_method)
+      : "—",
+    isClinicLease: rental.is_clinic_lease,
+  }));
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -98,274 +134,32 @@ export default async function PropertyRentalsPage({ params }: PageProps) {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{property.name} rentals</h1>
           <p className="text-sm text-slate-400">
-            Latest rentals appear first. Add and manage rentals, tenants, contracts, and linked transactions here.
+            Select a rental in the table to view and edit its details. Newest rentals appear first.
           </p>
         </header>
 
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-medium text-slate-200">Rentals</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Add a rental with <strong className="font-medium text-slate-300">Add rental</strong> below. After it appears in the list, open that rental’s card — you’ll find{" "}
-              <strong className="font-medium text-slate-300">Tenants</strong> there (name, email, phone, notes). You can add more than one tenant per rental.
-            </p>
-          </div>
-          <form action={createRental} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <input type="hidden" name="property_id" value={property.id} />
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Rental type</label>
-              <select name="rental_type" defaultValue="lease_monthly" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                {Object.entries(RENTAL_TYPES).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Monthly rent (lease)</label>
-              <input name="monthly_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Total for stay (short stay)</label>
-              <input name="period_total_payment" type="number" step="0.01" min="0" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Currency</label>
-              <input name="currency" defaultValue="ILS" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Start date</label>
-              <input name="start_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">End date</label>
-              <input name="end_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Payment method</label>
-              <select name="payment_method" defaultValue="" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                <option value="">— None —</option>
-                {Object.entries(RENTAL_PAYMENT_METHODS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Bank account</label>
-              <select name="bank_account_id" defaultValue="" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                <option value="">— None —</option>
-                {bankAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.account_name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400">Credit card</label>
-              <select name="credit_card_id" defaultValue="" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                <option value="">— None —</option>
-                {creditCards.map((c) => (
-                  <option key={c.id} value={c.id}>{c.card_name} · ****{c.card_last_four}</option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
-              <textarea name="notes" rows={2} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            </div>
-            <div className="flex items-center gap-2 sm:col-span-2">
-              <input type="checkbox" name="is_clinic_lease" id="is_clinic_lease_new" className="h-4 w-4 rounded border-slate-600 bg-slate-800" />
-              <label htmlFor="is_clinic_lease_new" className="text-xs text-slate-300">
-                Clinic lease — include end date in Clinic reminders
-              </label>
-            </div>
-            <div className="flex items-end">
-              <button type="submit" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">Add rental</button>
-            </div>
-          </form>
+        <RentalsTableClient
+          propertyId={property.id}
+          rows={tableRows}
+          selectedRentalId={selectedRentalId}
+        />
 
-          {rentalsSortedDesc.length === 0 ? (
-            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No rentals yet. Use the form above, then add <span className="text-slate-300">tenants</span>, contracts, and transaction links inside each rental.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {rentalsSortedDesc.map((rental) => (
-                <div key={rental.id} className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-                  <form action={updateRental} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <input type="hidden" name="id" value={rental.id} />
-                    <input type="hidden" name="property_id" value={property.id} />
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Rental type</label>
-                      <select name="rental_type" defaultValue={rental.rental_type} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                        {Object.entries(RENTAL_TYPES).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Monthly payment</label>
-                      <input type="number" name="monthly_payment" step="0.01" min="0" defaultValue={rental.monthly_payment?.toString() ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Total for stay</label>
-                      <input type="number" name="period_total_payment" step="0.01" min="0" defaultValue={rental.period_total_payment?.toString() ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Currency</label>
-                      <input name="currency" defaultValue={rental.currency} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Start date</label>
-                      <input type="date" name="start_date" defaultValue={rental.start_date ? rental.start_date.toISOString().slice(0, 10) : ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">End date</label>
-                      <input type="date" name="end_date" defaultValue={rental.end_date ? rental.end_date.toISOString().slice(0, 10) : ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Payment method</label>
-                      <select name="payment_method" defaultValue={rental.payment_method ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                        <option value="">— None —</option>
-                        {Object.entries(RENTAL_PAYMENT_METHODS).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Bank account</label>
-                      <select name="bank_account_id" defaultValue={rental.bank_account_id ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                        <option value="">— None —</option>
-                        {bankAccounts.map((a) => (
-                          <option key={a.id} value={a.id}>{a.account_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Credit card</label>
-                      <select name="credit_card_id" defaultValue={rental.credit_card_id ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100">
-                        <option value="">— None —</option>
-                        {creditCards.map((c) => (
-                          <option key={c.id} value={c.id}>{c.card_name} · ****{c.card_last_four}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs text-slate-400">Notes</label>
-                      <textarea name="notes" rows={2} defaultValue={rental.notes ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
-                    </div>
-                    <div className="flex items-center gap-2 sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        name="is_clinic_lease"
-                        id={`is_clinic_lease_${rental.id}`}
-                        defaultChecked={rental.is_clinic_lease}
-                        className="h-4 w-4 rounded border-slate-600 bg-slate-800"
-                      />
-                      <label htmlFor={`is_clinic_lease_${rental.id}`} className="text-xs text-slate-300">
-                        Clinic lease (reminders)
-                      </label>
-                    </div>
-                    <div className="flex items-end gap-3">
-                      <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">Save rental</button>
-                      <ConfirmDeleteFormActionButton
-                        formAction={deleteRental.bind(null, rental.id, property.id)}
-                        className="rounded bg-rose-700 px-3 py-1.5 text-xs text-white hover:bg-rose-600"
-                      >
-                        Delete rental
-                      </ConfirmDeleteFormActionButton>
-                    </div>
-                  </form>
+        {selectedRental ? (
+          <RentalDetailPanel
+            rental={selectedRental}
+            propertyId={property.id}
+            bankAccounts={bankAccounts}
+            creditCards={creditCards}
+            transactions={transactions}
+            dateDisplayFormat={dateDisplayFormat}
+          />
+        ) : null}
 
-                  <div className="rounded border border-slate-700 p-3">
-                    <p className="mb-1 text-sm font-medium text-slate-200">Tenants</p>
-                    <p className="mb-3 text-xs text-slate-500">Who is renting (you can add several).</p>
-                    <form action={createRentalTenant} className="mb-2 grid gap-2 sm:grid-cols-4">
-                      <input type="hidden" name="rental_id" value={rental.id} />
-                      <input name="full_name" required placeholder="Full name" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                      <input name="email" placeholder="Email" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                      <input name="phone" placeholder="Phone" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                      <input name="notes" placeholder="Notes" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                      <button type="submit" className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500">Add tenant</button>
-                    </form>
-                    <div className="space-y-2">
-                      {rental.tenants.map((tenant) => (
-                        <form key={tenant.id} action={updateRentalTenant} className="grid gap-2 sm:grid-cols-5">
-                          <input type="hidden" name="id" value={tenant.id} />
-                          <input name="full_name" defaultValue={tenant.full_name} required className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                          <input name="email" defaultValue={tenant.email ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                          <input name="phone" defaultValue={tenant.phone ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                          <input name="notes" defaultValue={tenant.notes ?? ""} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-                          <div className="flex items-center gap-2">
-                            <button type="submit" className="text-xs text-sky-300 hover:text-sky-200">Save</button>
-                            <ConfirmDeleteFormActionButton
-                              formAction={deleteRentalTenant.bind(null, tenant.id, property.id)}
-                              className="text-xs text-rose-400 hover:text-rose-300"
-                            >
-                              Delete
-                            </ConfirmDeleteFormActionButton>
-                          </div>
-                        </form>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded border border-slate-700 p-3">
-                    <p className="mb-2 text-xs text-slate-400">Contract files</p>
-                    <RentalContractUpload rentalId={rental.id} />
-                    <div className="mt-2 space-y-1">
-                      {rental.contracts.map((contract) => (
-                        <div
-                          key={contract.id}
-                          className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300"
-                        >
-                          <span className="min-w-0 truncate text-slate-200">{contract.file_name}</span>
-                          <div className="flex shrink-0 flex-wrap items-center gap-2">
-                            {contract.storage_url ? (
-                              <DirectFileOpenDownloadLinks
-                                href={contract.storage_url}
-                                fileName={contract.file_name}
-                              />
-                            ) : null}
-                            <ConfirmDeleteForm action={deleteRentalContract.bind(null, contract.id, property.id)}>
-                              <button type="submit" className="text-rose-400 hover:text-rose-300">
-                                Delete
-                              </button>
-                            </ConfirmDeleteForm>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded border border-slate-700 p-3">
-                    <p className="mb-2 text-xs text-slate-400">Linked transactions</p>
-                    {rental.transactions.length > 0 ? (
-                      <ul className="space-y-1 text-xs text-slate-300">
-                        {rental.transactions.map((tx) => (
-                          <li key={tx.id}>
-                            {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} · {tx.description ?? "—"}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-slate-500">No linked transactions yet. Use Import Review to link them.</p>
-                    )}
-                    <div className="mt-2">
-                      <label className="mb-1 block text-xs text-slate-500">Recent transactions not linked to this rental</label>
-                      <select className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100">
-                        <option value="">Use Import Review page for linking</option>
-                        {transactions.filter((t) => t.rental_id !== rental.id).slice(0, 20).map((tx) => (
-                          <option key={tx.id} value={tx.id}>
-                            {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} · {tx.description ?? "—"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <AddRentalForm
+          propertyId={property.id}
+          bankAccounts={bankAccounts}
+          creditCards={creditCards}
+        />
       </div>
     </div>
   );
