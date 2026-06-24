@@ -319,16 +319,24 @@ function parseMoney(raw: string | null): string | null {
 export async function createRental(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
 
   const property_id = (formData.get("property_id") as string | null)?.trim();
-  if (!property_id) return;
+  const rentalsBase = property_id
+    ? `${PROPERTIES_PATH_PREFIX}/${property_id}/rentals`
+    : PROPERTIES_PATH_PREFIX;
+  const redirectOnError = safePropertiesRedirectPath(
+    formData.get("redirect_on_error") as string | null,
+    `${rentalsBase}?modal=new`,
+  );
+
+  if (!householdId) redirectWithError(redirectOnError, "No household");
+  if (!property_id) redirectWithError(redirectOnError, "Missing property");
 
   const property = await prisma.properties.findFirst({
     where: { id: property_id, household_id: householdId },
     select: { id: true },
   });
-  if (!property) return;
+  if (!property) redirectWithError(redirectOnError, "Not found");
 
   const rental_type = parseRentalType((formData.get("rental_type") as string | null)?.trim() || null);
   const start_date = parseDateInput((formData.get("start_date") as string | null)?.trim() || null);
@@ -342,8 +350,12 @@ export async function createRental(formData: FormData) {
   const notes = (formData.get("notes") as string | null)?.trim() || null;
   const is_clinic_lease = formData.has("is_clinic_lease");
 
-  if (rental_type === "lease_monthly" && !monthly_payment) return;
-  if (rental_type === "short_stay" && !period_total_payment) return;
+  if (rental_type === "lease_monthly" && !monthly_payment) {
+    redirectWithError(redirectOnError, "Monthly payment is required for lease rentals");
+  }
+  if (rental_type === "short_stay" && !period_total_payment) {
+    redirectWithError(redirectOnError, "Total payment is required for short stay rentals");
+  }
   if (payment_method !== "credit_card") credit_card_id = null;
   if (payment_method !== "bank_account") bank_account_id = null;
 
@@ -352,7 +364,7 @@ export async function createRental(formData: FormData) {
       where: { id: credit_card_id, household_id: householdId },
       select: { id: true },
     });
-    if (!card) return;
+    if (!card) redirectWithError(redirectOnError, "Credit card not found");
   }
 
   if (bank_account_id) {
@@ -360,12 +372,13 @@ export async function createRental(formData: FormData) {
       where: { id: bank_account_id, household_id: householdId },
       select: { id: true },
     });
-    if (!account) return;
+    if (!account) redirectWithError(redirectOnError, "Bank account not found");
   }
 
+  const id = crypto.randomUUID();
   await prisma.rentals.create({
     data: {
-      id: crypto.randomUUID(),
+      id,
       household_id: householdId,
       property_id,
       rental_type,
@@ -386,6 +399,12 @@ export async function createRental(formData: FormData) {
   revalidatePath(`/dashboard/properties/${property_id}`);
   revalidatePath(`/dashboard/properties/${property_id}/rentals`);
   revalidatePath("/dashboard/private-clinic/reminders");
+
+  const redirectOnSuccess = safePropertiesRedirectPath(
+    formData.get("redirect_on_success") as string | null,
+    `${rentalsBase}?created=1&rentalId=${encodeURIComponent(id)}`,
+  );
+  redirect(redirectOnSuccess);
 }
 
 export async function updateRental(formData: FormData) {

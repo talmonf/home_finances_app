@@ -8,8 +8,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
-import { AddRentalForm } from "./add-rental-form";
 import { RentalDetailPanel } from "./rental-detail-panel";
+import { RentalModalForm } from "./rental-modal-form";
 import { RentalsTableClient, type RentalTableRow } from "./rentals-table-client";
 import { RENTAL_PAYMENT_METHODS } from "./rental-form-constants";
 
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ rentalId?: string }>;
+  searchParams?: Promise<{ rentalId?: string; modal?: string; created?: string; error?: string }>;
 };
 
 function sortRentalsNewestFirst<
@@ -44,6 +44,19 @@ function formatPaymentLabel(rental: {
     return `${rental.period_total_payment.toString()} ${rental.currency}`;
   }
   return "—";
+}
+
+function buildRentalsHref(
+  propertyId: string,
+  params: { rentalId?: string | null; modal?: string; created?: string; error?: string },
+): string {
+  const search = new URLSearchParams();
+  if (params.rentalId) search.set("rentalId", params.rentalId);
+  if (params.modal) search.set("modal", params.modal);
+  if (params.created) search.set("created", params.created);
+  if (params.error) search.set("error", params.error);
+  const qs = search.toString();
+  return `/dashboard/properties/${propertyId}/rentals${qs ? `?${qs}` : ""}`;
 }
 
 export default async function PropertyRentalsPage({ params, searchParams }: PageProps) {
@@ -101,6 +114,12 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
     ? rentalsSortedDesc.find((r) => r.id === selectedRentalId) ?? null
     : null;
 
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
+  const rentalsBaseHref = buildRentalsHref(property.id, { rentalId: selectedRentalId });
+  const addRentalHref = buildRentalsHref(property.id, { rentalId: selectedRentalId, modal: "new" });
+  const modalCloseHref = rentalsBaseHref;
+  const modalRedirectOnError = addRentalHref;
+
   const tableRows: RentalTableRow[] = rentalsSortedDesc.map((rental) => ({
     id: rental.id,
     rentalTypeLabel: formatRentalTypeLabel(rental.rental_type),
@@ -136,12 +155,26 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
           <p className="text-sm text-slate-400">
             Select a rental in the table to view and edit its details. Newest rentals appear first.
           </p>
+          {(resolvedSearchParams?.error || resolvedSearchParams?.created) && (
+            <div
+              className={`rounded-lg border px-3 py-2 text-xs ${
+                resolvedSearchParams.error
+                  ? "border-rose-600 bg-rose-950/60 text-rose-100"
+                  : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
+              }`}
+            >
+              {resolvedSearchParams.error
+                ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
+                : "Rental added."}
+            </div>
+          )}
         </header>
 
         <RentalsTableClient
           propertyId={property.id}
           rows={tableRows}
           selectedRentalId={selectedRentalId}
+          addRentalHref={addRentalHref}
         />
 
         {selectedRental ? (
@@ -155,11 +188,15 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
           />
         ) : null}
 
-        <AddRentalForm
-          propertyId={property.id}
-          bankAccounts={bankAccounts}
-          creditCards={creditCards}
-        />
+        {modalMode === "new" ? (
+          <RentalModalForm
+            propertyId={property.id}
+            bankAccounts={bankAccounts}
+            creditCards={creditCards}
+            closeHref={modalCloseHref}
+            redirectOnError={modalRedirectOnError}
+          />
+        ) : null}
       </div>
     </div>
   );
