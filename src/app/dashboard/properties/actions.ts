@@ -20,6 +20,17 @@ function redirectWithError(basePath: string, message: string): never {
   redirect(`${u.pathname}${u.search}`);
 }
 
+function redirectToPropertyRentals(
+  property_id: string,
+  params: { rentalId?: string; updated?: string; created?: string } = {},
+): never {
+  const u = new URL(`${PROPERTIES_PATH_PREFIX}/${property_id}/rentals`, "http://local.invalid");
+  if (params.rentalId) u.searchParams.set("rentalId", params.rentalId);
+  if (params.updated) u.searchParams.set("updated", params.updated);
+  if (params.created) u.searchParams.set("created", params.created);
+  redirect(`${u.pathname}${u.search}`);
+}
+
 export async function createProperty(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -476,6 +487,8 @@ export async function updateRental(formData: FormData) {
   revalidatePath(`/dashboard/properties/${property_id}`);
   revalidatePath(`/dashboard/properties/${property_id}/rentals`);
   revalidatePath("/dashboard/private-clinic/reminders");
+
+  redirectToPropertyRentals(property_id, { rentalId: id, updated: "1" });
 }
 
 export async function deleteRental(id: string, property_id: string) {
@@ -519,6 +532,7 @@ export async function createRentalTenant(formData: FormData) {
 
   revalidatePath(`/dashboard/properties/${rental.property_id}`);
   revalidatePath(`/dashboard/properties/${rental.property_id}/rentals`);
+  redirectToPropertyRentals(rental.property_id, { rentalId: rental_id, updated: "1" });
 }
 
 export async function updateRentalTenant(formData: FormData) {
@@ -532,7 +546,7 @@ export async function updateRentalTenant(formData: FormData) {
 
   const tenant = await prisma.rental_tenants.findFirst({
     where: { id, rental: { household_id: householdId } },
-    select: { rental: { select: { property_id: true } } },
+    select: { rental: { select: { property_id: true, id: true } } },
   });
   if (!tenant) return;
 
@@ -548,6 +562,7 @@ export async function updateRentalTenant(formData: FormData) {
 
   revalidatePath(`/dashboard/properties/${tenant.rental.property_id}`);
   revalidatePath(`/dashboard/properties/${tenant.rental.property_id}/rentals`);
+  redirectToPropertyRentals(tenant.rental.property_id, { rentalId: tenant.rental.id, updated: "1" });
 }
 
 export async function deleteRentalTenant(id: string, property_id: string) {

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ rentalId?: string; modal?: string; created?: string; error?: string }>;
+  searchParams?: Promise<{ rentalId?: string; modal?: string; created?: string; updated?: string; error?: string }>;
 };
 
 function sortRentalsNewestFirst<
@@ -155,7 +155,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
           <p className="text-sm text-slate-400">
             Select a rental in the table to view and edit its details. Newest rentals appear first.
           </p>
-          {(resolvedSearchParams?.error || resolvedSearchParams?.created) && (
+          {(resolvedSearchParams?.error || resolvedSearchParams?.created || resolvedSearchParams?.updated) && (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${
                 resolvedSearchParams.error
@@ -165,7 +165,9 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             >
               {resolvedSearchParams.error
                 ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
-                : "Rental added."}
+                : resolvedSearchParams.created
+                  ? "Rental added."
+                  : "Rental saved."}
             </div>
           )}
         </header>
