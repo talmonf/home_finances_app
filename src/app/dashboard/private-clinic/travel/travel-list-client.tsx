@@ -132,7 +132,7 @@ export function TravelListClient({
                 {sortArrow("job")}
               </button>
             </th>
-            <th className="px-3 py-2 text-slate-300">
+            <th className="px-3 py-2 text-right text-slate-300">
               <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                 {labels.amount}
                 {sortArrow("amount")}
@@ -158,7 +158,7 @@ export function TravelListClient({
                     : labels.scopeJob}
               </td>
               <td className="px-3 py-2 text-slate-400">{row.job_label ?? "—"}</td>
-              <td className="px-3 py-2 text-slate-300">
+              <td className="px-3 py-2 text-right text-slate-300">
                 {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
               </td>
               <td className="px-3 py-2 text-slate-400">

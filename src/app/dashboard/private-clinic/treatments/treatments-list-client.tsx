@@ -164,8 +164,6 @@ export function TreatmentsListClient({
     [sortDir, sortKey],
   );
 
-  const rowCount = useMemo(() => rows.length, [rows]);
-
   return (
     <div className="space-y-3">
       {selectedIds.size > 0 ? (
@@ -212,7 +210,7 @@ export function TreatmentsListClient({
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               {showFamily ? <th className="px-3 py-2 text-slate-300">{labels.family}</th> : null}
-              <th className="px-3 py-2 text-slate-300">
+              <th className="px-3 py-2 text-right text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
                   {sortArrow("amount")}
@@ -281,7 +279,7 @@ export function TreatmentsListClient({
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
                   <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
                   {showFamily ? <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td> : null}
-                  <td className="px-3 py-2 text-slate-200">
+                  <td className="px-3 py-2 text-right text-slate-200">
                     {t.amount != null && t.amount !== ""
                       ? formatDecimalAmountForDisplay(obfuscate, t.amount, t.currency, uiLanguage)
                       : "—"}
@@ -345,8 +343,7 @@ export function TreatmentsListClient({
         </table>
       </div>
       <div ref={sentinelRef} />
-      <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-        <span>{rowCount}</span>
+      <div className="flex items-center justify-end px-1 text-xs text-slate-500">
         {hasMore ? (
           <button
             type="button"

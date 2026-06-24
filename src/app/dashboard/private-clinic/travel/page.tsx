@@ -25,10 +25,11 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import { TravelAddButton } from "./travel-add-button";
 import { TravelListClient } from "./travel-list-client";
 import { TravelModalForm } from "./travel-modal-form";
-import { loadTravelRows, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
+import { loadTravelRows, loadTravelAmountTotal, loadTravelListRecordCount, parseTravelReceivedFilter, type TravelListFilters } from "./travel-list-data";
 
 export const dynamic = "force-dynamic";
 const TRAVEL_BASE = "/dashboard/private-clinic/travel";
@@ -92,7 +93,7 @@ export default async function TravelPage({
     Boolean(filters.to) ||
     filters.received !== "all";
 
-  const [jobs, clients, treatments, consultations, rows] = await Promise.all([
+  const [jobs, clients, treatments, consultations, rows, amountTotalsByCurrency, recordCount] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -126,6 +127,16 @@ export default async function TravelPage({
       familyMemberId,
       filters,
       take: 500,
+    }),
+    loadTravelAmountTotal({
+      householdId,
+      familyMemberId,
+      filters,
+    }),
+    loadTravelListRecordCount({
+      householdId,
+      familyMemberId,
+      filters,
     }),
   ]);
   const filteredReceipt = filters.receipt
@@ -282,9 +293,25 @@ export default async function TravelPage({
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{tv.travelReports}</h2>
-          <TravelAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={tv.addTravel} />
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="shrink-0 text-lg font-medium text-slate-200">{tv.travelReports}</h2>
+          {rows.length > 0 ? (
+            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+              {formatListAmountTotalLine(
+                obfuscate,
+                c.total,
+                recordCount,
+                c.records,
+                amountTotalsByCurrency,
+                uiLanguage,
+              )}
+            </p>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <div className="shrink-0">
+            <TravelAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={tv.addTravel} />
+          </div>
         </div>
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.travelEmpty}</p>

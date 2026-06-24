@@ -67,6 +67,12 @@ function receiptKindDefaultByEmploymentType(
   return employmentType === "employee" ? "salary_fictitious" : "regular";
 }
 
+function shouldDefaultCoveredPeriodToPreviousMonth(
+  employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company",
+): boolean {
+  return employmentType !== "self_employed";
+}
+
 function clientOptionJobIds(row: {
   default_job_id: string;
   client_jobs: { job_id: string }[];
@@ -682,6 +688,7 @@ export default async function ReceiptsPage({
             id: j.id,
             label: formatJobDisplayLabel(j),
             defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+            defaultCoveredPeriodToPreviousMonth: shouldDefaultCoveredPeriodToPreviousMonth(j.employment_type),
           }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
@@ -705,7 +712,7 @@ export default async function ReceiptsPage({
             client: c.client,
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
-            date: c.date,
+            date: r.submittedDate,
             grossAmount: r.grossAmount,
             grossAmountHint: r.grossAmountHint,
             netAmount: r.netAmount,
@@ -766,6 +773,7 @@ export default async function ReceiptsPage({
             id: j.id,
             label: formatJobDisplayLabel(j),
             defaultReceiptKind: receiptKindDefaultByEmploymentType(j.employment_type),
+            defaultCoveredPeriodToPreviousMonth: shouldDefaultCoveredPeriodToPreviousMonth(j.employment_type),
           }))}
           programs={receiptPrograms.map((p) => ({
             id: p.id,
@@ -789,7 +797,7 @@ export default async function ReceiptsPage({
             client: c.client,
             selectClient: r.selectClient,
             receiptNumber: r.receiptNumber,
-            date: c.date,
+            date: r.submittedDate,
             grossAmount: r.grossAmount,
             grossAmountHint: r.grossAmountHint,
             netAmount: r.netAmount,
@@ -907,21 +915,23 @@ export default async function ReceiptsPage({
                   <p className="text-slate-500">{c.noEntriesYet}</p>
                 )}
               </div>
-              <form action={linkTreatmentsToReceipt} className="space-y-2">
-                <input type="hidden" name="receipt_id" value={editReceipt.id} />
-                <p className="text-slate-200">{r.linkTreatmentsHeading}</p>
-                <ReceiptAllocationPicker
-                  key={`treatments-${editReceipt.id}-${treatmentPickerItems[0]?.id ?? "none"}-${treatmentPickerItems.length}`}
-                  inputName="treatment_ids"
-                  items={treatmentPickerItems}
-                  selectAllLabel={r.selectAll}
-                  deselectAllLabel={r.deselectAll}
-                  selectSuggestedLabel={r.selectSuggested}
-                />
-                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-                  {r.linkTreatmentsSubmit}
-                </button>
-              </form>
+              {treatmentPickerItems.length > 0 ? (
+                <form action={linkTreatmentsToReceipt} className="space-y-2">
+                  <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                  <p className="text-slate-200">{r.linkTreatmentsHeading}</p>
+                  <ReceiptAllocationPicker
+                    key={`treatments-${editReceipt.id}-${treatmentPickerItems[0]?.id ?? "none"}-${treatmentPickerItems.length}`}
+                    inputName="treatment_ids"
+                    items={treatmentPickerItems}
+                    selectAllLabel={r.selectAll}
+                    deselectAllLabel={r.deselectAll}
+                    selectSuggestedLabel={r.selectSuggested}
+                  />
+                  <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                    {r.linkTreatmentsSubmit}
+                  </button>
+                </form>
+              ) : null}
               <div className="space-y-2">
                 <p className="font-medium text-slate-200">{consultationsLabel}</p>
                 {consultationsLinkedToReceipt.length > 0 ? (
@@ -954,21 +964,23 @@ export default async function ReceiptsPage({
                   <p className="text-slate-500">{c.noEntriesYet}</p>
                 )}
               </div>
-              <form action={linkConsultationsToReceipt} className="space-y-2">
-                <input type="hidden" name="receipt_id" value={editReceipt.id} />
-                <p className="text-slate-200">{r.linkConsultationsHeading}</p>
-                <ReceiptAllocationPicker
-                  key={`consultations-${editReceipt.id}-${consultationPickerItems[0]?.id ?? "none"}-${consultationPickerItems.length}`}
-                  inputName="consultation_ids"
-                  items={consultationPickerItems}
-                  selectAllLabel={r.selectAll}
-                  deselectAllLabel={r.deselectAll}
-                  selectSuggestedLabel={r.selectSuggested}
-                />
-                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-                  {r.linkConsultationsSubmit}
-                </button>
-              </form>
+              {consultationPickerItems.length > 0 ? (
+                <form action={linkConsultationsToReceipt} className="space-y-2">
+                  <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                  <p className="text-slate-200">{r.linkConsultationsHeading}</p>
+                  <ReceiptAllocationPicker
+                    key={`consultations-${editReceipt.id}-${consultationPickerItems[0]?.id ?? "none"}-${consultationPickerItems.length}`}
+                    inputName="consultation_ids"
+                    items={consultationPickerItems}
+                    selectAllLabel={r.selectAll}
+                    deselectAllLabel={r.deselectAll}
+                    selectSuggestedLabel={r.selectSuggested}
+                  />
+                  <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                    {r.linkConsultationsSubmit}
+                  </button>
+                </form>
+              ) : null}
               <div className="space-y-2">
                 <p className="font-medium text-slate-200">{travelLabel}</p>
                 {travelLinkedToReceipt.length > 0 ? (
@@ -1001,21 +1013,23 @@ export default async function ReceiptsPage({
                   <p className="text-slate-500">{c.noEntriesYet}</p>
                 )}
               </div>
-              <form action={linkTravelEntriesToReceipt} className="space-y-2">
-                <input type="hidden" name="receipt_id" value={editReceipt.id} />
-                <p className="text-slate-200">{r.linkTravelHeading}</p>
-                <ReceiptAllocationPicker
-                  key={`travel-${editReceipt.id}-${travelPickerItems[0]?.id ?? "none"}-${travelPickerItems.length}`}
-                  inputName="travel_entry_ids"
-                  items={travelPickerItems}
-                  selectAllLabel={r.selectAll}
-                  deselectAllLabel={r.deselectAll}
-                  selectSuggestedLabel={r.selectSuggested}
-                />
-                <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-                  {r.linkTravelSubmit}
-                </button>
-              </form>
+              {travelPickerItems.length > 0 ? (
+                <form action={linkTravelEntriesToReceipt} className="space-y-2">
+                  <input type="hidden" name="receipt_id" value={editReceipt.id} />
+                  <p className="text-slate-200">{r.linkTravelHeading}</p>
+                  <ReceiptAllocationPicker
+                    key={`travel-${editReceipt.id}-${travelPickerItems[0]?.id ?? "none"}-${travelPickerItems.length}`}
+                    inputName="travel_entry_ids"
+                    items={travelPickerItems}
+                    selectAllLabel={r.selectAll}
+                    deselectAllLabel={r.deselectAll}
+                    selectSuggestedLabel={r.selectSuggested}
+                  />
+                  <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+                    {r.linkTravelSubmit}
+                  </button>
+                </form>
+              ) : null}
               <ConfirmDeleteForm action={deleteTherapyReceipt} className="border-t border-slate-700 pt-3">
                 <input type="hidden" name="id" value={editReceipt.id} />
                 <button type="submit" className="rounded bg-rose-700 px-3 py-1 text-xs font-semibold text-rose-100 hover:bg-rose-600">

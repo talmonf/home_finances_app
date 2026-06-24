@@ -36,7 +36,12 @@ export async function ReceiptModalForm({
   redirectOnSuccess: string;
   redirectOnError: string;
   householdId: string;
-  jobs: { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" }[];
+  jobs: {
+    id: string;
+    label: string;
+    defaultReceiptKind: "regular" | "salary_fictitious";
+    defaultCoveredPeriodToPreviousMonth: boolean;
+  }[];
   programs: { id: string; jobId: string; label: string }[];
   clients: { id: string; first_name: string; last_name: string | null; jobIds: string[] }[];
   labels: ReceiptModalFormLabels;

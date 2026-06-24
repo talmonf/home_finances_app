@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/auth";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
+import { sortAmountTotalsByCurrency, type AmountTotalsByCurrency } from "@/lib/private-clinic/list-amount-totals";
+import type { Prisma } from "@/generated/prisma/client";
 import type { TravelListRowDto } from "./travel-list-client";
 
 export type TravelReceivedFilter = "all" | "linked" | "unlinked";
@@ -27,6 +29,101 @@ export function parseTravelReceivedFilter(raw: string | undefined): TravelReceiv
   return "all";
 }
 
+function whereForTravelList(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TravelListFilters;
+}): Prisma.therapy_travel_entriesWhereInput {
+  const { householdId, familyMemberId, filters } = params;
+  const from = parseDateFilter(filters.from);
+  const to = parseDateFilter(filters.to);
+  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
+
+  return {
+    household_id: householdId,
+    AND: [
+      {
+        OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
+      },
+      ...(filters.job
+        ? [
+            {
+              OR: [
+                { job_id: filters.job },
+                { treatment: { job_id: filters.job } },
+                { consultation: { job_id: filters.job } },
+              ],
+            },
+          ]
+        : []),
+      ...(filters.client
+        ? [
+            {
+              OR: [
+                { treatment: { client_id: filters.client } },
+                {
+                  consultation: {
+                    participants: { some: { client_id: filters.client } },
+                  },
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(filters.receipt
+        ? [
+            {
+              receipt_allocations: {
+                some: {
+                  receipt_id: filters.receipt,
+                },
+              },
+            },
+          ]
+        : []),
+      ...(from || to
+        ? [
+            {
+              occurred_at: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            },
+          ]
+        : []),
+      ...(filters.received === "linked" ? [{ receipt_allocations: { some: {} } }] : []),
+      ...(filters.received === "unlinked" ? [{ receipt_allocations: { none: {} } }] : []),
+    ],
+  };
+}
+
+export async function loadTravelAmountTotal(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TravelListFilters;
+}): Promise<AmountTotalsByCurrency> {
+  const groups = await prisma.therapy_travel_entries.groupBy({
+    by: ["currency"],
+    where: whereForTravelList(params),
+    _sum: { amount: true },
+  });
+  const totals = new Map<string, number>();
+  for (const group of groups) {
+    const sum = group._sum?.amount;
+    if (sum == null) continue;
+    totals.set(group.currency, Number(sum.toString()));
+  }
+  return sortAmountTotalsByCurrency(totals);
+}
+
+export async function loadTravelListRecordCount(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TravelListFilters;
+}): Promise<number> {
+  return prisma.therapy_travel_entries.count({ where: whereForTravelList(params) });
+}
+
 export async function loadTravelRows(params: {
   householdId: string;
   familyMemberId?: string | null;
@@ -34,67 +131,9 @@ export async function loadTravelRows(params: {
   take?: number;
 }): Promise<TravelListRowDto[]> {
   const { householdId, familyMemberId, filters, take = 500 } = params;
-  const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
-  const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   const entries = await prisma.therapy_travel_entries.findMany({
-    where: {
-      household_id: householdId,
-      AND: [
-        {
-          OR: [{ job: jobScope }, { treatment: { job: jobScope } }, { consultation: { job: jobScope } }],
-        },
-        ...(filters.job
-          ? [
-              {
-                OR: [
-                  { job_id: filters.job },
-                  { treatment: { job_id: filters.job } },
-                  { consultation: { job_id: filters.job } },
-                ],
-              },
-            ]
-          : []),
-        ...(filters.client
-          ? [
-              {
-                OR: [
-                  { treatment: { client_id: filters.client } },
-                  {
-                    consultation: {
-                      participants: { some: { client_id: filters.client } },
-                    },
-                  },
-                ],
-              },
-            ]
-          : []),
-        ...(filters.receipt
-          ? [
-              {
-                receipt_allocations: {
-                  some: {
-                    receipt_id: filters.receipt,
-                  },
-                },
-              },
-            ]
-          : []),
-        ...(from || to
-          ? [
-              {
-                occurred_at: {
-                  ...(from ? { gte: from } : {}),
-                  ...(to ? { lte: to } : {}),
-                },
-              },
-            ]
-          : []),
-        ...(filters.received === "linked" ? [{ receipt_allocations: { some: {} } }] : []),
-        ...(filters.received === "unlinked" ? [{ receipt_allocations: { none: {} } }] : []),
-      ],
-    },
+    where: whereForTravelList({ householdId, familyMemberId, filters }),
     orderBy: { created_at: "desc" },
     take,
     include: {

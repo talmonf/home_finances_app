@@ -62,8 +62,6 @@ export function ConsultationsListClient({
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const rowCount = useMemo(() => rows.length, [rows]);
-
   // When navigating (e.g. after submitting the modal), Next may update props without
   // fully remounting this client component. Keep the list state in sync.
   useEffect(() => {
@@ -193,7 +191,7 @@ export function ConsultationsListClient({
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
               <th className="px-3 py-2 text-slate-300">{labels.clients}</th>
-              <th className="px-3 py-2 text-slate-300">
+              <th className="px-3 py-2 text-right text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
                   {labels.amount}
                   {sortArrow("amount")}
@@ -223,7 +221,7 @@ export function ConsultationsListClient({
                     ? row.clients.map((client) => formatClientNameForDisplay(obfuscate, client.name, null)).join(", ")
                     : "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2 text-right text-slate-300">
                   {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
                 </td>
                 <td className="px-3 py-2 text-slate-400">
@@ -263,8 +261,7 @@ export function ConsultationsListClient({
         </table>
       </div>
       <div ref={sentinelRef} />
-      <div className="mt-2 flex items-center justify-between px-1 text-xs text-slate-500">
-        <span>{rowCount}</span>
+      <div className="mt-2 flex items-center justify-end px-1 text-xs text-slate-500">
         {hasMore ? (
           <button
             type="button"

@@ -149,6 +149,8 @@ export function privateClinicCommon(lang: UiLanguage) {
     client: p("Client", "לקוח"),
     category: p("Category", "קטגוריה"),
     amount: p("Amount", "סכום"),
+    total: p("Total", "סה״כ"),
+    records: p("records", "רשומות"),
     currency: p("Currency", "מטבע"),
     type: p("Type", "סוג"),
     status: p("Status", "סטטוס"),
@@ -737,6 +739,7 @@ export function privateClinicReceipts(lang: UiLanguage) {
     editReceipt: p("Edit receipt", "עריכת קבלה"),
     saveReceipt: p("Save receipt", "שמירת קבלה"),
     receiptNumber: p("Receipt #", "מס׳ קבלה"),
+    submittedDate: p("Submitted date", "תאריך הגשה"),
     totalAmount: p("Total amount", "סכום כולל"),
     grossAmount: p("Gross amount", "סכום ברוטו"),
     grossAmountHint: p(

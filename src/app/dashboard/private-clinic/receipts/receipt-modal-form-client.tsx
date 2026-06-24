@@ -1,14 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { useMemo, useState, type ReactNode } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 
-type JobOption = { id: string; label: string; defaultReceiptKind: "regular" | "salary_fictitious" };
+type JobOption = {
+  id: string;
+  label: string;
+  defaultReceiptKind: "regular" | "salary_fictitious";
+  defaultCoveredPeriodToPreviousMonth: boolean;
+};
 
 type ClientOption = { id: string; first_name: string; last_name: string | null; jobIds: string[] };
 
 type ProgramOption = { id: string; jobId: string; label: string };
+
+function localDateToIsoYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function previousMonthPeriod(): { start: string; end: string } {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), 0);
+  return { start: localDateToIsoYmd(start), end: localDateToIsoYmd(end) };
+}
 
 export type ReceiptModalLabels = {
   titleNew: string;
@@ -102,44 +117,21 @@ export function ReceiptModalFormClient({
   children?: ReactNode;
 }) {
   const jobsById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
-  const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs, initial?.job_id));
+  const [jobId, setJobId] = useState(() => initial?.job_id ?? "");
   const [programId, setProgramId] = useState(initial?.program_id ?? "");
   const [recipientType, setRecipientType] = useState<string>(initial?.recipient_type ?? "");
   const [paymentMethod, setPaymentMethod] = useState<string>(initial?.payment_method ?? "");
   const [clientId, setClientId] = useState(initial?.client_id ?? "");
   const [receiptKind, setReceiptKind] = useState<string>(initial?.receipt_kind ?? "");
-
-  useEffect(() => {
-    setJobId(defaultClinicJobId(jobs, initial?.job_id));
-    setProgramId(initial?.program_id ?? "");
-    setRecipientType(initial?.recipient_type ?? "");
-    setPaymentMethod(initial?.payment_method ?? "");
-    setClientId(initial?.client_id ?? "");
-    setReceiptKind(initial?.receipt_kind ?? "");
-  }, [initial]);
-  useEffect(() => {
-    if (!jobId || receiptKind) return;
-    const defaults = jobsById.get(jobId);
-    if (defaults) setReceiptKind(defaults.defaultReceiptKind);
-  }, [jobId, jobsById, receiptKind]);
-
+  const [coveredPeriodStart, setCoveredPeriodStart] = useState(initial?.covered_period_start ?? "");
+  const [coveredPeriodEnd, setCoveredPeriodEnd] = useState(initial?.covered_period_end ?? "");
+  const [isDirty, setIsDirty] = useState(mode === "create");
+  const canSubmit = mode === "create" || isDirty;
 
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
     [programs, jobId],
   );
-
-  useEffect(() => {
-    if (programId && !programsForJob.some((p) => p.id === programId)) {
-      setProgramId("");
-    }
-  }, [programsForJob, programId]);
-
-  useEffect(() => {
-    if (recipientType === "organization") {
-      setClientId("");
-    }
-  }, [recipientType]);
 
   const clientsForJob = useMemo(() => {
     if (!jobId) return clients;
@@ -152,12 +144,24 @@ export function ReceiptModalFormClient({
     return filtered;
   }, [clients, jobId, initial?.client_id, mode]);
 
-  useEffect(() => {
-    if (!clientId || recipientType !== "client") return;
-    if (!clientsForJob.some((c) => c.id === clientId)) {
+  function applyJobDefaults(nextJobId: string) {
+    const defaults = jobsById.get(nextJobId);
+    if (!defaults) return;
+    setReceiptKind(defaults.defaultReceiptKind);
+    if (mode === "create" && defaults.defaultCoveredPeriodToPreviousMonth) {
+      const previousMonth = previousMonthPeriod();
+      setCoveredPeriodStart(previousMonth.start);
+      setCoveredPeriodEnd(previousMonth.end);
+      setRecipientType("organization");
       setClientId("");
     }
-  }, [clientId, clientsForJob, recipientType]);
+  }
+
+  function clientBelongsToJob(nextClientId: string, nextJobId: string): boolean {
+    const client = clients.find((cl) => cl.id === nextClientId);
+    if (!client) return false;
+    return !nextJobId || client.jobIds.includes(nextJobId);
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
@@ -168,7 +172,7 @@ export function ReceiptModalFormClient({
             {labels.cancel}
           </a>
         </div>
-        <form action={action} className="grid gap-3 md:grid-cols-2">
+        <form action={action} onChangeCapture={() => setIsDirty(true)} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
           {mode === "edit" && initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
@@ -183,12 +187,14 @@ export function ReceiptModalFormClient({
                 const v = e.target.value;
                 setJobId(v);
                 setProgramId("");
-                const defaults = jobsById.get(v);
-                if (defaults) setReceiptKind(defaults.defaultReceiptKind);
+                applyJobDefaults(v);
+                if (recipientType === "client" && clientId && !clientBelongsToJob(clientId, v)) {
+                  setClientId("");
+                }
               }}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{labels.job}</option>
+              <option value=""></option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.label}
@@ -205,7 +211,7 @@ export function ReceiptModalFormClient({
               onChange={(e) => setProgramId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">{labels.programOptionalEmpty}</option>
+              <option value=""></option>
               {programsForJob.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -225,6 +231,47 @@ export function ReceiptModalFormClient({
           </div>
 
           <div>
+            <label className="block text-xs text-slate-400">{labels.recipient}</label>
+            <select
+              name="recipient_type"
+              required
+              value={recipientType}
+              onChange={(e) => {
+                const v = e.target.value;
+                setRecipientType(v);
+                if (v === "organization") setClientId("");
+              }}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value=""></option>
+              <option value="client">{labels.recipientClient}</option>
+              <option value="organization">{labels.recipientOrg}</option>
+            </select>
+          </div>
+
+          {recipientType === "client" ? (
+            <div>
+              <label className="block text-xs text-slate-400">{labels.client}</label>
+              <select
+                name="client_id"
+                required
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">{labels.selectClient}</option>
+                {clientsForJob.map((cl) => (
+                  <option key={cl.id} value={cl.id}>
+                    {cl.first_name} {cl.last_name ?? ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <input type="hidden" name="client_id" value="" />
+          )}
+
+          <div>
             <label className="block text-xs text-slate-400">{labels.date}</label>
             <div className="mt-1">
               <HouseholdDateField
@@ -238,7 +285,6 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
-            <p className="mt-0.5 text-xs text-slate-500">{labels.paymentDateHint}</p>
             <div className="mt-1">
               <HouseholdDateField
                 name="payment_date"
@@ -261,13 +307,13 @@ export function ReceiptModalFormClient({
 
           <div>
             <label className="block text-xs text-slate-400">{labels.netAmount}</label>
+            <p className="mt-0.5 text-xs text-slate-500">{labels.netAmountHint}</p>
             <input
               name="net_amount"
               required
               defaultValue={initial?.net_amount ?? initial?.total_amount ?? ""}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
-            <p className="mt-1 text-xs text-slate-500">{labels.netAmountHint}</p>
           </div>
 
           <div>
@@ -298,7 +344,8 @@ export function ReceiptModalFormClient({
             <div className="mt-1">
               <HouseholdDateField
                 name="covered_period_start"
-                defaultIsoYmd={initial?.covered_period_start ?? ""}
+                defaultIsoYmd={coveredPeriodStart}
+                onIsoChange={setCoveredPeriodStart}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -309,48 +356,12 @@ export function ReceiptModalFormClient({
             <div className="mt-1">
               <HouseholdDateField
                 name="covered_period_end"
-                defaultIsoYmd={initial?.covered_period_end ?? ""}
+                defaultIsoYmd={coveredPeriodEnd}
+                onIsoChange={setCoveredPeriodEnd}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
           </div>
-
-          <div>
-            <label className="block text-xs text-slate-400">{labels.recipient}</label>
-            <select
-              name="recipient_type"
-              required
-              value={recipientType}
-              onChange={(e) => setRecipientType(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">{labels.selectRecipient}</option>
-              <option value="client">{labels.recipientClient}</option>
-              <option value="organization">{labels.recipientOrg}</option>
-            </select>
-          </div>
-
-          {recipientType === "client" ? (
-            <div>
-              <label className="block text-xs text-slate-400">{labels.client}</label>
-              <select
-                name="client_id"
-                required
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="">{labels.selectClient}</option>
-                {clientsForJob.map((cl) => (
-                  <option key={cl.id} value={cl.id}>
-                    {cl.first_name} {cl.last_name ?? ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <input type="hidden" name="client_id" value="" />
-          )}
 
           <div>
             <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>
@@ -392,7 +403,8 @@ export function ReceiptModalFormClient({
           <div className="md:col-span-2 flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+              disabled={!canSubmit}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
               {labels.save}
             </button>

@@ -22,8 +22,11 @@ import {
   jobsWhereActiveForPrivateClinicPickers,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import {
   loadConsultationsCursorPage,
+  loadConsultationsAmountTotal,
+  loadConsultationsListRecordCount,
   parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
@@ -125,7 +128,7 @@ export async function ConsultationsPageContent({
   apiListParams.set("take", "50");
   const apiHrefBase = `/api/private-clinic/consultations?${apiListParams.toString()}`;
 
-  const [jobs, firstPage, consultationTypes] = await Promise.all([
+  const [jobs, firstPage, consultationTypes, amountTotalsByCurrency, recordCount] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -140,6 +143,16 @@ export async function ConsultationsPageContent({
       where: { household_id: householdId },
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       select: { id: true, name: true, name_he: true, is_active: true },
+    }),
+    loadConsultationsAmountTotal({
+      householdId,
+      familyMemberId,
+      filters,
+    }),
+    loadConsultationsListRecordCount({
+      householdId,
+      familyMemberId,
+      filters,
     }),
   ]);
 
@@ -339,9 +352,25 @@ export async function ConsultationsPageContent({
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
-          <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="shrink-0 text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
+          {firstPage.rows.length > 0 ? (
+            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+              {formatListAmountTotalLine(
+                obfuscate,
+                c.total,
+                recordCount,
+                c.records,
+                amountTotalsByCurrency,
+                uiLanguage,
+              )}
+            </p>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <div className="shrink-0">
+            <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
+          </div>
         </div>
         {firstPage.rows.length === 0 ? (
           <p className="text-sm text-slate-500">{c.noEntriesYet}</p>
