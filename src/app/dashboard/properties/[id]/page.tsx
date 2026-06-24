@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { findCurrentRental } from "@/lib/rental-current";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -92,9 +93,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   ]);
 
   if (!property) redirect("/dashboard/properties?error=Not+found");
-  const now = new Date();
-  const currentRental =
-    property.rentals.find((rental) => !rental.end_date || rental.end_date >= now) ?? property.rentals[0] ?? null;
+  const currentRental = findCurrentRental(property.rentals);
+  const hasRentals = property.rentals.length > 0;
   const currentTenantNames =
     currentRental?.tenants.map((tenant) => tenant.full_name).filter(Boolean).join(", ") ||
     (isHebrew ? "לא צוינו דיירים" : "No tenants listed");
@@ -168,6 +168,12 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                     : isHebrew ? "ללא תאריך סיום" : "No end date"}
                 </p>
               </div>
+            ) : hasRentals ? (
+              <p className="mt-2 text-sm text-slate-400">
+                {isHebrew
+                  ? "אין שכירות פעילה. כל השכירויות הסתיימו או טרם החלו."
+                  : "No current rental. All leases have ended or not yet started."}
+              </p>
             ) : (
               <p className="mt-2 text-sm text-slate-400">{isHebrew ? "טרם נמצאה שכירות." : "No rental found yet."}</p>
             )}
