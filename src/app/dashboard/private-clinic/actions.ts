@@ -2500,20 +2500,42 @@ export async function deleteTherapyTreatment(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFm = await getCurrentUserFamilyMemberId(householdId);
   const fallbackPath = `${BASE}/treatments`;
-  const id = (formData.get("id") as string)?.trim() || "";
-  if (!id) redirectPrivateClinicScoped(formData, "error", fallbackPath, "id");
-  const row = await prisma.therapy_treatments.findFirst({
-    where: { id, household_id: householdId },
-    select: { job_id: true },
+  const ids = Array.from(
+    new Set(
+      [
+        (formData.get("id") as string | null)?.trim() || "",
+        ...formData.getAll("treatment_ids").map((value) => (typeof value === "string" ? value.trim() : "")),
+      ].filter(Boolean),
+    ),
+  );
+  if (ids.length === 0) redirectPrivateClinicScoped(formData, "error", fallbackPath, "id");
+
+  const rows = await prisma.therapy_treatments.findMany({
+    where: { id: { in: ids }, household_id: householdId },
+    select: {
+      id: true,
+      job_id: true,
+      receipt_allocations: { select: { receipt_id: true }, take: 1 },
+    },
   });
-  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
-  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
-    redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  if (rows.length !== ids.length) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  for (const row of rows) {
+    if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+    }
   }
-  await prisma.therapy_treatments.deleteMany({ where: { id, household_id: householdId } });
-  await logClinicUsage("treatments", "delete", { resourceType: "treatment", resourceId: id });
+  if (rows.some((row) => row.receipt_allocations.length > 0)) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "receipt-linked");
+  }
+
+  await prisma.therapy_treatments.deleteMany({ where: { id: { in: ids }, household_id: householdId } });
+  await logClinicUsage("treatments", "delete", {
+    resourceType: "treatment",
+    resourceId: ids.length === 1 ? ids[0] : undefined,
+    metadata: { treatmentIds: ids, count: ids.length },
+  });
   revalidatePath(`${BASE}/treatments`);
-  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?updated=1`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?deleted=1`);
 }
 
 // --- Receipts ---

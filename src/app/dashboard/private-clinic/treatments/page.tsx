@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { redirect } from "next/navigation";
-import { createTherapyTreatment, deleteReceiptAllocation, updateTherapyTreatment } from "../actions";
+import { createTherapyTreatment, deleteReceiptAllocation, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
 import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
@@ -61,7 +61,7 @@ type Search = {
 export default async function TreatmentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<Search & { created?: string; updated?: string; error?: string }>;
+  searchParams?: Promise<Search & { created?: string; updated?: string; deleted?: string; error?: string }>;
 }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -337,12 +337,21 @@ export default async function TreatmentsPage({
     <div className="space-y-5 sm:space-y-6">
       {sp.error && (
         <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
-          {sp.error === "travel_amount" ? tr.treatmentTravelAmountError : sp.error}
+          {sp.error === "travel_amount"
+            ? tr.treatmentTravelAmountError
+            : sp.error === "receipt-linked"
+              ? tr.cannotDeleteReceiptLinkedTreatment
+              : sp.error}
         </p>
       )}
       {(sp.created || sp.updated) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
           {c.saved}
+        </p>
+      )}
+      {sp.deleted && (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {c.deleted}
         </p>
       )}
 
@@ -457,6 +466,10 @@ export default async function TreatmentsPage({
               reportedCol: tr.reportedCol,
               edit: c.edit,
               createReceiptLabel: tr.createReceiptForSelected,
+              deleteSelectedLabel: tr.deleteSelectedTreatments,
+              selectedCount: tr.selectedTreatmentsCount,
+              deleteSelectedConfirm: tr.deleteSelectedTreatmentsConfirm,
+              cannotDeleteReceiptLinkedTreatment: tr.cannotDeleteReceiptLinkedTreatment,
               unlinkLabel: tr.unlinkFromReceipt,
               loadingMore: tr.loadingMore,
               noMoreRows: tr.noMoreRows,
@@ -527,6 +540,10 @@ export default async function TreatmentsPage({
           bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
           digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
           labels={{ c, tr, note1, note2, note3, showNote1, showNote2, showNote3 }}
+          deleteAction={deleteTherapyTreatment}
+          canDelete={editTreatment.receipt_allocations.length === 0}
+          deleteRedirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}deleted=1`}
+          deleteRedirectOnError={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editTreatment.id)}`}
           initial={{
             id: editTreatment.id,
             client_id: editTreatment.client_id,

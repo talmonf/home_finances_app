@@ -1,4 +1,5 @@
 import { HouseholdDateField } from "@/components/household-date-field";
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
@@ -58,6 +59,9 @@ type Labels = {
     markReportedInExternalSystem: string;
     inlineReceiptNumber: string;
     inlineReceiptDate: string;
+    deleteTreatment: string;
+    deleteTreatmentConfirm: string;
+    cannotDeleteReceiptLinkedTreatment: string;
     addTreatmentAttachmentHint: string;
     treatmentTravelSection: string;
     treatmentTravelCheckbox: string;
@@ -117,6 +121,10 @@ export function TreatmentModalForm({
   initial,
   extraContent,
   appointmentId,
+  deleteAction,
+  canDelete = true,
+  deleteRedirectOnSuccess,
+  deleteRedirectOnError,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -136,6 +144,10 @@ export function TreatmentModalForm({
   initial?: TreatmentModalInitial;
   extraContent?: ReactNode;
   appointmentId?: string;
+  deleteAction?: (formData: FormData) => void | Promise<void>;
+  canDelete?: boolean;
+  deleteRedirectOnSuccess?: string;
+  deleteRedirectOnError?: string;
 }) {
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
@@ -276,6 +288,29 @@ export function TreatmentModalForm({
             </a>
           </div>
         </form>
+        {mode === "edit" && initial?.id && deleteAction ? (
+          canDelete ? (
+            <ConfirmDeleteForm
+              action={deleteAction}
+              message={labels.tr.deleteTreatmentConfirm}
+              className="mt-5 border-t border-slate-700 pt-4"
+            >
+              <input type="hidden" name="id" value={initial.id} />
+              <input type="hidden" name="redirect_on_success" value={deleteRedirectOnSuccess ?? closeHref} />
+              <input type="hidden" name="redirect_on_error" value={deleteRedirectOnError ?? closeHref} />
+              <button
+                type="submit"
+                className="rounded-lg border border-rose-500/70 px-4 py-2 text-sm font-semibold text-rose-200 hover:bg-rose-950/40"
+              >
+                {labels.tr.deleteTreatment}
+              </button>
+            </ConfirmDeleteForm>
+          ) : (
+            <p className="mt-5 rounded-lg border border-amber-700/70 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
+              {labels.tr.cannotDeleteReceiptLinkedTreatment}
+            </p>
+          )
+        ) : null}
         {extraContent ? <div className="mt-4">{extraContent}</div> : null}
       </div>
     </div>

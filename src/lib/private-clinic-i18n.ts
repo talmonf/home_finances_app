@@ -577,6 +577,23 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "ניתן להוסיף קבצים מצורפים אחרי שמירת הטיפול.",
     ),
     editTreatmentTitle: p("Edit treatment", "עריכת טיפול"),
+    deleteTreatment: p("Delete treatment", "מחיקת טיפול"),
+    deletingTreatment: p("Deleting...", "מוחק..."),
+    deleteTreatmentConfirm: p(
+      "Delete this treatment permanently? This action cannot be undone.",
+      "למחוק את הטיפול לצמיתות? פעולה זו אינה ניתנת לביטול.",
+    ),
+    deleteSelectedTreatments: p("Delete selected", "מחיקת הנבחרים"),
+    selectedTreatmentsCount: (n: number) => p(`${n} selected`, `${n} נבחרו`),
+    deleteSelectedTreatmentsConfirm: (n: number) =>
+      p(
+        `Delete ${n} selected treatment${n === 1 ? "" : "s"} permanently? This action cannot be undone.`,
+        `למחוק ${n} טיפולים נבחרים לצמיתות? פעולה זו אינה ניתנת לביטול.`,
+      ),
+    cannotDeleteReceiptLinkedTreatment: p(
+      "Treatments linked to receipts cannot be deleted. Unlink the receipt first.",
+      "אי אפשר למחוק טיפולים שמשויכים לקבלות. נתקו קודם את הקבלה.",
+    ),
     loadingMore: p("Loading more…", "טוען עוד…"),
     loadMore: p("Load more", "טען עוד"),
     noMoreRows: p("No more treatments.", "אין עוד טיפולים."),

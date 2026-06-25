@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
@@ -12,6 +13,7 @@ import { treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
 import {
   createTherapyReceiptForSelectedTreatments,
   deleteReceiptAllocation,
+  deleteTherapyTreatment,
   setTherapyTreatmentExternalReportingStatus,
 } from "../actions";
 
@@ -28,6 +30,10 @@ type Labels = {
   reportedCol: string;
   edit: string;
   createReceiptLabel: string;
+  deleteSelectedLabel: string;
+  selectedCount: (count: number) => string;
+  deleteSelectedConfirm: (count: number) => string;
+  cannotDeleteReceiptLinkedTreatment: string;
   unlinkLabel: string;
   loadingMore: string;
   noMoreRows: string;
@@ -144,6 +150,9 @@ export function TreatmentsListClient({
       return String(av).localeCompare(String(bv)) * direction;
     });
   }, [rows, sortDir, sortKey]);
+  const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
+  const selectedHasReceiptLinkedTreatment = selectedRows.some((row) => row.receipt_allocations.length > 0);
+  const deleteSuccessHref = `${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}deleted=1`;
 
   const onSort = useCallback((column: ColumnSortKey) => {
     setSortKey((current) => {
@@ -167,23 +176,56 @@ export function TreatmentsListClient({
   return (
     <div className="space-y-3">
       {selectedIds.size > 0 ? (
-        <form action={createTherapyReceiptForSelectedTreatments} className="flex flex-wrap items-end gap-2 rounded border border-slate-700 bg-slate-900/60 p-2">
-          {Array.from(selectedIds).map((id) => (
-            <input key={id} type="hidden" name="treatment_ids" value={id} />
-          ))}
-          <input type="hidden" name="redirect_on_success" value={listBaseHref} />
-          <input type="hidden" name="redirect_on_error" value={listBaseHref} />
-          <input required name="receipt_number" placeholder="#" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-          <HouseholdDateField
-            name="issued_at"
-            required
-            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-          />
-          <input required name="total_amount" placeholder="0.00" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-          <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-            {labels.createReceiptLabel}
-          </button>
-        </form>
+        <div className="flex flex-wrap items-end gap-2 rounded border border-slate-700 bg-slate-900/60 p-2">
+          <p className="self-center text-xs font-medium text-slate-300">{labels.selectedCount(selectedIds.size)}</p>
+          <form action={createTherapyReceiptForSelectedTreatments} className="flex flex-wrap items-end gap-2">
+            {Array.from(selectedIds).map((id) => (
+              <input key={id} type="hidden" name="treatment_ids" value={id} />
+            ))}
+            <input type="hidden" name="redirect_on_success" value={listBaseHref} />
+            <input type="hidden" name="redirect_on_error" value={listBaseHref} />
+            <input required name="receipt_number" placeholder="#" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+            <HouseholdDateField
+              name="issued_at"
+              required
+              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+            />
+            <input required name="total_amount" placeholder="0.00" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+            <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
+              {labels.createReceiptLabel}
+            </button>
+          </form>
+          {selectedHasReceiptLinkedTreatment ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled
+                className="rounded border border-rose-500/40 px-2 py-1 text-xs font-semibold text-rose-300 opacity-60"
+              >
+                {labels.deleteSelectedLabel}
+              </button>
+              <p className="text-xs text-amber-200">{labels.cannotDeleteReceiptLinkedTreatment}</p>
+            </div>
+          ) : (
+            <ConfirmDeleteForm
+              action={deleteTherapyTreatment}
+              message={labels.deleteSelectedConfirm(selectedIds.size)}
+              className="flex items-end gap-2"
+            >
+              {Array.from(selectedIds).map((id) => (
+                <input key={id} type="hidden" name="treatment_ids" value={id} />
+              ))}
+              <input type="hidden" name="redirect_on_success" value={deleteSuccessHref} />
+              <input type="hidden" name="redirect_on_error" value={listBaseHref} />
+              <button
+                type="submit"
+                className="rounded border border-rose-500/70 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-950/40"
+              >
+                {labels.deleteSelectedLabel}
+              </button>
+            </ConfirmDeleteForm>
+          )}
+        </div>
       ) : null}
       <div className="overflow-x-auto rounded-xl border border-slate-700">
         <table className="w-full text-left text-sm">
