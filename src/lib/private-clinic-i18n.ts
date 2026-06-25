@@ -584,12 +584,15 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "למחוק את הטיפול לצמיתות? פעולה זו אינה ניתנת לביטול.",
     ),
     deleteSelectedTreatments: p("Delete selected", "מחיקת הנבחרים"),
-    selectedTreatmentsCount: (n: number) => p(`${n} selected`, `${n} נבחרו`),
-    deleteSelectedTreatmentsConfirm: (n: number) =>
-      p(
-        `Delete ${n} selected treatment${n === 1 ? "" : "s"} permanently? This action cannot be undone.`,
-        `למחוק ${n} טיפולים נבחרים לצמיתות? פעולה זו אינה ניתנת לביטול.`,
-      ),
+    selectedTreatmentsCountLabel: p("selected", "נבחרו"),
+    deleteOneSelectedTreatmentConfirm: p(
+      "Delete 1 selected treatment permanently? This action cannot be undone.",
+      "למחוק טיפול נבחר אחד לצמיתות? פעולה זו אינה ניתנת לביטול.",
+    ),
+    deleteSelectedTreatmentsConfirmTemplate: p(
+      "Delete {count} selected treatments permanently? This action cannot be undone.",
+      "למחוק {count} טיפולים נבחרים לצמיתות? פעולה זו אינה ניתנת לביטול.",
+    ),
     cannotDeleteReceiptLinkedTreatment: p(
       "Treatments linked to receipts cannot be deleted. Unlink the receipt first.",
       "אי אפשר למחוק טיפולים שמשויכים לקבלות. נתקו קודם את הקבלה.",

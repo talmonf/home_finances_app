@@ -31,8 +31,9 @@ type Labels = {
   edit: string;
   createReceiptLabel: string;
   deleteSelectedLabel: string;
-  selectedCount: (count: number) => string;
-  deleteSelectedConfirm: (count: number) => string;
+  selectedCountLabel: string;
+  deleteOneSelectedConfirm: string;
+  deleteSelectedConfirmTemplate: string;
   cannotDeleteReceiptLinkedTreatment: string;
   unlinkLabel: string;
   loadingMore: string;
@@ -153,6 +154,10 @@ export function TreatmentsListClient({
   const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
   const selectedHasReceiptLinkedTreatment = selectedRows.some((row) => row.receipt_allocations.length > 0);
   const deleteSuccessHref = `${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}deleted=1`;
+  const deleteSelectedConfirmMessage =
+    selectedIds.size === 1
+      ? labels.deleteOneSelectedConfirm
+      : labels.deleteSelectedConfirmTemplate.replace("{count}", String(selectedIds.size));
 
   const onSort = useCallback((column: ColumnSortKey) => {
     setSortKey((current) => {
@@ -177,7 +182,9 @@ export function TreatmentsListClient({
     <div className="space-y-3">
       {selectedIds.size > 0 ? (
         <div className="flex flex-wrap items-end gap-2 rounded border border-slate-700 bg-slate-900/60 p-2">
-          <p className="self-center text-xs font-medium text-slate-300">{labels.selectedCount(selectedIds.size)}</p>
+          <p className="self-center text-xs font-medium text-slate-300">
+            {selectedIds.size} {labels.selectedCountLabel}
+          </p>
           <form action={createTherapyReceiptForSelectedTreatments} className="flex flex-wrap items-end gap-2">
             {Array.from(selectedIds).map((id) => (
               <input key={id} type="hidden" name="treatment_ids" value={id} />
@@ -209,7 +216,7 @@ export function TreatmentsListClient({
           ) : (
             <ConfirmDeleteForm
               action={deleteTherapyTreatment}
-              message={labels.deleteSelectedConfirm(selectedIds.size)}
+              message={deleteSelectedConfirmMessage}
               className="flex items-end gap-2"
             >
               {Array.from(selectedIds).map((id) => (
