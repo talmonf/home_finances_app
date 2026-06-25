@@ -10,7 +10,7 @@ import Link from "next/link";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteReceiptAllocation, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
-import { privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
@@ -72,6 +72,7 @@ export default async function TreatmentsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
+  const rr = privateClinicReceipts(uiLanguage);
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const sp = searchParams ? await searchParams : {};
   const filters: TreatmentsListFilters = {
@@ -453,6 +454,8 @@ export default async function TreatmentsPage({
             dateDisplayFormat={dateDisplayFormat}
             uiLanguage={uiLanguage}
             obfuscate={obfuscate}
+            bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: `${b.account_name} — ${b.bank_name}` }))}
+            digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, name: d.name }))}
             labels={{
               when: c.when,
               client: c.client,
@@ -465,7 +468,21 @@ export default async function TreatmentsPage({
               paymentDetailsCol: tr.paymentDetailsCol,
               reportedCol: tr.reportedCol,
               edit: c.edit,
+              cancel: c.cancel,
+              save: c.save,
               createReceiptLabel: tr.createReceiptForSelected,
+              receiptNumber: rr.receiptNumber,
+              receiptDate: rr.submittedDate,
+              totalAmount: rr.totalAmount,
+              paymentDate: rr.paymentDate,
+              paymentMethod: rr.paymentMethodLabel,
+              selectPaymentMethod: rr.selectPaymentMethod,
+              paymentCash: rr.paymentCash,
+              paymentBank: rr.paymentBank,
+              paymentDigital: rr.paymentDigital,
+              paymentCredit: rr.paymentCredit,
+              paymentIntoAccount: tr.paymentIntoAccount,
+              paymentDigitalApp: tr.paymentDigitalApp,
               deleteSelectedLabel: tr.deleteSelectedTreatments,
               selectedCountLabel: tr.selectedTreatmentsCountLabel,
               deleteOneSelectedConfirm: tr.deleteOneSelectedTreatmentConfirm,

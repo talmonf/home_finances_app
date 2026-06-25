@@ -29,7 +29,21 @@ type Labels = {
   paymentDetailsCol: string;
   reportedCol: string;
   edit: string;
+  cancel: string;
+  save: string;
   createReceiptLabel: string;
+  receiptNumber: string;
+  receiptDate: string;
+  totalAmount: string;
+  paymentDate: string;
+  paymentMethod: string;
+  selectPaymentMethod: string;
+  paymentCash: string;
+  paymentBank: string;
+  paymentDigital: string;
+  paymentCredit: string;
+  paymentIntoAccount: string;
+  paymentDigitalApp: string;
   deleteSelectedLabel: string;
   selectedCountLabel: string;
   deleteOneSelectedConfirm: string;
@@ -52,6 +66,8 @@ export function TreatmentsListClient({
   dateDisplayFormat,
   uiLanguage,
   obfuscate,
+  bankAccounts,
+  digitalPaymentMethods,
   labels,
   showExternalReporting,
   showFamily,
@@ -63,6 +79,8 @@ export function TreatmentsListClient({
   dateDisplayFormat: HouseholdDateDisplayFormat;
   uiLanguage: UiLanguage;
   obfuscate: boolean;
+  bankAccounts: { id: string; label: string }[];
+  digitalPaymentMethods: { id: string; name: string }[];
   labels: Labels;
   showExternalReporting: boolean;
   showFamily: boolean;
@@ -74,6 +92,8 @@ export function TreatmentsListClient({
   const [sortKey, setSortKey] = useState<ColumnSortKey>("occurred_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showCreateReceiptModal, setShowCreateReceiptModal] = useState(false);
+  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -82,6 +102,7 @@ export function TreatmentsListClient({
     setHasMore(Boolean(initialCursor));
     setLoadingMore(false);
     setSelectedIds(new Set());
+    setShowCreateReceiptModal(false);
   }, [initialCursor, initialRows]);
 
   const loadMore = useCallback(async () => {
@@ -154,6 +175,8 @@ export function TreatmentsListClient({
   const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
   const selectedHasReceiptLinkedTreatment = selectedRows.some((row) => row.receipt_allocations.length > 0);
   const deleteSuccessHref = `${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}deleted=1`;
+  const modalControlClass =
+    "mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
   const deleteSelectedConfirmMessage =
     selectedIds.size === 1
       ? labels.deleteOneSelectedConfirm
@@ -185,23 +208,13 @@ export function TreatmentsListClient({
           <p className="self-center text-xs font-medium text-slate-300">
             {selectedIds.size} {labels.selectedCountLabel}
           </p>
-          <form action={createTherapyReceiptForSelectedTreatments} className="flex flex-wrap items-end gap-2">
-            {Array.from(selectedIds).map((id) => (
-              <input key={id} type="hidden" name="treatment_ids" value={id} />
-            ))}
-            <input type="hidden" name="redirect_on_success" value={listBaseHref} />
-            <input type="hidden" name="redirect_on_error" value={listBaseHref} />
-            <input required name="receipt_number" placeholder="#" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-            <HouseholdDateField
-              name="issued_at"
-              required
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-            />
-            <input required name="total_amount" placeholder="0.00" className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
-            <button type="submit" className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950">
-              {labels.createReceiptLabel}
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => setShowCreateReceiptModal(true)}
+            className="rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-slate-950 hover:bg-sky-400"
+          >
+            {labels.createReceiptLabel}
+          </button>
           {selectedHasReceiptLinkedTreatment ? (
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -232,6 +245,110 @@ export function TreatmentsListClient({
               </button>
             </ConfirmDeleteForm>
           )}
+        </div>
+      ) : null}
+      {showCreateReceiptModal ? (
+        <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-medium text-slate-100">{labels.createReceiptLabel}</h2>
+              <button
+                type="button"
+                onClick={() => setShowCreateReceiptModal(false)}
+                className="text-sm text-sky-400 hover:text-sky-300"
+              >
+                {labels.cancel}
+              </button>
+            </div>
+            <form action={createTherapyReceiptForSelectedTreatments} className="grid gap-3 md:grid-cols-2">
+              {Array.from(selectedIds).map((id) => (
+                <input key={id} type="hidden" name="treatment_ids" value={id} />
+              ))}
+              <input type="hidden" name="redirect_on_success" value={listBaseHref} />
+              <input type="hidden" name="redirect_on_error" value={listBaseHref} />
+              <div>
+                <label className="block text-xs text-slate-400">{labels.receiptNumber}</label>
+                <input name="receipt_number" required className={modalControlClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.receiptDate}</label>
+                <div className="mt-1">
+                  <HouseholdDateField name="issued_at" required className={modalControlClass} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.paymentDate}</label>
+                <div className="mt-1">
+                  <HouseholdDateField name="payment_date" required className={modalControlClass} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.totalAmount}</label>
+                <input name="total_amount" required placeholder="0.00" className={modalControlClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>
+                <select
+                  name="payment_method"
+                  required
+                  value={receiptPaymentMethod}
+                  onChange={(e) => setReceiptPaymentMethod(e.target.value)}
+                  className={modalControlClass}
+                >
+                  <option value="">{labels.selectPaymentMethod}</option>
+                  <option value="cash">{labels.paymentCash}</option>
+                  <option value="bank_transfer">{labels.paymentBank}</option>
+                  <option value="digital_card">{labels.paymentDigital}</option>
+                  <option value="credit_card">{labels.paymentCredit}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.paymentIntoAccount}</label>
+                <select
+                  name="payment_bank_account_id"
+                  required={receiptPaymentMethod === "bank_transfer"}
+                  className={modalControlClass}
+                >
+                  <option value="">—</option>
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400">{labels.paymentDigitalApp}</label>
+                <select
+                  name="payment_digital_payment_method_id"
+                  required={receiptPaymentMethod === "digital_card"}
+                  className={modalControlClass}
+                >
+                  <option value="">—</option>
+                  {digitalPaymentMethods.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2 flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {labels.save}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateReceiptModal(false)}
+                  className="text-sm text-slate-300 hover:text-slate-100"
+                >
+                  {labels.cancel}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       ) : null}
       <div className="overflow-x-auto rounded-xl border border-slate-700">

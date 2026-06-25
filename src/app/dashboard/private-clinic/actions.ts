@@ -2946,10 +2946,37 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
   const treatmentIds = (formData.getAll("treatment_ids") as string[]).map((id) => id.trim()).filter(Boolean);
   const receiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
   const issuedAt = parseDateRequired((formData.get("issued_at") as string)?.trim() || null);
+  const paymentDate = parseDateRequired((formData.get("payment_date") as string)?.trim() || null);
+  const receiptPaymentMethod = parseReceiptPaymentMethod((formData.get("payment_method") as string)?.trim() || null);
   const totalStr = parseMoney(formData.get("total_amount") as string);
   const netStr = totalStr;
-  if (!treatmentIds.length || !receiptNumber || !issuedAt || !totalStr || !netStr) {
+  if (!treatmentIds.length || !receiptNumber || !issuedAt || !paymentDate || !receiptPaymentMethod || !totalStr || !netStr) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  }
+  let treatmentPaymentMethod: TherapyTreatmentPaymentMethod | null = null;
+  let paymentBankAccountId: string | null = null;
+  let paymentDigitalPaymentMethodId: string | null = null;
+
+  if (receiptPaymentMethod === "bank_transfer") {
+    treatmentPaymentMethod = "bank_transfer";
+    const bankRaw = (formData.get("payment_bank_account_id") as string)?.trim() || "";
+    if (!bankRaw) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+    const ba = await prisma.bank_accounts.findFirst({
+      where: { id: bankRaw, household_id: householdId, is_active: true },
+      select: { id: true },
+    });
+    if (!ba) redirectPrivateClinicScoped(formData, "error", fallbackPath, "payment_bank_account");
+    paymentBankAccountId = ba.id;
+  } else if (receiptPaymentMethod === "digital_card") {
+    treatmentPaymentMethod = "digital_payment";
+    const digRaw = (formData.get("payment_digital_payment_method_id") as string)?.trim() || "";
+    if (!digRaw) redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+    const d = await prisma.digital_payment_methods.findFirst({
+      where: { id: digRaw, household_id: householdId, is_active: true },
+      select: { id: true },
+    });
+    if (!d) redirectPrivateClinicScoped(formData, "error", fallbackPath, "payment_digital_method");
+    paymentDigitalPaymentMethodId = d.id;
   }
   const treatments = await prisma.therapy_treatments.findMany({
     where: { household_id: householdId, id: { in: treatmentIds } },
@@ -2986,7 +3013,8 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
         receipt_kind: receiptKind,
         currency: treatments[0]!.currency,
         recipient_type: "client",
-        payment_method: "cash",
+        payment_method: receiptPaymentMethod,
+        payment_date: paymentDate,
       },
     });
     for (const treatment of treatments) {
@@ -3003,6 +3031,19 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
         update: { amount: allocationAmount },
       });
     }
+    await tx.therapy_treatments.updateMany({
+      where: {
+        household_id: householdId,
+        id: { in: treatmentIds },
+        receipt_allocations: { some: { receipt_id: receiptId, household_id: householdId } },
+      },
+      data: {
+        payment_date: paymentDate,
+        payment_method: treatmentPaymentMethod,
+        payment_bank_account_id: paymentBankAccountId,
+        payment_digital_payment_method_id: paymentDigitalPaymentMethodId,
+      },
+    });
   });
   revalidatePath(`${BASE}/treatments`);
   revalidatePath(`${BASE}/receipts`);
