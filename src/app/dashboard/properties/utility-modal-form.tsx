@@ -98,6 +98,17 @@ export function UtilityModalForm({
             />
           </div>
           <div>
+            <label htmlFor="modal_meter_number" className="mb-1 block text-xs font-medium text-slate-400">
+              {isHebrew ? "מספר מונה" : "Meter number"}
+            </label>
+            <input
+              id="modal_meter_number"
+              name="meter_number"
+              placeholder={isHebrew ? "אופציונלי" : "Optional"}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+          <div>
             <label htmlFor="modal_start_date" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "תאריך התחלה (אופציונלי)" : "Start date (optional)"}
             </label>

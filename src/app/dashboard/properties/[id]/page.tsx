@@ -258,6 +258,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אתר" : "Website"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "טלפון" : "Phone"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Meter #</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "הערות" : "Notes"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "פעולות" : "Actions"}</th>
@@ -297,6 +298,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
+                        <td className="px-4 py-3 text-slate-300">{u.meter_number || "—"}</td>
                         <td className="px-4 py-3 text-slate-300">
                           {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
                         </td>

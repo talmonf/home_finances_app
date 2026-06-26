@@ -119,6 +119,16 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
           </div>
 
           <div>
+            <label htmlFor="meter_number" className="mb-1 block text-xs font-medium text-slate-400">Meter number</label>
+            <input
+              id="meter_number"
+              name="meter_number"
+              defaultValue={utility.meter_number ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
+          <div>
             <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
               Start date (optional)
             </label>

@@ -801,6 +801,7 @@ model property_utilities {
   bank_account_id String?
   credit_card_id  String?
   account_number String?
+  meter_number   String?
   renewal_date   DateTime?
   start_date     DateTime?
   website_url    String?

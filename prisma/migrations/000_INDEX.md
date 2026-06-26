@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 127_property_utilities_meter_number.sql (2026-06-26)
 - [x] 126_family_members_notes_and_grandchild_parents.sql (2026-06-14)
 - [x] 125_therapy_appointment_series_virtual.sql (2026-06-10)
 - [x] 124_therapy_clients_end_reason.sql (2026-06-10)
@@ -147,6 +148,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 127 | `127_property_utilities_meter_number.sql` (2026-06-26) | ALTER | `property_utilities`: optional `meter_number` for utility accounts/meters per property. |
 | 126 | `126_family_members_notes_and_grandchild_parents.sql` (2026-06-14) | ALTER | `family_members`: optional `notes`; optional `parent_a_family_member_id` and `parent_b_family_member_id` for linking grandchildren to parents. |
 | 125 | `125_therapy_appointment_series_virtual.sql` (2026-06-10) | CREATE/ALTER | Virtual recurrence: `therapy_appointment_series_exceptions`; series `duration_minutes` + Google sync fields; `therapy_appointments.occurrence_date`; delete future scheduled series appointment rows. |
 | 124 | `124_therapy_clients_end_reason.sql` (2026-06-10) | ALTER | `therapy_clients`: optional enum `end_reason` (`death_at_home`, `death_in_hospital`, `transfer_to_inpatient_hospice`, `other`) for hospice-related programs when care ends. |

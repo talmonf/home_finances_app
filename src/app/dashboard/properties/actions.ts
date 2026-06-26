@@ -162,6 +162,7 @@ export async function createUtility(formData: FormData) {
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
+  const meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const start_date_raw = (formData.get("start_date") as string | null)?.trim() || null;
   const website_url = (formData.get("website_url") as string | null)?.trim() || null;
@@ -194,6 +195,7 @@ export async function createUtility(formData: FormData) {
       provider_name,
       payee_id: payee_id || null,
       account_number,
+      meter_number,
       renewal_date,
       start_date: startParsed.value,
       website_url,
@@ -230,6 +232,7 @@ export async function updateUtility(formData: FormData) {
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
+  const meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const start_date_raw = (formData.get("start_date") as string | null)?.trim() || null;
   const website_url = (formData.get("website_url") as string | null)?.trim() || null;
@@ -264,6 +267,7 @@ export async function updateUtility(formData: FormData) {
       provider_name,
       payee_id: finalPayeeId,
       account_number,
+      meter_number,
       renewal_date,
       start_date: startParsed.value,
       website_url,
