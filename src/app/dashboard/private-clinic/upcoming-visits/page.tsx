@@ -319,6 +319,12 @@ export default async function UpcomingVisitsPage({
                     <tr>
                       <th
                         scope="col"
+                        className="sticky start-0 z-20 bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
+                      >
+                        {uv.colClient}
+                      </th>
+                      <th
+                        scope="col"
                         className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
                       >
                         {uv.colNextDue}
@@ -339,12 +345,6 @@ export default async function UpcomingVisitsPage({
                           {uv.colOverdue}
                         </th>
                       ) : null}
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colClient}
-                      </th>
                       <th
                         scope="col"
                         className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
@@ -397,6 +397,26 @@ export default async function UpcomingVisitsPage({
                               : "hover:bg-slate-800/50"
                         }
                       >
+                        <td
+                          className={`sticky start-0 z-10 whitespace-nowrap px-3 py-2 text-slate-200 shadow-[8px_0_12px_-12px_rgb(15_23_42)] ${
+                            r.isOverdue
+                              ? "bg-rose-950"
+                              : r.isDueToday
+                                ? "bg-amber-950"
+                                : "bg-slate-900"
+                          }`}
+                        >
+                          {obfuscate ? (
+                            OBFUSCATED
+                          ) : (
+                            <Link
+                              href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
+                              className="font-medium text-sky-400 hover:text-sky-300"
+                            >
+                              {r.name}
+                            </Link>
+                          )}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <span className="font-medium text-slate-100">
                             {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
@@ -428,18 +448,6 @@ export default async function UpcomingVisitsPage({
                             ) : null}
                           </td>
                         ) : null}
-                        <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                          {obfuscate ? (
-                            OBFUSCATED
-                          ) : (
-                            <Link
-                              href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
-                              className="font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {r.name}
-                            </Link>
-                          )}
-                        </td>
                         <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                           {formatHouseholdDate(r.lastVisit, dateDisplayFormat)}
                         </td>
@@ -447,16 +455,7 @@ export default async function UpcomingVisitsPage({
                           {r.jobLabel}
                         </td>
                         <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.programLabel}>
-                          {r.programId ? (
-                            <Link
-                              href={`/dashboard/private-clinic/programs/${encodeURIComponent(r.programId)}/edit?fromUpcoming=1&modal=1`}
-                              className="font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {r.programLabel}
-                            </Link>
-                          ) : (
-                            r.programLabel
-                          )}
+                          {r.programLabel}
                         </td>
                         <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.kupatHolimLabel}>
                           {r.kupatHolimLabel}
