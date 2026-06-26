@@ -355,13 +355,13 @@ export function TreatmentsListClient({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-700 bg-slate-800/80">
-              <th className="sticky start-0 z-20 bg-slate-800/95 px-3 py-2 text-slate-300 shadow-[8px_0_12px_-12px_rgb(15_23_42)]">
+              <th className="sticky start-0 z-30 w-10 min-w-10 bg-slate-800/95 px-3 py-2 text-slate-300" />
+              <th className="sticky start-10 z-20 bg-slate-800/95 px-3 py-2 text-slate-300 shadow-[8px_0_12px_-12px_rgb(15_23_42)]">
                 <button type="button" onClick={() => onSort("client")} className="hover:text-slate-100">
                   {labels.client}
                   {sortArrow("client")}
                 </button>
               </th>
-              <th className="px-3 py-2 text-slate-300" />
               <th className="px-3 py-2 text-slate-300">
                 <button type="button" onClick={() => onSort("occurred_at")} className="hover:text-slate-100">
                   {labels.when}
@@ -417,15 +417,7 @@ export function TreatmentsListClient({
 
               return (
                 <tr key={t.id} className="border-b border-slate-700/80">
-                  <td className="sticky start-0 z-10 whitespace-nowrap bg-slate-950 px-3 py-2 text-slate-100 shadow-[8px_0_12px_-12px_rgb(15_23_42)]">
-                    <Link
-                      href={`/dashboard/private-clinic/clients/${encodeURIComponent(t.client_id)}/edit`}
-                      className="text-sky-400 hover:underline"
-                    >
-                      {formatClientNameForDisplay(obfuscate, t.client_first_name, t.client_last_name)}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2">
+                  <td className="sticky start-0 z-20 w-10 min-w-10 bg-slate-950 px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(t.id)}
@@ -438,6 +430,14 @@ export function TreatmentsListClient({
                         })
                       }
                     />
+                  </td>
+                  <td className="sticky start-10 z-10 whitespace-nowrap bg-slate-950 px-3 py-2 text-slate-100 shadow-[8px_0_12px_-12px_rgb(15_23_42)]">
+                    <Link
+                      href={`/dashboard/private-clinic/clients/${encodeURIComponent(t.client_id)}/edit`}
+                      className="text-sky-400 hover:underline"
+                    >
+                      {formatClientNameForDisplay(obfuscate, t.client_first_name, t.client_last_name)}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                     {formatHouseholdDateUtcWithOptionalTime(new Date(t.occurred_at_iso), dateDisplayFormat)}
