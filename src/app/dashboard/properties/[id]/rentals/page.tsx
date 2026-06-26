@@ -72,6 +72,17 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
     prisma.properties.findFirst({
       where: { id, household_id: householdId },
       include: {
+        utilities: {
+          select: {
+            id: true,
+            utility_type: true,
+            provider_name: true,
+            account_number: true,
+            meter_number: true,
+            notes: true,
+          },
+          orderBy: [{ utility_type: "asc" }, { provider_name: "asc" }],
+        },
         rentals: {
           include: {
             tenants: true,
@@ -184,6 +195,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
           <RentalDetailPanel
             rental={selectedRental}
             propertyId={property.id}
+            propertyUtilities={property.utilities}
             bankAccounts={bankAccounts}
             creditCards={creditCards}
             transactions={transactions}

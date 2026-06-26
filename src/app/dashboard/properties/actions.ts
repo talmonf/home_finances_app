@@ -598,14 +598,38 @@ export async function createRentalUtility(formData: FormData) {
 
   const rental_id = (formData.get("rental_id") as string | null)?.trim();
   const utilityTypeRaw = (formData.get("utility_type") as string | null)?.trim() || null;
-  const utility_company = (formData.get("utility_company") as string | null)?.trim();
-  if (!rental_id || !isUtilityType(utilityTypeRaw) || !utility_company) return;
+  const property_utility_id = (formData.get("property_utility_id") as string | null)?.trim() || null;
+  let utility_company = (formData.get("utility_company") as string | null)?.trim() || "";
+  let account_number = (formData.get("account_number") as string | null)?.trim() || null;
+  let meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
+  let notes = (formData.get("notes") as string | null)?.trim() || null;
+  if (!rental_id || !isUtilityType(utilityTypeRaw)) return;
 
   const rental = await prisma.rentals.findFirst({
     where: { id: rental_id, household_id: householdId },
     select: { property_id: true },
   });
   if (!rental) return;
+
+  if (property_utility_id) {
+    const propertyUtility = await prisma.property_utilities.findFirst({
+      where: {
+        id: property_utility_id,
+        household_id: householdId,
+        property_id: rental.property_id,
+        utility_type: utilityTypeRaw,
+      },
+      select: { provider_name: true, account_number: true, meter_number: true, notes: true },
+    });
+    if (propertyUtility) {
+      utility_company ||= propertyUtility.provider_name;
+      account_number ||= propertyUtility.account_number;
+      meter_number ||= propertyUtility.meter_number;
+      notes ||= propertyUtility.notes;
+    }
+  }
+
+  if (!utility_company) return;
 
   await prisma.rental_utilities.create({
     data: {
@@ -614,10 +638,10 @@ export async function createRentalUtility(formData: FormData) {
       rental_id,
       utility_type: utilityTypeRaw,
       utility_company,
-      account_number: (formData.get("account_number") as string | null)?.trim() || null,
-      meter_number: (formData.get("meter_number") as string | null)?.trim() || null,
+      account_number,
+      meter_number,
       last_meter_reading: (formData.get("last_meter_reading") as string | null)?.trim() || null,
-      notes: (formData.get("notes") as string | null)?.trim() || null,
+      notes,
     },
   });
 

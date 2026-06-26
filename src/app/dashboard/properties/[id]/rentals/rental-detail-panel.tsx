@@ -14,6 +14,7 @@ import {
   deleteRentalUtility,
   deleteRentalContract,
 } from "../../actions";
+import { RentalUtilityAddRow } from "./rental-utility-add-row";
 import { RENTAL_PAYMENT_METHODS, RENTAL_TYPES } from "./rental-form-constants";
 
 type BankAccountOption = { id: string; account_name: string };
@@ -34,6 +35,15 @@ type RentalUtility = {
   account_number: string | null;
   meter_number: string | null;
   last_meter_reading: string | null;
+  notes: string | null;
+};
+
+type PropertyUtilityDefault = {
+  id: string;
+  utility_type: string;
+  provider_name: string;
+  account_number: string | null;
+  meter_number: string | null;
   notes: string | null;
 };
 
@@ -80,6 +90,7 @@ export type RentalDetail = {
 type RentalDetailPanelProps = {
   rental: RentalDetail;
   propertyId: string;
+  propertyUtilities: PropertyUtilityDefault[];
   bankAccounts: BankAccountOption[];
   creditCards: CreditCardOption[];
   transactions: UnlinkedTransaction[];
@@ -112,6 +123,7 @@ function formatDateRangeSummary(
 export function RentalDetailPanel({
   rental,
   propertyId,
+  propertyUtilities,
   bankAccounts,
   creditCards,
   transactions,
@@ -466,80 +478,11 @@ export function RentalDetailPanel({
               )}
             </tbody>
             <tfoot className="border-t border-slate-700 bg-slate-900/70">
-              <tr>
-                <td className="px-3 py-2">
-                  <select
-                    form={`add_rental_utility_${rental.id}`}
-                    name="utility_type"
-                    required
-                    defaultValue=""
-                    aria-label="New utility type"
-                    className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  >
-                    <option value="">Select type</option>
-                    {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form={`add_rental_utility_${rental.id}`}
-                    name="utility_company"
-                    required
-                    placeholder="Company"
-                    aria-label="New utility company"
-                    className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form={`add_rental_utility_${rental.id}`}
-                    name="account_number"
-                    placeholder="Optional"
-                    aria-label="New account number"
-                    className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form={`add_rental_utility_${rental.id}`}
-                    name="meter_number"
-                    placeholder="Optional"
-                    aria-label="New meter number"
-                    className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form={`add_rental_utility_${rental.id}`}
-                    name="last_meter_reading"
-                    placeholder="Optional"
-                    aria-label="New last meter reading"
-                    className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form={`add_rental_utility_${rental.id}`}
-                    name="notes"
-                    placeholder="Optional"
-                    aria-label="New utility notes"
-                    className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    type="submit"
-                    form={`add_rental_utility_${rental.id}`}
-                    className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500"
-                  >
-                    Add utility
-                  </button>
-                </td>
-              </tr>
+              <RentalUtilityAddRow
+                formId={`add_rental_utility_${rental.id}`}
+                utilityTypeLabels={UTILITY_TYPE_LABELS}
+                propertyUtilities={propertyUtilities}
+              />
             </tfoot>
           </table>
         </div>
