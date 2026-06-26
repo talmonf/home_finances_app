@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 131_categories_prisma_alignment.sql (2026-06-26)
 - [x] 130_riseup_incremental_imports.sql (2026-06-26)
 - [x] 129_rental_utilities.sql (2026-06-26)
 - [x] 128_property_utilities_arnona_type.sql (2026-06-26)
@@ -151,6 +152,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 131 | `131_categories_prisma_alignment.sql` (2026-06-26) | ALTER | `categories`: add/backfill Prisma-expected `name`, `parent_id`, `is_active`, `created_at`, `updated_at`; parent FK and household active/name index for legacy databases. |
 | 130 | `130_riseup_incremental_imports.sql` (2026-06-26) | ALTER/CREATE | `transactions`: RiseUp import key/content hash with household-scoped uniqueness; `riseup_import_audits` for incremental import run counts. |
 | 129 | `129_rental_utilities.sql` (2026-06-26) | CREATE | `rental_utilities`: rental-scoped utility company, account number, meter number, last meter reading, and notes for selected rentals. |
 | 128 | `128_property_utilities_arnona_type.sql` (2026-06-26) | ALTER | `property_utility_type`: add `arnona` for municipal property tax utility accounts. |
