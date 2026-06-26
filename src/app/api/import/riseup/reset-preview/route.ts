@@ -53,6 +53,24 @@ export async function GET(req: NextRequest) {
     });
 
     const transactionIds = transactions.map((t) => t.id);
+    const genericLinkCount =
+      transactionIds.length === 0
+        ? 0
+        : await prisma.transaction_entity_links.count({
+            where: {
+              household_id: householdId,
+              transaction_id: { in: transactionIds },
+            },
+          });
+    const proposalCount = await prisma.riseup_import_proposals.count({
+      where: {
+        household_id: householdId,
+        OR: [
+          { import_audit_id: { not: null } },
+          { status: { in: ["proposed", "approved", "applied"] } },
+        ],
+      },
+    });
     const linkedEntityCount = transactions.filter(
       (t) =>
         t.category_id ||
@@ -112,13 +130,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       totalRiseUpTransactions: transactions.length,
       enrichedTransactions: linkedEntityCount,
+      genericLinkCount,
+      proposalCount,
       downstreamLinks: downstream,
       downstreamLinkCount: downstreamCount,
       blocked: downstreamCount > 0,
       message:
         downstreamCount > 0
           ? "Reset is blocked because imported transactions are referenced by downstream records."
-          : "Preview only: reset would be limited to RiseUp-owned transactions.",
+          : "Impact check only: no data was changed. A reset would be limited to RiseUp-owned transactions, generic links, and staged proposals.",
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Reset preview failed";

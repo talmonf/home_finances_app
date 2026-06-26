@@ -51,6 +51,9 @@ model households {
   payees                payees[]
   documents             documents[]
   transactions          transactions[]
+  transaction_entity_links transaction_entity_links[]
+  riseup_import_proposals riseup_import_proposals[]
+  riseup_import_proposal_transactions riseup_import_proposal_transactions[]
   tasks                 tasks[]
   properties            properties[]
   property_utilities    property_utilities[]
@@ -1287,6 +1290,8 @@ model transactions {
   therapy_consultations_linked  therapy_consultations[] @relation("TherapyConsultationTx")
   therapy_travel_entries_linked therapy_travel_entries[] @relation("TherapyTravelTransaction")
   car_petrol_fillups            car_petrol_fillups?
+  transaction_entity_links      transaction_entity_links[]
+  riseup_import_proposal_transactions riseup_import_proposal_transactions[]
 }
 
 model riseup_import_audits {
@@ -1308,6 +1313,81 @@ model riseup_import_audits {
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   user      users?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  transaction_entity_links transaction_entity_links[]
+  proposals riseup_import_proposals[]
+}
+
+model transaction_entity_links {
+  id              String   @id @default(uuid())
+  household_id    String
+  transaction_id  String
+  entity_kind     String
+  entity_id       String
+  source          String   @default("riseup_import")
+  confidence      String?
+  import_audit_id String?
+  proposal_id     String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  household    households              @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  transaction  transactions            @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  import_audit riseup_import_audits?   @relation(fields: [import_audit_id], references: [id], onDelete: SetNull)
+  proposal     riseup_import_proposals? @relation(fields: [proposal_id], references: [id], onDelete: SetNull)
+
+  @@unique([household_id, transaction_id, entity_kind, entity_id])
+  @@index([household_id, entity_kind, entity_id])
+  @@index([transaction_id])
+  @@index([import_audit_id])
+  @@index([proposal_id])
+}
+
+model riseup_import_proposals {
+  id                    String   @id @default(uuid())
+  household_id          String
+  import_audit_id       String?
+  proposal_kind         String
+  entity_kind           String
+  target_entity_id      String?
+  status                String   @default("proposed")
+  confidence            String?
+  title                 String
+  summary               String?
+  payload_json          Json     @default("{}")
+  proposed_changes_json Json     @default("{}")
+  decision_notes        String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  household     households            @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  import_audit  riseup_import_audits? @relation(fields: [import_audit_id], references: [id], onDelete: SetNull)
+  transaction_links transaction_entity_links[]
+  supporting_transactions riseup_import_proposal_transactions[]
+
+  @@index([household_id, status])
+  @@index([household_id, entity_kind])
+  @@index([import_audit_id])
+}
+
+model riseup_import_proposal_transactions {
+  id                String   @id @default(uuid())
+  household_id      String
+  proposal_id       String
+  transaction_id    String?
+  riseup_import_key String?
+  row_index         Int?
+  support_role      String
+  confidence        String?
+  row_snapshot_json Json?
+  created_at        DateTime @default(now())
+
+  household   households              @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  proposal    riseup_import_proposals @relation(fields: [proposal_id], references: [id], onDelete: Cascade)
+  transaction transactions?           @relation(fields: [transaction_id], references: [id], onDelete: SetNull)
+
+  @@index([household_id, proposal_id])
+  @@index([transaction_id])
+  @@index([riseup_import_key])
 }
 
 enum DocumentProcessingStatus {

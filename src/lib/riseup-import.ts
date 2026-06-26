@@ -72,23 +72,6 @@ export function isRiseUpHeaderRow(headerRow: unknown[]): boolean {
   return REQUIRED_HEADERS.every((h) => map.has(h));
 }
 
-function col(
-  map: Map<string, number>,
-  row: unknown[],
-  key: string,
-  altKeys?: string[],
-): string {
-  let idx = map.get(key);
-  if (idx === undefined && altKeys) {
-    for (const a of altKeys) {
-      idx = map.get(a);
-      if (idx !== undefined) break;
-    }
-  }
-  if (idx === undefined || idx < 0) return "";
-  return String(row[idx] ?? "").trim();
-}
-
 /** Parse DD/MM/YYYY or Excel serial (fallback). */
 export function parseRiseUpDate(raw: string): string | null {
   const s = String(raw).trim();
@@ -158,6 +141,42 @@ function parseOriginalAmount(raw: string): number | null {
   return n;
 }
 
+export function parseRiseUpRawRecord(
+  raw: Record<string, string>,
+  rowIndex = 0,
+): RiseUpParsedRow {
+  const businessName = raw["שם העסק"]?.trim() ?? "";
+  const paymentMethodRaw = raw["אמצעי התשלום"]?.trim() ?? "";
+  const paymentIdentifierRaw = raw["אמצעי זיהוי התשלום"]?.trim() ?? "";
+  const paymentDateRaw = raw["תאריך התשלום"]?.trim() ?? "";
+  const chargeDateRaw = raw["תאריך החיוב בחשבון"]?.trim() ?? "";
+  const amountRaw = raw["סכום"]?.trim() ?? "";
+  const sourceKind = (raw["סוג מקור"]?.trim() || "unknown") as RiseUpSourceKind;
+  const cashflowCategory = (raw["קטגוריה בתזרים"] ?? raw["קטגוריה"] ?? "").trim();
+  const originalRaw = raw["סכום מקורי"]?.trim() ?? "";
+
+  const paymentDate = parseRiseUpDate(paymentDateRaw);
+  const chargeDate = chargeDateRaw ? parseRiseUpDate(chargeDateRaw) : null;
+  const amount = parseRiseUpAmount(amountRaw);
+  const originalAmount = parseOriginalAmount(originalRaw);
+  const isZeroAmountPending = amount === 0 || Number.isNaN(amount);
+
+  return {
+    rowIndex,
+    businessName: businessName || "—",
+    paymentMethodRaw,
+    paymentIdentifierRaw,
+    sourceKind,
+    paymentDate: paymentDate ?? "",
+    chargeDate,
+    amount: Number.isNaN(amount) ? 0 : amount,
+    originalAmount,
+    cashflowCategory,
+    isZeroAmountPending,
+    raw,
+  };
+}
+
 export function parseRiseUpRowsFromMatrix(rows: unknown[][]): RiseUpParsedRow[] {
   if (rows.length < 2) return [];
   const headerRow = rows[0] ?? [];
@@ -176,37 +195,7 @@ export function parseRiseUpRowsFromMatrix(rows: unknown[][]): RiseUpParsedRow[] 
       raw[name] = String(row[idx] ?? "").trim();
     }
 
-    const businessName = col(map, row, "שם העסק");
-    const paymentMethodRaw = col(map, row, "אמצעי התשלום");
-    const paymentIdentifierRaw = col(map, row, "אמצעי זיהוי התשלום");
-    const paymentDateRaw = col(map, row, "תאריך התשלום");
-    const chargeDateRaw = col(map, row, "תאריך החיוב בחשבון");
-    const amountRaw = col(map, row, "סכום");
-    const sourceKind = col(map, row, "סוג מקור") as RiseUpSourceKind;
-    const cashflowCategory = col(map, row, "קטגוריה בתזרים", ["קטגוריה"]);
-    const originalRaw = col(map, row, "סכום מקורי");
-
-    const paymentDate = parseRiseUpDate(paymentDateRaw);
-    const chargeDate = chargeDateRaw ? parseRiseUpDate(chargeDateRaw) : null;
-    const amount = parseRiseUpAmount(amountRaw);
-    const originalAmount = parseOriginalAmount(originalRaw);
-
-    const isZeroAmountPending = amount === 0 || Number.isNaN(amount);
-
-    out.push({
-      rowIndex: i - 1,
-      businessName: businessName || "—",
-      paymentMethodRaw,
-      paymentIdentifierRaw,
-      sourceKind: sourceKind || "unknown",
-      paymentDate: paymentDate ?? "",
-      chargeDate,
-      amount: Number.isNaN(amount) ? 0 : amount,
-      originalAmount,
-      cashflowCategory: cashflowCategory || "",
-      isZeroAmountPending,
-      raw,
-    });
+    out.push(parseRiseUpRawRecord(raw, i - 1));
   }
 
   return out;
@@ -266,7 +255,7 @@ export function buildRiseUpImportIdentity(row: RiseUpIdentityRow): {
   const paymentDate = normalizeKeyPart(row.paymentDate);
   const chargeDate = normalizeKeyPart(row.chargeDate);
 
-  const hasNativeInstallmentKey = !!paymentNumber || !!totalPayments || !!cashflowMonth;
+  const hasNativeInstallmentKey = !!paymentNumber || !!totalPayments;
   const keyParts = hasNativeInstallmentKey
     ? {
         sourceKind,
@@ -289,6 +278,7 @@ export function buildRiseUpImportIdentity(row: RiseUpIdentityRow): {
         amount: normalizeAmountPart(row.amount),
         originalAmount: normalizeAmountPart(row.originalAmount),
         cashflowCategory: normalizeKeyPart(row.cashflowCategory),
+        cashflowMonth,
       };
 
   const contentParts = {

@@ -3,11 +3,15 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
 import { normalizeComparableName } from "@/lib/riseup-matching";
 import { buildRiseUpImportIdentity, riseUpRowToJson } from "@/lib/riseup-import";
-import type { RiseUpCommitRowPayload } from "@/lib/riseup-commit-types";
+import type {
+  RiseUpCommitProposalPayload,
+  RiseUpCommitRowPayload,
+} from "@/lib/riseup-commit-types";
 
 type CommitBody = {
   fileName: string;
   rows: RiseUpCommitRowPayload[];
+  proposals?: RiseUpCommitProposalPayload[];
 };
 
 function decimalDate(value: string | null): Date | null {
@@ -35,6 +39,24 @@ function rowIdentity(r: RiseUpCommitRowPayload): {
     importKey: identity.importKey,
     contentHash: identity.contentHash,
   };
+}
+
+function recordFromJson(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function stringField(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  const s = value === null || value === undefined ? "" : String(value).trim();
+  return s || null;
+}
+
+function numberField(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -65,6 +87,12 @@ export async function POST(req: NextRequest) {
     let skippedCount = 0;
     let changedRows = 0;
     let ambiguousRows = 0;
+    let skippedExisting = 0;
+    let skippedByUser = 0;
+    let proposalsApproved = 0;
+    let proposalsApplied = 0;
+    let proposalLinksCreated = 0;
+    const importAuditId = crypto.randomUUID();
 
     await prisma.$transaction(async (tx) => {
       const doc = await tx.documents.create({
@@ -95,12 +123,14 @@ export async function POST(req: NextRequest) {
 
         if (action === "skip") {
           skippedCount++;
+          skippedByUser++;
           if (existing && existing.riseup_content_hash !== identity.contentHash) changedRows++;
           continue;
         }
 
         if (action === "create" && existing) {
           skippedCount++;
+          skippedExisting++;
           continue;
         }
 
@@ -281,9 +311,203 @@ export async function POST(req: NextRequest) {
         createdTxIds.push(t.id);
       }
 
+      const proposalActions = new Map(
+        (body.proposals ?? []).map((p) => [p.id, p.action] as const),
+      );
+      const proposalIds = [...proposalActions.keys()];
+      if (proposalIds.length > 0) {
+        const proposals = await tx.riseup_import_proposals.findMany({
+          where: {
+            id: { in: proposalIds },
+            household_id: householdId,
+          },
+          include: {
+            supporting_transactions: true,
+          },
+        });
+
+        for (const proposal of proposals) {
+          const action = proposalActions.get(proposal.id) ?? "skip";
+          if (action === "skip") continue;
+          if (action === "reject") {
+            await tx.riseup_import_proposals.update({
+              where: { id: proposal.id },
+              data: { status: "rejected" },
+            });
+            continue;
+          }
+
+          proposalsApproved++;
+          const payload = recordFromJson(proposal.payload_json);
+          let targetEntityId = proposal.target_entity_id;
+          let applied = false;
+
+          if (!targetEntityId) {
+            if (proposal.entity_kind === "payee") {
+              const name = stringField(payload, "suggestedName");
+              if (name) {
+                const created = await tx.payees.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    name,
+                    normalized_name: normalizeComparableName(name) || null,
+                  },
+                });
+                targetEntityId = created.id;
+                applied = true;
+              }
+            } else if (proposal.entity_kind === "category") {
+              const name = stringField(payload, "suggestedName") ?? stringField(payload, "riseUpCategory");
+              if (name) {
+                const created = await tx.categories.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    name,
+                  },
+                });
+                targetEntityId = created.id;
+                applied = true;
+              }
+            } else if (proposal.entity_kind === "bank_account") {
+              const method = stringField(payload, "paymentMethodRaw") ?? "RiseUp bank account";
+              const identifier = stringField(payload, "paymentIdentifierRaw");
+              const created = await tx.bank_accounts.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  household_id: householdId,
+                  account_name: method,
+                  bank_name: method,
+                  account_number: identifier,
+                  notes: "Draft created from RiseUp import proposal. Please review details.",
+                },
+              });
+              targetEntityId = created.id;
+              applied = true;
+            } else if (proposal.entity_kind === "credit_card") {
+              const method = stringField(payload, "paymentMethodRaw") ?? "RiseUp credit card";
+              const identifier = stringField(payload, "paymentIdentifierRaw") ?? "";
+              const digits = identifier.replace(/\D/g, "");
+              const created = await tx.credit_cards.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  household_id: householdId,
+                  card_name: method,
+                  scheme: "other",
+                  issuer_name: method,
+                  card_last_four: digits.slice(-4) || identifier.slice(-4) || "0000",
+                  notes: "Draft created from RiseUp import proposal. Please review details.",
+                },
+              });
+              targetEntityId = created.id;
+              applied = true;
+            } else if (proposal.entity_kind === "subscription") {
+              const name = stringField(payload, "suggestedName");
+              const amount = numberField(payload, "amount");
+              if (name && amount !== null && amount > 0) {
+                const created = await tx.subscriptions.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    name,
+                    fee_amount: amount,
+                    billing_interval: "monthly",
+                    description: "Draft created from RiseUp import proposal. Please review details.",
+                  },
+                });
+                targetEntityId = created.id;
+                applied = true;
+              }
+            } else if (proposal.entity_kind === "savings_policy") {
+              const name = stringField(payload, "suggestedName");
+              const amount = numberField(payload, "amountPattern");
+              if (name) {
+                const created = await tx.savings_policies.create({
+                  data: {
+                    id: crypto.randomUUID(),
+                    household_id: householdId,
+                    provider_name: name,
+                    policy_name: name,
+                    monthly_contribution: amount && amount > 0 ? amount : null,
+                    notes: "Draft created from RiseUp import proposal. Please review details.",
+                  },
+                });
+                targetEntityId = created.id;
+                applied = true;
+              }
+            }
+          }
+
+          const genericLinkKinds = new Set([
+            "property_utility",
+            "insurance_policy",
+            "donation",
+            "savings_policy",
+            "digital_payment_method",
+          ]);
+          if (targetEntityId && genericLinkKinds.has(proposal.entity_kind)) {
+            for (const support of proposal.supporting_transactions) {
+              let transactionId = support.transaction_id;
+              if (!transactionId && support.riseup_import_key) {
+                const txMatch = await tx.transactions.findFirst({
+                  where: {
+                    household_id: householdId,
+                    riseup_import_key: support.riseup_import_key,
+                  },
+                  select: { id: true },
+                });
+                transactionId = txMatch?.id ?? null;
+              }
+              if (!transactionId) continue;
+              await tx.transaction_entity_links.upsert({
+                where: {
+                  household_id_transaction_id_entity_kind_entity_id: {
+                    household_id: householdId,
+                    transaction_id: transactionId,
+                    entity_kind: proposal.entity_kind,
+                    entity_id: targetEntityId,
+                  },
+                },
+                update: {
+                  confidence: support.confidence,
+                  import_audit_id: importAuditId,
+                  proposal_id: proposal.id,
+                },
+                create: {
+                  id: crypto.randomUUID(),
+                  household_id: householdId,
+                  transaction_id: transactionId,
+                  entity_kind: proposal.entity_kind,
+                  entity_id: targetEntityId,
+                  source: "riseup_import",
+                  confidence: support.confidence,
+                  import_audit_id: importAuditId,
+                  proposal_id: proposal.id,
+                },
+              });
+              proposalLinksCreated++;
+            }
+          }
+
+          await tx.riseup_import_proposals.update({
+            where: { id: proposal.id },
+            data: {
+              status: applied ? "applied" : "approved",
+              target_entity_id: targetEntityId,
+              import_audit_id: importAuditId,
+              decision_notes: applied
+                ? "Applied during RiseUp import commit."
+                : "Approved but requires additional details before applying.",
+            },
+          });
+          if (applied) proposalsApplied++;
+        }
+      }
+
       await tx.riseup_import_audits.create({
         data: {
-          id: crypto.randomUUID(),
+          id: importAuditId,
           household_id: householdId,
           user_id: userId ?? null,
           file_name: body.fileName,
@@ -306,6 +530,13 @@ export async function POST(req: NextRequest) {
       count: createdTxIds.length,
       updatedCount: updatedTxIds.length,
       skippedCount,
+      skippedExisting,
+      skippedByUser,
+      changedRows,
+      ambiguousRows,
+      proposalsApproved,
+      proposalsApplied,
+      proposalLinksCreated,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Commit failed";

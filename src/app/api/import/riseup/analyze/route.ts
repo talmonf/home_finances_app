@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
+import { Prisma } from "@/generated/prisma/client";
 import {
   buildRiseUpImportIdentity,
   parseRiseUpCsvBuffer,
+  parseRiseUpRawRecord,
   type RiseUpParsedRow,
 } from "@/lib/riseup-import";
 import { matchRiseUpRowsForHousehold } from "@/lib/riseup-matching";
+import {
+  generateRiseUpImportProposals,
+  summarizeRiseUpProposals,
+} from "@/lib/riseup-proposals";
 import type {
   RiseUpExistingTransactionSummary,
   RiseUpImportDiff,
+  RiseUpImportProposal,
   RiseUpImportRowStatus,
 } from "@/lib/riseup-commit-types";
 
@@ -24,6 +31,12 @@ type ExistingRiseUpTransaction = {
   riseup_charge_date: Date | null;
   riseup_original_amount: unknown | null;
   riseup_content_hash: string | null;
+};
+
+type LegacyBackfillSummary = {
+  legacyScanned: number;
+  legacyBackfilled: number;
+  legacyAmbiguous: number;
 };
 
 function decimalToNumber(value: unknown): number {
@@ -101,6 +114,139 @@ function diffExisting(
   return diffs;
 }
 
+function rawRecordFromJson(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const out: Record<string, string> = {};
+  for (const [key, rawValue] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = String(rawValue ?? "").trim();
+  }
+  return out;
+}
+
+async function backfillLegacyRiseUpIdentities(householdId: string): Promise<LegacyBackfillSummary> {
+  const legacy = await prisma.transactions.findMany({
+    where: {
+      household_id: householdId,
+      riseup_import_key: null,
+      OR: [
+        { document: { is: { file_type: "riseup_csv" } } },
+        { source_record: { isNot: null } },
+      ],
+    },
+    select: {
+      id: true,
+      source_record: {
+        select: {
+          riseup_row: true,
+        },
+      },
+    },
+  });
+
+  const keyed = new Map<
+    string,
+    Array<{ id: string; importKey: string; contentHash: string }>
+  >();
+
+  for (const tx of legacy) {
+    const raw = rawRecordFromJson(tx.source_record?.riseup_row);
+    if (!raw) continue;
+    const row = parseRiseUpRawRecord(raw);
+    const identity = buildRiseUpImportIdentity(row);
+    keyed.set(identity.importKey, [
+      ...(keyed.get(identity.importKey) ?? []),
+      { id: tx.id, importKey: identity.importKey, contentHash: identity.contentHash },
+    ]);
+  }
+
+  const unique = [...keyed.values()].filter((items) => items.length === 1).map((items) => items[0]!);
+  const ambiguous = [...keyed.values()].filter((items) => items.length > 1).reduce((sum, items) => sum + items.length, 0);
+  let legacyBackfilled = 0;
+
+  if (unique.length > 0) {
+    const existingKeys = new Set(
+      (
+        await prisma.transactions.findMany({
+          where: {
+            household_id: householdId,
+            riseup_import_key: { in: unique.map((item) => item.importKey) },
+          },
+          select: { riseup_import_key: true },
+        })
+      )
+        .map((item) => item.riseup_import_key)
+        .filter((key): key is string => !!key),
+    );
+
+    for (const item of unique) {
+      if (existingKeys.has(item.importKey)) continue;
+      const updated = await prisma.transactions.updateMany({
+        where: { id: item.id, household_id: householdId, riseup_import_key: null },
+        data: {
+          riseup_import_key: item.importKey,
+          riseup_content_hash: item.contentHash,
+        },
+      });
+      legacyBackfilled += updated.count;
+    }
+  }
+
+  return {
+    legacyScanned: legacy.length,
+    legacyBackfilled,
+    legacyAmbiguous: ambiguous,
+  };
+}
+
+async function persistAnalyzeProposals(
+  householdId: string,
+  proposals: RiseUpImportProposal[],
+): Promise<RiseUpImportProposal[]> {
+  await prisma.$transaction(async (tx) => {
+    await tx.riseup_import_proposals.deleteMany({
+      where: {
+        household_id: householdId,
+        import_audit_id: null,
+        status: "proposed",
+      },
+    });
+
+    for (const p of proposals) {
+      const proposalId = crypto.randomUUID();
+      await tx.riseup_import_proposals.create({
+        data: {
+          id: proposalId,
+          household_id: householdId,
+          import_audit_id: null,
+          proposal_kind: p.proposal_kind,
+          entity_kind: p.entity_kind,
+          target_entity_id: p.target_entity_id,
+          status: p.status,
+          confidence: p.confidence,
+          title: p.title,
+          summary: p.summary,
+          payload_json: p.payload_json as Prisma.InputJsonValue,
+          proposed_changes_json: p.proposed_changes_json as Prisma.InputJsonValue,
+          supporting_transactions: {
+            create: p.supportRows.map((support) => ({
+              id: crypto.randomUUID(),
+              household_id: householdId,
+              transaction_id: support.transaction_id ?? null,
+              riseup_import_key: support.riseup_import_key ?? null,
+              row_index: support.rowIndex,
+              support_role: support.support_role,
+              confidence: support.confidence ?? null,
+            })),
+          },
+        },
+      });
+      p.id = proposalId;
+    }
+  });
+
+  return proposals;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = await getToken({
@@ -133,6 +279,7 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseRiseUpCsvBuffer(buffer);
+    const legacySummary = await backfillLegacyRiseUpIdentities(householdId);
     const identities = new Map(
       parsed.map((row) => {
         const identity = buildRiseUpImportIdentity(row);
@@ -144,6 +291,10 @@ export async function POST(req: NextRequest) {
     const importKeys = rows
       .map((row) => identities.get(row.rowIndex)?.importKey)
       .filter((key): key is string => !!key);
+    const incomingKeyCounts = new Map<string, number>();
+    for (const key of importKeys) {
+      incomingKeyCounts.set(key, (incomingKeyCounts.get(key) ?? 0) + 1);
+    }
 
     const existing = await prisma.transactions.findMany({
       where: {
@@ -180,6 +331,8 @@ export async function POST(req: NextRequest) {
 
       if (matches.length > 1) {
         importStatus = "ambiguous";
+      } else if ((incomingKeyCounts.get(identity.importKey) ?? 0) > 1) {
+        importStatus = "ambiguous";
       } else if (matches.length === 1) {
         const match = matches[0];
         existingTransaction = existingSummary(match);
@@ -201,6 +354,11 @@ export async function POST(req: NextRequest) {
         changedFields,
       };
     });
+    const proposals = await persistAnalyzeProposals(
+      householdId,
+      generateRiseUpImportProposals(classifiedRows),
+    );
+    const proposalSummary = summarizeRiseUpProposals(proposals);
 
     return NextResponse.json({
       fileName: file.name,
@@ -210,7 +368,18 @@ export async function POST(req: NextRequest) {
         existing: classifiedRows.filter((r) => r.importStatus === "existing").length,
         changed: classifiedRows.filter((r) => r.importStatus === "changed").length,
         ambiguous: classifiedRows.filter((r) => r.importStatus === "ambiguous").length,
+        needsReview: classifiedRows.filter((r) => r.needsReview).length,
+        ...legacySummary,
+        proposals: proposalSummary,
       },
+      wizardSections: [
+        "instruments",
+        "core_mappings",
+        "domain_entities",
+        "transaction_actions",
+        "historical_backfill",
+      ],
+      proposals,
       rows: classifiedRows,
     });
   } catch (e) {

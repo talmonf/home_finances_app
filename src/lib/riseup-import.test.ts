@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildRiseUpImportIdentity, parseRiseUpCsvBuffer } from "./riseup-import";
+import {
+  buildRiseUpImportIdentity,
+  parseRiseUpCsvBuffer,
+  parseRiseUpRawRecord,
+} from "./riseup-import";
 
 test("parses UTF-8 Hebrew RiseUp CSV exports", async () => {
   const csv = [
@@ -136,4 +140,29 @@ test("uses a broader fallback identity when RiseUp native keys are absent", () =
 
   assert.equal(first.basis, "fallback");
   assert.notEqual(first.importKey, second.importKey);
+});
+
+test("reconstructs a legacy RiseUp row from stored raw source record JSON", () => {
+  const raw = {
+    "שייך לתזרים חודש": "2026-07",
+    "שם העסק": "חשמל לדוגמה",
+    "אמצעי התשלום": "bank",
+    "אמצעי זיהוי התשלום": "123456",
+    "תאריך התשלום": "07/07/2026",
+    "תאריך החיוב בחשבון": "08/07/2026",
+    "סכום": "-210.50",
+    "קטגוריה בתזרים": "חשמל",
+    "סוג מקור": "checkingAccount",
+  };
+
+  const row = parseRiseUpRawRecord(raw, 12);
+  const identity = buildRiseUpImportIdentity(row);
+
+  assert.equal(row.rowIndex, 12);
+  assert.equal(row.businessName, "חשמל לדוגמה");
+  assert.equal(row.paymentDate, "2026-07-07");
+  assert.equal(row.chargeDate, "2026-07-08");
+  assert.equal(row.amount, -210.5);
+  assert.equal(row.cashflowCategory, "חשמל");
+  assert.equal(identity.basis, "fallback");
 });

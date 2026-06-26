@@ -4,10 +4,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { RiseUpAnalyzedRow } from "@/lib/riseup-matching";
 import type {
+  RiseUpAnalyzeSummary,
   RiseUpCommitRowPayload,
   RiseUpExistingTransactionSummary,
   RiseUpImportAction,
   RiseUpImportDiff,
+  RiseUpImportProposal,
+  RiseUpCommitProposalPayload,
   RiseUpImportRowStatus,
 } from "@/lib/riseup-commit-types";
 
@@ -33,7 +36,16 @@ type RiseUpResetPreview = {
   blocked: boolean;
   message: string;
   downstreamLinks: Record<string, number>;
+  genericLinkCount?: number;
+  proposalCount?: number;
 };
+
+type RiseUpWizardSection =
+  | "instruments"
+  | "core_mappings"
+  | "domain_entities"
+  | "transaction_actions"
+  | "historical_backfill";
 
 function buildCommitPayload(
   rows: RiseUpAnalyzedImportRow[],
@@ -102,6 +114,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [actions, setActions] = useState<Record<number, RiseUpImportAction>>({});
+  const [proposals, setProposals] = useState<RiseUpImportProposal[]>([]);
+  const [proposalActions, setProposalActions] = useState<Record<string, "approve" | "reject" | "skip">>({});
+  const [activeSection, setActiveSection] = useState<RiseUpWizardSection>("instruments");
+  const [analyzeSummary, setAnalyzeSummary] = useState<RiseUpAnalyzeSummary | null>(null);
   const [resetPreview, setResetPreview] = useState<RiseUpResetPreview | null>(null);
   const [previewingReset, setPreviewingReset] = useState(false);
   const [overrides, setOverrides] = useState<
@@ -138,7 +154,8 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
         subscription_id: r.subscription.selectedId,
         loan_id: r.loan.selectedId,
       };
-      nextActions[r.rowIndex] = r.importStatus === "new" ? "create" : "skip";
+      nextActions[r.rowIndex] =
+        r.importStatus === "new" && !r.isZeroAmountPending ? "create" : "skip";
     }
     setOverrides(next);
     setActions(nextActions);
@@ -164,6 +181,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       }
       const rows = data.rows as RiseUpAnalyzedImportRow[];
       setAnalyzed(rows);
+      setProposals((data.proposals as RiseUpImportProposal[] | undefined) ?? []);
+      setProposalActions({});
+      setAnalyzeSummary((data.summary as RiseUpAnalyzeSummary | undefined) ?? null);
+      setActiveSection("instruments");
       setFileName(data.fileName ?? file.name);
       initOverrides(rows);
     } catch (e) {
@@ -179,10 +200,13 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
     setSuccess(null);
     try {
       const rows = buildCommitPayload(analyzed, overrides, actions);
+      const selectedProposals: RiseUpCommitProposalPayload[] = Object.entries(proposalActions)
+        .filter(([, action]) => action !== "skip")
+        .map(([id, action]) => ({ id, action }));
       const res = await fetch("/api/import/riseup/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName, rows }),
+        body: JSON.stringify({ fileName, rows, proposals: selectedProposals }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -199,6 +223,9 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       setFile(null);
       setFileName(null);
       setActions({});
+      setProposals([]);
+      setProposalActions({});
+      setAnalyzeSummary(null);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Commit failed");
@@ -242,8 +269,41 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       selectedUpdates: analyzed.filter(
         (r) => (actions[r.rowIndex] ?? "skip") === "update",
       ).length,
+      selectedSkips: analyzed.filter(
+        (r) => (actions[r.rowIndex] ?? "skip") === "skip",
+      ).length,
     };
   }, [actions, analyzed]);
+
+  const wizardSections: Array<{ id: RiseUpWizardSection; label: string }> = [
+    { id: "instruments", label: isHe ? "אמצעי תשלום" : "Instruments" },
+    { id: "core_mappings", label: isHe ? "התאמות בסיסיות" : "Core mappings" },
+    { id: "domain_entities", label: isHe ? "ישויות" : "Domain entities" },
+    { id: "transaction_actions", label: isHe ? "תנועות" : "Transactions" },
+    { id: "historical_backfill", label: isHe ? "קישור היסטורי" : "Backfill" },
+  ];
+
+  const visibleProposals = proposals.filter((p) => {
+    if (activeSection === "instruments") {
+      return p.entity_kind === "bank_account" || p.entity_kind === "credit_card";
+    }
+    if (activeSection === "core_mappings") {
+      return p.entity_kind === "payee" || p.entity_kind === "category";
+    }
+    if (activeSection === "domain_entities") {
+      return !["bank_account", "credit_card", "payee", "category"].includes(p.entity_kind);
+    }
+    if (activeSection === "historical_backfill") {
+      return p.proposal_kind === "link_transactions";
+    }
+    return false;
+  });
+
+  const visibleRows = useMemo(() => {
+    if (!analyzed) return [];
+    if (activeSection !== "transaction_actions") return [];
+    return analyzed;
+  }, [activeSection, analyzed]);
 
   function setO(
     rowIndex: number,
@@ -257,6 +317,11 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
 
   function setAction(rowIndex: number, action: RiseUpImportAction) {
     setActions((prev) => ({ ...prev, [rowIndex]: action }));
+  }
+
+  function setProposalAction(id: string | undefined, action: "approve" | "reject" | "skip") {
+    if (!id) return;
+    setProposalActions((prev) => ({ ...prev, [id]: action }));
   }
 
   return (
@@ -284,8 +349,8 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
               ? "בודק…"
               : "Previewing…"
             : isHe
-              ? "תצוגת איפוס"
-              : "Preview reset"}
+              ? "בדיקת השפעת איפוס"
+              : "Check reset impact"}
         </button>
       </div>
 
@@ -299,8 +364,8 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
         >
           <div className="font-medium">
             {isHe
-              ? `תצוגת איפוס: ${resetPreview.totalRiseUpTransactions} תנועות RiseUp, ${resetPreview.enrichedTransactions} עם קישורים/סיווגים, ${resetPreview.downstreamLinkCount} קישורים חיצוניים.`
-              : `Reset preview: ${resetPreview.totalRiseUpTransactions} RiseUp transactions, ${resetPreview.enrichedTransactions} enriched/linked rows, ${resetPreview.downstreamLinkCount} downstream links.`}
+              ? `בדיקת השפעת איפוס: ${resetPreview.totalRiseUpTransactions} תנועות RiseUp, ${resetPreview.enrichedTransactions} עם קישורים/סיווגים, ${resetPreview.genericLinkCount ?? 0} קישורי ישויות, ${resetPreview.proposalCount ?? 0} הצעות, ${resetPreview.downstreamLinkCount} קישורים חיצוניים.`
+              : `Reset impact check: ${resetPreview.totalRiseUpTransactions} RiseUp transactions, ${resetPreview.enrichedTransactions} enriched/linked rows, ${resetPreview.genericLinkCount ?? 0} generic entity links, ${resetPreview.proposalCount ?? 0} staged proposals, ${resetPreview.downstreamLinkCount} downstream links.`}
           </div>
           <div className="mt-1">{resetPreview.message}</div>
           {resetPreview.downstreamLinkCount > 0 ? (
@@ -367,6 +432,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 setFile(null);
                 setFileName(null);
                 setActions({});
+                setProposals([]);
+                setProposalActions({});
+                setAnalyzeSummary(null);
+                setActiveSection("instruments");
                 setSuccess(null);
               }}
             >
@@ -377,11 +446,108 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
           {importSummary ? (
             <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
               {isHe
-                ? `ברירת המחדל היא ייבוא אינקרמנטלי: ${importSummary.selectedCreates} תנועות חדשות ייווצרו ו-${importSummary.selectedUpdates} שינויים מאושרים יעודכנו. שורות קיימות מדולגות.`
-                : `Default incremental import: ${importSummary.selectedCreates} new transactions will be created and ${importSummary.selectedUpdates} reviewed changes will be updated. Existing rows are skipped.`}
+                ? `ברירת המחדל היא ייבוא אינקרמנטלי: ${importSummary.selectedCreates} תנועות חדשות ייווצרו, ${importSummary.selectedUpdates} שינויים מאושרים יעודכנו, ו-${importSummary.selectedSkips} שורות ידולגו. שורות קיימות ותנועות בסכום אפס מדולגות כברירת מחדל.`
+                : `Default incremental import: ${importSummary.selectedCreates} new transactions will be created, ${importSummary.selectedUpdates} reviewed changes will be updated, and ${importSummary.selectedSkips} rows will be skipped. Existing and zero-amount rows are skipped by default.`}
             </div>
           ) : null}
 
+          <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-3">
+            <div className="flex flex-wrap gap-2">
+              {wizardSections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveSection(section.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    activeSection === section.id
+                      ? "bg-violet-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+            {analyzeSummary ? (
+              <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-4">
+                <div className="rounded bg-slate-900 p-2">
+                  <div className="text-slate-500">{isHe ? "שורות לבדיקה" : "Needs review"}</div>
+                  <div className="text-lg font-semibold">{analyzeSummary.needsReview}</div>
+                </div>
+                <div className="rounded bg-slate-900 p-2">
+                  <div className="text-slate-500">{isHe ? "הצעות" : "Proposals"}</div>
+                  <div className="text-lg font-semibold">{analyzeSummary.proposals.total}</div>
+                </div>
+                <div className="rounded bg-slate-900 p-2">
+                  <div className="text-slate-500">{isHe ? "ייבוא ישן זוהה" : "Legacy scanned"}</div>
+                  <div className="text-lg font-semibold">{analyzeSummary.legacyScanned}</div>
+                </div>
+                <div className="rounded bg-slate-900 p-2">
+                  <div className="text-slate-500">{isHe ? "ייבוא ישן עודכן" : "Legacy backfilled"}</div>
+                  <div className="text-lg font-semibold">{analyzeSummary.legacyBackfilled}</div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {activeSection !== "transaction_actions" ? (
+            <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-3">
+              <div className="mb-2 text-sm font-medium text-slate-200">
+                {activeSection === "historical_backfill"
+                  ? isHe
+                    ? "קישור היסטורי"
+                    : "Historical backfill"
+                  : isHe
+                    ? "הצעות ישויות"
+                    : "Entity proposals"}
+              </div>
+              {visibleProposals.length === 0 ? (
+                <p className="text-xs text-slate-400">
+                  {isHe
+                    ? "אין הצעות בשלב זה."
+                    : "No staged proposals in this step."}
+                </p>
+              ) : (
+                <div className="grid gap-2">
+                  {visibleProposals.map((proposal) => {
+                    const selected = proposal.id ? proposalActions[proposal.id] ?? "skip" : "skip";
+                    return (
+                      <div
+                        key={proposal.id ?? proposal.clientKey}
+                        className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium text-slate-100">{proposal.title}</div>
+                            <div className="mt-1 text-slate-400">{proposal.summary}</div>
+                            <div className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">
+                              {proposal.entity_kind} · {proposal.confidence} · {proposal.supportRows.length} supporting rows
+                            </div>
+                          </div>
+                          <select
+                            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                            value={selected}
+                            onChange={(e) =>
+                              setProposalAction(
+                                proposal.id,
+                                e.target.value as "approve" | "reject" | "skip",
+                              )
+                            }
+                          >
+                            <option value="skip">{isHe ? "דלג כרגע" : "Skip for now"}</option>
+                            <option value="approve">{isHe ? "אשר" : "Approve"}</option>
+                            <option value="reject">{isHe ? "דחה" : "Reject"}</option>
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {activeSection === "transaction_actions" ? (
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-slate-700">
             <table className="min-w-full border-collapse text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-800 text-slate-300">
@@ -400,7 +566,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 </tr>
               </thead>
               <tbody>
-                {analyzed.map((r) => {
+                {visibleRows.map((r) => {
                   const o = overrides[r.rowIndex];
                   if (!o) return null;
                   const action = actions[r.rowIndex] ?? "skip";
@@ -660,6 +826,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
               </tbody>
             </table>
           </div>
+          ) : null}
 
           <button
             type="button"
