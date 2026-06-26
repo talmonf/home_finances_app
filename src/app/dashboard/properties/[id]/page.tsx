@@ -21,6 +21,7 @@ const UTILITY_TYPE_LABELS_EN: Record<string, string> = {
   internet: "Internet",
   telephone: "Telephone",
   gas: "Gas",
+  arnona: "Arnona",
   other: "Other",
 };
 
@@ -30,6 +31,7 @@ const UTILITY_TYPE_LABELS_HE: Record<string, string> = {
   internet: "אינטרנט",
   telephone: "טלפון",
   gas: "גז",
+  arnona: "ארנונה",
   other: "אחר",
 };
 
@@ -245,8 +247,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
           {property.utilities.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
               {isHebrew
-                ? "אין עדיין תשתיות. לחצו על ״הוספת תשתית״ (למשל חשמל, מים, אינטרנט)."
-                : "No utilities yet. Use “Add utility” (e.g. electricity, water, internet)."}
+                ? "אין עדיין תשתיות. לחצו על ״הוספת תשתית״ (למשל חשמל, מים, ארנונה)."
+                : "No utilities yet. Use “Add utility” (e.g. electricity, water, Arnona)."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">

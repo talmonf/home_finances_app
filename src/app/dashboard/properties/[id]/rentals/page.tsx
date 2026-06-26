@@ -75,6 +75,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
         rentals: {
           include: {
             tenants: true,
+            utilities: { orderBy: { created_at: "asc" } },
             contracts: true,
             credit_card: true,
             bank_account: true,

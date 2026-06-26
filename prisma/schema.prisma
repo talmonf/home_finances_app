@@ -63,6 +63,7 @@ model households {
   digital_payment_methods digital_payment_methods[]
   medical_appointments    medical_appointments[]
   rentals                 rentals[]
+  rental_utilities        rental_utilities[]
   rental_contracts        rental_contracts[]
   trips                   trips[]
   cars                    cars[]
@@ -726,8 +727,29 @@ model rentals {
   credit_card credit_cards? @relation(fields: [credit_card_id], references: [id], onDelete: SetNull)
   bank_account bank_accounts? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
   tenants    rental_tenants[]
+  utilities  rental_utilities[]
   contracts  rental_contracts[]
   transactions transactions[]
+}
+
+model rental_utilities {
+  id                 String              @id @default(uuid())
+  household_id       String
+  rental_id          String
+  utility_type       PropertyUtilityType
+  utility_company    String
+  account_number     String?
+  meter_number       String?
+  last_meter_reading String?
+  notes              String?
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  rental    rentals    @relation(fields: [rental_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id])
+  @@index([rental_id])
 }
 
 model rental_tenants {
@@ -1165,6 +1187,7 @@ enum PropertyUtilityType {
   internet
   telephone
   gas
+  arnona
   other
 
   @@map("property_utility_type")

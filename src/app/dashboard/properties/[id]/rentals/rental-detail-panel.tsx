@@ -9,6 +9,9 @@ import {
   createRentalTenant,
   updateRentalTenant,
   deleteRentalTenant,
+  createRentalUtility,
+  updateRentalUtility,
+  deleteRentalUtility,
   deleteRentalContract,
 } from "../../actions";
 import { RENTAL_PAYMENT_METHODS, RENTAL_TYPES } from "./rental-form-constants";
@@ -21,6 +24,16 @@ type RentalTenant = {
   full_name: string;
   email: string | null;
   phone: string | null;
+  notes: string | null;
+};
+
+type RentalUtility = {
+  id: string;
+  utility_type: string;
+  utility_company: string;
+  account_number: string | null;
+  meter_number: string | null;
+  last_meter_reading: string | null;
   notes: string | null;
 };
 
@@ -59,6 +72,7 @@ export type RentalDetail = {
   notes: string | null;
   is_clinic_lease: boolean;
   tenants: RentalTenant[];
+  utilities: RentalUtility[];
   contracts: RentalContract[];
   transactions: RentalTransaction[];
 };
@@ -70,6 +84,16 @@ type RentalDetailPanelProps = {
   creditCards: CreditCardOption[];
   transactions: UnlinkedTransaction[];
   dateDisplayFormat: HouseholdDateDisplayFormat;
+};
+
+const UTILITY_TYPE_LABELS: Record<string, string> = {
+  electricity: "Electricity",
+  water: "Water",
+  internet: "Internet",
+  telephone: "Telephone",
+  gas: "Gas",
+  arnona: "Arnona",
+  other: "Other",
 };
 
 function formatDateRangeSummary(
@@ -316,6 +340,205 @@ export function RentalDetailPanel({
               </div>
             </form>
           ))}
+        </div>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-slate-700 p-4">
+        <div>
+          <h3 className="text-sm font-medium text-slate-200">Utilities</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Utility details for this rental, including company, account, meter, and latest reading.
+          </p>
+        </div>
+        <form id={`add_rental_utility_${rental.id}`} action={createRentalUtility}>
+          <input type="hidden" name="rental_id" value={rental.id} />
+        </form>
+        {rental.utilities.map((utility) => (
+          <form key={`utility_form_${utility.id}`} id={`rental_utility_${utility.id}`} action={updateRentalUtility}>
+            <input type="hidden" name="id" value={utility.id} />
+          </form>
+        ))}
+        <div className="overflow-x-auto rounded-xl border border-slate-700">
+          <table className="min-w-full divide-y divide-slate-700 text-xs">
+            <thead className="bg-slate-800/80 text-left text-slate-300">
+              <tr>
+                <th className="px-3 py-2 font-medium">Type</th>
+                <th className="px-3 py-2 font-medium">Utility company</th>
+                <th className="px-3 py-2 font-medium">Account #</th>
+                <th className="px-3 py-2 font-medium">Meter #</th>
+                <th className="px-3 py-2 font-medium">Last meter reading</th>
+                <th className="px-3 py-2 font-medium">Notes</th>
+                <th className="px-3 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {rental.utilities.length > 0 ? (
+                rental.utilities.map((utility) => {
+                  const formId = `rental_utility_${utility.id}`;
+                  return (
+                    <tr key={utility.id}>
+                      <td className="px-3 py-2">
+                        <select
+                          form={formId}
+                          name="utility_type"
+                          defaultValue={utility.utility_type}
+                          aria-label="Utility type"
+                          className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        >
+                          {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          form={formId}
+                          name="utility_company"
+                          required
+                          defaultValue={utility.utility_company}
+                          aria-label="Utility company"
+                          className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          form={formId}
+                          name="account_number"
+                          defaultValue={utility.account_number ?? ""}
+                          aria-label="Account number"
+                          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          form={formId}
+                          name="meter_number"
+                          defaultValue={utility.meter_number ?? ""}
+                          aria-label="Meter number"
+                          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          form={formId}
+                          name="last_meter_reading"
+                          defaultValue={utility.last_meter_reading ?? ""}
+                          aria-label="Last meter reading"
+                          className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          form={formId}
+                          name="notes"
+                          defaultValue={utility.notes ?? ""}
+                          aria-label="Utility notes"
+                          className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="submit"
+                            form={formId}
+                            className="text-xs text-sky-300 hover:text-sky-200"
+                          >
+                            Save
+                          </button>
+                          <ConfirmDeleteForm action={deleteRentalUtility.bind(null, utility.id, propertyId)}>
+                            <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                              Delete
+                            </button>
+                          </ConfirmDeleteForm>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-3 py-3 text-slate-500">
+                    No utilities recorded for this rental yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            <tfoot className="border-t border-slate-700 bg-slate-900/70">
+              <tr>
+                <td className="px-3 py-2">
+                  <select
+                    form={`add_rental_utility_${rental.id}`}
+                    name="utility_type"
+                    aria-label="New utility type"
+                    className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  >
+                    {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    form={`add_rental_utility_${rental.id}`}
+                    name="utility_company"
+                    required
+                    placeholder="Company"
+                    aria-label="New utility company"
+                    className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    form={`add_rental_utility_${rental.id}`}
+                    name="account_number"
+                    placeholder="Optional"
+                    aria-label="New account number"
+                    className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    form={`add_rental_utility_${rental.id}`}
+                    name="meter_number"
+                    placeholder="Optional"
+                    aria-label="New meter number"
+                    className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    form={`add_rental_utility_${rental.id}`}
+                    name="last_meter_reading"
+                    placeholder="Optional"
+                    aria-label="New last meter reading"
+                    className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    form={`add_rental_utility_${rental.id}`}
+                    name="notes"
+                    placeholder="Optional"
+                    aria-label="New utility notes"
+                    className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    type="submit"
+                    form={`add_rental_utility_${rental.id}`}
+                    className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500"
+                  >
+                    Add utility
+                  </button>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 

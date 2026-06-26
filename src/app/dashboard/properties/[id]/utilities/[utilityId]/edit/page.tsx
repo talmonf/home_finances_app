@@ -11,6 +11,7 @@ const UTILITY_TYPE_LABELS: Record<string, string> = {
   internet: "Internet",
   telephone: "Telephone",
   gas: "Gas",
+  arnona: "Arnona",
   other: "Other",
 };
 

@@ -14,6 +14,8 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 129_rental_utilities.sql (2026-06-26)
+- [x] 128_property_utilities_arnona_type.sql (2026-06-26)
 - [x] 127_property_utilities_meter_number.sql (2026-06-26)
 - [x] 126_family_members_notes_and_grandchild_parents.sql (2026-06-14)
 - [x] 125_therapy_appointment_series_virtual.sql (2026-06-10)
@@ -148,6 +150,8 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 129 | `129_rental_utilities.sql` (2026-06-26) | CREATE | `rental_utilities`: rental-scoped utility company, account number, meter number, last meter reading, and notes for selected rentals. |
+| 128 | `128_property_utilities_arnona_type.sql` (2026-06-26) | ALTER | `property_utility_type`: add `arnona` for municipal property tax utility accounts. |
 | 127 | `127_property_utilities_meter_number.sql` (2026-06-26) | ALTER | `property_utilities`: optional `meter_number` for utility accounts/meters per property. |
 | 126 | `126_family_members_notes_and_grandchild_parents.sql` (2026-06-14) | ALTER | `family_members`: optional `notes`; optional `parent_a_family_member_id` and `parent_b_family_member_id` for linking grandchildren to parents. |
 | 125 | `125_therapy_appointment_series_virtual.sql` (2026-06-10) | CREATE/ALTER | Virtual recurrence: `therapy_appointment_series_exceptions`; series `duration_minutes` + Google sync fields; `therapy_appointments.occurrence_date`; delete future scheduled series appointment rows. |

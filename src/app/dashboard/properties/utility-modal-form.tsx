@@ -49,8 +49,13 @@ export function UtilityModalForm({
             <select
               id="modal_utility_type"
               name="utility_type"
+              required
+              defaultValue=""
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
+              <option value="" disabled>
+                {isHebrew ? "בחרו סוג" : "Select type"}
+              </option>
               {Object.entries(utilityTypeLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
