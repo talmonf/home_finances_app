@@ -1,3 +1,4 @@
+import { HouseholdDateField } from "@/components/household-date-field";
 import { createUtility } from "./actions";
 
 type PayeeOption = { id: string; name: string };
@@ -112,10 +113,9 @@ export function UtilityModalForm({
             <label htmlFor="modal_start_date" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "תאריך התחלה (אופציונלי)" : "Start date (optional)"}
             </label>
-            <input
+            <HouseholdDateField
               id="modal_start_date"
               name="start_date"
-              type="date"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -123,10 +123,9 @@ export function UtilityModalForm({
             <label htmlFor="modal_renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "תאריך חידוש (אופציונלי)" : "Renewal date (optional)"}
             </label>
-            <input
+            <HouseholdDateField
               id="modal_renewal_date"
               name="renewal_date"
-              type="date"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

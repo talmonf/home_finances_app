@@ -1,3 +1,5 @@
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -94,21 +96,6 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
           </div>
 
           <div>
-            <label htmlFor="payee_id" className="mb-1 block text-xs font-medium text-slate-400">Link to payee (optional)</label>
-            <select
-              id="payee_id"
-              name="payee_id"
-              defaultValue={utility.payee_id ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">— None —</option>
-              {payees.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
             <input
               id="account_number"
@@ -132,22 +119,20 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
             <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
               Start date (optional)
             </label>
-            <input
+            <HouseholdDateField
               id="start_date"
               name="start_date"
-              type="date"
-              defaultValue={utility.start_date ? utility.start_date.toISOString().slice(0, 10) : ""}
+              defaultIsoYmd={utcDateToHtmlDateInputValue(utility.start_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
 
           <div>
             <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">Renewal date</label>
-            <input
+            <HouseholdDateField
               id="renewal_date"
               name="renewal_date"
-              type="date"
-              defaultValue={utility.renewal_date ? utility.renewal_date.toISOString().slice(0, 10) : ""}
+              defaultIsoYmd={utcDateToHtmlDateInputValue(utility.renewal_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -200,6 +185,21 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
               placeholder="https://facebook.com/..."
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="payee_id" className="mb-1 block text-xs font-medium text-slate-400">Link to payee (optional)</label>
+            <select
+              id="payee_id"
+              name="payee_id"
+              defaultValue={utility.payee_id ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="">— None —</option>
+              {payees.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="sm:col-span-2">
