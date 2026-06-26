@@ -471,9 +471,12 @@ export function RentalDetailPanel({
                   <select
                     form={`add_rental_utility_${rental.id}`}
                     name="utility_type"
+                    required
+                    defaultValue=""
                     aria-label="New utility type"
                     className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                   >
+                    <option value="">Select type</option>
                     {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
