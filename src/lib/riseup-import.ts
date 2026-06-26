@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 /**
  * RiseUp (input.riseup.co.il) CSV export: detection, normalization, row extraction.
  */
@@ -23,6 +25,21 @@ export type RiseUpParsedRow = {
   /** Full raw row for persistence / audit */
   raw: Record<string, string>;
 };
+
+type RiseUpIdentityRow = Pick<
+  RiseUpParsedRow,
+  | "businessName"
+  | "paymentMethodRaw"
+  | "paymentIdentifierRaw"
+  | "sourceKind"
+  | "paymentDate"
+  | "chargeDate"
+  | "amount"
+  | "originalAmount"
+  | "cashflowCategory"
+  | "isZeroAmountPending"
+  | "raw"
+>;
 
 const REQUIRED_HEADERS = [
   "שם העסק",
@@ -193,6 +210,111 @@ export function parseRiseUpRowsFromMatrix(rows: unknown[][]): RiseUpParsedRow[] 
   }
 
   return out;
+}
+
+function normalizeKeyPart(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeAmountPart(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  return value.toFixed(2);
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableJson(v)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stableJson(record[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+function sha256Hex(value: unknown): string {
+  return createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
+/**
+ * Deterministic identity for full RiseUp exports.
+ *
+ * When RiseUp-native installment columns are present, they are stronger identity
+ * anchors than mutable fields such as category or amount. Older/sparser exports
+ * fall back to a broader transaction fingerprint so duplicate imports are still
+ * blocked.
+ */
+export function buildRiseUpImportIdentity(row: RiseUpIdentityRow): {
+  importKey: string;
+  contentHash: string;
+  basis: "native" | "fallback";
+} {
+  const paymentNumber = normalizeKeyPart(row.raw["מספר התשלום"]);
+  const totalPayments = normalizeKeyPart(row.raw["מספר תשלומים כולל"]);
+  const cashflowMonth = normalizeKeyPart(row.raw["שייך לתזרים חודש"]);
+  const sourceKind = normalizeKeyPart(row.sourceKind);
+  const paymentIdentifier = normalizeKeyPart(row.paymentIdentifierRaw);
+  const paymentMethod = normalizeKeyPart(row.paymentMethodRaw);
+  const businessName = normalizeKeyPart(row.businessName);
+  const paymentDate = normalizeKeyPart(row.paymentDate);
+  const chargeDate = normalizeKeyPart(row.chargeDate);
+
+  const hasNativeInstallmentKey = !!paymentNumber || !!totalPayments || !!cashflowMonth;
+  const keyParts = hasNativeInstallmentKey
+    ? {
+        sourceKind,
+        paymentIdentifier,
+        paymentMethod,
+        paymentDate,
+        chargeDate,
+        businessName,
+        paymentNumber,
+        totalPayments,
+        cashflowMonth,
+      }
+    : {
+        sourceKind,
+        paymentIdentifier,
+        paymentMethod,
+        paymentDate,
+        chargeDate,
+        businessName,
+        amount: normalizeAmountPart(row.amount),
+        originalAmount: normalizeAmountPart(row.originalAmount),
+        cashflowCategory: normalizeKeyPart(row.cashflowCategory),
+      };
+
+  const contentParts = {
+    sourceKind,
+    paymentIdentifier,
+    paymentMethod,
+    businessName,
+    paymentDate,
+    chargeDate,
+    amount: normalizeAmountPart(row.amount),
+    originalAmount: normalizeAmountPart(row.originalAmount),
+    cashflowCategory: normalizeKeyPart(row.cashflowCategory),
+    isZeroAmountPending: row.isZeroAmountPending,
+    raw: Object.fromEntries(
+      Object.entries(row.raw).map(([key, value]) => [
+        normalizeKeyPart(key),
+        normalizeKeyPart(value),
+      ]),
+    ),
+  };
+
+  return {
+    importKey: `riseup:${sha256Hex(keyParts)}`,
+    contentHash: sha256Hex(contentParts),
+    basis: hasNativeInstallmentKey ? "native" : "fallback",
+  };
 }
 
 export async function parseRiseUpCsvBuffer(buffer: Buffer): Promise<RiseUpParsedRow[]> {

@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { RiseUpAnalyzedRow } from "@/lib/riseup-matching";
-import type { RiseUpCommitRowPayload } from "@/lib/riseup-commit-types";
+import type {
+  RiseUpCommitRowPayload,
+  RiseUpExistingTransactionSummary,
+  RiseUpImportAction,
+  RiseUpImportDiff,
+  RiseUpImportRowStatus,
+} from "@/lib/riseup-commit-types";
 
 type Props = {
   uiLanguage: "en" | "he";
@@ -11,8 +17,26 @@ type Props = {
   creditCards: { id: string; label: string }[];
 };
 
+type RiseUpAnalyzedImportRow = RiseUpAnalyzedRow & {
+  riseup_import_key: string;
+  riseup_content_hash: string;
+  riseup_identity_basis: "native" | "fallback";
+  importStatus: RiseUpImportRowStatus;
+  existingTransaction: RiseUpExistingTransactionSummary | null;
+  changedFields: RiseUpImportDiff[];
+};
+
+type RiseUpResetPreview = {
+  totalRiseUpTransactions: number;
+  enrichedTransactions: number;
+  downstreamLinkCount: number;
+  blocked: boolean;
+  message: string;
+  downstreamLinks: Record<string, number>;
+};
+
 function buildCommitPayload(
-  rows: RiseUpAnalyzedRow[],
+  rows: RiseUpAnalyzedImportRow[],
   overrides: Record<
     number,
     {
@@ -26,12 +50,18 @@ function buildCommitPayload(
       loan_id: string | null;
     }
   >,
+  actions: Record<number, RiseUpImportAction>,
 ): RiseUpCommitRowPayload[] {
   return rows.map((r) => {
     const o = overrides[r.rowIndex];
     return {
       rowIndex: r.rowIndex,
+      riseup_import_key: r.riseup_import_key,
+      riseup_content_hash: r.riseup_content_hash,
+      import_action: actions[r.rowIndex] ?? "skip",
       businessName: r.businessName,
+      paymentMethodRaw: r.paymentMethodRaw,
+      paymentIdentifierRaw: r.paymentIdentifierRaw,
       paymentDate: r.paymentDate,
       chargeDate: r.chargeDate,
       amount: r.amount,
@@ -65,11 +95,15 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
   const router = useRouter();
   const isHe = uiLanguage === "he";
   const [file, setFile] = useState<File | null>(null);
-  const [analyzed, setAnalyzed] = useState<RiseUpAnalyzedRow[] | null>(null);
+  const [analyzed, setAnalyzed] = useState<RiseUpAnalyzedImportRow[] | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [actions, setActions] = useState<Record<number, RiseUpImportAction>>({});
+  const [resetPreview, setResetPreview] = useState<RiseUpResetPreview | null>(null);
+  const [previewingReset, setPreviewingReset] = useState(false);
   const [overrides, setOverrides] = useState<
     Record<
       number,
@@ -86,8 +120,9 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
     >
   >({});
 
-  const initOverrides = (rows: RiseUpAnalyzedRow[]) => {
+  const initOverrides = (rows: RiseUpAnalyzedImportRow[]) => {
     const next: typeof overrides = {};
+    const nextActions: Record<number, RiseUpImportAction> = {};
     for (const r of rows) {
       const bank =
         r.instrument.kind === "bank_account" ? r.instrument.selectedId : null;
@@ -103,8 +138,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
         subscription_id: r.subscription.selectedId,
         loan_id: r.loan.selectedId,
       };
+      nextActions[r.rowIndex] = r.importStatus === "new" ? "create" : "skip";
     }
     setOverrides(next);
+    setActions(nextActions);
   };
 
   async function analyze() {
@@ -114,6 +151,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
     }
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
       const fd = new FormData();
       fd.set("file", file);
@@ -124,7 +162,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
         setLoading(false);
         return;
       }
-      const rows = data.rows as RiseUpAnalyzedRow[];
+      const rows = data.rows as RiseUpAnalyzedImportRow[];
       setAnalyzed(rows);
       setFileName(data.fileName ?? file.name);
       initOverrides(rows);
@@ -138,8 +176,9 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
     if (!analyzed || !fileName) return;
     setCommitting(true);
     setError(null);
+    setSuccess(null);
     try {
-      const rows = buildCommitPayload(analyzed, overrides);
+      const rows = buildCommitPayload(analyzed, overrides, actions);
       const res = await fetch("/api/import/riseup/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -151,9 +190,15 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
         setCommitting(false);
         return;
       }
+      setSuccess(
+        isHe
+          ? `נוצרו ${data.count ?? 0} תנועות, עודכנו ${data.updatedCount ?? 0}, דולגו ${data.skippedCount ?? 0}.`
+          : `Created ${data.count ?? 0}, updated ${data.updatedCount ?? 0}, skipped ${data.skippedCount ?? 0}.`,
+      );
       setAnalyzed(null);
       setFile(null);
       setFileName(null);
+      setActions({});
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Commit failed");
@@ -161,10 +206,44 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
     setCommitting(false);
   }
 
+  async function previewReset() {
+    setPreviewingReset(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/import/riseup/reset-preview");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Reset preview failed");
+        setPreviewingReset(false);
+        return;
+      }
+      setResetPreview(data as RiseUpResetPreview);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Reset preview failed");
+    }
+    setPreviewingReset(false);
+  }
+
   const uncertainCount = useMemo(
     () => (analyzed ? analyzed.filter((r) => r.needsReview).length : 0),
     [analyzed],
   );
+
+  const importSummary = useMemo(() => {
+    if (!analyzed) return null;
+    return {
+      new: analyzed.filter((r) => r.importStatus === "new").length,
+      existing: analyzed.filter((r) => r.importStatus === "existing").length,
+      changed: analyzed.filter((r) => r.importStatus === "changed").length,
+      ambiguous: analyzed.filter((r) => r.importStatus === "ambiguous").length,
+      selectedCreates: analyzed.filter(
+        (r) => (actions[r.rowIndex] ?? "skip") === "create",
+      ).length,
+      selectedUpdates: analyzed.filter(
+        (r) => (actions[r.rowIndex] ?? "skip") === "update",
+      ).length,
+    };
+  }, [actions, analyzed]);
 
   function setO(
     rowIndex: number,
@@ -174,6 +253,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       ...prev,
       [rowIndex]: { ...prev[rowIndex], ...patch },
     }));
+  }
+
+  function setAction(rowIndex: number, action: RiseUpImportAction) {
+    setActions((prev) => ({ ...prev, [rowIndex]: action }));
   }
 
   return (
@@ -188,8 +271,48 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
               ? "ייצוא מ-RiseUp: נתח את הקובץ, בדוק התאמות, ואשר לפני שמירה."
               : "Export from RiseUp: analyze the file, review matches, then confirm to save."}
           </p>
+          {success ? <p className="mt-2 text-sm text-emerald-300">{success}</p> : null}
         </div>
+        <button
+          type="button"
+          disabled={previewingReset}
+          onClick={() => void previewReset()}
+          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:opacity-60"
+        >
+          {previewingReset
+            ? isHe
+              ? "בודק…"
+              : "Previewing…"
+            : isHe
+              ? "תצוגת איפוס"
+              : "Preview reset"}
+        </button>
       </div>
+
+      {resetPreview ? (
+        <div
+          className={`rounded-lg border p-3 text-xs ${
+            resetPreview.blocked
+              ? "border-amber-700 bg-amber-950/30 text-amber-100"
+              : "border-slate-700 bg-slate-950/50 text-slate-300"
+          }`}
+        >
+          <div className="font-medium">
+            {isHe
+              ? `תצוגת איפוס: ${resetPreview.totalRiseUpTransactions} תנועות RiseUp, ${resetPreview.enrichedTransactions} עם קישורים/סיווגים, ${resetPreview.downstreamLinkCount} קישורים חיצוניים.`
+              : `Reset preview: ${resetPreview.totalRiseUpTransactions} RiseUp transactions, ${resetPreview.enrichedTransactions} enriched/linked rows, ${resetPreview.downstreamLinkCount} downstream links.`}
+          </div>
+          <div className="mt-1">{resetPreview.message}</div>
+          {resetPreview.downstreamLinkCount > 0 ? (
+            <div className="mt-1 text-[10px]">
+              {Object.entries(resetPreview.downstreamLinks)
+                .filter(([, count]) => count > 0)
+                .map(([name, count]) => `${name}: ${count}`)
+                .join(" · ")}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {!analyzed ? (
         <div className="flex flex-wrap items-end gap-3">
@@ -229,6 +352,13 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 </span>
               )}
             </span>
+            {importSummary ? (
+              <span className="text-xs text-slate-400">
+                {isHe
+                  ? `חדשות ${importSummary.new}, קיימות ${importSummary.existing}, שונו ${importSummary.changed}, לא חד משמעיות ${importSummary.ambiguous}`
+                  : `New ${importSummary.new}, existing ${importSummary.existing}, changed ${importSummary.changed}, ambiguous ${importSummary.ambiguous}`}
+              </span>
+            ) : null}
             <button
               type="button"
               className="text-xs text-slate-400 underline hover:text-slate-200"
@@ -236,11 +366,21 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 setAnalyzed(null);
                 setFile(null);
                 setFileName(null);
+                setActions({});
+                setSuccess(null);
               }}
             >
               {isHe ? "התחל מחדש" : "Start over"}
             </button>
           </div>
+
+          {importSummary ? (
+            <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+              {isHe
+                ? `ברירת המחדל היא ייבוא אינקרמנטלי: ${importSummary.selectedCreates} תנועות חדשות ייווצרו ו-${importSummary.selectedUpdates} שינויים מאושרים יעודכנו. שורות קיימות מדולגות.`
+                : `Default incremental import: ${importSummary.selectedCreates} new transactions will be created and ${importSummary.selectedUpdates} reviewed changes will be updated. Existing rows are skipped.`}
+            </div>
+          ) : null}
 
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-slate-700">
             <table className="min-w-full border-collapse text-left text-xs">
@@ -250,6 +390,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "תאריך" : "Date"}</th>
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "עסק" : "Merchant"}</th>
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "סכום" : "Amount"}</th>
+                  <th className="border-b border-slate-600 px-2 py-2">{isHe ? "ייבוא" : "Import"}</th>
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "מכשיר" : "Instrument"}</th>
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "משלם" : "Payee"}</th>
                   <th className="border-b border-slate-600 px-2 py-2">{isHe ? "קטגוריה" : "Category"}</th>
@@ -262,6 +403,23 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 {analyzed.map((r) => {
                   const o = overrides[r.rowIndex];
                   if (!o) return null;
+                  const action = actions[r.rowIndex] ?? "skip";
+                  const statusLabel =
+                    r.importStatus === "new"
+                      ? isHe
+                        ? "חדשה"
+                        : "New"
+                      : r.importStatus === "existing"
+                        ? isHe
+                          ? "קיימת"
+                          : "Existing"
+                        : r.importStatus === "changed"
+                          ? isHe
+                            ? "שונתה"
+                            : "Changed"
+                          : isHe
+                            ? "לא חד משמעית"
+                            : "Ambiguous";
                   const instLabel =
                     r.instrument.kind === "bank_account"
                       ? isHe
@@ -278,6 +436,10 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                       className={
                         r.needsReview
                           ? "bg-amber-950/40"
+                          : r.importStatus === "existing"
+                            ? "bg-slate-950/60 opacity-70"
+                            : r.importStatus === "changed"
+                              ? "bg-sky-950/30"
                           : "bg-slate-900/40"
                       }
                     >
@@ -292,6 +454,39 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                       </td>
                       <td className="border-b border-slate-800 px-2 py-1.5 align-top font-mono text-slate-200">
                         {r.amount.toFixed(2)}
+                      </td>
+                      <td className="border-b border-slate-800 px-2 py-1.5 align-top">
+                        <div className="text-[10px] text-slate-400">{statusLabel}</div>
+                        {r.importStatus === "changed" && r.changedFields.length > 0 ? (
+                          <div className="mt-1 max-w-[220px] text-[10px] text-sky-200">
+                            {r.changedFields.slice(0, 3).map((d) => (
+                              <div key={d.field}>
+                                {d.label}: {d.existing ?? "—"} → {d.incoming ?? "—"}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        <select
+                          className="mt-1 rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-100"
+                          value={action}
+                          onChange={(e) =>
+                            setAction(r.rowIndex, e.target.value as RiseUpImportAction)
+                          }
+                        >
+                          {r.importStatus === "new" ? (
+                            <>
+                              <option value="create">{isHe ? "צור" : "Create"}</option>
+                              <option value="skip">{isHe ? "דלג" : "Skip"}</option>
+                            </>
+                          ) : r.importStatus === "changed" ? (
+                            <>
+                              <option value="skip">{isHe ? "דלג" : "Skip"}</option>
+                              <option value="update">{isHe ? "עדכן" : "Update"}</option>
+                            </>
+                          ) : (
+                            <option value="skip">{isHe ? "דלג" : "Skip"}</option>
+                          )}
+                        </select>
                       </td>
                       <td className="border-b border-slate-800 px-2 py-1.5 align-top">
                         <div className="text-[10px] text-slate-500">{instLabel}</div>

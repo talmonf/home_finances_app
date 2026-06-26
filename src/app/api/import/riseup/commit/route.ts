@@ -2,13 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/auth";
 import { normalizeComparableName } from "@/lib/riseup-matching";
-import { riseUpRowToJson } from "@/lib/riseup-import";
+import { buildRiseUpImportIdentity, riseUpRowToJson } from "@/lib/riseup-import";
 import type { RiseUpCommitRowPayload } from "@/lib/riseup-commit-types";
 
 type CommitBody = {
   fileName: string;
   rows: RiseUpCommitRowPayload[];
 };
+
+function decimalDate(value: string | null): Date | null {
+  return value ? new Date(value + "T12:00:00.000Z") : null;
+}
+
+function rowIdentity(r: RiseUpCommitRowPayload): {
+  importKey: string;
+  contentHash: string;
+} {
+  const identity = buildRiseUpImportIdentity({
+    businessName: r.businessName,
+    paymentMethodRaw: r.paymentMethodRaw,
+    paymentIdentifierRaw: r.paymentIdentifierRaw,
+    sourceKind: r.sourceKind,
+    paymentDate: r.paymentDate,
+    chargeDate: r.chargeDate,
+    amount: r.amount,
+    originalAmount: r.originalAmount,
+    cashflowCategory: r.cashflowCategory,
+    isZeroAmountPending: r.isZeroAmountPending,
+    raw: r.raw,
+  });
+  return {
+    importKey: identity.importKey,
+    contentHash: identity.contentHash,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +59,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
+    const userId = (token.id as string | undefined) ?? (token.sub as string | undefined);
     const createdTxIds: string[] = [];
+    const updatedTxIds: string[] = [];
+    let skippedCount = 0;
+    let changedRows = 0;
+    let ambiguousRows = 0;
 
     await prisma.$transaction(async (tx) => {
       const doc = await tx.documents.create({
@@ -47,6 +79,31 @@ export async function POST(req: NextRequest) {
       });
 
       for (const r of body.rows) {
+        const action = r.import_action ?? "create";
+        const identity = rowIdentity(r);
+        const existing = await tx.transactions.findFirst({
+          where: {
+            household_id: householdId,
+            riseup_import_key: identity.importKey,
+          },
+          select: {
+            id: true,
+            source_record_id: true,
+            riseup_content_hash: true,
+          },
+        });
+
+        if (action === "skip") {
+          skippedCount++;
+          if (existing && existing.riseup_content_hash !== identity.contentHash) changedRows++;
+          continue;
+        }
+
+        if (action === "create" && existing) {
+          skippedCount++;
+          continue;
+        }
+
         let payeeId: string | null =
           r.payee_id &&
           (await tx.payees.findFirst({
@@ -116,26 +173,77 @@ export async function POST(req: NextRequest) {
         const transaction_direction =
           amount < 0 ? "debit" : amount > 0 ? "credit" : "debit";
         const absAmount = Math.abs(amount);
-        const transaction_date = r.paymentDate
-          ? new Date(r.paymentDate + "T12:00:00.000Z")
-          : new Date();
+        const transaction_date = decimalDate(r.paymentDate) ?? new Date();
 
-        const riseup_charge_date = r.chargeDate
-          ? new Date(r.chargeDate + "T12:00:00.000Z")
-          : null;
+        const riseup_charge_date = decimalDate(r.chargeDate);
+
+        const sourceRecordData = {
+          row_index: r.rowIndex,
+          raw_date: r.paymentDate,
+          raw_amount: String(amount),
+          raw_description: r.businessName,
+          parsed_date: transaction_date,
+          parsed_amount: absAmount,
+          parsed_direction: transaction_direction,
+          riseup_row: riseUpRowToJson(r.raw),
+        };
+
+        if (action === "update" && existing) {
+          if (existing.riseup_content_hash !== identity.contentHash) changedRows++;
+          let sourceRecordId = existing.source_record_id;
+          if (sourceRecordId) {
+            await tx.source_records.update({
+              where: { id: sourceRecordId },
+              data: sourceRecordData,
+            });
+          } else {
+            const sr = await tx.source_records.create({
+              data: {
+                id: crypto.randomUUID(),
+                document_id: doc.id,
+                ...sourceRecordData,
+              },
+            });
+            sourceRecordId = sr.id;
+          }
+
+          await tx.transactions.update({
+            where: { id: existing.id },
+            data: {
+              source_record_id: sourceRecordId,
+              transaction_date,
+              amount: absAmount,
+              transaction_direction,
+              transaction_type: "regular",
+              description: r.businessName,
+              notes: r.cashflowCategory ? `RiseUp: ${r.cashflowCategory}` : null,
+              riseup_charge_date,
+              riseup_cashflow_month: r.raw["שייך לתזרים חודש"]?.trim() || null,
+              riseup_is_zero_amount_pending: r.isZeroAmountPending,
+              riseup_original_amount:
+                r.originalAmount !== null && r.originalAmount !== undefined
+                  ? Math.abs(r.originalAmount)
+                  : null,
+              riseup_import_key: identity.importKey,
+              riseup_content_hash: identity.contentHash,
+              import_status: "confirmed",
+            },
+          });
+          updatedTxIds.push(existing.id);
+          continue;
+        }
+
+        if (action === "update" && !existing) {
+          ambiguousRows++;
+          skippedCount++;
+          continue;
+        }
 
         const sr = await tx.source_records.create({
           data: {
             id: crypto.randomUUID(),
             document_id: doc.id,
-            row_index: r.rowIndex,
-            raw_date: r.paymentDate,
-            raw_amount: String(amount),
-            raw_description: r.businessName,
-            parsed_date: transaction_date,
-            parsed_amount: absAmount,
-            parsed_direction: transaction_direction,
-            riseup_row: riseUpRowToJson(r.raw),
+            ...sourceRecordData,
           },
         });
 
@@ -159,23 +267,45 @@ export async function POST(req: NextRequest) {
             job_id: jobId,
             subscription_id: subscriptionId,
             riseup_charge_date,
-            riseup_cashflow_month: null,
+            riseup_cashflow_month: r.raw["שייך לתזרים חודש"]?.trim() || null,
             riseup_is_zero_amount_pending: r.isZeroAmountPending,
             riseup_original_amount:
               r.originalAmount !== null && r.originalAmount !== undefined
                 ? Math.abs(r.originalAmount)
                 : null,
+            riseup_import_key: identity.importKey,
+            riseup_content_hash: identity.contentHash,
             import_status: "confirmed",
           },
         });
         createdTxIds.push(t.id);
       }
+
+      await tx.riseup_import_audits.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          user_id: userId ?? null,
+          file_name: body.fileName,
+          import_mode: "incremental",
+          status: "successful",
+          row_count: body.rows.length,
+          created_transactions: createdTxIds.length,
+          updated_transactions: updatedTxIds.length,
+          skipped_transactions: skippedCount,
+          changed_rows: changedRows,
+          ambiguous_rows: ambiguousRows,
+        },
+      });
     });
 
     return NextResponse.json({
       ok: true,
       transactionIds: createdTxIds,
+      updatedTransactionIds: updatedTxIds,
       count: createdTxIds.length,
+      updatedCount: updatedTxIds.length,
+      skippedCount,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Commit failed";

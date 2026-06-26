@@ -1,6 +1,31 @@
+export type RiseUpImportAction = "create" | "update" | "skip";
+
+export type RiseUpImportRowStatus = "new" | "existing" | "changed" | "ambiguous";
+
+export type RiseUpImportDiff = {
+  field: string;
+  label: string;
+  existing: string | null;
+  incoming: string | null;
+};
+
+export type RiseUpExistingTransactionSummary = {
+  id: string;
+  transactionDate: string;
+  amount: number;
+  transactionDirection: "debit" | "credit";
+  description: string | null;
+  contentHash: string | null;
+};
+
 export type RiseUpCommitRowPayload = {
   rowIndex: number;
+  riseup_import_key: string;
+  riseup_content_hash: string;
+  import_action?: RiseUpImportAction;
   businessName: string;
+  paymentMethodRaw: string;
+  paymentIdentifierRaw: string;
   paymentDate: string;
   chargeDate: string | null;
   amount: number;

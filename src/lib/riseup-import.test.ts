@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseRiseUpCsvBuffer } from "./riseup-import";
+import { buildRiseUpImportIdentity, parseRiseUpCsvBuffer } from "./riseup-import";
 
 test("parses UTF-8 Hebrew RiseUp CSV exports", async () => {
   const csv = [
@@ -56,4 +56,84 @@ test("parses UTF-8 Hebrew RiseUp CSV exports", async () => {
   assert.equal(rows[0]?.originalAmount, -864);
   assert.equal(rows[0]?.cashflowCategory, "תרומה");
   assert.equal(rows[0]?.sourceKind, "creditCard");
+});
+
+test("keeps native RiseUp identity stable when mutable content changes", async () => {
+  const base = {
+    rowIndex: 0,
+    businessName: "תקוה ומרפא (ער)-גמא",
+    paymentMethodRaw: "cal",
+    paymentIdentifierRaw: "2499",
+    sourceKind: "creditCard",
+    paymentDate: "2026-07-05",
+    chargeDate: "2026-07-15",
+    amount: -72,
+    originalAmount: -864,
+    cashflowCategory: "תרומה",
+    isZeroAmountPending: false,
+    raw: {
+      "שייך לתזרים חודש": "2026-07",
+      "שם העסק": "תקוה ומרפא (ער)-גמא",
+      "אמצעי התשלום": "cal",
+      "אמצעי זיהוי התשלום": "2499",
+      "תאריך התשלום": "05/07/2026",
+      "תאריך החיוב בחשבון": "15/07/2026",
+      "סכום": "-72",
+      "מספר התשלום": "10",
+      "מספר תשלומים כולל": "12",
+      "קטגוריה בתזרים": "תרומה",
+      "סוג מקור": "creditCard",
+      "סכום מקורי": "-864",
+    },
+  };
+
+  const changed = {
+    ...base,
+    amount: -75,
+    cashflowCategory: "תרומות",
+    raw: {
+      ...base.raw,
+      "סכום": "-75",
+      "קטגוריה בתזרים": "תרומות",
+    },
+  };
+
+  const first = buildRiseUpImportIdentity(base);
+  const second = buildRiseUpImportIdentity(changed);
+
+  assert.equal(first.basis, "native");
+  assert.equal(second.basis, "native");
+  assert.equal(first.importKey, second.importKey);
+  assert.notEqual(first.contentHash, second.contentHash);
+});
+
+test("uses a broader fallback identity when RiseUp native keys are absent", () => {
+  const row = {
+    rowIndex: 0,
+    businessName: "Merchant",
+    paymentMethodRaw: "Bank",
+    paymentIdentifierRaw: "1234",
+    sourceKind: "checkingAccount",
+    paymentDate: "2026-07-05",
+    chargeDate: null,
+    amount: -50,
+    originalAmount: null,
+    cashflowCategory: "Food",
+    isZeroAmountPending: false,
+    raw: {
+      "שם העסק": "Merchant",
+      "אמצעי התשלום": "Bank",
+      "אמצעי זיהוי התשלום": "1234",
+      "תאריך התשלום": "05/07/2026",
+      "סכום": "-50",
+      "קטגוריה בתזרים": "Food",
+      "סוג מקור": "checkingAccount",
+    },
+  };
+
+  const first = buildRiseUpImportIdentity(row);
+  const second = buildRiseUpImportIdentity({ ...row, amount: -55 });
+
+  assert.equal(first.basis, "fallback");
+  assert.notEqual(first.importKey, second.importKey);
 });
