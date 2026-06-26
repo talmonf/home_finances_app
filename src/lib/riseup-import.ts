@@ -197,15 +197,24 @@ export function parseRiseUpRowsFromMatrix(rows: unknown[][]): RiseUpParsedRow[] 
 
 export async function parseRiseUpCsvBuffer(buffer: Buffer): Promise<RiseUpParsedRow[]> {
   const XLSX = await import("xlsx");
-  const workbook = XLSX.read(buffer, { type: "buffer", codepage: 65001 });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!sheet) return [];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-  }) as unknown[][];
-  return parseRiseUpRowsFromMatrix(rows);
+
+  const toRows = (workbook: import("xlsx").WorkBook): unknown[][] => {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) return [];
+    return XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: true,
+    }) as unknown[][];
+  };
+
+  const utf8Rows = toRows(XLSX.read(buffer.toString("utf8"), { type: "string", raw: true }));
+  if (utf8Rows.length === 0 || isRiseUpHeaderRow(utf8Rows[0] ?? [])) {
+    return parseRiseUpRowsFromMatrix(utf8Rows);
+  }
+
+  const legacyRows = toRows(XLSX.read(buffer, { type: "buffer", codepage: 65001 }));
+  return parseRiseUpRowsFromMatrix(legacyRows);
 }
 
 /** Safe JSON-serializable snapshot for `source_records.riseup_row`. */

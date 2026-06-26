@@ -27,6 +27,16 @@ type AddUtilityFields = {
   notes: string;
 };
 
+const EMPTY_FIELDS: AddUtilityFields = {
+  propertyUtilityId: "",
+  utilityType: "",
+  utilityCompany: "",
+  accountNumber: "",
+  meterNumber: "",
+  lastMeterReading: "",
+  notes: "",
+};
+
 function fieldsFromPropertyUtility(utility: PropertyUtilityDefault | undefined): AddUtilityFields {
   return {
     propertyUtilityId: utility?.id ?? "",
@@ -52,7 +62,7 @@ export function RentalUtilityAddRow({
     return defaults;
   }, [propertyUtilities]);
 
-  const [fields, setFields] = useState<AddUtilityFields>(() => fieldsFromPropertyUtility(propertyUtilities[0]));
+  const [fields, setFields] = useState<AddUtilityFields>(EMPTY_FIELDS);
 
   return (
     <tr>
@@ -69,7 +79,7 @@ export function RentalUtilityAddRow({
             setFields(
               propertyDefault
                 ? fieldsFromPropertyUtility(propertyDefault)
-                : { ...fields, propertyUtilityId: "", utilityType },
+                : { ...EMPTY_FIELDS, utilityType },
             );
           }}
           aria-label="New utility type"
