@@ -370,6 +370,9 @@ export function RentalDetailPanel({
             <input type="hidden" name="id" value={utility.id} />
           </form>
         ))}
+        {rental.utilities.length === 0 ? (
+          <p className="text-xs text-slate-500">No utilities recorded for this rental yet. Add one below.</p>
+        ) : null}
         <div className="overflow-x-auto rounded-xl border border-slate-700">
           <table className="min-w-full divide-y divide-slate-700 text-xs">
             <thead className="bg-slate-800/80 text-left text-slate-300">
@@ -384,98 +387,90 @@ export function RentalDetailPanel({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {rental.utilities.length > 0 ? (
-                rental.utilities.map((utility) => {
-                  const formId = `rental_utility_${utility.id}`;
-                  return (
-                    <tr key={utility.id}>
-                      <td className="px-3 py-2">
-                        <select
+              {rental.utilities.map((utility) => {
+                const formId = `rental_utility_${utility.id}`;
+                return (
+                  <tr key={utility.id}>
+                    <td className="px-3 py-2">
+                      <select
+                        form={formId}
+                        name="utility_type"
+                        defaultValue={utility.utility_type}
+                        aria-label="Utility type"
+                        className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      >
+                        {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="utility_company"
+                        required
+                        defaultValue={utility.utility_company}
+                        aria-label="Utility company"
+                        className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="account_number"
+                        defaultValue={utility.account_number ?? ""}
+                        aria-label="Account number"
+                        className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="meter_number"
+                        defaultValue={utility.meter_number ?? ""}
+                        aria-label="Meter number"
+                        className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="last_meter_reading"
+                        defaultValue={utility.last_meter_reading ?? ""}
+                        aria-label="Last meter reading"
+                        className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="notes"
+                        defaultValue={utility.notes ?? ""}
+                        aria-label="Utility notes"
+                        className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
                           form={formId}
-                          name="utility_type"
-                          defaultValue={utility.utility_type}
-                          aria-label="Utility type"
-                          className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                          className="text-xs text-sky-300 hover:text-sky-200"
                         >
-                          {Object.entries(UTILITY_TYPE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          form={formId}
-                          name="utility_company"
-                          required
-                          defaultValue={utility.utility_company}
-                          aria-label="Utility company"
-                          className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          form={formId}
-                          name="account_number"
-                          defaultValue={utility.account_number ?? ""}
-                          aria-label="Account number"
-                          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          form={formId}
-                          name="meter_number"
-                          defaultValue={utility.meter_number ?? ""}
-                          aria-label="Meter number"
-                          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          form={formId}
-                          name="last_meter_reading"
-                          defaultValue={utility.last_meter_reading ?? ""}
-                          aria-label="Last meter reading"
-                          className="w-36 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          form={formId}
-                          name="notes"
-                          defaultValue={utility.notes ?? ""}
-                          aria-label="Utility notes"
-                          className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="submit"
-                            form={formId}
-                            className="text-xs text-sky-300 hover:text-sky-200"
-                          >
-                            Save
+                          Save
+                        </button>
+                        <ConfirmDeleteForm action={deleteRentalUtility.bind(null, utility.id, propertyId)}>
+                          <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
+                            Delete
                           </button>
-                          <ConfirmDeleteForm action={deleteRentalUtility.bind(null, utility.id, propertyId)}>
-                            <button type="submit" className="text-xs text-rose-400 hover:text-rose-300">
-                              Delete
-                            </button>
-                          </ConfirmDeleteForm>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} className="px-3 py-3 text-slate-500">
-                    No utilities recorded for this rental yet.
-                  </td>
-                </tr>
-              )}
+                        </ConfirmDeleteForm>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot className="border-t border-slate-700 bg-slate-900/70">
               <RentalUtilityAddRow
