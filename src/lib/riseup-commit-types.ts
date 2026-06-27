@@ -53,6 +53,46 @@ export type RiseUpProposalSupportRow = {
   confidence?: RiseUpProposalConfidence;
 };
 
+export type RiseUpPatternKind =
+  | "payment_instrument"
+  | "work_income"
+  | "benefit_income"
+  | "transfer_or_refund_income"
+  | "subscription"
+  | "recurring_obligation"
+  | "insurance"
+  | "loan_return"
+  | "installment_or_annual"
+  | "petrol"
+  | "petrol_review";
+
+export type RiseUpDetectedPattern = {
+  key: string;
+  kind: RiseUpPatternKind;
+  title: string;
+  confidence: RiseUpProposalConfidence;
+  firstMonth: string;
+  lastMonth: string;
+  activeMonths: number;
+  rowCount: number;
+  averageAmount: number;
+  medianAmount: number;
+  totalAmount: number;
+  startedDuringPeriod: boolean;
+  endedDuringPeriod: boolean;
+  reviewReason?: string;
+  metadata: Record<string, unknown>;
+  supportRows: RiseUpProposalSupportRow[];
+};
+
+export type RiseUpPatternSummary = {
+  periodFirstMonth: string;
+  periodLastMonth: string;
+  totalPatterns: number;
+  byKind: Record<string, number>;
+  highlights: RiseUpDetectedPattern[];
+};
+
 export type RiseUpImportProposal = {
   id?: string;
   clientKey: string;
@@ -84,6 +124,7 @@ export type RiseUpAnalyzeSummary = {
   legacyBackfilled: number;
   legacyAmbiguous: number;
   proposals: RiseUpProposalSummary;
+  patterns?: RiseUpPatternSummary;
 };
 
 export type RiseUpCommitRowPayload = {

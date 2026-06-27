@@ -1,5 +1,6 @@
 import type { RiseUpAnalyzedRow } from "@/lib/riseup-matching";
 import type {
+  RiseUpDetectedPattern,
   RiseUpEntityKind,
   RiseUpImportProposal,
   RiseUpProposalConfidence,
@@ -103,7 +104,91 @@ export function summarizeRiseUpProposals(proposals: RiseUpImportProposal[]): Ris
   };
 }
 
-export function generateRiseUpImportProposals(rows: RowWithIdentity[]): RiseUpImportProposal[] {
+function proposalExists(proposals: RiseUpImportProposal[], clientKey: string): boolean {
+  return proposals.some((p) => p.clientKey === clientKey);
+}
+
+function similarProposalExists(
+  proposals: RiseUpImportProposal[],
+  entityKind: RiseUpEntityKind,
+  title: string,
+): boolean {
+  const normalizedTitle = normalizeProposalName(title);
+  return proposals.some((p) => {
+    if (p.entity_kind !== entityKind) return false;
+    const suggestedName = String(p.payload_json.suggestedName ?? p.payload_json.providerName ?? p.title);
+    return normalizeProposalName(suggestedName) === normalizedTitle;
+  });
+}
+
+function patternEntityKind(pattern: RiseUpDetectedPattern): RiseUpEntityKind | null {
+  if (pattern.kind === "work_income") return "job";
+  if (pattern.kind === "subscription") return "subscription";
+  if (pattern.kind === "insurance") return "insurance_policy";
+  if (pattern.kind === "loan_return") return "loan";
+  if (pattern.kind === "recurring_obligation") return "property_utility";
+  if (pattern.kind === "petrol") return "car";
+  return null;
+}
+
+function patternLabel(pattern: RiseUpDetectedPattern): string {
+  if (pattern.kind === "work_income") return "Work income source";
+  if (pattern.kind === "subscription") return "Recurring subscription";
+  if (pattern.kind === "insurance") return "Insurance policy";
+  if (pattern.kind === "loan_return") return "Loan repayment";
+  if (pattern.kind === "recurring_obligation") return "Recurring household obligation";
+  if (pattern.kind === "petrol") return "Petrol / car expense pattern";
+  return "RiseUp pattern";
+}
+
+function generatePatternProposals(
+  patterns: RiseUpDetectedPattern[],
+  existing: RiseUpImportProposal[],
+): RiseUpImportProposal[] {
+  const out: RiseUpImportProposal[] = [];
+  for (const pattern of patterns) {
+    const entityKind = patternEntityKind(pattern);
+    if (!entityKind) continue;
+    if (pattern.confidence === "low") continue;
+    const clientKey = `pattern:${pattern.kind}:${pattern.key}`;
+    if (proposalExists(existing, clientKey) || proposalExists(out, clientKey)) continue;
+    if (similarProposalExists(existing, entityKind, pattern.title)) continue;
+    out.push(
+      proposal({
+        clientKey,
+        proposal_kind: "create_entity",
+        entity_kind: entityKind,
+        confidence: pattern.confidence,
+        title: `${patternLabel(pattern)}: ${pattern.title}`,
+        summary: `${pattern.rowCount} rows across ${pattern.activeMonths} active months (${pattern.firstMonth} to ${pattern.lastMonth}); avg ${pattern.averageAmount}, median ${pattern.medianAmount}.`,
+        payload_json: {
+          suggestedName: pattern.title,
+          patternKind: pattern.kind,
+          firstMonth: pattern.firstMonth,
+          lastMonth: pattern.lastMonth,
+          activeMonths: pattern.activeMonths,
+          averageAmount: pattern.averageAmount,
+          medianAmount: pattern.medianAmount,
+          totalAmount: pattern.totalAmount,
+          startedDuringPeriod: pattern.startedDuringPeriod,
+          endedDuringPeriod: pattern.endedDuringPeriod,
+          ...pattern.metadata,
+        },
+        proposed_changes_json: {
+          source: "riseup_cross_row_pattern",
+          reviewReason: pattern.reviewReason ?? null,
+        },
+        supportRows: pattern.supportRows,
+      }),
+    );
+  }
+  return out;
+}
+
+export function generateRiseUpImportProposals(
+  rows: RowWithIdentity[],
+  patterns: RiseUpDetectedPattern[] = [],
+): RiseUpImportProposal[] {
   const proposals: RiseUpImportProposal[] = [];
   const actionableRows = rows.filter((r) => r.importStatus !== "existing");
 
@@ -222,7 +307,6 @@ export function generateRiseUpImportProposals(rows: RowWithIdentity[]): RiseUpIm
     { entity_kind: "insurance_policy", label: "Insurance policy", predicate: (r) => /ביטוח/i.test(r.cashflowCategory) && !r.insurance.selectedId },
     { entity_kind: "savings_policy", label: "Savings policy", predicate: (r) => /חסכ|חסכונות|גמל|פנס|השתלמות|פיקדון|פקדון|השקעה|לא תזרימיות/i.test(`${r.cashflowCategory} ${r.businessName}`) },
     { entity_kind: "car", label: "Car expense cluster", predicate: (r) => /רכב|דלק|חניה|כביש/i.test(`${r.cashflowCategory} ${r.businessName}`) },
-    { entity_kind: "job", label: "Income source", predicate: (r) => r.transactionDirection === "credit" && /הכנסות|משכורת|שכר/i.test(`${r.cashflowCategory} ${r.businessName}`) && !r.job.selectedId },
   ];
 
   for (const pattern of domainPatterns) {
@@ -247,6 +331,8 @@ export function generateRiseUpImportProposals(rows: RowWithIdentity[]): RiseUpIm
       );
     }
   }
+
+  proposals.push(...generatePatternProposals(patterns, proposals));
 
   return proposals;
 }

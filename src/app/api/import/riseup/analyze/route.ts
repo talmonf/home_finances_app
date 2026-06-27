@@ -13,6 +13,10 @@ import {
   generateRiseUpImportProposals,
   summarizeRiseUpProposals,
 } from "@/lib/riseup-proposals";
+import {
+  analyzeRiseUpPatterns,
+  summarizeRiseUpPatterns,
+} from "@/lib/riseup-patterns";
 import type {
   RiseUpExistingTransactionSummary,
   RiseUpImportDiff,
@@ -354,9 +358,11 @@ export async function POST(req: NextRequest) {
         changedFields,
       };
     });
+    const patterns = analyzeRiseUpPatterns(classifiedRows);
+    const patternSummary = summarizeRiseUpPatterns(patterns);
     const proposals = await persistAnalyzeProposals(
       householdId,
-      generateRiseUpImportProposals(classifiedRows),
+      generateRiseUpImportProposals(classifiedRows, patterns),
     );
     const proposalSummary = summarizeRiseUpProposals(proposals);
 
@@ -371,7 +377,9 @@ export async function POST(req: NextRequest) {
         needsReview: classifiedRows.filter((r) => r.needsReview).length,
         ...legacySummary,
         proposals: proposalSummary,
+        patterns: patternSummary,
       },
+      patterns,
       wizardSections: [
         "instruments",
         "core_mappings",

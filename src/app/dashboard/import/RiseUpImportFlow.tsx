@@ -103,6 +103,23 @@ function instrumentValue(o: {
   return "";
 }
 
+function patternKindLabel(kind: string): string {
+  const labels: Record<string, string> = {
+    payment_instrument: "instrument",
+    work_income: "work income",
+    benefit_income: "benefit income",
+    transfer_or_refund_income: "transfer/refund",
+    subscription: "subscription",
+    recurring_obligation: "recurring bill",
+    insurance: "insurance",
+    loan_return: "loan return",
+    installment_or_annual: "installment/annual",
+    petrol: "petrol",
+    petrol_review: "petrol review",
+  };
+  return labels[kind] ?? kind;
+}
+
 export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Props) {
   const router = useRouter();
   const isHe = uiLanguage === "he";
@@ -469,7 +486,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
               ))}
             </div>
             {analyzeSummary ? (
-              <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-4">
+              <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-5">
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "שורות לבדיקה" : "Needs review"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.needsReview}</div>
@@ -479,12 +496,34 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                   <div className="text-lg font-semibold">{analyzeSummary.proposals.total}</div>
                 </div>
                 <div className="rounded bg-slate-900 p-2">
+                  <div className="text-slate-500">{isHe ? "דפוסים" : "Patterns"}</div>
+                  <div className="text-lg font-semibold">{analyzeSummary.patterns?.totalPatterns ?? 0}</div>
+                </div>
+                <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "ייבוא ישן זוהה" : "Legacy scanned"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.legacyScanned}</div>
                 </div>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "ייבוא ישן עודכן" : "Legacy backfilled"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.legacyBackfilled}</div>
+                </div>
+              </div>
+            ) : null}
+            {analyzeSummary?.patterns?.highlights?.length ? (
+              <div className="mt-3 rounded border border-slate-800 bg-slate-950/60 p-2 text-xs text-slate-300">
+                <div className="mb-1 font-medium text-slate-200">
+                  {isHe ? "דפוסים חזקים שזוהו" : "Strong detected patterns"}
+                </div>
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {analyzeSummary.patterns.highlights.slice(0, 8).map((pattern) => (
+                    <div key={pattern.key} className="rounded bg-slate-900 px-2 py-1">
+                      <span className="font-medium text-slate-100">{pattern.title}</span>
+                      <span className="text-slate-500">
+                        {" "}
+                        · {patternKindLabel(pattern.kind)} · {pattern.activeMonths} months · avg {pattern.averageAmount}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : null}

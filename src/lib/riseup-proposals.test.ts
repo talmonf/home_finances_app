@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { analyzeRiseUpPatterns } from "./riseup-patterns";
 import { generateRiseUpImportProposals } from "./riseup-proposals";
 import type { RiseUpAnalyzedRow } from "./riseup-matching";
 
@@ -83,4 +84,101 @@ test("generates domain proposals for recurring utility and donation rows", () =>
 
   assert.ok(proposals.some((p) => p.entity_kind === "property_utility"));
   assert.ok(proposals.some((p) => p.entity_kind === "donation"));
+});
+
+test("classifies recurring income, loans, installments, and petrol patterns", () => {
+  const rows = [
+    row({
+      rowIndex: 10,
+      businessName: "משכורת דיסקונט",
+      amount: 21000,
+      transactionDirection: "credit",
+      cashflowCategory: "הכנסות קבועות",
+      paymentDate: "2026-05-01",
+    }),
+    row({
+      rowIndex: 11,
+      businessName: "משכורת דיסקונט",
+      amount: 21500,
+      transactionDirection: "credit",
+      cashflowCategory: "הכנסות קבועות",
+      paymentDate: "2026-06-01",
+    }),
+    row({
+      rowIndex: 12,
+      businessName: "בנק הפועלים",
+      amount: -2000,
+      cashflowCategory: "הלוואה",
+      paymentDate: "2026-05-10",
+    }),
+    row({
+      rowIndex: 13,
+      businessName: "בנק הפועלים",
+      amount: -2000,
+      cashflowCategory: "הלוואה",
+      paymentDate: "2026-06-10",
+    }),
+    row({
+      rowIndex: 14,
+      businessName: "פז אפליקציה יילו",
+      amount: -280,
+      cashflowCategory: "רכב",
+      paymentDate: "2026-05-12",
+    }),
+    row({
+      rowIndex: 15,
+      businessName: "פז אפליקציה יילו",
+      amount: -300,
+      cashflowCategory: "רכב",
+      paymentDate: "2026-06-12",
+    }),
+    row({
+      rowIndex: 16,
+      businessName: "כלל ביטוח חובה",
+      amount: -1781,
+      originalAmount: -3562,
+      cashflowCategory: "תשלומים",
+      paymentDate: "2026-05-15",
+      raw: { "מספר התשלום": "1", "מספר תשלומים כולל": "2" },
+    }),
+  ];
+
+  const patterns = analyzeRiseUpPatterns(rows);
+
+  assert.ok(patterns.some((p) => p.kind === "work_income" && p.title === "משכורת דיסקונט"));
+  assert.ok(patterns.some((p) => p.kind === "loan_return" && p.title === "בנק הפועלים"));
+  assert.ok(patterns.some((p) => p.kind === "petrol" && p.title === "פז אפליקציה יילו"));
+  assert.ok(patterns.some((p) => p.kind === "installment_or_annual" && p.title === "כלל ביטוח חובה"));
+});
+
+test("uses cross-row patterns to create reviewed durable entity proposals", () => {
+  const rows = [
+    row({
+      rowIndex: 20,
+      businessName: "משכורת דיסקונט",
+      amount: 21000,
+      transactionDirection: "credit",
+      cashflowCategory: "הכנסות קבועות",
+      paymentDate: "2026-05-01",
+    }),
+    row({
+      rowIndex: 21,
+      businessName: "משכורת דיסקונט",
+      amount: 21500,
+      transactionDirection: "credit",
+      cashflowCategory: "הכנסות קבועות",
+      paymentDate: "2026-06-01",
+    }),
+  ];
+  const patterns = analyzeRiseUpPatterns(rows);
+  const proposals = generateRiseUpImportProposals(rows, patterns);
+
+  assert.ok(
+    proposals.some(
+      (p) =>
+        p.entity_kind === "job" &&
+        p.payload_json.patternKind === "work_income" &&
+        p.supportRows.length === 2,
+    ),
+  );
 });
