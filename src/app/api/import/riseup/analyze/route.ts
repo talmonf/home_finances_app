@@ -311,8 +311,7 @@ function buildDefaultRowWizardState(
       subscription_id: row.subscription.selectedId,
       loan_id: row.loan.selectedId,
     };
-    actions[row.rowIndex] =
-      row.importStatus === "new" && !row.isZeroAmountPending ? "create" : "skip";
+    actions[row.rowIndex] = "skip";
   }
   return { actions, overrides };
 }

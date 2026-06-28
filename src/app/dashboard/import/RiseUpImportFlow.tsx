@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { RiseUpAnalyzedRow } from "@/lib/riseup-matching";
 import type {
   RiseUpAnalyzeSummary,
@@ -25,6 +25,12 @@ import {
   type SubscriptionFamilyJobSelectJob,
   type SubscriptionFamilyJobSelectMember,
 } from "@/components/subscription-family-job-selects";
+import { RiseUpImportHelpTip } from "@/components/riseup-import-help-tip";
+import { RiseUpImportUserGuide } from "@/components/riseup-import-user-guide";
+import {
+  riseUpImportGuideContent,
+  riseUpImportWizardTabTooltip,
+} from "@/lib/riseup-import-guide-content";
 
 type Props = {
   uiLanguage: "en" | "he";
@@ -59,6 +65,8 @@ const defaultTxFilters: RiseUpImportDraftTxFilters = {
   importStatus: "all",
   needsReviewOnly: false,
 };
+
+const TX_PAGE_SIZE = 100;
 
 type RowOverrideState = RiseUpImportDraftRowOverride;
 
@@ -227,6 +235,9 @@ export function RiseUpImportFlow({
 }: Props) {
   const router = useRouter();
   const isHe = uiLanguage === "he";
+  const guide = useMemo(() => riseUpImportGuideContent(isHe), [isHe]);
+  const tip = useCallback((key: string) => guide.tooltips[key] ?? "", [guide]);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [analyzed, setAnalyzed] = useState<RiseUpAnalyzedImportRow[] | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -246,6 +257,8 @@ export function RiseUpImportFlow({
   const [resetPreview, setResetPreview] = useState<RiseUpResetPreview | null>(null);
   const [previewingReset, setPreviewingReset] = useState(false);
   const [txFilters, setTxFilters] = useState<RiseUpImportDraftTxFilters>(defaultTxFilters);
+  const [txPage, setTxPage] = useState(1);
+  const [isSectionPending, startSectionTransition] = useTransition();
   const [savedDraftSummary, setSavedDraftSummary] = useState<RiseUpSavedDraftSummary | null>(null);
   const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [overrides, setOverrides] = useState<Record<number, RowOverrideState>>({});
@@ -280,9 +293,7 @@ export function RiseUpImportFlow({
         subscription_id: r.subscription.selectedId,
         loan_id: r.loan.selectedId,
       };
-      nextActions[r.rowIndex] =
-        initial.actions?.[r.rowIndex] ??
-        (r.importStatus === "new" && !r.isZeroAmountPending ? "create" : "skip");
+      nextActions[r.rowIndex] = initial.actions?.[r.rowIndex] ?? "skip";
     }
     setOverrides(nextOverrides);
     setActions(nextActions);
@@ -362,6 +373,23 @@ export function RiseUpImportFlow({
   useEffect(() => {
     void loadSavedDraftSummary();
   }, [loadSavedDraftSummary]);
+
+  useEffect(() => {
+    setTxPage(1);
+  }, [txFilters]);
+
+  function selectWizardSection(section: RiseUpWizardSection) {
+    startSectionTransition(() => {
+      if (
+        section === "transaction_actions" &&
+        txFilters.month === "all" &&
+        paymentMonths.length > 0
+      ) {
+        setTxFilters((prev) => ({ ...prev, month: paymentMonths[0]! }));
+      }
+      setActiveSection(section);
+    });
+  }
 
   useEffect(() => {
     if (!analyzed || !fileContentHash) return;
@@ -648,6 +676,14 @@ export function RiseUpImportFlow({
     return filterRiseUpImportRows(analyzed, txFilters);
   }, [activeSection, analyzed, txFilters]);
 
+  const txPageCount = Math.max(1, Math.ceil(visibleRows.length / TX_PAGE_SIZE));
+
+  const paginatedVisibleRows = useMemo(() => {
+    const page = Math.min(txPage, txPageCount);
+    const start = (page - 1) * TX_PAGE_SIZE;
+    return visibleRows.slice(start, start + TX_PAGE_SIZE);
+  }, [txPage, txPageCount, visibleRows]);
+
   const pendingCommitCount = useMemo(() => {
     if (!analyzed) return 0;
     return analyzed.filter((row) => {
@@ -655,6 +691,13 @@ export function RiseUpImportFlow({
       return action === "create" || action === "update";
     }).length;
   }, [actions, analyzed]);
+
+  const pendingVisibleCommitCount = useMemo(() => {
+    return visibleRows.filter((row) => {
+      const action = actions[row.rowIndex] ?? "skip";
+      return action === "create" || action === "update";
+    }).length;
+  }, [actions, visibleRows]);
 
   function applyBulkSkipExisting() {
     if (!analyzed) return;
@@ -720,35 +763,58 @@ export function RiseUpImportFlow({
 
   return (
     <div className="space-y-4 rounded-xl border border-violet-800/60 bg-slate-900/60 p-4">
+      <RiseUpImportUserGuide
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        content={guide}
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium text-slate-200">
-            {isHe ? "ייבוא RiseUp (CSV)" : "RiseUp import (CSV)"}
-          </h2>
-          <p className="mt-1 text-xs text-slate-400">
-            {isHe
-              ? "ייצוא מ-RiseUp: נתח את הקובץ, בדוק התאמות, ואשר לפני שמירה."
-              : "Export from RiseUp: analyze the file, review matches, then confirm to save."}
-          </p>
-          {success ? <p className="mt-2 text-sm text-emerald-300">{success}</p> : null}
+        <RiseUpImportHelpTip tip={tip("headerTitle")} block className="min-w-0 flex-1">
+          <div>
+            <h2 className="text-lg font-medium text-slate-200">
+              {isHe ? "ייבוא RiseUp (CSV)" : "RiseUp import (CSV)"}
+            </h2>
+            <RiseUpImportHelpTip tip={tip("headerSubtitle")} block>
+              <p className="mt-1 text-xs text-slate-400">
+                {isHe
+                  ? "ייצוא מ-RiseUp: נתח את הקובץ, בדוק התאמות, ואשר לפני שמירה."
+                  : "Export from RiseUp: analyze the file, review matches, then confirm to save."}
+              </p>
+            </RiseUpImportHelpTip>
+            {success ? <p className="mt-2 text-sm text-emerald-300">{success}</p> : null}
+          </div>
+        </RiseUpImportHelpTip>
+        <div className="flex flex-wrap items-center gap-2">
+          <RiseUpImportHelpTip tip={tip("userGuideButton")}>
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              className="rounded-lg border border-violet-600/80 bg-violet-950/40 px-3 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-900/50"
+            >
+              {guide.openButton}
+            </button>
+          </RiseUpImportHelpTip>
+          <RiseUpImportHelpTip tip={tip("checkResetImpact")}>
+            <button
+              type="button"
+              disabled={previewingReset}
+              onClick={() => void previewReset()}
+              className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:opacity-60"
+            >
+              {previewingReset
+                ? isHe
+                  ? "בודק…"
+                  : "Previewing…"
+                : isHe
+                  ? "בדיקת השפעת איפוס"
+                  : "Check reset impact"}
+            </button>
+          </RiseUpImportHelpTip>
         </div>
-        <button
-          type="button"
-          disabled={previewingReset}
-          onClick={() => void previewReset()}
-          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:opacity-60"
-        >
-          {previewingReset
-            ? isHe
-              ? "בודק…"
-              : "Previewing…"
-            : isHe
-              ? "בדיקת השפעת איפוס"
-              : "Check reset impact"}
-        </button>
       </div>
 
       {resetPreview ? (
+        <RiseUpImportHelpTip tip={tip("resetPreviewPanel")} block>
         <div
           className={`rounded-lg border p-3 text-xs ${
             resetPreview.blocked
@@ -771,11 +837,13 @@ export function RiseUpImportFlow({
             </div>
           ) : null}
         </div>
+        </RiseUpImportHelpTip>
       ) : null}
 
       {!analyzed ? (
         <div className="space-y-3">
           {savedDraftSummary ? (
+            <RiseUpImportHelpTip tip={tip("savedDraftBanner")} block>
             <div className="rounded-lg border border-violet-700/60 bg-violet-950/30 p-3 text-sm text-violet-100">
               <div className="font-medium">
                 {isHe ? "יש טיוטת ייבוא שמורה" : "Saved import draft available"}
@@ -790,6 +858,7 @@ export function RiseUpImportFlow({
                   ? "העלה שוב את אותו קובץ CSV ולחץ «נתח קובץ» כדי להמשיך מהטיוטה."
                   : "Re-upload the same CSV file and click Analyze file to continue from your saved draft."}
               </p>
+              <RiseUpImportHelpTip tip={tip("discardDraft")}>
               <button
                 type="button"
                 className="mt-2 text-xs text-violet-300 underline hover:text-violet-100"
@@ -797,9 +866,12 @@ export function RiseUpImportFlow({
               >
                 {isHe ? "מחק טיוטה שמורה" : "Discard saved draft"}
               </button>
+              </RiseUpImportHelpTip>
             </div>
+            </RiseUpImportHelpTip>
           ) : null}
           <div className="flex flex-wrap items-end gap-3">
+          <RiseUpImportHelpTip tip={tip("csvFileInput")}>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-400">
               {isHe ? "קובץ CSV" : "CSV file"}
@@ -811,6 +883,8 @@ export function RiseUpImportFlow({
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </div>
+          </RiseUpImportHelpTip>
+          <RiseUpImportHelpTip tip={tip("analyzeFileButton")}>
           <button
             type="button"
             disabled={loading}
@@ -819,31 +893,41 @@ export function RiseUpImportFlow({
           >
             {loading ? (isHe ? "מנתח…" : "Analyzing…") : isHe ? "נתח קובץ" : "Analyze file"}
           </button>
+          </RiseUpImportHelpTip>
         </div>
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-300">
+            <RiseUpImportHelpTip tip={tip("fileRowSummary")}>
             <span>
               {fileName} — {analyzed.length}{" "}
               {isHe ? "שורות" : "rows"}
               {uncertainCount > 0 ? (
+                <RiseUpImportHelpTip tip={tip("needReviewBadge")}>
                 <span className="ml-2 rounded bg-amber-500/20 px-2 py-0.5 text-amber-200">
                   {uncertainCount} {isHe ? "דורשות בדיקה" : "need review"}
                 </span>
+                </RiseUpImportHelpTip>
               ) : (
+                <RiseUpImportHelpTip tip={tip("mostlyConfidentBadge")}>
                 <span className="ml-2 text-emerald-400">
                   {isHe ? "התאמות בטוחות" : "Mostly high-confidence"}
                 </span>
+                </RiseUpImportHelpTip>
               )}
             </span>
+            </RiseUpImportHelpTip>
             {importSummary ? (
+              <RiseUpImportHelpTip tip={tip("importStatusCounts")}>
               <span className="text-xs text-slate-400">
                 {isHe
                   ? `חדשות ${importSummary.new}, קיימות ${importSummary.existing}, שונו ${importSummary.changed}, לא חד משמעיות ${importSummary.ambiguous}`
                   : `New ${importSummary.new}, existing ${importSummary.existing}, changed ${importSummary.changed}, ambiguous ${importSummary.ambiguous}`}
               </span>
+              </RiseUpImportHelpTip>
             ) : null}
+            <RiseUpImportHelpTip tip={tip("startOver")}>
             <button
               type="button"
               className="text-xs text-slate-400 underline hover:text-slate-200"
@@ -865,36 +949,48 @@ export function RiseUpImportFlow({
             >
               {isHe ? "התחל מחדש" : "Start over"}
             </button>
+            </RiseUpImportHelpTip>
             {draftSaveState === "saving" ? (
+              <RiseUpImportHelpTip tip={tip("draftSaving")}>
               <span className="text-[10px] text-slate-500">
                 {isHe ? "שומר טיוטה…" : "Saving draft…"}
               </span>
+              </RiseUpImportHelpTip>
             ) : draftSaveState === "saved" ? (
+              <RiseUpImportHelpTip tip={tip("draftSavedIndicator")}>
               <span className="text-[10px] text-emerald-400">
                 {isHe ? "טיוטה נשמרה" : "Draft saved"}
               </span>
+              </RiseUpImportHelpTip>
             ) : draftSaveState === "error" ? (
+              <RiseUpImportHelpTip tip={tip("draftSaveFailed")}>
               <span className="text-[10px] text-rose-400">
                 {isHe ? "שמירת טיוטה נכשלה" : "Draft save failed"}
               </span>
+              </RiseUpImportHelpTip>
             ) : null}
           </div>
 
           {importSummary ? (
+            <RiseUpImportHelpTip tip={tip("importSummaryBar")} block>
             <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
               {isHe
-                ? `ברירת המחדל היא ייבוא אינקרמנטלי: ${importSummary.selectedCreates} תנועות חדשות ייווצרו, ${importSummary.selectedUpdates} שינויים מאושרים יעודכנו, ו-${importSummary.selectedSkips} שורות ידולגו. שורות קיימות ותנועות בסכום אפס מדולגות כברירת מחדל.`
-                : `Default incremental import: ${importSummary.selectedCreates} new transactions will be created, ${importSummary.selectedUpdates} reviewed changes will be updated, and ${importSummary.selectedSkips} rows will be skipped. Existing and zero-amount rows are skipped by default.`}
+                ? `ייבוא אינקרמנטלי: ${importSummary.selectedCreates} ליצירה, ${importSummary.selectedUpdates} לעדכון, ${importSummary.selectedSkips} לדילוג. שורות חדשות מדולגות כברירת מחדל — סמנו «צור» רק לקבוצה שאתם מייבאים עכשיו (למשל חודש אחד).`
+                : `Incremental import: ${importSummary.selectedCreates} to create, ${importSummary.selectedUpdates} to update, ${importSummary.selectedSkips} to skip. New rows default to Skip — mark Create only for the batch you are importing now (e.g. one month).`}
             </div>
+            </RiseUpImportHelpTip>
           ) : null}
 
           <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-3">
             <div className="flex flex-wrap gap-2">
               {wizardSections.map((section) => (
-                <button
+                <RiseUpImportHelpTip
                   key={section.id}
+                  tip={riseUpImportWizardTabTooltip(isHe, section.id)}
+                >
+                <button
                   type="button"
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => selectWizardSection(section.id)}
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
                     activeSection === section.id
                       ? "bg-violet-600 text-white"
@@ -903,33 +999,45 @@ export function RiseUpImportFlow({
                 >
                   {section.label}
                 </button>
+                </RiseUpImportHelpTip>
               ))}
             </div>
             {analyzeSummary ? (
               <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-5">
+                <RiseUpImportHelpTip tip={tip("statNeedsReview")} block>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "שורות לבדיקה" : "Needs review"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.needsReview}</div>
                 </div>
+                </RiseUpImportHelpTip>
+                <RiseUpImportHelpTip tip={tip("statProposals")} block>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "הצעות" : "Proposals"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.proposals.total}</div>
                 </div>
+                </RiseUpImportHelpTip>
+                <RiseUpImportHelpTip tip={tip("statPatterns")} block>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "דפוסים" : "Patterns"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.patterns?.totalPatterns ?? 0}</div>
                 </div>
+                </RiseUpImportHelpTip>
+                <RiseUpImportHelpTip tip={tip("statLegacyScanned")} block>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "ייבוא ישן זוהה" : "Legacy scanned"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.legacyScanned}</div>
                 </div>
+                </RiseUpImportHelpTip>
+                <RiseUpImportHelpTip tip={tip("statLegacyBackfilled")} block>
                 <div className="rounded bg-slate-900 p-2">
                   <div className="text-slate-500">{isHe ? "ייבוא ישן עודכן" : "Legacy backfilled"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.legacyBackfilled}</div>
                 </div>
+                </RiseUpImportHelpTip>
               </div>
             ) : null}
             {analyzeSummary?.patterns?.highlights?.length ? (
+              <RiseUpImportHelpTip tip={tip("strongPatternsPanel")} block>
               <div className="mt-3 rounded border border-slate-800 bg-slate-950/60 p-2 text-xs text-slate-300">
                 <div className="mb-1 font-medium text-slate-200">
                   {isHe ? "דפוסים חזקים שזוהו" : "Strong detected patterns"}
@@ -946,10 +1054,12 @@ export function RiseUpImportFlow({
                   ))}
                 </div>
               </div>
+              </RiseUpImportHelpTip>
             ) : null}
           </div>
 
           {activeSection !== "transaction_actions" ? (
+            <RiseUpImportHelpTip tip={tip("proposalsSection")} block>
             <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-3">
               <div className="mb-2 text-sm font-medium text-slate-200">
                 {activeSection === "historical_backfill"
@@ -999,6 +1109,7 @@ export function RiseUpImportFlow({
                             </div>
                             {isSubscription && proposal.id ? (
                               <div className="mt-3 rounded-lg border border-slate-600/80 bg-slate-950/50 p-3">
+                                <RiseUpImportHelpTip tip={tip("workExpenseCheckbox")} block>
                                 <label className="mb-2 flex items-center gap-2 text-slate-200">
                                   <input
                                     type="checkbox"
@@ -1017,6 +1128,7 @@ export function RiseUpImportFlow({
                                     {isHe ? "הוצאה מקצועית (מנוי עבודה)" : "Work expense subscription"}
                                   </span>
                                 </label>
+                                </RiseUpImportHelpTip>
                                 {workDraft?.isWorkExpense ? (
                                   <div className="grid gap-3 sm:grid-cols-2">
                                     <SubscriptionFamilyJobSelects
@@ -1054,6 +1166,7 @@ export function RiseUpImportFlow({
                               </div>
                             ) : null}
                           </div>
+                          <RiseUpImportHelpTip tip={tip("proposalActionSelect")}>
                           <select
                             className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
                             value={selected}
@@ -1068,6 +1181,7 @@ export function RiseUpImportFlow({
                             <option value="approve">{isHe ? "אשר" : "Approve"}</option>
                             <option value="reject">{isHe ? "דחה" : "Reject"}</option>
                           </select>
+                          </RiseUpImportHelpTip>
                         </div>
                       </div>
                     );
@@ -1075,12 +1189,20 @@ export function RiseUpImportFlow({
                 </div>
               )}
             </div>
+            </RiseUpImportHelpTip>
           ) : null}
 
           {activeSection === "transaction_actions" ? (
           <>
+          {isSectionPending ? (
+            <p className="rounded-lg border border-slate-700 bg-slate-950/50 p-4 text-sm text-slate-400">
+              {isHe ? "טוען תנועות…" : "Loading transactions…"}
+            </p>
+          ) : (
+          <>
           <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
             <div className="flex flex-wrap items-end gap-3">
+              <RiseUpImportHelpTip tip={tip("filterPaymentMonth")}>
               <div>
                 <label className="mb-1 block text-[10px] font-medium text-slate-500">
                   {isHe ? "חודש תשלום" : "Payment month"}
@@ -1100,6 +1222,8 @@ export function RiseUpImportFlow({
                   ))}
                 </select>
               </div>
+              </RiseUpImportHelpTip>
+              <RiseUpImportHelpTip tip={tip("filterImportStatus")}>
               <div>
                 <label className="mb-1 block text-[10px] font-medium text-slate-500">
                   {isHe ? "סטטוס ייבוא" : "Import status"}
@@ -1121,6 +1245,8 @@ export function RiseUpImportFlow({
                   <option value="ambiguous">{isHe ? "לא חד משמעיות" : "Ambiguous"}</option>
                 </select>
               </div>
+              </RiseUpImportHelpTip>
+              <RiseUpImportHelpTip tip={tip("filterNeedsReviewOnly")}>
               <label className="flex items-center gap-2 pb-1 text-slate-200">
                 <input
                   type="checkbox"
@@ -1135,8 +1261,10 @@ export function RiseUpImportFlow({
                 />
                 {isHe ? "רק שורות לבדיקה" : "Needs review only"}
               </label>
+              </RiseUpImportHelpTip>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
+              <RiseUpImportHelpTip tip={tip("bulkSkipExisting")}>
               <button
                 type="button"
                 onClick={applyBulkSkipExisting}
@@ -1144,6 +1272,8 @@ export function RiseUpImportFlow({
               >
                 {isHe ? "דלג על כל הקיימות" : "Skip all existing"}
               </button>
+              </RiseUpImportHelpTip>
+              <RiseUpImportHelpTip tip={tip("bulkSkipVisible")}>
               <button
                 type="button"
                 onClick={applyBulkSkipVisible}
@@ -1151,6 +1281,8 @@ export function RiseUpImportFlow({
               >
                 {isHe ? "דלג על המסוננות" : "Skip all visible"}
               </button>
+              </RiseUpImportHelpTip>
+              <RiseUpImportHelpTip tip={tip("bulkCreateHighConfidence")}>
               <button
                 type="button"
                 onClick={applyBulkCreateHighConfidenceVisible}
@@ -1160,13 +1292,42 @@ export function RiseUpImportFlow({
                   ? "צור חדשות בטוחות (מסוננות)"
                   : "Create high-confidence new (visible)"}
               </button>
+              </RiseUpImportHelpTip>
             </div>
+            <RiseUpImportHelpTip tip={tip("txFilterSummary")} block>
             <p className="mt-2 text-[10px] text-slate-500">
               {isHe
-                ? `מציג ${visibleRows.length} מתוך ${analyzed.length} שורות · ${pendingCommitCount} מסומנות ליצירה/עדכון`
-                : `Showing ${visibleRows.length} of ${analyzed.length} rows · ${pendingCommitCount} marked create/update`}
+                ? `מציג ${paginatedVisibleRows.length} בשורה (עמוד ${Math.min(txPage, txPageCount)}/${txPageCount}) · ${visibleRows.length} מתוך ${analyzed.length} לאחר סינון · ${pendingVisibleCommitCount} מסומנות ליצירה/עדכון במסך · ${pendingCommitCount} סה״כ`
+                : `Showing ${paginatedVisibleRows.length} on page (${Math.min(txPage, txPageCount)}/${txPageCount}) · ${visibleRows.length} of ${analyzed.length} after filter · ${pendingVisibleCommitCount} marked create/update in view · ${pendingCommitCount} total`}
             </p>
+            </RiseUpImportHelpTip>
+            {txPageCount > 1 ? (
+              <RiseUpImportHelpTip tip={tip("txPagination")} block>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={txPage <= 1}
+                  onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                  className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+                >
+                  {isHe ? "הקודם" : "Previous"}
+                </button>
+                <span className="text-[10px] text-slate-500">
+                  {isHe ? `עמוד ${Math.min(txPage, txPageCount)} מתוך ${txPageCount}` : `Page ${Math.min(txPage, txPageCount)} of ${txPageCount}`}
+                </span>
+                <button
+                  type="button"
+                  disabled={txPage >= txPageCount}
+                  onClick={() => setTxPage((p) => Math.min(txPageCount, p + 1))}
+                  className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+                >
+                  {isHe ? "הבא" : "Next"}
+                </button>
+              </div>
+              </RiseUpImportHelpTip>
+            ) : null}
           </div>
+          <RiseUpImportHelpTip tip={tip("txTable")} block>
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-slate-700">
             <table className="min-w-full border-collapse text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-800 text-slate-300">
@@ -1185,7 +1346,7 @@ export function RiseUpImportFlow({
                 </tr>
               </thead>
               <tbody>
-                {visibleRows.map((r) => {
+                {paginatedVisibleRows.map((r) => {
                   const o = overrides[r.rowIndex];
                   if (!o) return null;
                   const action = actions[r.rowIndex] ?? "skip";
@@ -1445,9 +1606,13 @@ export function RiseUpImportFlow({
               </tbody>
             </table>
           </div>
+          </RiseUpImportHelpTip>
+          </>
+          )}
           </>
           ) : null}
 
+          <RiseUpImportHelpTip tip={tip("saveButton")}>
           <button
             type="button"
             disabled={committing}
@@ -1460,12 +1625,13 @@ export function RiseUpImportFlow({
                 : "Saving…"
               : pendingCommitCount > 0
                 ? isHe
-                  ? `שמור קבוצה (${pendingCommitCount}) והמשך`
-                  : `Save batch (${pendingCommitCount}) and continue`
+                  ? `שמור ${pendingCommitCount} תנועות והמשך`
+                  : `Save ${pendingCommitCount} transactions and continue`
                 : isHe
                   ? "אשר ושמור"
                   : "Confirm and save"}
           </button>
+          </RiseUpImportHelpTip>
         </>
       )}
 
