@@ -1,0 +1,734 @@
+{
+  "meta": {
+    "export_active_month": "06/2026",
+    "active_rule": "Paid in export's last month → is_active=true, end=ongoing",
+    "yearly_total_rule": "Active monthly: per_payment×12; dual annual: per_payment×2; otherwise actual sum in export"
+  },
+  "subscriptions": [
+    {
+      "name": "Partner variable bill (210–572 ILS)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 296.23,
+      "yearly_total_ils": 3554.76,
+      "total_paid_in_export_ils": 6517.0,
+      "per_payment_ils": 296.23,
+      "start": "24/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 22,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        210.0,
+        572.0
+      ],
+      "reason": "Partner telecom; amount varies — may include usage, not pure subscription",
+      "confidence": "low"
+    },
+    {
+      "name": "Makor Rishon newspaper",
+      "frequency": "monthly",
+      "avg_monthly_ils": 103.24,
+      "yearly_total_ils": 2168.0,
+      "total_paid_in_export_ils": 2168.0,
+      "per_payment_ils": 103.24,
+      "start": "26/09/2024",
+      "end": "27/05/2026",
+      "is_active": false,
+      "payments": 21,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        78.0,
+        106.0
+      ],
+      "reason": "מנויים in merchant name; monthly newspaper",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Bezeq internet ~154 ILS (standing order)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 148.23,
+      "yearly_total_ils": 1778.76,
+      "total_paid_in_export_ils": 3261.0,
+      "per_payment_ils": 148.23,
+      "start": "06/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 22,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        134.0,
+        165.0
+      ],
+      "reason": "B בזק - הוראת קבע; stable ~154 ILS",
+      "confidence": "high"
+    },
+    {
+      "name": "Apple iCloud / App Store subs",
+      "frequency": "monthly",
+      "avg_monthly_ils": 28.31,
+      "yearly_total_ils": 1557.2,
+      "total_paid_in_export_ils": 1557.2,
+      "per_payment_ils": 28.31,
+      "start": "16/09/2024",
+      "end": "13/04/2026",
+      "is_active": false,
+      "payments": 55,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        5.9,
+        109.9
+      ],
+      "reason": "APPLE.COM/BILL; multiple App Store / iCloud tiers",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Partner mobile ~116 ILS line",
+      "frequency": "monthly",
+      "avg_monthly_ils": 115.86,
+      "yearly_total_ils": 1390.32,
+      "total_paid_in_export_ils": 2549.0,
+      "per_payment_ils": 115.86,
+      "start": "11/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 22,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        115.0,
+        117.0
+      ],
+      "reason": "פרטנר תקשורת; stable ~116 ILS monthly line",
+      "confidence": "high"
+    },
+    {
+      "name": "Israeli Tanakh app",
+      "frequency": "monthly",
+      "avg_monthly_ils": 88.77,
+      "yearly_total_ils": 1154.0,
+      "total_paid_in_export_ils": 1154.0,
+      "per_payment_ils": 88.77,
+      "start": "29/09/2024",
+      "end": "07/12/2025",
+      "is_active": false,
+      "payments": 13,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        38.0,
+        97.0
+      ],
+      "reason": "תנך ישראלי; app subscription ~97 ILS",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Zoom (annual plan)",
+      "frequency": "yearly",
+      "avg_monthly_ils": 92.0,
+      "yearly_total_ils": 1104.06,
+      "total_paid_in_export_ils": 1656.09,
+      "per_payment_ils": 552.03,
+      "start": "26/09/2024",
+      "end": "25/09/2025",
+      "is_active": false,
+      "payments": 3,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [
+        "PAYPAL *ZOOMCOMM",
+        "ZOOM.COM 888-799-966",
+        "ZOOM.US 888-799-9666"
+      ],
+      "amount_range": [
+        544.67,
+        560.37
+      ],
+      "reason": "~552 ILS once/year per seat (orig ~$159.90); merged ZOOM.COM / ZOOM.US / PayPal; ~2 payments/year → likely annual plan for 2 family members",
+      "confidence": "high",
+      "annual_family_members": 2
+    },
+    {
+      "name": "Panima / Otiyot / Mada VTevel magazines",
+      "frequency": "monthly",
+      "avg_monthly_ils": 52.21,
+      "yearly_total_ils": 992.0,
+      "total_paid_in_export_ils": 992.0,
+      "per_payment_ils": 52.21,
+      "start": "05/09/2024",
+      "end": "06/01/2026",
+      "is_active": false,
+      "payments": 19,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        52.0,
+        54.0
+      ],
+      "reason": "Combined magazine bundle; ~52 ILS monthly",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Bar Kayama (בר קיימא)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 120.0,
+      "yearly_total_ils": 960.0,
+      "total_paid_in_export_ils": 960.0,
+      "per_payment_ils": 120.0,
+      "start": "29/09/2024",
+      "end": "29/04/2025",
+      "is_active": false,
+      "payments": 8,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        120.0,
+        120.0
+      ],
+      "reason": "Recurring 120 ILS; unclear if subscription",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "iEffect (אי-פקט)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 175.2,
+      "yearly_total_ils": 876.0,
+      "total_paid_in_export_ils": 876.0,
+      "per_payment_ils": 175.2,
+      "start": "22/09/2024",
+      "end": "22/01/2025",
+      "is_active": false,
+      "payments": 5,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        175.0,
+        176.0
+      ],
+      "reason": "Recurring ~175 ILS for 5 months then stopped",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "LinkedIn Premium (PayPal)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 71.19,
+      "yearly_total_ils": 854.28,
+      "total_paid_in_export_ils": 355.97,
+      "per_payment_ils": 71.19,
+      "start": "19/03/2025",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 5,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [
+        "Google LINKEDIN COM",
+        "Google LinkedIn Jobs",
+        "PAYPAL *LINKEDIN"
+      ],
+      "amount_range": [
+        52.49,
+        104.99
+      ],
+      "reason": "PAYPAL *LINKEDIN; מנויים category",
+      "confidence": "high"
+    },
+    {
+      "name": "Claude AI",
+      "frequency": "monthly",
+      "avg_monthly_ils": 69.03,
+      "yearly_total_ils": 828.36,
+      "total_paid_in_export_ils": 1587.66,
+      "per_payment_ils": 69.03,
+      "start": "04/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 23,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [
+        "ANTHROPIC",
+        "ANTHROPIC* CLAUDE SUB",
+        "CLAUDE.AI SUBSCRIPTION"
+      ],
+      "amount_range": [
+        58.8,
+        78.81
+      ],
+      "reason": "Merchant contains SUBSCRIPTION; monthly ~$20 USD; דיגיטל/מנויים category",
+      "confidence": "high"
+    },
+    {
+      "name": "Cursor IDE",
+      "frequency": "monthly",
+      "avg_monthly_ils": 60.9,
+      "yearly_total_ils": 730.8,
+      "total_paid_in_export_ils": 304.51,
+      "per_payment_ils": 60.9,
+      "start": "16/02/2026",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 5,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        59.02,
+        62.95
+      ],
+      "reason": "CURSOR AI POWERED IDE; monthly ~$20 USD; דיגיטל category",
+      "confidence": "high"
+    },
+    {
+      "name": "RiseUp app",
+      "frequency": "monthly",
+      "avg_monthly_ils": 87.62,
+      "yearly_total_ils": 701.0,
+      "total_paid_in_export_ils": 701.0,
+      "per_payment_ils": 87.62,
+      "start": "15/02/2025",
+      "end": "15/09/2025",
+      "is_active": false,
+      "payments": 8,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        23.0,
+        430.0
+      ],
+      "reason": "מנוי riseup; monthly then possible plan change",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Bezeq line ~50 ILS (standing order)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 49.82,
+      "yearly_total_ils": 597.84,
+      "total_paid_in_export_ils": 548.0,
+      "per_payment_ils": 49.82,
+      "start": "20/10/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 11,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        49.0,
+        50.0
+      ],
+      "reason": "B בזק - הוראת קבע; stable ~50 ILS (note: מעלית הבנין)",
+      "confidence": "high"
+    },
+    {
+      "name": "Partner ~280 ILS line (variable usage?)",
+      "frequency": "yearly",
+      "avg_monthly_ils": 46.67,
+      "yearly_total_ils": 560.0,
+      "total_paid_in_export_ils": 560.0,
+      "per_payment_ils": 280.0,
+      "start": "24/03/2026",
+      "end": "24/05/2026",
+      "is_active": false,
+      "payments": 2,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        280.0,
+        280.0
+      ],
+      "reason": "Partner telecom; amount varies — may include usage, not pure subscription; ~2 payments/year → likely annual plan for 2 family members",
+      "confidence": "low",
+      "annual_family_members": 2
+    },
+    {
+      "name": "Hever club membership (דמי חבר מועדון חבר)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 20.0,
+      "yearly_total_ils": 420.0,
+      "total_paid_in_export_ils": 420.0,
+      "per_payment_ils": 20.0,
+      "start": "30/09/2024",
+      "end": "31/05/2026",
+      "is_active": false,
+      "payments": 21,
+      "payment_method": "credit card ending 3608",
+      "merged_from": [],
+      "amount_range": [
+        20.0,
+        20.0
+      ],
+      "reason": "Membership fee in name; 20 ILS/month",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Henriko (הנריקו)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 57.14,
+      "yearly_total_ils": 400.0,
+      "total_paid_in_export_ils": 400.0,
+      "per_payment_ils": 57.14,
+      "start": "28/10/2024",
+      "end": "28/04/2025",
+      "is_active": false,
+      "payments": 7,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        25.0,
+        250.0
+      ],
+      "reason": "Recurring 25 ILS; unclear service",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Midah website",
+      "frequency": "monthly",
+      "avg_monthly_ils": 25.0,
+      "yearly_total_ils": 400.0,
+      "total_paid_in_export_ils": 400.0,
+      "per_payment_ils": 25.0,
+      "start": "21/09/2024",
+      "end": "21/12/2025",
+      "is_active": false,
+      "payments": 16,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        25.0,
+        25.0
+      ],
+      "reason": "אתר מידה; monthly digital media",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Google Leap Fitness",
+      "frequency": "monthly",
+      "avg_monthly_ils": 14.47,
+      "yearly_total_ils": 390.7,
+      "total_paid_in_export_ils": 390.7,
+      "per_payment_ils": 14.47,
+      "start": "05/09/2024",
+      "end": "05/09/2025",
+      "is_active": false,
+      "payments": 27,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [
+        "GOOGLE LEAP FITNESS",
+        "Google Leap Fitness"
+      ],
+      "amount_range": [
+        13.9,
+        15.0
+      ],
+      "reason": "Google Play app subscription; stable ~14 ILS",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Bezeq phone ~29 ILS (standing order)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 29.0,
+      "yearly_total_ils": 348.0,
+      "total_paid_in_export_ils": 638.0,
+      "per_payment_ils": 29.0,
+      "start": "06/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 22,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        29.0,
+        29.0
+      ],
+      "reason": "B בזק - הוראת קבע; stable ~29 ILS",
+      "confidence": "high"
+    },
+    {
+      "name": "Telrom-Koter",
+      "frequency": "monthly",
+      "avg_monthly_ils": 29.0,
+      "yearly_total_ils": 348.0,
+      "total_paid_in_export_ils": 348.0,
+      "per_payment_ils": 29.0,
+      "start": "25/11/2024",
+      "end": "25/10/2025",
+      "is_active": false,
+      "payments": 12,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        29.0,
+        29.0
+      ],
+      "reason": "Digital publication; דיגיטל",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Google YouTube Premium",
+      "frequency": "monthly",
+      "avg_monthly_ils": 23.9,
+      "yearly_total_ils": 286.8,
+      "total_paid_in_export_ils": 549.7,
+      "per_payment_ils": 23.9,
+      "start": "04/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 23,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [
+        "GOOGLE YOUTUBEPREMIUM",
+        "Google YouTubePremium"
+      ],
+      "amount_range": [
+        23.9,
+        23.9
+      ],
+      "reason": "Recurring Google charge; stable 23.90 ILS; דיגיטל",
+      "confidence": "high"
+    },
+    {
+      "name": "Brain Bina (בריין בינה)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 27.0,
+      "yearly_total_ils": 216.0,
+      "total_paid_in_export_ils": 216.0,
+      "per_payment_ils": 27.0,
+      "start": "02/09/2024",
+      "end": "02/04/2025",
+      "is_active": false,
+      "payments": 8,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        27.0,
+        27.0
+      ],
+      "reason": "Recurring 27 ILS; unclear service",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "AI at Eye Level (בינה מלאכותית בגובה העיניים)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 50.5,
+      "yearly_total_ils": 202.0,
+      "total_paid_in_export_ils": 202.0,
+      "per_payment_ils": 50.5,
+      "start": "26/11/2025",
+      "end": "26/02/2026",
+      "is_active": false,
+      "payments": 4,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        1.0,
+        67.0
+      ],
+      "reason": "Recurring 67 ILS; possible AI newsletter/service",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Google Fasting app",
+      "frequency": "monthly",
+      "avg_monthly_ils": 14.2,
+      "yearly_total_ils": 156.2,
+      "total_paid_in_export_ils": 156.2,
+      "per_payment_ils": 14.2,
+      "start": "11/09/2025",
+      "end": "11/04/2026",
+      "is_active": false,
+      "payments": 11,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [
+        "GOOGLE*FASTING INTERM",
+        "Google Fasting Interm"
+      ],
+      "amount_range": [
+        13.9,
+        15.0
+      ],
+      "reason": "GOOGLE*FASTING INTERM; app subscription",
+      "confidence": "high",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Google One (~12 ILS/mo tier)",
+      "frequency": "monthly",
+      "avg_monthly_ils": 12.59,
+      "yearly_total_ils": 151.08,
+      "total_paid_in_export_ils": 277.0,
+      "per_payment_ils": 12.59,
+      "start": "29/09/2024",
+      "end": "ongoing",
+      "is_active": true,
+      "payments": 22,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        12.0,
+        19.0
+      ],
+      "reason": "Recurring Google One storage; stable ~12 ILS",
+      "confidence": "high"
+    },
+    {
+      "name": "Canva",
+      "frequency": "monthly",
+      "avg_monthly_ils": 56.23,
+      "yearly_total_ils": 112.46,
+      "total_paid_in_export_ils": 112.46,
+      "per_payment_ils": 56.23,
+      "start": "05/12/2024",
+      "end": "05/01/2025",
+      "is_active": false,
+      "payments": 2,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        55.93,
+        56.53
+      ],
+      "reason": "PAYPAL *CANVAPTYLIM; דיגיטל category; consecutive monthly payments",
+      "confidence": "medium",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "TribalPages genealogy",
+      "frequency": "monthly",
+      "avg_monthly_ils": 111.28,
+      "yearly_total_ils": 111.28,
+      "total_paid_in_export_ils": 111.28,
+      "per_payment_ils": 111.28,
+      "start": "12/11/2024",
+      "end": "12/11/2024",
+      "is_active": false,
+      "payments": 1,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        111.28,
+        111.28
+      ],
+      "reason": "PAYPAL *TRIBALPAGES; genealogy site (only 1 payment in export)",
+      "confidence": "medium",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Google One (annual ~80 ILS)",
+      "frequency": "yearly",
+      "avg_monthly_ils": 6.67,
+      "yearly_total_ils": 80.0,
+      "total_paid_in_export_ils": 160.0,
+      "per_payment_ils": 80.0,
+      "start": "01/03/2025",
+      "end": "01/03/2026",
+      "is_active": false,
+      "payments": 2,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [],
+      "amount_range": [
+        80.0,
+        80.0
+      ],
+      "reason": "80 ILS charge ~yearly (likely annual Google One tier)",
+      "confidence": "medium"
+    },
+    {
+      "name": "Google Call Recorder",
+      "frequency": "yearly",
+      "avg_monthly_ils": 3.68,
+      "yearly_total_ils": 44.15,
+      "total_paid_in_export_ils": 176.6,
+      "per_payment_ils": 44.15,
+      "start": "24/11/2024",
+      "end": "11/04/2026",
+      "is_active": false,
+      "payments": 4,
+      "payment_method": "credit card ending 3700",
+      "merged_from": [
+        "GOOGLE*CALL RECORDER",
+        "Google Call Recorder"
+      ],
+      "amount_range": [
+        35.0,
+        49.0
+      ],
+      "reason": "Google Play app; recurring charge",
+      "confidence": "high"
+    },
+    {
+      "name": "Vysor",
+      "frequency": "yearly",
+      "avg_monthly_ils": 2.78,
+      "yearly_total_ils": 33.31,
+      "total_paid_in_export_ils": 66.63,
+      "per_payment_ils": 33.31,
+      "start": "28/04/2025",
+      "end": "28/04/2026",
+      "is_active": false,
+      "payments": 2,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        29.97,
+        36.66
+      ],
+      "reason": "VYSOR; מנויים; note says 'צריך לבטל'",
+      "confidence": "medium"
+    },
+    {
+      "name": "OpenAI / ChatGPT",
+      "frequency": "monthly",
+      "avg_monthly_ils": 30.41,
+      "yearly_total_ils": 30.41,
+      "total_paid_in_export_ils": 30.41,
+      "per_payment_ils": 30.41,
+      "start": "22/04/2026",
+      "end": "22/04/2026",
+      "is_active": false,
+      "payments": 1,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        30.41,
+        30.41
+      ],
+      "reason": "OPENAI charge; likely ChatGPT Plus",
+      "confidence": "medium",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    },
+    {
+      "name": "Render.com hosting",
+      "frequency": "monthly",
+      "avg_monthly_ils": 12.23,
+      "yearly_total_ils": 24.46,
+      "total_paid_in_export_ils": 24.46,
+      "per_payment_ils": 12.23,
+      "start": "05/04/2026",
+      "end": "05/05/2026",
+      "is_active": false,
+      "payments": 2,
+      "payment_method": "credit card ending 5109",
+      "merged_from": [],
+      "amount_range": [
+        4.41,
+        20.05
+      ],
+      "reason": "RENDER.COM; cloud hosting for room-management app (per note)",
+      "confidence": "medium",
+      "yearly_total_note": "Actual sum in export only — subscription not active in export's last month; not projected to a full year"
+    }
+  ]
+}

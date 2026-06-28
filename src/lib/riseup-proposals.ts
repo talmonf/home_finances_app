@@ -8,6 +8,13 @@ import type {
   RiseUpProposalSummary,
   RiseUpProposalSupportRow,
 } from "@/lib/riseup-commit-types";
+import {
+  analyzeRiseUpSubscriptions,
+  getExportActiveMonth,
+  subscriptionAnalysisSummary,
+  subscriptionAnalysisToPayload,
+  type SubscriptionAnalysisRow,
+} from "@/lib/riseup-subscription-analysis";
 
 function normalizeProposalName(s: string): string {
   return s
@@ -70,24 +77,20 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   return groups;
 }
 
-function months(rows: RowWithIdentity[]): Set<string> {
-  return new Set(rows.map((r) => r.paymentDate.slice(0, 7)).filter(Boolean));
-}
-
-function amountBucket(row: RowWithIdentity): string {
-  return Math.abs(row.originalAmount ?? row.amount).toFixed(0);
-}
-
-function instrumentKey(row: RowWithIdentity): string {
-  if (row.instrument.kind === "unknown") return "";
-  return `${row.instrument.kind}:${normalizeProposalName(row.paymentMethodRaw)}:${row.paymentIdentifierRaw.trim()}`;
-}
-
-function recurringGroups(rows: RowWithIdentity[]): Map<string, RowWithIdentity[]> {
-  return groupBy(
-    rows.filter((r) => Math.abs(r.amount) > 0),
-    (r) => `${normalizeProposalName(r.businessName)}:${amountBucket(r)}:${instrumentKey(r)}`,
-  );
+function toSubscriptionRow(row: RowWithIdentity): SubscriptionAnalysisRow {
+  return {
+    rowIndex: row.rowIndex,
+    riseup_import_key: row.riseup_import_key,
+    businessName: row.businessName,
+    paymentDate: row.paymentDate,
+    amount: row.amount,
+    originalAmount: row.originalAmount,
+    cashflowCategory: row.cashflowCategory,
+    paymentMethodRaw: row.paymentMethodRaw,
+    paymentIdentifierRaw: row.paymentIdentifierRaw,
+    raw: row.raw,
+    subscriptionSelectedId: row.subscription.selectedId,
+  };
 }
 
 export function summarizeRiseUpProposals(proposals: RiseUpImportProposal[]): RiseUpProposalSummary {
@@ -108,16 +111,22 @@ function proposalExists(proposals: RiseUpImportProposal[], clientKey: string): b
   return proposals.some((p) => p.clientKey === clientKey);
 }
 
-function similarProposalExists(
+function instrumentKey(row: RowWithIdentity): string {
+  if (row.instrument.kind === "unknown") return "";
+  return `${row.instrument.kind}:${normalizeProposalName(row.paymentMethodRaw)}:${row.paymentIdentifierRaw.trim()}`;
+}
+
+function similarSubscriptionProposalExists(
   proposals: RiseUpImportProposal[],
-  entityKind: RiseUpEntityKind,
-  title: string,
+  canonicalName: string,
 ): boolean {
-  const normalizedTitle = normalizeProposalName(title);
+  const normalized = normalizeProposalName(canonicalName);
   return proposals.some((p) => {
-    if (p.entity_kind !== entityKind) return false;
-    const suggestedName = String(p.payload_json.suggestedName ?? p.payload_json.providerName ?? p.title);
-    return normalizeProposalName(suggestedName) === normalizedTitle;
+    if (p.entity_kind !== "subscription") return false;
+    const payloadName = String(
+      p.payload_json.normalizedName ?? p.payload_json.suggestedName ?? p.title,
+    );
+    return normalizeProposalName(payloadName) === normalized;
   });
 }
 
@@ -141,6 +150,60 @@ function patternLabel(pattern: RiseUpDetectedPattern): string {
   return "RiseUp pattern";
 }
 
+function similarProposalExists(
+  proposals: RiseUpImportProposal[],
+  entityKind: RiseUpEntityKind,
+  title: string,
+): boolean {
+  const normalizedTitle = normalizeProposalName(title);
+  return proposals.some((p) => {
+    if (p.entity_kind !== entityKind) return false;
+    const suggestedName = String(p.payload_json.suggestedName ?? p.payload_json.providerName ?? p.title);
+    return normalizeProposalName(suggestedName) === normalizedTitle;
+  });
+}
+
+function generateSubscriptionProposals(
+  rows: RowWithIdentity[],
+  allRows: RowWithIdentity[],
+  existing: RiseUpImportProposal[],
+): RiseUpImportProposal[] {
+  const out: RiseUpImportProposal[] = [];
+  const exportActiveMonth = getExportActiveMonth(allRows.map(toSubscriptionRow));
+  const analyses = analyzeRiseUpSubscriptions(allRows.map(toSubscriptionRow));
+
+  for (const analysis of analyses) {
+    if (analysis.confidence === "low") continue;
+    const supportRows = rows
+      .filter((row) => analysis.supportRowIndexes.includes(row.rowIndex))
+      .filter((row) => !row.subscription.selectedId);
+    if (supportRows.length === 0) continue;
+
+    const clientKey = `subscription:${normalizeProposalName(analysis.canonicalName)}:${analysis.perPaymentAmount.toFixed(2)}`;
+    if (proposalExists(existing, clientKey) || proposalExists(out, clientKey)) continue;
+    if (similarSubscriptionProposalExists(existing, analysis.canonicalName)) continue;
+    if (similarSubscriptionProposalExists(out, analysis.canonicalName)) continue;
+
+    out.push(
+      proposal({
+        clientKey,
+        proposal_kind: "create_entity",
+        entity_kind: "subscription",
+        confidence: analysis.confidence as RiseUpProposalConfidence,
+        title: `Subscription: ${analysis.displayName}`,
+        summary: subscriptionAnalysisSummary(analysis),
+        payload_json: subscriptionAnalysisToPayload(analysis, exportActiveMonth),
+        proposed_changes_json: {
+          source: "riseup_subscription_analysis",
+          reviewWorkExpense: true,
+        },
+        supportRows: supportRows.slice(0, 25).map((r) => support(r, "recurring_instance")),
+      }),
+    );
+  }
+  return out;
+}
+
 function generatePatternProposals(
   patterns: RiseUpDetectedPattern[],
   existing: RiseUpImportProposal[],
@@ -150,6 +213,7 @@ function generatePatternProposals(
     const entityKind = patternEntityKind(pattern);
     if (!entityKind) continue;
     if (pattern.confidence === "low") continue;
+    if (pattern.kind === "subscription") continue;
     const clientKey = `pattern:${pattern.kind}:${pattern.key}`;
     if (proposalExists(existing, clientKey) || proposalExists(out, clientKey)) continue;
     if (similarProposalExists(existing, entityKind, pattern.title)) continue;
@@ -252,31 +316,6 @@ export function generateRiseUpImportProposals(
     );
   }
 
-  for (const [key, group] of recurringGroups(actionableRows)) {
-    if (group.length < 2 || months(group).size < 2) continue;
-    const first = group[0]!;
-    const normalizedName = normalizeProposalName(first.businessName);
-    if (!first.subscription.selectedId && !/תרומה|ביטוח|הלווא|חשמל|מים|ארנונה|גז|סופר|דלק|רכב/.test(first.cashflowCategory)) {
-      proposals.push(
-        proposal({
-          clientKey: `subscription:${key}`,
-          proposal_kind: "create_entity",
-          entity_kind: "subscription",
-          confidence: group.length >= 4 ? "high" : "medium",
-          title: `Recurring subscription: ${first.businessName}`,
-          summary: `${group.length} recurring payments across ${months(group).size} months.`,
-          payload_json: {
-            suggestedName: first.businessName,
-            normalizedName,
-            amount: Math.abs(first.originalAmount ?? first.amount),
-            paymentMethodRaw: first.paymentMethodRaw,
-          },
-          supportRows: group.slice(0, 25).map((r) => support(r, "recurring_instance")),
-        }),
-      );
-    }
-  }
-
   for (const [key, group] of groupBy(actionableRows.filter((r) => !!r.utilityCategoryHint && !r.utility.selectedId), (r) => `${r.utilityCategoryHint}:${normalizeProposalName(r.businessName)}`)) {
     const first = group[0];
     if (!first) continue;
@@ -332,6 +371,7 @@ export function generateRiseUpImportProposals(
     }
   }
 
+  proposals.push(...generateSubscriptionProposals(actionableRows, rows, proposals));
   proposals.push(...generatePatternProposals(patterns, proposals));
 
   return proposals;

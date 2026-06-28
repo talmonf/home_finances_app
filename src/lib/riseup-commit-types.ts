@@ -156,6 +156,7 @@ export type RiseUpCommitRowPayload = {
 export type RiseUpCommitProposalPayload = {
   id: string;
   action: "approve" | "reject" | "skip";
+  payloadOverrides?: Record<string, unknown>;
 };
 
 export type RiseUpCommitSummary = {

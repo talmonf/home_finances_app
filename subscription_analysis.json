@@ -1,0 +1,3128 @@
+[
+  {
+    "merge_key": "העברה באינטרנט",
+    "display_name": "העברה באינטרנט (י)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 5950.0,
+    "yearly_total": 71400.0,
+    "payment_per_period": 5950.0,
+    "start_date": "2024-09-08",
+    "end_date": "2026-02-01",
+    "payment_count": 3,
+    "payment_method": "bank account ending 454-506018",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      5850.0,
+      6000.0
+    ]
+  },
+  {
+    "merge_key": "העברה באינטרנט",
+    "display_name": "העברה באינטרנט (י)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 1941.93,
+    "yearly_total": 23303.2,
+    "payment_per_period": 1941.93,
+    "start_date": "2024-12-11",
+    "end_date": "2026-01-08",
+    "payment_count": 6,
+    "payment_method": "bank account ending 454-506018",
+    "category": "הוצאות משתנות",
+    "reason": "recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      1800.0,
+      2151.6
+    ]
+  },
+  {
+    "merge_key": "ע. בן דוד ושות' רואי חשבו",
+    "display_name": "ע. בן דוד ושות' רואי חשבו",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 1365.0,
+    "yearly_total": 16380.0,
+    "payment_per_period": 1365.0,
+    "start_date": "2024-09-11",
+    "end_date": "2024-09-11",
+    "payment_count": 3,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      1365.0,
+      1365.0
+    ]
+  },
+  {
+    "merge_key": "פזגז בעמ",
+    "display_name": "פזגז בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 1174.0,
+    "yearly_total": 14088.0,
+    "payment_per_period": 1174.0,
+    "start_date": "2025-08-17",
+    "end_date": "2026-05-21",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הבית",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      1132.0,
+      1235.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 750.0,
+    "yearly_total": 9000.0,
+    "payment_per_period": 750.0,
+    "start_date": "2025-05-08",
+    "end_date": "2026-01-15",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      700.0,
+      800.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 590.0,
+    "yearly_total": 7080.0,
+    "payment_per_period": 590.0,
+    "start_date": "2025-11-02",
+    "end_date": "2025-11-02",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      590.0,
+      590.0
+    ]
+  },
+  {
+    "merge_key": "פזגז בעמ",
+    "display_name": "פזגז בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 584.75,
+    "yearly_total": 7017.0,
+    "payment_per_period": 584.75,
+    "start_date": "2025-01-19",
+    "end_date": "2026-01-19",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      563.0,
+      606.0
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 572.0,
+    "yearly_total": 6864.0,
+    "payment_per_period": 572.0,
+    "start_date": "2026-02-24",
+    "end_date": "2026-02-24",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; consistent amount across 1 payments",
+    "amount_range": [
+      572.0,
+      572.0
+    ]
+  },
+  {
+    "merge_key": "ZOOM.US 888-799-9666",
+    "display_name": "ZOOM.US 888-799-9666",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 560.37,
+    "yearly_total": 6724.44,
+    "payment_per_period": 560.37,
+    "start_date": "2024-09-26",
+    "end_date": "2024-09-26",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'zoom'; consistent amount across 1 payments",
+    "amount_range": [
+      560.37,
+      560.37
+    ]
+  },
+  {
+    "merge_key": "PAYPAL",
+    "display_name": "PAYPAL *ZOOMCOMM",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 551.05,
+    "yearly_total": 6612.6,
+    "payment_per_period": 551.05,
+    "start_date": "2025-07-06",
+    "end_date": "2025-07-06",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'zoom'; consistent amount across 1 payments",
+    "amount_range": [
+      551.05,
+      551.05
+    ]
+  },
+  {
+    "merge_key": "ZOOM.COM 888-799-966",
+    "display_name": "ZOOM.COM 888-799-966",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 544.67,
+    "yearly_total": 6536.04,
+    "payment_per_period": 544.67,
+    "start_date": "2025-09-25",
+    "end_date": "2025-09-25",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'zoom'; consistent amount across 1 payments",
+    "amount_range": [
+      544.67,
+      544.67
+    ]
+  },
+  {
+    "merge_key": "העברה באינטרנט",
+    "display_name": "העברה באינטרנט (י)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 508.0,
+    "yearly_total": 6096.0,
+    "payment_per_period": 508.0,
+    "start_date": "2024-09-10",
+    "end_date": "2026-04-09",
+    "payment_count": 18,
+    "payment_method": "bank account ending 454-506018",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 18 payments; recurring ~monthly pattern (18 payments)",
+    "amount_range": [
+      500.0,
+      570.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 506.25,
+    "yearly_total": 6075.0,
+    "payment_per_period": 506.25,
+    "start_date": "2025-09-01",
+    "end_date": "2026-03-03",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'",
+    "amount_range": [
+      450.0,
+      550.0
+    ]
+  },
+  {
+    "merge_key": "ACADEMIA* SUBSCRIPTION",
+    "display_name": "ACADEMIA* SUBSCRIPTION",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 479.34,
+    "yearly_total": 5752.08,
+    "payment_per_period": 479.34,
+    "start_date": "2026-06-25",
+    "end_date": "2026-06-25",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'subscription'; consistent amount across 1 payments",
+    "amount_range": [
+      479.34,
+      479.34
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 453.0,
+    "yearly_total": 5436.0,
+    "payment_per_period": 453.0,
+    "start_date": "2025-03-25",
+    "end_date": "2025-06-24",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; RiseUp category 'תקשורת' (digital/telecom/general); recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      427.0,
+      495.0
+    ]
+  },
+  {
+    "merge_key": "מנוי RISEUP",
+    "display_name": "מנוי riseup",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 430.0,
+    "yearly_total": 5160.0,
+    "payment_per_period": 430.0,
+    "start_date": "2025-09-15",
+    "end_date": "2025-09-15",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'riseup'; consistent amount across 1 payments",
+    "amount_range": [
+      430.0,
+      430.0
+    ]
+  },
+  {
+    "merge_key": "קריו סל ישראל בעמ",
+    "display_name": "קריו סל ישראל בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 429.67,
+    "yearly_total": 5156.0,
+    "payment_per_period": 429.67,
+    "start_date": "2024-09-09",
+    "end_date": "2025-09-15",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      427.0,
+      431.0
+    ]
+  },
+  {
+    "merge_key": "העברה באינטרנט",
+    "display_name": "העברה באינטרנט (י)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 371.26,
+    "yearly_total": 4455.16,
+    "payment_per_period": 371.26,
+    "start_date": "2024-09-23",
+    "end_date": "2026-02-02",
+    "payment_count": 19,
+    "payment_method": "bank account ending 454-506018",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 19 payments; recurring ~monthly pattern (19 payments)",
+    "amount_range": [
+      350.0,
+      400.0
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 364.0,
+    "yearly_total": 4368.0,
+    "payment_per_period": 364.0,
+    "start_date": "2026-06-24",
+    "end_date": "2026-06-24",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; RiseUp category 'תקשורת' (digital/telecom/general); consistent amount across 1 payments",
+    "amount_range": [
+      364.0,
+      364.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 363.33,
+    "yearly_total": 4360.0,
+    "payment_per_period": 363.33,
+    "start_date": "2024-09-09",
+    "end_date": "2026-01-16",
+    "payment_count": 6,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 6 payments",
+    "amount_range": [
+      350.0,
+      400.0
+    ]
+  },
+  {
+    "merge_key": "בית מרקחת מעלה אדומים",
+    "display_name": "בית מרקחת מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 347.33,
+    "yearly_total": 4168.0,
+    "payment_per_period": 347.33,
+    "start_date": "2025-02-18",
+    "end_date": "2025-09-16",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      347.0,
+      348.0
+    ]
+  },
+  {
+    "merge_key": "קרטר'ס מילה אדומים",
+    "display_name": "קרטר'ס מילה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 339.83,
+    "yearly_total": 4078.0,
+    "payment_per_period": 339.83,
+    "start_date": "2024-10-14",
+    "end_date": "2026-06-17",
+    "payment_count": 3,
+    "payment_method": "credit card ending 1166",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      329.8,
+      349.9
+    ]
+  },
+  {
+    "merge_key": "פז אפליקציה יילו",
+    "display_name": "פז אפליקציה יילו",
+    "alternate_names": [
+      "פז אפליקציה  יילו"
+    ],
+    "frequency": "monthly",
+    "avg_monthly_amount": 330.05,
+    "yearly_total": 3960.6,
+    "payment_per_period": 330.05,
+    "start_date": "2024-10-02",
+    "end_date": "2026-06-18",
+    "payment_count": 20,
+    "payment_method": "credit card ending 5109",
+    "category": "רכב",
+    "reason": "consistent amount across 20 payments; recurring ~monthly pattern (20 payments)",
+    "amount_range": [
+      316.0,
+      357.0
+    ]
+  },
+  {
+    "merge_key": "פז אפליקציית יילו",
+    "display_name": "פז אפליקציית יילו",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 313.45,
+    "yearly_total": 3761.4,
+    "payment_per_period": 313.45,
+    "start_date": "2024-09-04",
+    "end_date": "2025-08-26",
+    "payment_count": 25,
+    "payment_method": "credit card ending 7370",
+    "category": "רכב",
+    "reason": "consistent amount across 25 payments; recurring ~monthly pattern (25 payments)",
+    "amount_range": [
+      285.0,
+      329.51
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 308.0,
+    "yearly_total": 3696.0,
+    "payment_per_period": 308.0,
+    "start_date": "2025-04-25",
+    "end_date": "2026-05-24",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; RiseUp category 'תקשורת' (digital/telecom/general); recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      280.0,
+      330.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 300.0,
+    "yearly_total": 3600.0,
+    "payment_per_period": 300.0,
+    "start_date": "2025-08-31",
+    "end_date": "2025-08-31",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "merge_key": "ACADEMIA* SUBSCRIPTION",
+    "display_name": "ACADEMIA* SUBSCRIPTION",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 274.27,
+    "yearly_total": 3291.24,
+    "payment_per_period": 274.27,
+    "start_date": "2025-06-25",
+    "end_date": "2025-06-25",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'subscription'; consistent amount across 1 payments",
+    "amount_range": [
+      274.27,
+      274.27
+    ]
+  },
+  {
+    "merge_key": "IHERB IHERB.COM",
+    "display_name": "IHERB IHERB.COM",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 262.88,
+    "yearly_total": 3154.52,
+    "payment_per_period": 262.88,
+    "start_date": "2024-09-24",
+    "end_date": "2025-09-17",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "פארמה",
+    "reason": "recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      238.03,
+      280.53
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 223.5,
+    "yearly_total": 2682.0,
+    "payment_per_period": 223.5,
+    "start_date": "2024-09-24",
+    "end_date": "2026-01-25",
+    "payment_count": 12,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; RiseUp category 'תקשורת' (digital/telecom/general); consistent amount across 12 payments; recurring ~monthly pattern (12 payments)",
+    "amount_range": [
+      210.0,
+      228.0
+    ]
+  },
+  {
+    "merge_key": "שאול תמרוקים-רמות",
+    "display_name": "שאול תמרוקים-רמות",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 210.8,
+    "yearly_total": 2529.6,
+    "payment_per_period": 210.8,
+    "start_date": "2024-11-19",
+    "end_date": "2026-03-25",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "פארמה",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      202.4,
+      224.0
+    ]
+  },
+  {
+    "merge_key": "איי.די טאצ' תקשורת בע'מ",
+    "display_name": "איי.די טאצ' תקשורת בע'מ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 196.33,
+    "yearly_total": 2356.0,
+    "payment_per_period": 196.33,
+    "start_date": "2024-11-16",
+    "end_date": "2026-01-15",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      179.0,
+      210.0
+    ]
+  },
+  {
+    "merge_key": "דלתא",
+    "display_name": "דלתא",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 193.67,
+    "yearly_total": 2324.0,
+    "payment_per_period": 193.67,
+    "start_date": "2025-12-21",
+    "end_date": "2026-01-22",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "ביגוד והנעלה",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      181.0,
+      200.0
+    ]
+  },
+  {
+    "merge_key": "פז אפליקצית-YELLOW",
+    "display_name": "פז אפליקצית-YELLOW",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 190.71,
+    "yearly_total": 2288.54,
+    "payment_per_period": 190.71,
+    "start_date": "2026-05-05",
+    "end_date": "2026-06-09",
+    "payment_count": 5,
+    "payment_method": "credit card ending 1436",
+    "category": "רכב",
+    "reason": "recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      182.39,
+      211.42
+    ]
+  },
+  {
+    "merge_key": "העברה ב BIT בנהפ",
+    "display_name": "העברה ב BIT בנהפ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 184.62,
+    "yearly_total": 2215.38,
+    "payment_per_period": 184.62,
+    "start_date": "2024-09-01",
+    "end_date": "2025-10-01",
+    "payment_count": 13,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 13 payments; recurring ~monthly pattern (13 payments)",
+    "amount_range": [
+      180.0,
+      200.0
+    ]
+  },
+  {
+    "merge_key": "אי-פקט בעמ",
+    "display_name": "אי-פקט בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 175.33,
+    "yearly_total": 2104.0,
+    "payment_per_period": 175.33,
+    "start_date": "2024-11-22",
+    "end_date": "2025-01-22",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      175.0,
+      176.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 161.4,
+    "yearly_total": 1936.8,
+    "payment_per_period": 161.4,
+    "start_date": "2025-01-25",
+    "end_date": "2026-01-25",
+    "payment_count": 10,
+    "payment_method": "credit card ending 3700",
+    "category": "תחבורה ציבורית",
+    "reason": "recurring ~monthly pattern (10 payments)",
+    "amount_range": [
+      144.0,
+      176.0
+    ]
+  },
+  {
+    "merge_key": "בזק - הוראת קבע",
+    "display_name": "B בזק - הוראת קבע",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 148.23,
+    "yearly_total": 1778.73,
+    "payment_per_period": 148.23,
+    "start_date": "2024-09-06",
+    "end_date": "2026-06-06",
+    "payment_count": 22,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "merchant name contains 'standing order' (הוראת קבע); known subscription/telecom keyword: 'בזק'; RiseUp category 'תקשורת' (digital/telecom/general); recurring ~monthly pattern (22 payments)",
+    "amount_range": [
+      134.0,
+      165.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 125.07,
+    "yearly_total": 1500.86,
+    "payment_per_period": 125.07,
+    "start_date": "2024-09-25",
+    "end_date": "2026-05-25",
+    "payment_count": 14,
+    "payment_method": "credit card ending 3700",
+    "category": "תחבורה ציבורית",
+    "reason": "recurring ~monthly pattern (14 payments)",
+    "amount_range": [
+      118.0,
+      141.0
+    ]
+  },
+  {
+    "merge_key": "העברה ב BIT בנהפ",
+    "display_name": "העברה ב BIT בנהפ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 121.21,
+    "yearly_total": 1454.57,
+    "payment_per_period": 121.21,
+    "start_date": "2024-09-01",
+    "end_date": "2025-03-18",
+    "payment_count": 14,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 14 payments; recurring ~monthly pattern (14 payments)",
+    "amount_range": [
+      120.0,
+      137.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 120.0,
+    "yearly_total": 1440.0,
+    "payment_per_period": 120.0,
+    "start_date": "2025-08-19",
+    "end_date": "2025-08-19",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      120.0,
+      120.0
+    ]
+  },
+  {
+    "merge_key": "בר קיימא",
+    "display_name": "בר קיימא",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 120.0,
+    "yearly_total": 1440.0,
+    "payment_per_period": 120.0,
+    "start_date": "2024-11-29",
+    "end_date": "2025-04-29",
+    "payment_count": 6,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      120.0,
+      120.0
+    ]
+  },
+  {
+    "merge_key": "התורה והארץ",
+    "display_name": "התורה והארץ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 120.0,
+    "yearly_total": 1440.0,
+    "payment_per_period": 120.0,
+    "start_date": "2024-11-10",
+    "end_date": "2025-03-29",
+    "payment_count": 5,
+    "payment_method": "credit card ending 2499",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      120.0,
+      120.0
+    ]
+  },
+  {
+    "merge_key": "פרטנר תקשורת בעמ",
+    "display_name": "פרטנר תקשורת בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 115.86,
+    "yearly_total": 1390.36,
+    "payment_per_period": 115.86,
+    "start_date": "2024-09-11",
+    "end_date": "2026-06-11",
+    "payment_count": 22,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "known subscription/telecom keyword: 'פרטנר'; RiseUp category 'תקשורת' (digital/telecom/general); consistent amount across 22 payments; recurring ~monthly pattern (22 payments)",
+    "amount_range": [
+      115.0,
+      117.0
+    ]
+  },
+  {
+    "merge_key": "WOLT",
+    "display_name": "WOLT",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 114.75,
+    "yearly_total": 1376.96,
+    "payment_per_period": 114.75,
+    "start_date": "2025-09-12",
+    "end_date": "2026-05-18",
+    "payment_count": 3,
+    "payment_method": "credit card ending 6570",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      105.74,
+      123.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 108.23,
+    "yearly_total": 1298.8,
+    "payment_per_period": 108.23,
+    "start_date": "2024-09-16",
+    "end_date": "2025-09-26",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'apple'; consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      104.9,
+      109.9
+    ]
+  },
+  {
+    "merge_key": "PAYPAL",
+    "display_name": "PAYPAL *TRIBALPAGES",
+    "alternate_names": [
+      "PAYPAL *LINKEDIN"
+    ],
+    "frequency": "unclear",
+    "avg_monthly_amount": 108.13,
+    "yearly_total": 1297.62,
+    "payment_per_period": 108.13,
+    "start_date": "2024-11-12",
+    "end_date": "2026-04-03",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'tribalpages'; consistent amount across 2 payments",
+    "amount_range": [
+      104.99,
+      111.28
+    ]
+  },
+  {
+    "merge_key": "עיתון מקור ראשון ש.מ מנויים",
+    "display_name": "עיתון מקור ראשון ש.מ מנויים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 105.84,
+    "yearly_total": 1270.11,
+    "payment_per_period": 105.84,
+    "start_date": "2024-09-26",
+    "end_date": "2026-05-27",
+    "payment_count": 19,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "known subscription/telecom keyword: 'מנוי'; RiseUp category 'כללי' (digital/telecom/general); consistent amount across 19 payments; recurring ~monthly pattern (19 payments)",
+    "amount_range": [
+      105.0,
+      106.0
+    ]
+  },
+  {
+    "merge_key": "אמישרגז",
+    "display_name": "אמישרגז",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 104.33,
+    "yearly_total": 1252.0,
+    "payment_per_period": 104.33,
+    "start_date": "2025-01-12",
+    "end_date": "2026-01-05",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "גז",
+    "reason": "recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      95.0,
+      113.0
+    ]
+  },
+  {
+    "merge_key": "LEVI'S PLACE",
+    "display_name": "LEVI'S PLACE",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2026-05-26",
+    "end_date": "2026-05-26",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7586",
+    "category": "אוכל בחוץ",
+    "reason": "known subscription/telecom keyword: 'levi'; consistent amount across 1 payments",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2025-07-17",
+    "end_date": "2026-02-28",
+    "payment_count": 5,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 5 payments",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "ארגון רבני צהר",
+    "display_name": "ארגון רבני צהר",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2024-09-01",
+    "end_date": "2025-03-01",
+    "payment_count": 4,
+    "payment_method": "credit card ending 2499",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "ארומה אפליקציה",
+    "display_name": "ארומה אפליקציה",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2025-09-07",
+    "end_date": "2025-09-14",
+    "payment_count": 3,
+    "payment_method": "credit card ending 6570",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "לאופק",
+    "display_name": "לאופק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2024-09-25",
+    "end_date": "2025-03-25",
+    "payment_count": 7,
+    "payment_method": "credit card ending 2499",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 7 payments; recurring ~monthly pattern (7 payments)",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "מעגלי נפש",
+    "display_name": "מעגלי נפש (ער)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2025-01-19",
+    "end_date": "2025-03-19",
+    "payment_count": 3,
+    "payment_method": "credit card ending 2499",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "קדושי מירון-אור ודרך",
+    "display_name": "קדושי מירון-אור ודרך",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 100.0,
+    "yearly_total": 1200.0,
+    "payment_per_period": 100.0,
+    "start_date": "2024-11-07",
+    "end_date": "2025-03-06",
+    "payment_count": 5,
+    "payment_method": "credit card ending 2499",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      100.0,
+      100.0
+    ]
+  },
+  {
+    "merge_key": "סופרפארם מעלה אדומים",
+    "display_name": "סופרפארם מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 99.57,
+    "yearly_total": 1194.8,
+    "payment_per_period": 99.57,
+    "start_date": "2025-11-17",
+    "end_date": "2026-06-16",
+    "payment_count": 3,
+    "payment_method": "credit card ending 6570",
+    "category": "פארמה",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      95.0,
+      105.8
+    ]
+  },
+  {
+    "merge_key": "תנך ישראלי",
+    "display_name": "תנך ישראלי",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 97.0,
+    "yearly_total": 1164.0,
+    "payment_per_period": 97.0,
+    "start_date": "2024-09-29",
+    "end_date": "2025-12-07",
+    "payment_count": 5,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 5 payments",
+    "amount_range": [
+      97.0,
+      97.0
+    ]
+  },
+  {
+    "merge_key": "רולדין ממילא",
+    "display_name": "רולדין ממילא",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 94.5,
+    "yearly_total": 1134.0,
+    "payment_per_period": 94.5,
+    "start_date": "2024-11-01",
+    "end_date": "2025-05-11",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      88.0,
+      104.0
+    ]
+  },
+  {
+    "merge_key": "ארומה שערי צדק",
+    "display_name": "ארומה שערי צדק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 93.0,
+    "yearly_total": 1116.0,
+    "payment_per_period": 93.0,
+    "start_date": "2025-08-14",
+    "end_date": "2026-04-12",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      87.0,
+      98.0
+    ]
+  },
+  {
+    "merge_key": "מאוחדת שיניים",
+    "display_name": "מאוחדת שיניים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 92.33,
+    "yearly_total": 1108.0,
+    "payment_per_period": 92.33,
+    "start_date": "2024-09-22",
+    "end_date": "2025-05-16",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      91.0,
+      93.0
+    ]
+  },
+  {
+    "merge_key": "פילורוס א.א יזמות עסקית ב",
+    "display_name": "פילורוס א.א יזמות עסקית ב",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 82.0,
+    "yearly_total": 984.0,
+    "payment_per_period": 82.0,
+    "start_date": "2024-09-13",
+    "end_date": "2025-02-28",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 2 payments",
+    "amount_range": [
+      82.0,
+      82.0
+    ]
+  },
+  {
+    "merge_key": "סופרפארם מעלה אדומים",
+    "display_name": "סופרפארם מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 79.6,
+    "yearly_total": 955.2,
+    "payment_per_period": 79.6,
+    "start_date": "2024-11-02",
+    "end_date": "2026-05-06",
+    "payment_count": 3,
+    "payment_method": "credit card ending 6570",
+    "category": "פארמה",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      72.73,
+      83.8
+    ]
+  },
+  {
+    "merge_key": "GOOGLE OMO HEALTHY WE",
+    "display_name": "Google Omo Healthy We",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 79.0,
+    "yearly_total": 948.0,
+    "payment_per_period": 79.0,
+    "start_date": "2024-11-20",
+    "end_date": "2024-11-20",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      79.0,
+      79.0
+    ]
+  },
+  {
+    "merge_key": "עיתון מקור ראשון ש.מ מנויים",
+    "display_name": "עיתון מקור ראשון ש.מ מנויים",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 78.5,
+    "yearly_total": 942.0,
+    "payment_per_period": 78.5,
+    "start_date": "2024-10-28",
+    "end_date": "2025-03-26",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "known subscription/telecom keyword: 'מנוי'; RiseUp category 'כללי' (digital/telecom/general); consistent amount across 2 payments",
+    "amount_range": [
+      78.0,
+      79.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE LINKEDIN COM",
+    "display_name": "Google LINKEDIN COM",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 73.0,
+    "yearly_total": 876.0,
+    "payment_per_period": 73.0,
+    "start_date": "2025-04-19",
+    "end_date": "2025-04-19",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      73.0,
+      73.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE LINKEDIN JOBS",
+    "display_name": "Google LinkedIn Jobs",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 73.0,
+    "yearly_total": 876.0,
+    "payment_per_period": 73.0,
+    "start_date": "2025-03-19",
+    "end_date": "2025-03-19",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      73.0,
+      73.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 70.0,
+    "yearly_total": 840.0,
+    "payment_per_period": 70.0,
+    "start_date": "2024-09-19",
+    "end_date": "2024-09-19",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      70.0,
+      70.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 69.9,
+    "yearly_total": 838.8,
+    "payment_per_period": 69.9,
+    "start_date": "2025-10-12",
+    "end_date": "2025-10-12",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'apple'; consistent amount across 1 payments",
+    "amount_range": [
+      69.9,
+      69.9
+    ]
+  },
+  {
+    "merge_key": "פילורוס א.א יזמות עסקית ב",
+    "display_name": "פילורוס א.א יזמות עסקית ב",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 69.83,
+    "yearly_total": 838.0,
+    "payment_per_period": 69.83,
+    "start_date": "2024-10-27",
+    "end_date": "2026-04-10",
+    "payment_count": 6,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general)",
+    "amount_range": [
+      63.0,
+      78.0
+    ]
+  },
+  {
+    "merge_key": "CLAUDE.AI SUBSCRIPTION",
+    "display_name": "CLAUDE.AI SUBSCRIPTION",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 69.02,
+    "yearly_total": 828.26,
+    "payment_per_period": 69.02,
+    "start_date": "2024-09-04",
+    "end_date": "2026-05-13",
+    "payment_count": 21,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'subscription'; RiseUp category 'דיגיטל' (digital/telecom/general); recurring ~monthly pattern (21 payments)",
+    "amount_range": [
+      58.8,
+      75.88
+    ]
+  },
+  {
+    "merge_key": "בינה מלאכותית בגובה העיניים בעמ",
+    "display_name": "בינה מלאכותית בגובה העיניים בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 67.0,
+    "yearly_total": 804.0,
+    "payment_per_period": 67.0,
+    "start_date": "2025-12-26",
+    "end_date": "2026-02-26",
+    "payment_count": 3,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      67.0,
+      67.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 66.31,
+    "yearly_total": 795.75,
+    "payment_per_period": 66.31,
+    "start_date": "2024-09-25",
+    "end_date": "2026-04-26",
+    "payment_count": 8,
+    "payment_method": "credit card ending 5109",
+    "category": "תחבורה ציבורית",
+    "reason": "recurring ~monthly pattern (8 payments)",
+    "amount_range": [
+      59.0,
+      72.0
+    ]
+  },
+  {
+    "merge_key": "SIMPLE PREMIUM",
+    "display_name": "SIMPLE PREMIUM",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 65.95,
+    "yearly_total": 791.4,
+    "payment_per_period": 65.95,
+    "start_date": "2025-12-29",
+    "end_date": "2025-12-29",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'premium'; consistent amount across 1 payments",
+    "amount_range": [
+      65.95,
+      65.95
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "quarterly",
+    "avg_monthly_amount": 194.58,
+    "yearly_total": 778.33,
+    "payment_per_period": 194.58,
+    "start_date": "2024-12-08",
+    "end_date": "2026-03-08",
+    "payment_count": 6,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'",
+    "amount_range": [
+      180.0,
+      210.0
+    ]
+  },
+  {
+    "merge_key": "לחיות בכבוד",
+    "display_name": "לחיות בכבוד (ער)",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 64.0,
+    "yearly_total": 768.0,
+    "payment_per_period": 64.0,
+    "start_date": "2024-12-05",
+    "end_date": "2025-03-05",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      64.0,
+      64.0
+    ]
+  },
+  {
+    "merge_key": "רולדין ישפרו מודיעין",
+    "display_name": "רולדין ישפרו מודיעין",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 63.67,
+    "yearly_total": 764.0,
+    "payment_per_period": 63.67,
+    "start_date": "2025-05-13",
+    "end_date": "2025-07-22",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      60.0,
+      68.0
+    ]
+  },
+  {
+    "merge_key": "LEVI'S PLACE",
+    "display_name": "LEVI'S PLACE",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 62.33,
+    "yearly_total": 748.0,
+    "payment_per_period": 62.33,
+    "start_date": "2025-03-09",
+    "end_date": "2026-03-11",
+    "payment_count": 6,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "known subscription/telecom keyword: 'levi'; consistent amount across 6 payments",
+    "amount_range": [
+      61.0,
+      63.0
+    ]
+  },
+  {
+    "merge_key": "העברה ב BIT בנהפ",
+    "display_name": "העברה ב BIT בנהפ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 61.0,
+    "yearly_total": 732.0,
+    "payment_per_period": 61.0,
+    "start_date": "2024-09-19",
+    "end_date": "2026-04-15",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      60.0,
+      64.0
+    ]
+  },
+  {
+    "merge_key": "CURSOR AI POWERED IDE",
+    "display_name": "CURSOR AI POWERED IDE",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 60.9,
+    "yearly_total": 730.82,
+    "payment_per_period": 60.9,
+    "start_date": "2026-02-16",
+    "end_date": "2026-06-16",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'cursor'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      59.02,
+      62.95
+    ]
+  },
+  {
+    "merge_key": "רולדין מעלה אדומים",
+    "display_name": "רולדין מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 60.08,
+    "yearly_total": 720.92,
+    "payment_per_period": 60.08,
+    "start_date": "2025-11-21",
+    "end_date": "2026-05-17",
+    "payment_count": 13,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (13 payments)",
+    "amount_range": [
+      56.0,
+      66.0
+    ]
+  },
+  {
+    "merge_key": "בית אלי לחייל הבודד",
+    "display_name": "בית אלי לחייל הבודד",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 60.0,
+    "yearly_total": 720.0,
+    "payment_per_period": 60.0,
+    "start_date": "2024-11-05",
+    "end_date": "2025-03-06",
+    "payment_count": 6,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      60.0,
+      60.0
+    ]
+  },
+  {
+    "merge_key": "ANTHROPIC* CLAUDE SUB",
+    "display_name": "ANTHROPIC* CLAUDE SUB",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 59.4,
+    "yearly_total": 712.8,
+    "payment_per_period": 59.4,
+    "start_date": "2026-06-13",
+    "end_date": "2026-06-13",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'claude'; consistent amount across 1 payments",
+    "amount_range": [
+      59.4,
+      59.4
+    ]
+  },
+  {
+    "merge_key": "בלאדי",
+    "display_name": "בלאדי",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 56.33,
+    "yearly_total": 676.0,
+    "payment_per_period": 56.33,
+    "start_date": "2025-11-16",
+    "end_date": "2026-06-23",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7586",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      55.0,
+      59.0
+    ]
+  },
+  {
+    "merge_key": "PAYPAL",
+    "display_name": "PAYPAL *CANVAPTYLIM",
+    "alternate_names": [
+      "PAYPAL *LINKEDIN"
+    ],
+    "frequency": "monthly",
+    "avg_monthly_amount": 54.36,
+    "yearly_total": 652.32,
+    "payment_per_period": 54.36,
+    "start_date": "2024-12-05",
+    "end_date": "2026-06-03",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      52.49,
+      56.53
+    ]
+  },
+  {
+    "merge_key": "עמותת קרן חיים",
+    "display_name": "עמותת קרן חיים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 54.0,
+    "yearly_total": 648.0,
+    "payment_per_period": 54.0,
+    "start_date": "2024-11-10",
+    "end_date": "2025-03-10",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      54.0,
+      54.0
+    ]
+  },
+  {
+    "merge_key": "מאוחדת שיניים",
+    "display_name": "מאוחדת שיניים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 53.0,
+    "yearly_total": 636.0,
+    "payment_per_period": 53.0,
+    "start_date": "2025-02-14",
+    "end_date": "2026-01-23",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      53.0,
+      53.0
+    ]
+  },
+  {
+    "merge_key": "פנימה/ אותיות/ מדע וטבע",
+    "display_name": "פנימה/ אותיות/ מדע וטבע",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 52.12,
+    "yearly_total": 625.41,
+    "payment_per_period": 52.12,
+    "start_date": "2024-09-05",
+    "end_date": "2025-12-22",
+    "payment_count": 17,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 17 payments; recurring ~monthly pattern (17 payments)",
+    "amount_range": [
+      52.0,
+      54.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון מעלה אדומים",
+    "display_name": "מאפה נאמן קניון מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 51.5,
+    "yearly_total": 618.0,
+    "payment_per_period": 51.5,
+    "start_date": "2024-12-19",
+    "end_date": "2025-08-24",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      50.0,
+      53.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "quarterly",
+    "avg_monthly_amount": 152.0,
+    "yearly_total": 608.0,
+    "payment_per_period": 152.0,
+    "start_date": "2025-05-09",
+    "end_date": "2026-04-27",
+    "payment_count": 5,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 5 payments",
+    "amount_range": [
+      150.0,
+      160.0
+    ]
+  },
+  {
+    "merge_key": "קו לחיים",
+    "display_name": "קו לחיים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 50.0,
+    "yearly_total": 600.0,
+    "payment_per_period": 50.0,
+    "start_date": "2024-09-15",
+    "end_date": "2025-03-16",
+    "payment_count": 7,
+    "payment_method": "credit card ending 2499",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 7 payments; recurring ~monthly pattern (7 payments)",
+    "amount_range": [
+      50.0,
+      50.0
+    ]
+  },
+  {
+    "merge_key": "בזק - הוראת קבע",
+    "display_name": "B בזק - הוראת קבע",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 49.82,
+    "yearly_total": 597.82,
+    "payment_per_period": 49.82,
+    "start_date": "2024-10-20",
+    "end_date": "2026-06-20",
+    "payment_count": 11,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "merchant name contains 'standing order' (הוראת קבע); known subscription/telecom keyword: 'בזק'; consistent amount across 11 payments; recurring ~monthly pattern (11 payments)",
+    "amount_range": [
+      49.0,
+      50.0
+    ]
+  },
+  {
+    "merge_key": "פסטה מבשרת",
+    "display_name": "פסטה מבשרת",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 49.56,
+    "yearly_total": 594.67,
+    "payment_per_period": 49.56,
+    "start_date": "2024-09-11",
+    "end_date": "2025-05-18",
+    "payment_count": 9,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (9 payments)",
+    "amount_range": [
+      46.0,
+      54.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 49.5,
+    "yearly_total": 594.0,
+    "payment_per_period": 49.5,
+    "start_date": "2024-12-26",
+    "end_date": "2026-02-25",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "תחבורה ציבורית",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      48.0,
+      53.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE*CALL RECORDER",
+    "display_name": "GOOGLE*CALL RECORDER",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 49.0,
+    "yearly_total": 588.0,
+    "payment_per_period": 49.0,
+    "start_date": "2024-11-24",
+    "end_date": "2024-11-24",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      49.0,
+      49.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE CALL RECORDER",
+    "display_name": "Google Call Recorder",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 49.0,
+    "yearly_total": 588.0,
+    "payment_per_period": 49.0,
+    "start_date": "2025-11-24",
+    "end_date": "2025-11-24",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      49.0,
+      49.0
+    ]
+  },
+  {
+    "merge_key": "איתוראן בעמ הוק",
+    "display_name": "איתוראן בעמ הוק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 49.0,
+    "yearly_total": 588.0,
+    "payment_per_period": 49.0,
+    "start_date": "2025-12-28",
+    "end_date": "2026-05-28",
+    "payment_count": 6,
+    "payment_method": "credit card ending 5109",
+    "category": "רכב",
+    "reason": "consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      49.0,
+      49.0
+    ]
+  },
+  {
+    "merge_key": "אנגל",
+    "display_name": "אנגל",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 45.0,
+    "yearly_total": 540.0,
+    "payment_per_period": 45.0,
+    "start_date": "2026-02-08",
+    "end_date": "2026-04-17",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      44.0,
+      47.0
+    ]
+  },
+  {
+    "merge_key": "מנוי RISEUP",
+    "display_name": "מנוי riseup",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 45.0,
+    "yearly_total": 540.0,
+    "payment_per_period": 45.0,
+    "start_date": "2025-04-15",
+    "end_date": "2025-08-15",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "RiseUp",
+    "reason": "known subscription/telecom keyword: 'riseup'; consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      45.0,
+      45.0
+    ]
+  },
+  {
+    "merge_key": "LEVI'S PLACE",
+    "display_name": "LEVI'S PLACE",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 44.7,
+    "yearly_total": 536.4,
+    "payment_per_period": 44.7,
+    "start_date": "2024-10-09",
+    "end_date": "2025-12-24",
+    "payment_count": 10,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'levi'; consistent amount across 10 payments",
+    "amount_range": [
+      42.0,
+      45.0
+    ]
+  },
+  {
+    "merge_key": "קפה נטו שערי צדק",
+    "display_name": "קפה נטו שערי צדק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 44.67,
+    "yearly_total": 536.0,
+    "payment_per_period": 44.67,
+    "start_date": "2025-09-07",
+    "end_date": "2026-05-05",
+    "payment_count": 3,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      42.0,
+      46.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון מעלה אדומים",
+    "display_name": "מאפה נאמן קניון מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 42.33,
+    "yearly_total": 508.0,
+    "payment_per_period": 42.33,
+    "start_date": "2024-10-14",
+    "end_date": "2026-03-22",
+    "payment_count": 6,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      40.0,
+      47.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון מעלה",
+    "display_name": "מאפה נאמן קניון מעלה",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 41.75,
+    "yearly_total": 500.96,
+    "payment_per_period": 41.75,
+    "start_date": "2025-09-08",
+    "end_date": "2025-12-11",
+    "payment_count": 3,
+    "payment_method": "credit card ending 6570",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      40.64,
+      42.6
+    ]
+  },
+  {
+    "merge_key": "מרכז קהילתי מעלה אדומים",
+    "display_name": "מרכז קהילתי מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 40.0,
+    "yearly_total": 480.0,
+    "payment_per_period": 40.0,
+    "start_date": "2024-09-03",
+    "end_date": "2024-12-02",
+    "payment_count": 4,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      40.0,
+      40.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 39.85,
+    "yearly_total": 478.16,
+    "payment_per_period": 39.85,
+    "start_date": "2025-03-14",
+    "end_date": "2026-04-13",
+    "payment_count": 22,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'apple'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 22 payments; recurring ~monthly pattern (22 payments)",
+    "amount_range": [
+      38.62,
+      40.0
+    ]
+  },
+  {
+    "merge_key": "נחמה את נעמד",
+    "display_name": "נחמה את נעמד",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 39.5,
+    "yearly_total": 474.0,
+    "payment_per_period": 39.5,
+    "start_date": "2025-09-22",
+    "end_date": "2026-01-07",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 2 payments",
+    "amount_range": [
+      39.0,
+      40.0
+    ]
+  },
+  {
+    "merge_key": "נשיונל גיאוגרפיק קידס הוק",
+    "display_name": "נשיונל גיאוגרפיק קידס הוק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 39.0,
+    "yearly_total": 468.0,
+    "payment_per_period": 39.0,
+    "start_date": "2025-01-26",
+    "end_date": "2025-03-25",
+    "payment_count": 3,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      39.0,
+      39.0
+    ]
+  },
+  {
+    "merge_key": "פנגו חשבונית חודשית",
+    "display_name": "פנגו חשבונית חודשית",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 38.82,
+    "yearly_total": 465.86,
+    "payment_per_period": 38.82,
+    "start_date": "2024-10-27",
+    "end_date": "2025-05-27",
+    "payment_count": 5,
+    "payment_method": "credit card ending 3700",
+    "category": "רכב",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      36.47,
+      41.81
+    ]
+  },
+  {
+    "merge_key": "פנגו-חניונים",
+    "display_name": "פנגו-חניונים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 37.46,
+    "yearly_total": 449.47,
+    "payment_per_period": 37.46,
+    "start_date": "2025-03-22",
+    "end_date": "2025-08-20",
+    "payment_count": 9,
+    "payment_method": "credit card ending 3700",
+    "category": "רכב",
+    "reason": "consistent amount across 9 payments; recurring ~monthly pattern (9 payments)",
+    "amount_range": [
+      36.9,
+      41.9
+    ]
+  },
+  {
+    "merge_key": "פילורוס א.א יזמות עסקית ב",
+    "display_name": "פילורוס א.א יזמות עסקית ב",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 36.5,
+    "yearly_total": 438.0,
+    "payment_per_period": 36.5,
+    "start_date": "2024-11-22",
+    "end_date": "2026-04-10",
+    "payment_count": 6,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 6 payments",
+    "amount_range": [
+      35.0,
+      38.0
+    ]
+  },
+  {
+    "merge_key": "רולדין מעלה אדומים",
+    "display_name": "רולדין מעלה אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 35.43,
+    "yearly_total": 425.14,
+    "payment_per_period": 35.43,
+    "start_date": "2025-11-20",
+    "end_date": "2026-04-19",
+    "payment_count": 7,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (7 payments)",
+    "amount_range": [
+      32.0,
+      38.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE CALL RECORDER",
+    "display_name": "Google Call Recorder",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 35.0,
+    "yearly_total": 420.0,
+    "payment_per_period": 35.0,
+    "start_date": "2026-04-11",
+    "end_date": "2026-04-11",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      35.0,
+      35.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE CUBE APPS LTD",
+    "display_name": "Google Cube Apps Ltd",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 35.0,
+    "yearly_total": 420.0,
+    "payment_per_period": 35.0,
+    "start_date": "2025-04-11",
+    "end_date": "2025-04-11",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      35.0,
+      35.0
+    ]
+  },
+  {
+    "merge_key": "חומוס אליהו מישור אדומים",
+    "display_name": "חומוס אליהו מישור אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 33.75,
+    "yearly_total": 405.0,
+    "payment_per_period": 33.75,
+    "start_date": "2025-05-27",
+    "end_date": "2025-08-26",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      32.0,
+      36.0
+    ]
+  },
+  {
+    "merge_key": "בי פרש שערי צדק",
+    "display_name": "בי פרש שערי צדק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 31.0,
+    "yearly_total": 372.0,
+    "payment_per_period": 31.0,
+    "start_date": "2026-03-25",
+    "end_date": "2026-05-18",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7586",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      31.0,
+      31.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 30.78,
+    "yearly_total": 369.36,
+    "payment_per_period": 30.78,
+    "start_date": "2025-05-07",
+    "end_date": "2025-05-07",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'apple'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 1 payments",
+    "amount_range": [
+      30.78,
+      30.78
+    ]
+  },
+  {
+    "merge_key": "OPENAI",
+    "display_name": "OPENAI",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 30.41,
+    "yearly_total": 364.92,
+    "payment_per_period": 30.41,
+    "start_date": "2026-04-22",
+    "end_date": "2026-04-22",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'openai'; consistent amount across 1 payments",
+    "amount_range": [
+      30.41,
+      30.41
+    ]
+  },
+  {
+    "merge_key": "נשיונל גיאוגרפיק קידס הו",
+    "display_name": "נשיונל גיאוגרפיק קידס הו",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.9,
+    "yearly_total": 358.8,
+    "payment_per_period": 29.9,
+    "start_date": "2024-09-29",
+    "end_date": "2024-10-29",
+    "payment_count": 2,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 2 payments",
+    "amount_range": [
+      29.9,
+      29.9
+    ]
+  },
+  {
+    "merge_key": "נשיונל גיאוגרפיק קידס הוק",
+    "display_name": "נשיונל גיאוגרפיק קידס הוק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.9,
+    "yearly_total": 358.8,
+    "payment_per_period": 29.9,
+    "start_date": "2024-11-28",
+    "end_date": "2024-12-25",
+    "payment_count": 2,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 2 payments",
+    "amount_range": [
+      29.9,
+      29.9
+    ]
+  },
+  {
+    "merge_key": "ארומה שערי צדק",
+    "display_name": "ארומה שערי צדק",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.6,
+    "yearly_total": 355.2,
+    "payment_per_period": 29.6,
+    "start_date": "2025-08-11",
+    "end_date": "2025-12-15",
+    "payment_count": 5,
+    "payment_method": "credit card ending 6570",
+    "category": "אוכל בחוץ",
+    "reason": "recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      28.0,
+      33.0
+    ]
+  },
+  {
+    "merge_key": "FAIRTIQ",
+    "display_name": "FAIRTIQ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.34,
+    "yearly_total": 352.05,
+    "payment_per_period": 29.34,
+    "start_date": "2026-01-30",
+    "end_date": "2026-02-03",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "תחבורה ציבורית",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      28.91,
+      29.89
+    ]
+  },
+  {
+    "merge_key": "בזק - הוראת קבע",
+    "display_name": "B בזק - הוראת קבע",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.0,
+    "yearly_total": 348.0,
+    "payment_per_period": 29.0,
+    "start_date": "2024-09-06",
+    "end_date": "2026-06-06",
+    "payment_count": 22,
+    "payment_method": "credit card ending 5109",
+    "category": "תקשורת",
+    "reason": "merchant name contains 'standing order' (הוראת קבע); known subscription/telecom keyword: 'בזק'; RiseUp category 'תקשורת' (digital/telecom/general); consistent amount across 22 payments; recurring ~monthly pattern (22 payments)",
+    "amount_range": [
+      29.0,
+      29.0
+    ]
+  },
+  {
+    "merge_key": "טלרום-כותר",
+    "display_name": "טלרום-כותר",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 29.0,
+    "yearly_total": 348.0,
+    "payment_per_period": 29.0,
+    "start_date": "2024-11-25",
+    "end_date": "2025-10-25",
+    "payment_count": 12,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 12 payments; recurring ~monthly pattern (12 payments)",
+    "amount_range": [
+      29.0,
+      29.0
+    ]
+  },
+  {
+    "merge_key": "בריין בינה בעמ",
+    "display_name": "בריין בינה בעמ",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 27.0,
+    "yearly_total": 324.0,
+    "payment_per_period": 27.0,
+    "start_date": "2024-11-02",
+    "end_date": "2025-04-02",
+    "payment_count": 6,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      27.0,
+      27.0
+    ]
+  },
+  {
+    "merge_key": "לה ז'ומל",
+    "display_name": "לה ז'ומל",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 26.25,
+    "yearly_total": 315.0,
+    "payment_per_period": 26.25,
+    "start_date": "2024-12-16",
+    "end_date": "2025-12-25",
+    "payment_count": 12,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 12 payments; recurring ~monthly pattern (12 payments)",
+    "amount_range": [
+      26.0,
+      29.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 25.0,
+    "yearly_total": 300.0,
+    "payment_per_period": 25.0,
+    "start_date": "2024-09-17",
+    "end_date": "2026-04-23",
+    "payment_count": 6,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 6 payments",
+    "amount_range": [
+      25.0,
+      25.0
+    ]
+  },
+  {
+    "merge_key": "אתר מידה",
+    "display_name": "אתר מידה",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 25.0,
+    "yearly_total": 300.0,
+    "payment_per_period": 25.0,
+    "start_date": "2024-11-21",
+    "end_date": "2025-12-21",
+    "payment_count": 14,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 14 payments; recurring ~monthly pattern (14 payments)",
+    "amount_range": [
+      25.0,
+      25.0
+    ]
+  },
+  {
+    "merge_key": "הנריקו",
+    "display_name": "הנריקו",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 25.0,
+    "yearly_total": 300.0,
+    "payment_per_period": 25.0,
+    "start_date": "2024-11-28",
+    "end_date": "2025-04-28",
+    "payment_count": 6,
+    "payment_method": "credit card ending 3700",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      25.0,
+      25.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 24.0,
+    "yearly_total": 288.0,
+    "payment_per_period": 24.0,
+    "start_date": "2024-12-26",
+    "end_date": "2026-02-25",
+    "payment_count": 3,
+    "payment_method": "credit card ending 3700",
+    "category": "תחבורה ציבורית",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      24.0,
+      24.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE YOUTUBE PREMIUM",
+    "display_name": "GOOGLE YOUTUBEPREMIUM",
+    "alternate_names": [
+      "Google YouTubePremium"
+    ],
+    "frequency": "monthly",
+    "avg_monthly_amount": 23.9,
+    "yearly_total": 286.8,
+    "payment_per_period": 23.9,
+    "start_date": "2024-09-04",
+    "end_date": "2026-06-04",
+    "payment_count": 23,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'premium'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 23 payments; recurring ~monthly pattern (23 payments)",
+    "amount_range": [
+      23.9,
+      23.9
+    ]
+  },
+  {
+    "merge_key": "קפה נאמן רמת אשכול",
+    "display_name": "קפה נאמן רמת אשכול",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 23.33,
+    "yearly_total": 280.0,
+    "payment_per_period": 23.33,
+    "start_date": "2024-11-08",
+    "end_date": "2025-07-08",
+    "payment_count": 3,
+    "payment_method": "credit card ending 3700",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      22.0,
+      24.0
+    ]
+  },
+  {
+    "merge_key": "מנוי RISEUP",
+    "display_name": "מנוי riseup",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 23.0,
+    "yearly_total": 276.0,
+    "payment_per_period": 23.0,
+    "start_date": "2025-02-15",
+    "end_date": "2025-03-15",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'riseup'; consistent amount across 2 payments",
+    "amount_range": [
+      23.0,
+      23.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 21.5,
+    "yearly_total": 258.0,
+    "payment_per_period": 21.5,
+    "start_date": "2024-11-03",
+    "end_date": "2025-03-05",
+    "payment_count": 2,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 2 payments",
+    "amount_range": [
+      20.0,
+      23.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן פז אדומים",
+    "display_name": "מאפה נאמן פז אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 20.65,
+    "yearly_total": 247.84,
+    "payment_per_period": 20.65,
+    "start_date": "2025-01-10",
+    "end_date": "2025-03-13",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      20.0,
+      21.0
+    ]
+  },
+  {
+    "merge_key": "דמי חבר מועדון חבר",
+    "display_name": "דמי חבר מועדון חבר",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 20.0,
+    "yearly_total": 240.0,
+    "payment_per_period": 20.0,
+    "start_date": "2024-09-30",
+    "end_date": "2026-05-31",
+    "payment_count": 21,
+    "payment_method": "credit card ending 3608",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'דמי חבר'; consistent amount across 21 payments; recurring ~monthly pattern (21 payments)",
+    "amount_range": [
+      20.0,
+      20.0
+    ]
+  },
+  {
+    "merge_key": "כביש",
+    "display_name": "כביש 6",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 20.0,
+    "yearly_total": 240.0,
+    "payment_per_period": 20.0,
+    "start_date": "2024-12-20",
+    "end_date": "2025-08-20",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "רכב",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      20.0,
+      20.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE ONE",
+    "display_name": "Google One",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 19.0,
+    "yearly_total": 228.0,
+    "payment_per_period": 19.0,
+    "start_date": "2026-06-20",
+    "end_date": "2026-06-20",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      19.0,
+      19.0
+    ]
+  },
+  {
+    "merge_key": "וופל בר רמות",
+    "display_name": "וופל בר רמות",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 18.0,
+    "yearly_total": 216.0,
+    "payment_per_period": 18.0,
+    "start_date": "2025-10-21",
+    "end_date": "2025-11-25",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      18.0,
+      18.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן פז",
+    "display_name": "מאפה נאמן פז",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 18.0,
+    "yearly_total": 216.0,
+    "payment_per_period": 18.0,
+    "start_date": "2024-09-19",
+    "end_date": "2024-12-06",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      17.0,
+      19.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 16.5,
+    "yearly_total": 198.0,
+    "payment_per_period": 16.5,
+    "start_date": "2024-10-25",
+    "end_date": "2026-05-25",
+    "payment_count": 8,
+    "payment_method": "credit card ending 7370",
+    "category": "תחבורה ציבורית",
+    "reason": "consistent amount across 8 payments; recurring ~monthly pattern (8 payments)",
+    "amount_range": [
+      16.0,
+      18.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE ONE",
+    "display_name": "Google One",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 15.0,
+    "yearly_total": 180.0,
+    "payment_per_period": 15.0,
+    "start_date": "2026-04-15",
+    "end_date": "2026-05-20",
+    "payment_count": 2,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 2 payments",
+    "amount_range": [
+      15.0,
+      15.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE LEAP FITNESS",
+    "display_name": "GOOGLE LEAP FITNESS",
+    "alternate_names": [
+      "Google Leap Fitness"
+    ],
+    "frequency": "monthly",
+    "avg_monthly_amount": 14.47,
+    "yearly_total": 173.64,
+    "payment_per_period": 14.47,
+    "start_date": "2024-09-05",
+    "end_date": "2025-09-05",
+    "payment_count": 27,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'google'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 27 payments; recurring ~monthly pattern (27 payments)",
+    "amount_range": [
+      13.9,
+      15.0
+    ]
+  },
+  {
+    "merge_key": "פילורוס א.א יזמות עסקית ב",
+    "display_name": "פילורוס א.א יזמות עסקית ב",
+    "alternate_names": [],
+    "frequency": "unclear",
+    "avg_monthly_amount": 14.0,
+    "yearly_total": 168.0,
+    "payment_per_period": 14.0,
+    "start_date": "2024-10-18",
+    "end_date": "2025-09-12",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "כללי",
+    "reason": "RiseUp category 'כללי' (digital/telecom/general); consistent amount across 5 payments",
+    "amount_range": [
+      14.0,
+      14.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE*FASTING INTERM",
+    "display_name": "GOOGLE*FASTING INTERM",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 13.9,
+    "yearly_total": 166.8,
+    "payment_per_period": 13.9,
+    "start_date": "2026-04-11",
+    "end_date": "2026-04-11",
+    "payment_count": 1,
+    "payment_method": "credit card ending 5109",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      13.9,
+      13.9
+    ]
+  },
+  {
+    "merge_key": "GOOGLE FASTING INTERM",
+    "display_name": "Google Fasting Interm",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 13.9,
+    "yearly_total": 166.8,
+    "payment_per_period": 13.9,
+    "start_date": "2025-09-11",
+    "end_date": "2025-09-11",
+    "payment_count": 1,
+    "payment_method": "credit card ending 3700",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 1 payments",
+    "amount_range": [
+      13.9,
+      13.9
+    ]
+  },
+  {
+    "merge_key": "קפה נאמן רמת אשכול",
+    "display_name": "קפה נאמן רמת אשכול",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 13.5,
+    "yearly_total": 162.0,
+    "payment_per_period": 13.5,
+    "start_date": "2025-02-27",
+    "end_date": "2025-12-24",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      13.0,
+      14.0
+    ]
+  },
+  {
+    "merge_key": "לה ז'ומל",
+    "display_name": "לה ז'ומל",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 13.0,
+    "yearly_total": 156.0,
+    "payment_per_period": 13.0,
+    "start_date": "2024-12-01",
+    "end_date": "2026-01-15",
+    "payment_count": 56,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 56 payments; recurring ~monthly pattern (56 payments)",
+    "amount_range": [
+      13.0,
+      13.0
+    ]
+  },
+  {
+    "merge_key": "דמי כרטיס",
+    "display_name": "דמי כרטיס",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 12.9,
+    "yearly_total": 154.8,
+    "payment_per_period": 12.9,
+    "start_date": "2025-09-14",
+    "end_date": "2026-06-12",
+    "payment_count": 9,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 9 payments; recurring ~monthly pattern (9 payments)",
+    "amount_range": [
+      12.9,
+      12.9
+    ]
+  },
+  {
+    "merge_key": "GOOGLE ONE",
+    "display_name": "Google One",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 12.0,
+    "yearly_total": 144.0,
+    "payment_per_period": 12.0,
+    "start_date": "2024-09-29",
+    "end_date": "2026-03-28",
+    "payment_count": 19,
+    "payment_method": "credit card ending 5109",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'google'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 19 payments; recurring ~monthly pattern (19 payments)",
+    "amount_range": [
+      12.0,
+      12.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 12.0,
+    "yearly_total": 144.0,
+    "payment_per_period": 12.0,
+    "start_date": "2026-02-22",
+    "end_date": "2026-02-22",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      12.0,
+      12.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון מעלה",
+    "display_name": "מאפה נאמן קניון מעלה",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 12.0,
+    "yearly_total": 144.0,
+    "payment_per_period": 12.0,
+    "start_date": "2026-05-03",
+    "end_date": "2026-05-28",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7586",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      12.0,
+      12.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 11.9,
+    "yearly_total": 142.8,
+    "payment_per_period": 11.9,
+    "start_date": "2024-09-16",
+    "end_date": "2025-04-29",
+    "payment_count": 15,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'apple'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 15 payments; recurring ~monthly pattern (15 payments)",
+    "amount_range": [
+      11.9,
+      11.9
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "quarterly",
+    "avg_monthly_amount": 30.67,
+    "yearly_total": 122.67,
+    "payment_per_period": 30.67,
+    "start_date": "2025-07-14",
+    "end_date": "2026-01-05",
+    "payment_count": 3,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 3 payments",
+    "amount_range": [
+      30.0,
+      32.0
+    ]
+  },
+  {
+    "merge_key": "חניון ממילא",
+    "display_name": "חניון ממילא",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 10.12,
+    "yearly_total": 121.38,
+    "payment_per_period": 10.12,
+    "start_date": "2024-11-04",
+    "end_date": "2026-05-05",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7370",
+    "category": "רכב",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      10.0,
+      10.46
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 10.0,
+    "yearly_total": 120.0,
+    "payment_per_period": 10.0,
+    "start_date": "2026-01-01",
+    "end_date": "2026-01-01",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      10.0,
+      10.0
+    ]
+  },
+  {
+    "merge_key": "קפה עלית -רכבת השלום דרום",
+    "display_name": "קפה עלית -רכבת השלום דרום",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 10.0,
+    "yearly_total": 120.0,
+    "payment_per_period": 10.0,
+    "start_date": "2024-09-09",
+    "end_date": "2024-10-14",
+    "payment_count": 4,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      10.0,
+      10.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון מעלה",
+    "display_name": "מאפה נאמן קניון מעלה",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 9.88,
+    "yearly_total": 118.5,
+    "payment_per_period": 9.88,
+    "start_date": "2026-03-09",
+    "end_date": "2026-06-21",
+    "payment_count": 4,
+    "payment_method": "credit card ending 7586",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      9.5,
+      10.0
+    ]
+  },
+  {
+    "merge_key": "מאפה נאמן קניון אדומים",
+    "display_name": "מאפה נאמן קניון אדומים",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 9.8,
+    "yearly_total": 117.6,
+    "payment_per_period": 9.8,
+    "start_date": "2024-09-22",
+    "end_date": "2025-05-26",
+    "payment_count": 5,
+    "payment_method": "credit card ending 5109",
+    "category": "אוכל בחוץ",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      9.0,
+      10.0
+    ]
+  },
+  {
+    "merge_key": "משקט",
+    "display_name": "משקט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 8.2,
+    "yearly_total": 98.4,
+    "payment_per_period": 8.2,
+    "start_date": "2026-03-15",
+    "end_date": "2026-05-31",
+    "payment_count": 5,
+    "payment_method": "credit card ending 8843",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 5 payments; recurring ~monthly pattern (5 payments)",
+    "amount_range": [
+      8.0,
+      9.0
+    ]
+  },
+  {
+    "merge_key": "מ. התחבורה - פנגו מוביט",
+    "display_name": "מ. התחבורה - פנגו מוביט",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 8.0,
+    "yearly_total": 96.0,
+    "payment_per_period": 8.0,
+    "start_date": "2025-03-26",
+    "end_date": "2026-04-26",
+    "payment_count": 6,
+    "payment_method": "credit card ending 7370",
+    "category": "תחבורה ציבורית",
+    "reason": "consistent amount across 6 payments; recurring ~monthly pattern (6 payments)",
+    "amount_range": [
+      8.0,
+      8.0
+    ]
+  },
+  {
+    "merge_key": "GOOGLE ONE",
+    "display_name": "Google One",
+    "alternate_names": [],
+    "frequency": "yearly",
+    "avg_monthly_amount": 6.67,
+    "yearly_total": 80.0,
+    "payment_per_period": 80.0,
+    "start_date": "2025-03-01",
+    "end_date": "2026-03-01",
+    "payment_count": 2,
+    "payment_method": "credit card ending 3700",
+    "category": "מנויים",
+    "reason": "known subscription/telecom keyword: 'google'; consistent amount across 2 payments; payments occur approximately once per year",
+    "amount_range": [
+      80.0,
+      80.0
+    ]
+  },
+  {
+    "merge_key": "PAYBOX",
+    "display_name": "PAYBOX",
+    "alternate_names": [],
+    "frequency": "unknown",
+    "avg_monthly_amount": 6.0,
+    "yearly_total": 72.0,
+    "payment_per_period": 6.0,
+    "start_date": "2025-11-13",
+    "end_date": "2025-11-13",
+    "payment_count": 1,
+    "payment_method": "credit card ending 7370",
+    "category": "הוצאות משתנות",
+    "reason": "known subscription/telecom keyword: 'paybox'; consistent amount across 1 payments",
+    "amount_range": [
+      6.0,
+      6.0
+    ]
+  },
+  {
+    "merge_key": "APPLE.COM/BILL",
+    "display_name": "APPLE.COM/BILL",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 5.9,
+    "yearly_total": 70.8,
+    "payment_per_period": 5.9,
+    "start_date": "2024-12-19",
+    "end_date": "2025-12-19",
+    "payment_count": 13,
+    "payment_method": "credit card ending 3700",
+    "category": "דיגיטל",
+    "reason": "known subscription/telecom keyword: 'apple'; RiseUp category 'דיגיטל' (digital/telecom/general); consistent amount across 13 payments; recurring ~monthly pattern (13 payments)",
+    "amount_range": [
+      5.9,
+      5.9
+    ]
+  },
+  {
+    "merge_key": "השלמת דמי ניהול מזערי",
+    "display_name": "השלמת דמי ניהול מזערי",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 5.04,
+    "yearly_total": 60.48,
+    "payment_per_period": 5.04,
+    "start_date": "2024-09-01",
+    "end_date": "2025-05-02",
+    "payment_count": 3,
+    "payment_method": "bank account ending 729-107143",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 3 payments; recurring ~monthly pattern (3 payments)",
+    "amount_range": [
+      5.04,
+      5.04
+    ]
+  },
+  {
+    "merge_key": "עמלת פעולה בערוץ ישיר",
+    "display_name": "עמלת פעולה בערוץ ישיר",
+    "alternate_names": [],
+    "frequency": "monthly",
+    "avg_monthly_amount": 1.76,
+    "yearly_total": 21.12,
+    "payment_per_period": 1.76,
+    "start_date": "2024-09-01",
+    "end_date": "2025-05-02",
+    "payment_count": 4,
+    "payment_method": "bank account ending 729-107143",
+    "category": "הוצאות משתנות",
+    "reason": "consistent amount across 4 payments; recurring ~monthly pattern (4 payments)",
+    "amount_range": [
+      1.76,
+      1.76
+    ]
+  }
+]

@@ -19,18 +19,7 @@ export default async function ImportPage({ searchParams }: PageProps) {
   const sp = searchParams ? await searchParams : undefined;
   const format = sp?.format === "riseup" ? "riseup" : "bank";
 
-  const [documents, bankAccounts, creditCards] = await Promise.all([
-    format === "riseup"
-      ? Promise.resolve([])
-      : prisma.documents.findMany({
-          where: { household_id: householdId },
-          orderBy: { created_at: "desc" },
-          take: 20,
-          include: {
-            _count: { select: { transactions: true } },
-            bank_account: true,
-          },
-        }),
+  const [bankAccounts, creditCards, familyMembers, jobs] = await Promise.all([
     prisma.bank_accounts.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { account_name: "asc" },
@@ -38,6 +27,14 @@ export default async function ImportPage({ searchParams }: PageProps) {
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { card_name: "asc" },
+    }),
+    prisma.family_members.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { full_name: "asc" },
+    }),
+    prisma.jobs.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
   ]);
 
@@ -49,6 +46,29 @@ export default async function ImportPage({ searchParams }: PageProps) {
     id: c.id,
     label: `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
   }));
+  const familyMemberOptions = familyMembers.map((m) => ({
+    id: m.id,
+    full_name: m.full_name,
+  }));
+  const jobOptions = jobs.map((j) => ({
+    id: j.id,
+    family_member_id: j.family_member_id,
+    job_title: j.job_title,
+    employer_name: j.employer_name,
+  }));
+
+  const documents =
+    format === "riseup"
+      ? []
+      : await prisma.documents.findMany({
+          where: { household_id: householdId },
+          orderBy: { created_at: "desc" },
+          take: 20,
+          include: {
+            _count: { select: { transactions: true } },
+            bank_account: true,
+          },
+        });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -106,6 +126,8 @@ export default async function ImportPage({ searchParams }: PageProps) {
             uiLanguage={uiLanguage}
             bankAccounts={bankAccountOptions}
             creditCards={creditCardOptions}
+            familyMembers={familyMemberOptions}
+            jobs={jobOptions}
           />
         ) : (
           <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />

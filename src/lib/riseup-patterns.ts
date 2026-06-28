@@ -6,6 +6,13 @@ import type {
   RiseUpProposalConfidence,
   RiseUpProposalSupportRow,
 } from "@/lib/riseup-commit-types";
+import {
+  canonicalSubscriptionName,
+  getExportActiveMonth,
+  isPaidInExportActiveMonth,
+  patternEndedDuringExport,
+  type SubscriptionAnalysisRow,
+} from "@/lib/riseup-subscription-analysis";
 
 export type RiseUpPatternRow = RiseUpAnalyzedRow & {
   riseup_import_key: string;
@@ -151,25 +158,49 @@ function patternKey(row: RiseUpPatternRow, kind: RiseUpPatternKind): string {
   if (kind === "installment_or_annual") {
     return `${kind}:${normalizePatternText(row.businessName)}:${amountKey(row)}:${totalPayments(row) ?? ""}:${row.paymentIdentifierRaw}`;
   }
+  if (kind === "subscription") {
+    return `${kind}:${normalizePatternText(canonicalSubscriptionName(row.businessName))}:${amountKey(row)}`;
+  }
   return `${kind}:${normalizePatternText(row.businessName)}`;
+}
+
+function toSubscriptionAnalysisRow(row: RiseUpPatternRow): SubscriptionAnalysisRow {
+  return {
+    rowIndex: row.rowIndex,
+    riseup_import_key: row.riseup_import_key,
+    businessName: row.businessName,
+    paymentDate: row.paymentDate,
+    amount: row.amount,
+    originalAmount: row.originalAmount,
+    cashflowCategory: row.cashflowCategory,
+    paymentMethodRaw: row.paymentMethodRaw,
+    paymentIdentifierRaw: row.paymentIdentifierRaw,
+    raw: row.raw,
+  };
 }
 
 function buildPattern(
   kind: RiseUpPatternKind,
   group: RiseUpPatternRow[],
   globalFirstMonth: string,
-  globalLastMonth: string,
+  exportActiveMonth: string | null,
 ): RiseUpDetectedPattern | null {
   const first = group[0];
   if (!first) return null;
   const monthSet = new Set(group.map(monthOf).filter(Boolean));
   const sortedMonths = [...monthSet].sort();
-  const amounts = group.map((row) => Math.abs(row.amount));
+  const amounts = group.map((row) => Math.abs(row.originalAmount ?? row.amount));
   const confidence = confidenceFor(kind, monthSet.size, group.length);
+  const lastMonth = sortedMonths[sortedMonths.length - 1] ?? "";
+  const paidInActiveMonth = group.some((row) =>
+    isPaidInExportActiveMonth(row.paymentDate, exportActiveMonth),
+  );
   const title =
     kind === "payment_instrument"
       ? `${first.sourceKind === "creditCard" ? "Credit card" : "Bank account"}: ${first.paymentMethodRaw} ${first.paymentIdentifierRaw}`
-      : first.businessName;
+      : kind === "subscription"
+        ? canonicalSubscriptionName(first.businessName)
+        : first.businessName;
 
   return {
     key: patternKey(first, kind),
@@ -177,14 +208,14 @@ function buildPattern(
     title,
     confidence,
     firstMonth: sortedMonths[0] ?? "",
-    lastMonth: sortedMonths[sortedMonths.length - 1] ?? "",
+    lastMonth,
     activeMonths: monthSet.size,
     rowCount: group.length,
     averageAmount: Math.round(average(amounts)),
     medianAmount: Math.round(median(amounts)),
     totalAmount: Math.round(amounts.reduce((sum, amount) => sum + amount, 0)),
     startedDuringPeriod: (sortedMonths[0] ?? "") > globalFirstMonth,
-    endedDuringPeriod: (sortedMonths[sortedMonths.length - 1] ?? "") < globalLastMonth,
+    endedDuringPeriod: patternEndedDuringExport(lastMonth, exportActiveMonth, paidInActiveMonth),
     reviewReason:
       kind === "transfer_or_refund_income"
         ? "Transfer/refund-like income needs user confirmation before creating a durable income source."
@@ -199,6 +230,9 @@ function buildPattern(
       totalPayments: totalPayments(first),
       observedPaymentNumbers: group.map(paymentNumber).filter((n): n is number => n !== null).sort((a, b) => a - b),
       originalAmount: Math.round(Math.abs(first.originalAmount ?? first.amount)),
+      exportActiveMonth,
+      isActiveInExport: paidInActiveMonth,
+      merchantAliases: kind === "subscription" ? [...new Set(group.map((row) => row.businessName))] : undefined,
     },
     supportRows: group.slice(0, 25).map((row) => support(row, confidence)),
   };
@@ -208,11 +242,11 @@ export function analyzeRiseUpPatterns(rows: RiseUpPatternRow[]): RiseUpDetectedP
   const datedRows = rows.filter((row) => row.paymentDate);
   const allMonths = [...new Set(datedRows.map(monthOf))].sort();
   const globalFirstMonth = allMonths[0] ?? "";
-  const globalLastMonth = allMonths[allMonths.length - 1] ?? "";
+  const exportActiveMonth = getExportActiveMonth(datedRows.map(toSubscriptionAnalysisRow));
   const patterns: RiseUpDetectedPattern[] = [];
 
   for (const group of groupBy(datedRows, (row) => patternKey(row, "payment_instrument")).values()) {
-    const pattern = buildPattern("payment_instrument", group, globalFirstMonth, globalLastMonth);
+    const pattern = buildPattern("payment_instrument", group, globalFirstMonth, exportActiveMonth);
     if (pattern && group.length >= 2) patterns.push(pattern);
   }
 
@@ -223,7 +257,7 @@ export function analyzeRiseUpPatterns(rows: RiseUpPatternRow[]): RiseUpDetectedP
   }
   for (const group of groupBy(incomeRows, (row) => patternKey(row, (row as RiseUpPatternRow & { __patternKind: RiseUpPatternKind }).__patternKind)).values()) {
     const kind = (group[0] as RiseUpPatternRow & { __patternKind: RiseUpPatternKind }).__patternKind;
-    const pattern = buildPattern(kind, group, globalFirstMonth, globalLastMonth);
+    const pattern = buildPattern(kind, group, globalFirstMonth, exportActiveMonth);
     if (pattern && (pattern.activeMonths >= 2 || pattern.totalAmount >= 5000)) patterns.push(pattern);
   }
 
@@ -238,7 +272,7 @@ export function analyzeRiseUpPatterns(rows: RiseUpPatternRow[]): RiseUpDetectedP
       first.kind,
       group.map((item) => item.row),
       globalFirstMonth,
-      globalLastMonth,
+      exportActiveMonth,
     );
     if (!pattern) continue;
     if (pattern.kind === "installment_or_annual" || pattern.activeMonths >= 2 || pattern.rowCount >= 2) {

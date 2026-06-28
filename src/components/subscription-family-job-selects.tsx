@@ -22,11 +22,17 @@ type Props = {
   jobs: SubscriptionFamilyJobSelectJob[];
   defaultFamilyMemberId?: string;
   defaultJobId?: string;
+  familyMemberId?: string;
+  jobId?: string;
+  onFamilyMemberIdChange?: (id: string) => void;
+  onJobIdChange?: (id: string) => void;
+  fieldIdPrefix?: string;
   memberLabel: string;
   jobLabel: string;
   selectClassName: string;
   showInactiveMemberSuffix?: boolean;
   showInactiveJobSuffix?: boolean;
+  noneLabel?: string;
 };
 
 export function SubscriptionFamilyJobSelects({
@@ -34,14 +40,25 @@ export function SubscriptionFamilyJobSelects({
   jobs,
   defaultFamilyMemberId = "",
   defaultJobId = "",
+  familyMemberId: controlledMemberId,
+  jobId: controlledJobId,
+  onFamilyMemberIdChange,
+  onJobIdChange,
+  fieldIdPrefix = "",
   memberLabel,
   jobLabel,
   selectClassName,
   showInactiveMemberSuffix = false,
   showInactiveJobSuffix = false,
+  noneLabel = "None",
 }: Props) {
-  const [memberId, setMemberId] = useState(defaultFamilyMemberId);
-  const [jobId, setJobId] = useState(defaultJobId);
+  const [internalMemberId, setInternalMemberId] = useState(defaultFamilyMemberId);
+  const [internalJobId, setInternalJobId] = useState(defaultJobId);
+  const controlled = onFamilyMemberIdChange != null;
+  const memberId = controlled ? (controlledMemberId ?? "") : internalMemberId;
+  const jobId = controlled ? (controlledJobId ?? "") : internalJobId;
+  const memberFieldId = `${fieldIdPrefix}family_member_id`;
+  const jobFieldId = `${fieldIdPrefix}job_id`;
 
   const visibleJobs = useMemo(() => {
     let list = !memberId ? jobs : jobs.filter((j) => j.family_member_id === memberId);
@@ -55,28 +72,44 @@ export function SubscriptionFamilyJobSelects({
   }, [jobs, memberId, jobId]);
 
   function handleMemberChange(nextMemberId: string) {
-    setMemberId(nextMemberId);
+    if (controlled) {
+      onFamilyMemberIdChange!(nextMemberId);
+    } else {
+      setInternalMemberId(nextMemberId);
+    }
     if (!nextMemberId || !jobId) return;
     const j = jobs.find((x) => x.id === jobId);
     if (j && j.family_member_id !== nextMemberId) {
-      setJobId("");
+      if (controlled) {
+        onJobIdChange?.("");
+      } else {
+        setInternalJobId("");
+      }
+    }
+  }
+
+  function handleJobChange(nextJobId: string) {
+    if (controlled) {
+      onJobIdChange?.(nextJobId);
+    } else {
+      setInternalJobId(nextJobId);
     }
   }
 
   return (
     <>
       <div>
-        <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
+        <label htmlFor={memberFieldId} className="mb-1 block text-xs font-medium text-slate-400">
           {memberLabel}
         </label>
         <select
-          id="family_member_id"
-          name="family_member_id"
+          id={memberFieldId}
+          name={controlled ? undefined : "family_member_id"}
           className={selectClassName}
           value={memberId}
           onChange={(e) => handleMemberChange(e.target.value)}
         >
-          <option value="">None</option>
+          <option value="">{noneLabel}</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
               {m.full_name}
@@ -86,17 +119,17 @@ export function SubscriptionFamilyJobSelects({
         </select>
       </div>
       <div>
-        <label htmlFor="job_id" className="mb-1 block text-xs font-medium text-slate-400">
+        <label htmlFor={jobFieldId} className="mb-1 block text-xs font-medium text-slate-400">
           {jobLabel}
         </label>
         <select
-          id="job_id"
-          name="job_id"
+          id={jobFieldId}
+          name={controlled ? undefined : "job_id"}
           className={selectClassName}
           value={jobId}
-          onChange={(e) => setJobId(e.target.value)}
+          onChange={(e) => handleJobChange(e.target.value)}
         >
-          <option value="">None</option>
+          <option value="">{noneLabel}</option>
           {visibleJobs.map((j) => (
             <option key={j.id} value={j.id}>
               {formatJobDisplayLabel(j)}

@@ -314,6 +314,9 @@ export async function POST(req: NextRequest) {
       const proposalActions = new Map(
         (body.proposals ?? []).map((p) => [p.id, p.action] as const),
       );
+      const proposalOverrides = new Map(
+        (body.proposals ?? []).map((p) => [p.id, p.payloadOverrides ?? {}] as const),
+      );
       const proposalIds = [...proposalActions.keys()];
       if (proposalIds.length > 0) {
         const proposals = await tx.riseup_import_proposals.findMany({
@@ -338,7 +341,10 @@ export async function POST(req: NextRequest) {
           }
 
           proposalsApproved++;
-          const payload = recordFromJson(proposal.payload_json);
+          const payload = {
+            ...recordFromJson(proposal.payload_json),
+            ...recordFromJson(proposalOverrides.get(proposal.id)),
+          };
           let targetEntityId = proposal.target_entity_id;
           let applied = false;
 
@@ -404,7 +410,13 @@ export async function POST(req: NextRequest) {
               applied = true;
             } else if (proposal.entity_kind === "subscription") {
               const name = stringField(payload, "suggestedName");
-              const amount = numberField(payload, "amount");
+              const amount =
+                numberField(payload, "perPaymentAmount") ?? numberField(payload, "amount");
+              const billingIntervalRaw = stringField(payload, "billingInterval");
+              const billing_interval =
+                billingIntervalRaw === "annual" ? "annual" : "monthly";
+              const familyMemberId = stringField(payload, "familyMemberId");
+              const jobId = stringField(payload, "jobId");
               if (name && amount !== null && amount > 0) {
                 const created = await tx.subscriptions.create({
                   data: {
@@ -412,8 +424,31 @@ export async function POST(req: NextRequest) {
                     household_id: householdId,
                     name,
                     fee_amount: amount,
-                    billing_interval: "monthly",
-                    description: "Draft created from RiseUp import proposal. Please review details.",
+                    billing_interval,
+                    family_member_id:
+                      familyMemberId &&
+                      (await tx.family_members.findFirst({
+                        where: { id: familyMemberId, household_id: householdId },
+                      }))
+                        ? familyMemberId
+                        : null,
+                    job_id:
+                      jobId &&
+                      (await tx.jobs.findFirst({
+                        where: { id: jobId, household_id: householdId },
+                      }))
+                        ? jobId
+                        : null,
+                    description: [
+                      "Draft created from RiseUp import proposal. Please review details.",
+                      stringField(payload, "reason"),
+                      payload.isActive === true ? "Status: ongoing in export window." : null,
+                      payload.annualFamilyMembers
+                        ? `Annual seats detected: ${String(payload.annualFamilyMembers)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" "),
                   },
                 });
                 targetEntityId = created.id;

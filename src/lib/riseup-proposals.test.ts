@@ -151,6 +151,55 @@ test("classifies recurring income, loans, installments, and petrol patterns", ()
   assert.ok(patterns.some((p) => p.kind === "installment_or_annual" && p.title === "כלל ביטוח חובה"));
 });
 
+test("generates subscription proposals with actual totals and active-month rules", () => {
+  const rows = [
+    row({
+      rowIndex: 30,
+      businessName: "PAYPAL *CANVAPTYLIM",
+      paymentDate: "2024-12-05",
+      amount: -55.93,
+      cashflowCategory: "דיגיטל",
+    }),
+    row({
+      rowIndex: 31,
+      businessName: "PAYPAL *CANVAPTYLIM",
+      paymentDate: "2025-01-05",
+      amount: -56.53,
+      cashflowCategory: "הוצאות משתנות",
+    }),
+    row({
+      rowIndex: 32,
+      businessName: "OPENAI",
+      paymentDate: "2026-04-22",
+      amount: -30.41,
+      cashflowCategory: "הוצאות משתנות",
+    }),
+    row({
+      rowIndex: 33,
+      businessName: "CURSOR AI POWERED IDE",
+      paymentDate: "2026-06-16",
+      amount: -59.06,
+      cashflowCategory: "דיגיטל",
+    }),
+  ];
+  const proposals = generateRiseUpImportProposals(rows);
+  const canva = proposals.find((p) => p.entity_kind === "subscription" && /canva/i.test(p.title));
+  const openai = proposals.find((p) => p.entity_kind === "subscription" && /openai/i.test(p.title));
+  const cursor = proposals.find((p) => p.entity_kind === "subscription" && /cursor/i.test(p.title));
+
+  assert.ok(canva);
+  assert.equal(canva.payload_json.totalPaidInExport, 112.46);
+  assert.equal(canva.payload_json.yearlyTotalAmount, 112.46);
+  assert.equal(canva.payload_json.isActive, false);
+
+  assert.ok(openai);
+  assert.equal(openai.payload_json.yearlyTotalAmount, 30.41);
+
+  assert.ok(cursor);
+  assert.equal(cursor.payload_json.isActive, true);
+  assert.equal(cursor.payload_json.endDate, "ongoing");
+});
+
 test("uses cross-row patterns to create reviewed durable entity proposals", () => {
   const rows = [
     row({

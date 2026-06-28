@@ -13,11 +13,18 @@ import type {
   RiseUpCommitProposalPayload,
   RiseUpImportRowStatus,
 } from "@/lib/riseup-commit-types";
+import {
+  SubscriptionFamilyJobSelects,
+  type SubscriptionFamilyJobSelectJob,
+  type SubscriptionFamilyJobSelectMember,
+} from "@/components/subscription-family-job-selects";
 
 type Props = {
   uiLanguage: "en" | "he";
   bankAccounts: { id: string; label: string }[];
   creditCards: { id: string; label: string }[];
+  familyMembers: SubscriptionFamilyJobSelectMember[];
+  jobs: SubscriptionFamilyJobSelectJob[];
 };
 
 type RiseUpAnalyzedImportRow = RiseUpAnalyzedRow & {
@@ -39,6 +46,71 @@ type RiseUpResetPreview = {
   genericLinkCount?: number;
   proposalCount?: number;
 };
+
+type RiseUpProposalWorkExpenseDraft = {
+  isWorkExpense: boolean;
+  familyMemberId: string;
+  jobId: string;
+};
+
+function proposalWorkExpenseDraft(
+  proposal: RiseUpImportProposal,
+  existing?: RiseUpProposalWorkExpenseDraft,
+): RiseUpProposalWorkExpenseDraft {
+  const payload = proposal.payload_json;
+  return {
+    isWorkExpense: existing?.isWorkExpense ?? Boolean(payload.isWorkExpense ?? payload.jobId),
+    familyMemberId: existing?.familyMemberId ?? String(payload.familyMemberId ?? ""),
+    jobId: existing?.jobId ?? String(payload.jobId ?? ""),
+  };
+}
+
+function subscriptionProposalDetailLines(
+  proposal: RiseUpImportProposal,
+  isHe: boolean,
+): string[] {
+  if (proposal.entity_kind !== "subscription") return [];
+  const p = proposal.payload_json;
+  const lines: string[] = [];
+  const interval = p.billingInterval === "annual" ? (isHe ? "שנתי" : "annual") : isHe ? "חודשי" : "monthly";
+  if (p.perPaymentAmount != null) {
+    lines.push(
+      isHe
+        ? `תשלום: ₪${Number(p.perPaymentAmount).toFixed(2)} (${interval})`
+        : `Payment: ₪${Number(p.perPaymentAmount).toFixed(2)} (${interval})`,
+    );
+  }
+  if (p.yearlyTotalAmount != null) {
+    lines.push(
+      isHe
+        ? `סה״כ שנתי משוער: ₪${Number(p.yearlyTotalAmount).toFixed(2)}`
+        : `Est. yearly total: ₪${Number(p.yearlyTotalAmount).toFixed(2)}`,
+    );
+  }
+  if (p.totalPaidInExport != null) {
+    lines.push(
+      isHe
+        ? `שולם בייצוא: ₪${Number(p.totalPaidInExport).toFixed(2)} (${p.paymentCount ?? "?"} תשלומים)`
+        : `Paid in export: ₪${Number(p.totalPaidInExport).toFixed(2)} (${p.paymentCount ?? "?"} payments)`,
+    );
+  }
+  if (p.isActive === true) {
+    lines.push(isHe ? "סטטוס: פעיל (תשלום בחודש האחרון בייצוא)" : "Status: active (paid in export's last month)");
+  } else if (p.endDate) {
+    lines.push(isHe ? `סיום/אחרון: ${p.endDate}` : `Last/end: ${p.endDate}`);
+  }
+  if (p.annualFamilyMembers != null) {
+    lines.push(
+      isHe
+        ? `מנוי שנתי ל-${p.annualFamilyMembers} בני משפחה`
+        : `Annual plan for ~${p.annualFamilyMembers} family members`,
+    );
+  }
+  return lines;
+}
+
+const subscriptionSelectClass =
+  "w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100";
 
 type RiseUpWizardSection =
   | "instruments"
@@ -120,7 +192,13 @@ function patternKindLabel(kind: string): string {
   return labels[kind] ?? kind;
 }
 
-export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Props) {
+export function RiseUpImportFlow({
+  uiLanguage,
+  bankAccounts,
+  creditCards,
+  familyMembers,
+  jobs,
+}: Props) {
   const router = useRouter();
   const isHe = uiLanguage === "he";
   const [file, setFile] = useState<File | null>(null);
@@ -133,6 +211,9 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
   const [actions, setActions] = useState<Record<number, RiseUpImportAction>>({});
   const [proposals, setProposals] = useState<RiseUpImportProposal[]>([]);
   const [proposalActions, setProposalActions] = useState<Record<string, "approve" | "reject" | "skip">>({});
+  const [proposalWorkExpense, setProposalWorkExpense] = useState<
+    Record<string, RiseUpProposalWorkExpenseDraft>
+  >({});
   const [activeSection, setActiveSection] = useState<RiseUpWizardSection>("instruments");
   const [analyzeSummary, setAnalyzeSummary] = useState<RiseUpAnalyzeSummary | null>(null);
   const [resetPreview, setResetPreview] = useState<RiseUpResetPreview | null>(null);
@@ -200,6 +281,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       setAnalyzed(rows);
       setProposals((data.proposals as RiseUpImportProposal[] | undefined) ?? []);
       setProposalActions({});
+      setProposalWorkExpense({});
       setAnalyzeSummary((data.summary as RiseUpAnalyzeSummary | undefined) ?? null);
       setActiveSection("instruments");
       setFileName(data.fileName ?? file.name);
@@ -219,7 +301,19 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       const rows = buildCommitPayload(analyzed, overrides, actions);
       const selectedProposals: RiseUpCommitProposalPayload[] = Object.entries(proposalActions)
         .filter(([, action]) => action !== "skip")
-        .map(([id, action]) => ({ id, action }));
+        .map(([id, action]) => {
+          const draft = proposalWorkExpense[id];
+          const proposal = proposals.find((p) => p.id === id);
+          const payloadOverrides =
+            proposal?.entity_kind === "subscription" && draft?.isWorkExpense
+              ? {
+                  familyMemberId: draft.familyMemberId || null,
+                  jobId: draft.jobId || null,
+                  isWorkExpense: true,
+                }
+              : undefined;
+          return { id, action, payloadOverrides };
+        });
       const res = await fetch("/api/import/riseup/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -242,6 +336,7 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
       setActions({});
       setProposals([]);
       setProposalActions({});
+      setProposalWorkExpense({});
       setAnalyzeSummary(null);
       router.refresh();
     } catch (e) {
@@ -339,6 +434,20 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
   function setProposalAction(id: string | undefined, action: "approve" | "reject" | "skip") {
     if (!id) return;
     setProposalActions((prev) => ({ ...prev, [id]: action }));
+  }
+
+  function setProposalWorkExpenseDraft(
+    proposal: RiseUpImportProposal,
+    patch: Partial<RiseUpProposalWorkExpenseDraft>,
+  ) {
+    if (!proposal.id) return;
+    setProposalWorkExpense((prev) => ({
+      ...prev,
+      [proposal.id!]: {
+        ...proposalWorkExpenseDraft(proposal, prev[proposal.id!]),
+        ...patch,
+      },
+    }));
   }
 
   return (
@@ -550,18 +659,89 @@ export function RiseUpImportFlow({ uiLanguage, bankAccounts, creditCards }: Prop
                 <div className="grid gap-2">
                   {visibleProposals.map((proposal) => {
                     const selected = proposal.id ? proposalActions[proposal.id] ?? "skip" : "skip";
+                    const isSubscription = proposal.entity_kind === "subscription";
+                    const workDraft = proposal.id
+                      ? proposalWorkExpenseDraft(
+                          proposal,
+                          proposal.id ? proposalWorkExpense[proposal.id] : undefined,
+                        )
+                      : null;
+                    const detailLines = subscriptionProposalDetailLines(proposal, isHe);
                     return (
                       <div
                         key={proposal.id ?? proposal.clientKey}
                         className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium text-slate-100">{proposal.title}</div>
                             <div className="mt-1 text-slate-400">{proposal.summary}</div>
+                            {detailLines.length > 0 ? (
+                              <ul className="mt-2 list-inside list-disc text-slate-400">
+                                {detailLines.map((line) => (
+                                  <li key={line}>{line}</li>
+                                ))}
+                              </ul>
+                            ) : null}
                             <div className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">
                               {proposal.entity_kind} · {proposal.confidence} · {proposal.supportRows.length} supporting rows
                             </div>
+                            {isSubscription && proposal.id ? (
+                              <div className="mt-3 rounded-lg border border-slate-600/80 bg-slate-950/50 p-3">
+                                <label className="mb-2 flex items-center gap-2 text-slate-200">
+                                  <input
+                                    type="checkbox"
+                                    checked={workDraft?.isWorkExpense ?? false}
+                                    onChange={(e) =>
+                                      setProposalWorkExpenseDraft(proposal, {
+                                        isWorkExpense: e.target.checked,
+                                        ...(e.target.checked
+                                          ? {}
+                                          : { familyMemberId: "", jobId: "" }),
+                                      })
+                                    }
+                                    className="rounded border-slate-500"
+                                  />
+                                  <span className="font-medium">
+                                    {isHe ? "הוצאה מקצועית (מנוי עבודה)" : "Work expense subscription"}
+                                  </span>
+                                </label>
+                                {workDraft?.isWorkExpense ? (
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <SubscriptionFamilyJobSelects
+                                      members={familyMembers}
+                                      jobs={jobs}
+                                      familyMemberId={workDraft.familyMemberId}
+                                      jobId={workDraft.jobId}
+                                      onFamilyMemberIdChange={(familyMemberId) =>
+                                        setProposalWorkExpenseDraft(proposal, { familyMemberId })
+                                      }
+                                      onJobIdChange={(jobId) =>
+                                        setProposalWorkExpenseDraft(proposal, { jobId })
+                                      }
+                                      fieldIdPrefix={`proposal-${proposal.id}-`}
+                                      memberLabel={isHe ? "בן/בת משפחה" : "Family member"}
+                                      jobLabel={isHe ? "משרה" : "Job"}
+                                      selectClassName={subscriptionSelectClass}
+                                      noneLabel={isHe ? "ללא" : "None"}
+                                    />
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] text-slate-500">
+                                    {isHe
+                                      ? "סמנו כדי לקשר את המנוי לאדם ולמשרה (למשל Claude, Cursor)."
+                                      : "Check to link this subscription to a person and job (e.g. Claude, Cursor)."}
+                                  </p>
+                                )}
+                                {workDraft?.isWorkExpense && selected === "approve" && !workDraft.jobId ? (
+                                  <p className="mt-2 text-[11px] text-amber-300">
+                                    {isHe
+                                      ? "מומלץ לבחור משרה לפני אישור הוצאה מקצועית."
+                                      : "Select a job before approving as a work expense."}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
                           <select
                             className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
