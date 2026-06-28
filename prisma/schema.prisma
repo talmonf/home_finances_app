@@ -101,6 +101,7 @@ model households {
   therapy_consultation_participants  therapy_consultation_participants[]
   therapy_travel_entries            therapy_travel_entries[]
   riseup_import_audits              riseup_import_audits[]
+  riseup_import_drafts              riseup_import_drafts?
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
   therapy_treatment_attachments      therapy_treatment_attachments[]
   private_clinic_reminders           private_clinic_reminders[]
@@ -1367,6 +1368,21 @@ model riseup_import_proposals {
   @@index([household_id, status])
   @@index([household_id, entity_kind])
   @@index([import_audit_id])
+}
+
+model riseup_import_drafts {
+  id                String   @id @default(uuid())
+  household_id      String   @unique
+  file_name         String
+  file_content_hash String
+  row_count         Int      @default(0)
+  draft_state_json  Json     @default("{}")
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+
+  @@index([file_content_hash])
 }
 
 model riseup_import_proposal_transactions {

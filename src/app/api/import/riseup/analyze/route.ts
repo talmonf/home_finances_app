@@ -17,8 +17,16 @@ import {
   analyzeRiseUpPatterns,
   summarizeRiseUpPatterns,
 } from "@/lib/riseup-patterns";
+import {
+  computeRiseUpFileContentHash,
+  mergeRiseUpImportDraft,
+  parseRiseUpImportDraftState,
+  restoreProposalDraftDecisions,
+  type RiseUpImportDraftRowOverride,
+} from "@/lib/riseup-import-draft";
 import type {
   RiseUpExistingTransactionSummary,
+  RiseUpImportAction,
   RiseUpImportDiff,
   RiseUpImportProposal,
   RiseUpImportRowStatus,
@@ -251,6 +259,44 @@ async function persistAnalyzeProposals(
   return proposals;
 }
 
+function buildDefaultRowWizardState(
+  rows: Array<{
+    rowIndex: number;
+    riseup_import_key: string;
+    importStatus: RiseUpImportRowStatus;
+    isZeroAmountPending: boolean;
+    instrument: { kind: string; selectedId: string | null };
+    payee: { selectedId: string | null };
+    category: { selectedId: string | null };
+    job: { selectedId: string | null };
+    subscription: { selectedId: string | null };
+    loan: { selectedId: string | null };
+  }>,
+): {
+  actions: Record<number, RiseUpImportAction>;
+  overrides: Record<number, RiseUpImportDraftRowOverride>;
+} {
+  const actions: Record<number, RiseUpImportAction> = {};
+  const overrides: Record<number, RiseUpImportDraftRowOverride> = {};
+  for (const row of rows) {
+    const bank = row.instrument.kind === "bank_account" ? row.instrument.selectedId : null;
+    const card = row.instrument.kind === "credit_card" ? row.instrument.selectedId : null;
+    overrides[row.rowIndex] = {
+      bank_account_id: bank,
+      credit_card_id: card,
+      payee_id: row.payee.selectedId,
+      new_payee_name: "",
+      category_id: row.category.selectedId,
+      job_id: row.job.selectedId,
+      subscription_id: row.subscription.selectedId,
+      loan_id: row.loan.selectedId,
+    };
+    actions[row.rowIndex] =
+      row.importStatus === "new" && !row.isZeroAmountPending ? "create" : "skip";
+  }
+  return { actions, overrides };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = await getToken({
@@ -282,6 +328,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const fileContentHash = computeRiseUpFileContentHash(buffer);
     const parsed = await parseRiseUpCsvBuffer(buffer);
     const legacySummary = await backfillLegacyRiseUpIdentities(householdId);
     const identities = new Map(
@@ -366,9 +413,39 @@ export async function POST(req: NextRequest) {
     );
     const proposalSummary = summarizeRiseUpProposals(proposals);
 
+    const savedDraftRow = await prisma.riseup_import_drafts.findUnique({
+      where: { household_id: householdId },
+    });
+    const savedDraft =
+      savedDraftRow?.file_content_hash === fileContentHash
+        ? parseRiseUpImportDraftState(savedDraftRow.draft_state_json)
+        : null;
+    const defaults = buildDefaultRowWizardState(classifiedRows);
+    const mergedRows = mergeRiseUpImportDraft({
+      rows: classifiedRows,
+      defaultActions: defaults.actions,
+      defaultOverrides: defaults.overrides,
+      draft: savedDraft,
+    });
+    const restoredProposals = restoreProposalDraftDecisions(proposals, savedDraft);
+
     return NextResponse.json({
       fileName: file.name,
+      fileContentHash,
       rowCount: classifiedRows.length,
+      draftRestored: Boolean(savedDraft),
+      draftRestoredRowCount: mergedRows.restoredRowCount,
+      draftRestoredProposalCount: restoredProposals.restoredCount,
+      activeSection: savedDraft?.activeSection ?? "instruments",
+      txFilters: savedDraft?.txFilters ?? {
+        month: "all",
+        importStatus: "all",
+        needsReviewOnly: false,
+      },
+      initialActions: mergedRows.actions,
+      initialOverrides: mergedRows.overrides,
+      initialProposalActions: restoredProposals.proposalActions,
+      initialProposalWorkExpense: restoredProposals.proposalWorkExpense,
       summary: {
         new: classifiedRows.filter((r) => r.importStatus === "new").length,
         existing: classifiedRows.filter((r) => r.importStatus === "existing").length,

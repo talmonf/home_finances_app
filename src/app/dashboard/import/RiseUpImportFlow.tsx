@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RiseUpAnalyzedRow } from "@/lib/riseup-matching";
 import type {
   RiseUpAnalyzeSummary,
@@ -13,6 +13,13 @@ import type {
   RiseUpCommitProposalPayload,
   RiseUpImportRowStatus,
 } from "@/lib/riseup-commit-types";
+import {
+  collectRiseUpPaymentMonths,
+  filterRiseUpImportRows,
+  isHighConfidenceNewRiseUpRow,
+  type RiseUpImportDraftRowOverride,
+  type RiseUpImportDraftTxFilters,
+} from "@/lib/riseup-import-draft";
 import {
   SubscriptionFamilyJobSelects,
   type SubscriptionFamilyJobSelectJob,
@@ -35,6 +42,25 @@ type RiseUpAnalyzedImportRow = RiseUpAnalyzedRow & {
   existingTransaction: RiseUpExistingTransactionSummary | null;
   changedFields: RiseUpImportDiff[];
 };
+
+type RiseUpSavedDraftSummary = {
+  fileName: string;
+  fileContentHash: string;
+  rowCount: number;
+  updatedAt: string;
+  pendingNewActions: number;
+  pendingProposalDecisions: number;
+  activeSection: string | null;
+  txFilters: RiseUpImportDraftTxFilters | null;
+};
+
+const defaultTxFilters: RiseUpImportDraftTxFilters = {
+  month: "all",
+  importStatus: "all",
+  needsReviewOnly: false,
+};
+
+type RowOverrideState = RiseUpImportDraftRowOverride;
 
 type RiseUpResetPreview = {
   totalRiseUpTransactions: number;
@@ -204,6 +230,7 @@ export function RiseUpImportFlow({
   const [file, setFile] = useState<File | null>(null);
   const [analyzed, setAnalyzed] = useState<RiseUpAnalyzedImportRow[] | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileContentHash, setFileContentHash] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,31 +245,32 @@ export function RiseUpImportFlow({
   const [analyzeSummary, setAnalyzeSummary] = useState<RiseUpAnalyzeSummary | null>(null);
   const [resetPreview, setResetPreview] = useState<RiseUpResetPreview | null>(null);
   const [previewingReset, setPreviewingReset] = useState(false);
-  const [overrides, setOverrides] = useState<
-    Record<
-      number,
-      {
-        bank_account_id: string | null;
-        credit_card_id: string | null;
-        payee_id: string | null;
-        new_payee_name: string;
-        category_id: string | null;
-        job_id: string | null;
-        subscription_id: string | null;
-        loan_id: string | null;
-      }
-    >
-  >({});
+  const [txFilters, setTxFilters] = useState<RiseUpImportDraftTxFilters>(defaultTxFilters);
+  const [savedDraftSummary, setSavedDraftSummary] = useState<RiseUpSavedDraftSummary | null>(null);
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [overrides, setOverrides] = useState<Record<number, RowOverrideState>>({});
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextDraftSaveRef = useRef(false);
 
-  const initOverrides = (rows: RiseUpAnalyzedImportRow[]) => {
-    const next: typeof overrides = {};
+  const applyWizardInitialState = (
+    rows: RiseUpAnalyzedImportRow[],
+    initial: {
+      actions?: Record<number, RiseUpImportAction>;
+      overrides?: Record<number, RowOverrideState>;
+      proposalActions?: Record<string, "approve" | "reject" | "skip">;
+      proposalWorkExpense?: Record<string, RiseUpProposalWorkExpenseDraft>;
+      activeSection?: RiseUpWizardSection;
+      txFilters?: RiseUpImportDraftTxFilters;
+    },
+  ) => {
+    const nextOverrides: Record<number, RowOverrideState> = {};
     const nextActions: Record<number, RiseUpImportAction> = {};
     for (const r of rows) {
       const bank =
         r.instrument.kind === "bank_account" ? r.instrument.selectedId : null;
       const card =
         r.instrument.kind === "credit_card" ? r.instrument.selectedId : null;
-      next[r.rowIndex] = {
+      nextOverrides[r.rowIndex] = initial.overrides?.[r.rowIndex] ?? {
         bank_account_id: bank,
         credit_card_id: card,
         payee_id: r.payee.selectedId,
@@ -253,11 +281,112 @@ export function RiseUpImportFlow({
         loan_id: r.loan.selectedId,
       };
       nextActions[r.rowIndex] =
-        r.importStatus === "new" && !r.isZeroAmountPending ? "create" : "skip";
+        initial.actions?.[r.rowIndex] ??
+        (r.importStatus === "new" && !r.isZeroAmountPending ? "create" : "skip");
     }
-    setOverrides(next);
+    setOverrides(nextOverrides);
     setActions(nextActions);
+    setProposalActions(initial.proposalActions ?? {});
+    setProposalWorkExpense(initial.proposalWorkExpense ?? {});
+    if (initial.activeSection) setActiveSection(initial.activeSection);
+    if (initial.txFilters) setTxFilters(initial.txFilters);
   };
+
+  const loadSavedDraftSummary = useCallback(async () => {
+    try {
+      const res = await fetch("/api/import/riseup/draft");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      setSavedDraftSummary((data.draft as RiseUpSavedDraftSummary | null) ?? null);
+    } catch {
+      // ignore — draft resume is optional
+    }
+  }, []);
+
+  const persistDraft = useCallback(async () => {
+    if (!analyzed || !fileName || !fileContentHash) return;
+    setDraftSaveState("saving");
+    try {
+      const res = await fetch("/api/import/riseup/draft", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName,
+          fileContentHash,
+          rows: analyzed.map((row) => ({
+            rowIndex: row.rowIndex,
+            riseup_import_key: row.riseup_import_key,
+          })),
+          actions,
+          overrides,
+          proposalActions,
+          proposalWorkExpense,
+          activeSection,
+          txFilters,
+          proposals,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDraftSaveState("error");
+        return;
+      }
+      setSavedDraftSummary((data.draft as RiseUpSavedDraftSummary | null) ?? null);
+      setDraftSaveState("saved");
+    } catch {
+      setDraftSaveState("error");
+    }
+  }, [
+    actions,
+    activeSection,
+    analyzed,
+    fileContentHash,
+    fileName,
+    overrides,
+    proposalActions,
+    proposalWorkExpense,
+    proposals,
+    txFilters,
+  ]);
+
+  const clearSavedDraft = useCallback(async () => {
+    try {
+      await fetch("/api/import/riseup/draft", { method: "DELETE" });
+    } catch {
+      // ignore
+    }
+    setSavedDraftSummary(null);
+    setDraftSaveState("idle");
+  }, []);
+
+  useEffect(() => {
+    void loadSavedDraftSummary();
+  }, [loadSavedDraftSummary]);
+
+  useEffect(() => {
+    if (!analyzed || !fileContentHash) return;
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      return;
+    }
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => {
+      void persistDraft();
+    }, 1500);
+    return () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    };
+  }, [
+    actions,
+    activeSection,
+    analyzed,
+    fileContentHash,
+    overrides,
+    persistDraft,
+    proposalActions,
+    proposalWorkExpense,
+    txFilters,
+  ]);
 
   async function analyze() {
     if (!file) {
@@ -280,12 +409,30 @@ export function RiseUpImportFlow({
       const rows = data.rows as RiseUpAnalyzedImportRow[];
       setAnalyzed(rows);
       setProposals((data.proposals as RiseUpImportProposal[] | undefined) ?? []);
-      setProposalActions({});
-      setProposalWorkExpense({});
       setAnalyzeSummary((data.summary as RiseUpAnalyzeSummary | undefined) ?? null);
-      setActiveSection("instruments");
       setFileName(data.fileName ?? file.name);
-      initOverrides(rows);
+      setFileContentHash(String(data.fileContentHash ?? ""));
+      applyWizardInitialState(rows, {
+        actions: data.initialActions as Record<number, RiseUpImportAction> | undefined,
+        overrides: data.initialOverrides as Record<number, RowOverrideState> | undefined,
+        proposalActions: data.initialProposalActions as
+          | Record<string, "approve" | "reject" | "skip">
+          | undefined,
+        proposalWorkExpense: data.initialProposalWorkExpense as
+          | Record<string, RiseUpProposalWorkExpenseDraft>
+          | undefined,
+        activeSection: (data.activeSection as RiseUpWizardSection | undefined) ?? "instruments",
+        txFilters: (data.txFilters as RiseUpImportDraftTxFilters | undefined) ?? defaultTxFilters,
+      });
+      skipNextDraftSaveRef.current = true;
+      if (data.draftRestored) {
+        setSuccess(
+          isHe
+            ? `הוחזרה טיוטה שמורה (${data.draftRestoredRowCount ?? 0} החלטות שורות, ${data.draftRestoredProposalCount ?? 0} הצעות).`
+            : `Restored saved draft (${data.draftRestoredRowCount ?? 0} row decisions, ${data.draftRestoredProposalCount ?? 0} proposals).`,
+        );
+      }
+      void loadSavedDraftSummary();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analyze failed");
     }
@@ -297,27 +444,35 @@ export function RiseUpImportFlow({
     setCommitting(true);
     setError(null);
     setSuccess(null);
+    const rowsPayload = buildCommitPayload(analyzed, overrides, actions);
+    const selectedProposals: RiseUpCommitProposalPayload[] = Object.entries(proposalActions)
+      .filter(([, action]) => action !== "skip")
+      .map(([id, action]) => {
+        const draft = proposalWorkExpense[id];
+        const proposal = proposals.find((p) => p.id === id);
+        const payloadOverrides =
+          proposal?.entity_kind === "subscription" && draft?.isWorkExpense
+            ? {
+                familyMemberId: draft.familyMemberId || null,
+                jobId: draft.jobId || null,
+                isWorkExpense: true,
+              }
+            : undefined;
+        return { id, action, payloadOverrides };
+      });
+    const approvedProposalIds = new Set(
+      selectedProposals.filter((p) => p.action === "approve").map((p) => p.id),
+    );
+    const committedRowIndices = new Set(
+      rowsPayload
+        .filter((row) => row.import_action === "create" || row.import_action === "update")
+        .map((row) => row.rowIndex),
+    );
     try {
-      const rows = buildCommitPayload(analyzed, overrides, actions);
-      const selectedProposals: RiseUpCommitProposalPayload[] = Object.entries(proposalActions)
-        .filter(([, action]) => action !== "skip")
-        .map(([id, action]) => {
-          const draft = proposalWorkExpense[id];
-          const proposal = proposals.find((p) => p.id === id);
-          const payloadOverrides =
-            proposal?.entity_kind === "subscription" && draft?.isWorkExpense
-              ? {
-                  familyMemberId: draft.familyMemberId || null,
-                  jobId: draft.jobId || null,
-                  isWorkExpense: true,
-                }
-              : undefined;
-          return { id, action, payloadOverrides };
-        });
       const res = await fetch("/api/import/riseup/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName, rows, proposals: selectedProposals }),
+        body: JSON.stringify({ fileName, rows: rowsPayload, proposals: selectedProposals }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -325,20 +480,91 @@ export function RiseUpImportFlow({
         setCommitting(false);
         return;
       }
-      setSuccess(
-        isHe
-          ? `נוצרו ${data.count ?? 0} תנועות, עודכנו ${data.updatedCount ?? 0}, דולגו ${data.skippedCount ?? 0}.`
-          : `Created ${data.count ?? 0}, updated ${data.updatedCount ?? 0}, skipped ${data.skippedCount ?? 0}.`,
+      const remainingProposals = proposals.filter(
+        (p) => !p.id || !approvedProposalIds.has(p.id),
       );
-      setAnalyzed(null);
-      setFile(null);
-      setFileName(null);
-      setActions({});
-      setProposals([]);
-      setProposalActions({});
-      setProposalWorkExpense({});
-      setAnalyzeSummary(null);
-      router.refresh();
+      const postCommitRows = analyzed.map((row) => {
+        if (!committedRowIndices.has(row.rowIndex)) return row;
+        const action = actions[row.rowIndex] ?? "skip";
+        if (action === "create" || action === "update") {
+          return { ...row, importStatus: "existing" as const };
+        }
+        return row;
+      });
+      const sessionContinues =
+        postCommitRows.some(
+          (row) =>
+            row.importStatus === "new" ||
+            row.importStatus === "changed" ||
+            row.importStatus === "ambiguous",
+        ) || remainingProposals.length > 0;
+
+      if (sessionContinues) {
+        setAnalyzed((prev) =>
+          prev
+            ? prev.map((row) => {
+                if (!committedRowIndices.has(row.rowIndex)) return row;
+                const action = actions[row.rowIndex] ?? "skip";
+                if (action === "create" || action === "update") {
+                  return {
+                    ...row,
+                    importStatus: "existing" as const,
+                    changedFields: [] as RiseUpImportDiff[],
+                    existingTransaction: row.existingTransaction ?? {
+                      id: "committed",
+                      transactionDate: row.paymentDate,
+                      amount: Math.abs(row.amount),
+                      transactionDirection: row.amount < 0 ? "debit" : "credit",
+                      description: row.businessName,
+                      contentHash: row.riseup_content_hash,
+                    },
+                  };
+                }
+                return row;
+              })
+            : null,
+        );
+        setActions((prev) => {
+          const next = { ...prev };
+          for (const rowIndex of committedRowIndices) {
+            next[rowIndex] = "skip";
+          }
+          return next;
+        });
+        setProposals(remainingProposals);
+        setProposalActions((prev) => {
+          const next = { ...prev };
+          for (const id of approvedProposalIds) delete next[id];
+          return next;
+        });
+        skipNextDraftSaveRef.current = false;
+        void persistDraft();
+        setSuccess(
+          isHe
+            ? `נשמרה קבוצה: נוצרו ${data.count ?? 0}, עודכנו ${data.updatedCount ?? 0}, דולגו ${data.skippedCount ?? 0}. אפשר להמשיך לעבד שורות נוספות.`
+            : `Batch saved: created ${data.count ?? 0}, updated ${data.updatedCount ?? 0}, skipped ${data.skippedCount ?? 0}. Continue reviewing remaining rows.`,
+        );
+        router.refresh();
+      } else {
+        skipNextDraftSaveRef.current = true;
+        await clearSavedDraft();
+        setAnalyzed(null);
+        setFile(null);
+        setFileName(null);
+        setFileContentHash(null);
+        setActions({});
+        setProposals([]);
+        setProposalActions({});
+        setProposalWorkExpense({});
+        setAnalyzeSummary(null);
+        setTxFilters(defaultTxFilters);
+        setSuccess(
+          isHe
+            ? `נוצרו ${data.count ?? 0} תנועות, עודכנו ${data.updatedCount ?? 0}, דולגו ${data.skippedCount ?? 0}.`
+            : `Created ${data.count ?? 0}, updated ${data.updatedCount ?? 0}, skipped ${data.skippedCount ?? 0}.`,
+        );
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Commit failed");
     }
@@ -411,11 +637,53 @@ export function RiseUpImportFlow({
     return false;
   });
 
+  const paymentMonths = useMemo(
+    () => (analyzed ? collectRiseUpPaymentMonths(analyzed) : []),
+    [analyzed],
+  );
+
   const visibleRows = useMemo(() => {
     if (!analyzed) return [];
     if (activeSection !== "transaction_actions") return [];
-    return analyzed;
-  }, [activeSection, analyzed]);
+    return filterRiseUpImportRows(analyzed, txFilters);
+  }, [activeSection, analyzed, txFilters]);
+
+  const pendingCommitCount = useMemo(() => {
+    if (!analyzed) return 0;
+    return analyzed.filter((row) => {
+      const action = actions[row.rowIndex] ?? "skip";
+      return action === "create" || action === "update";
+    }).length;
+  }, [actions, analyzed]);
+
+  function applyBulkSkipExisting() {
+    if (!analyzed) return;
+    setActions((prev) => {
+      const next = { ...prev };
+      for (const row of analyzed) {
+        if (row.importStatus === "existing") next[row.rowIndex] = "skip";
+      }
+      return next;
+    });
+  }
+
+  function applyBulkSkipVisible() {
+    setActions((prev) => {
+      const next = { ...prev };
+      for (const row of visibleRows) next[row.rowIndex] = "skip";
+      return next;
+    });
+  }
+
+  function applyBulkCreateHighConfidenceVisible() {
+    setActions((prev) => {
+      const next = { ...prev };
+      for (const row of visibleRows) {
+        if (isHighConfidenceNewRiseUpRow(row)) next[row.rowIndex] = "create";
+      }
+      return next;
+    });
+  }
 
   function setO(
     rowIndex: number,
@@ -506,7 +774,32 @@ export function RiseUpImportFlow({
       ) : null}
 
       {!analyzed ? (
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-3">
+          {savedDraftSummary ? (
+            <div className="rounded-lg border border-violet-700/60 bg-violet-950/30 p-3 text-sm text-violet-100">
+              <div className="font-medium">
+                {isHe ? "יש טיוטת ייבוא שמורה" : "Saved import draft available"}
+              </div>
+              <p className="mt-1 text-xs text-violet-200/90">
+                {isHe
+                  ? `${savedDraftSummary.fileName} · ${savedDraftSummary.rowCount} שורות · ${savedDraftSummary.pendingNewActions} פעולות תנועה · ${savedDraftSummary.pendingProposalDecisions} החלטות הצעות · עודכן ${new Date(savedDraftSummary.updatedAt).toLocaleString()}`
+                  : `${savedDraftSummary.fileName} · ${savedDraftSummary.rowCount} rows · ${savedDraftSummary.pendingNewActions} transaction actions · ${savedDraftSummary.pendingProposalDecisions} proposal decisions · updated ${new Date(savedDraftSummary.updatedAt).toLocaleString()}`}
+              </p>
+              <p className="mt-1 text-xs text-violet-200/80">
+                {isHe
+                  ? "העלה שוב את אותו קובץ CSV ולחץ «נתח קובץ» כדי להמשיך מהטיוטה."
+                  : "Re-upload the same CSV file and click Analyze file to continue from your saved draft."}
+              </p>
+              <button
+                type="button"
+                className="mt-2 text-xs text-violet-300 underline hover:text-violet-100"
+                onClick={() => void clearSavedDraft()}
+              >
+                {isHe ? "מחק טיוטה שמורה" : "Discard saved draft"}
+              </button>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-400">
               {isHe ? "קובץ CSV" : "CSV file"}
@@ -526,6 +819,7 @@ export function RiseUpImportFlow({
           >
             {loading ? (isHe ? "מנתח…" : "Analyzing…") : isHe ? "נתח קובץ" : "Analyze file"}
           </button>
+        </div>
         </div>
       ) : (
         <>
@@ -554,19 +848,36 @@ export function RiseUpImportFlow({
               type="button"
               className="text-xs text-slate-400 underline hover:text-slate-200"
               onClick={() => {
+                void clearSavedDraft();
                 setAnalyzed(null);
                 setFile(null);
                 setFileName(null);
+                setFileContentHash(null);
                 setActions({});
                 setProposals([]);
                 setProposalActions({});
+                setProposalWorkExpense({});
                 setAnalyzeSummary(null);
                 setActiveSection("instruments");
+                setTxFilters(defaultTxFilters);
                 setSuccess(null);
               }}
             >
               {isHe ? "התחל מחדש" : "Start over"}
             </button>
+            {draftSaveState === "saving" ? (
+              <span className="text-[10px] text-slate-500">
+                {isHe ? "שומר טיוטה…" : "Saving draft…"}
+              </span>
+            ) : draftSaveState === "saved" ? (
+              <span className="text-[10px] text-emerald-400">
+                {isHe ? "טיוטה נשמרה" : "Draft saved"}
+              </span>
+            ) : draftSaveState === "error" ? (
+              <span className="text-[10px] text-rose-400">
+                {isHe ? "שמירת טיוטה נכשלה" : "Draft save failed"}
+              </span>
+            ) : null}
           </div>
 
           {importSummary ? (
@@ -767,6 +1078,95 @@ export function RiseUpImportFlow({
           ) : null}
 
           {activeSection === "transaction_actions" ? (
+          <>
+          <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-slate-500">
+                  {isHe ? "חודש תשלום" : "Payment month"}
+                </label>
+                <select
+                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                  value={txFilters.month}
+                  onChange={(e) =>
+                    setTxFilters((prev) => ({ ...prev, month: e.target.value }))
+                  }
+                >
+                  <option value="all">{isHe ? "כל החודשים" : "All months"}</option>
+                  {paymentMonths.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-slate-500">
+                  {isHe ? "סטטוס ייבוא" : "Import status"}
+                </label>
+                <select
+                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
+                  value={txFilters.importStatus}
+                  onChange={(e) =>
+                    setTxFilters((prev) => ({
+                      ...prev,
+                      importStatus: e.target.value as RiseUpImportRowStatus | "all",
+                    }))
+                  }
+                >
+                  <option value="all">{isHe ? "הכל" : "All"}</option>
+                  <option value="new">{isHe ? "חדשות" : "New"}</option>
+                  <option value="existing">{isHe ? "קיימות" : "Existing"}</option>
+                  <option value="changed">{isHe ? "שונו" : "Changed"}</option>
+                  <option value="ambiguous">{isHe ? "לא חד משמעיות" : "Ambiguous"}</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 pb-1 text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={txFilters.needsReviewOnly}
+                  onChange={(e) =>
+                    setTxFilters((prev) => ({
+                      ...prev,
+                      needsReviewOnly: e.target.checked,
+                    }))
+                  }
+                  className="rounded border-slate-500"
+                />
+                {isHe ? "רק שורות לבדיקה" : "Needs review only"}
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={applyBulkSkipExisting}
+                className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800"
+              >
+                {isHe ? "דלג על כל הקיימות" : "Skip all existing"}
+              </button>
+              <button
+                type="button"
+                onClick={applyBulkSkipVisible}
+                className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800"
+              >
+                {isHe ? "דלג על המסוננות" : "Skip all visible"}
+              </button>
+              <button
+                type="button"
+                onClick={applyBulkCreateHighConfidenceVisible}
+                className="rounded border border-emerald-700/60 px-2 py-1 text-[11px] text-emerald-200 hover:bg-emerald-950/40"
+              >
+                {isHe
+                  ? "צור חדשות בטוחות (מסוננות)"
+                  : "Create high-confidence new (visible)"}
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500">
+              {isHe
+                ? `מציג ${visibleRows.length} מתוך ${analyzed.length} שורות · ${pendingCommitCount} מסומנות ליצירה/עדכון`
+                : `Showing ${visibleRows.length} of ${analyzed.length} rows · ${pendingCommitCount} marked create/update`}
+            </p>
+          </div>
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-slate-700">
             <table className="min-w-full border-collapse text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-800 text-slate-300">
@@ -1045,6 +1445,7 @@ export function RiseUpImportFlow({
               </tbody>
             </table>
           </div>
+          </>
           ) : null}
 
           <button
@@ -1057,9 +1458,13 @@ export function RiseUpImportFlow({
               ? isHe
                 ? "שומר…"
                 : "Saving…"
-              : isHe
-                ? "אשר ושמור תנועות"
-                : "Confirm and save transactions"}
+              : pendingCommitCount > 0
+                ? isHe
+                  ? `שמור קבוצה (${pendingCommitCount}) והמשך`
+                  : `Save batch (${pendingCommitCount}) and continue`
+                : isHe
+                  ? "אשר ושמור"
+                  : "Confirm and save"}
           </button>
         </>
       )}
