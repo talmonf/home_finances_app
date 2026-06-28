@@ -214,47 +214,67 @@ async function persistAnalyzeProposals(
   householdId: string,
   proposals: RiseUpImportProposal[],
 ): Promise<RiseUpImportProposal[]> {
-  await prisma.$transaction(async (tx) => {
-    await tx.riseup_import_proposals.deleteMany({
-      where: {
-        household_id: householdId,
-        import_audit_id: null,
-        status: "proposed",
-      },
-    });
+  const PROPOSAL_BATCH = 100;
+  const SUPPORT_BATCH = 500;
 
-    for (const p of proposals) {
-      const proposalId = crypto.randomUUID();
-      await tx.riseup_import_proposals.create({
-        data: {
-          id: proposalId,
+  const proposalRows: Prisma.riseup_import_proposalsCreateManyInput[] = [];
+  const supportRows: Prisma.riseup_import_proposal_transactionsCreateManyInput[] = [];
+
+  for (const p of proposals) {
+    const proposalId = crypto.randomUUID();
+    p.id = proposalId;
+    proposalRows.push({
+      id: proposalId,
+      household_id: householdId,
+      import_audit_id: null,
+      proposal_kind: p.proposal_kind,
+      entity_kind: p.entity_kind,
+      target_entity_id: p.target_entity_id,
+      status: p.status,
+      confidence: p.confidence,
+      title: p.title,
+      summary: p.summary,
+      payload_json: p.payload_json as Prisma.InputJsonValue,
+      proposed_changes_json: p.proposed_changes_json as Prisma.InputJsonValue,
+    });
+    for (const support of p.supportRows) {
+      supportRows.push({
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        proposal_id: proposalId,
+        transaction_id: support.transaction_id ?? null,
+        riseup_import_key: support.riseup_import_key ?? null,
+        row_index: support.rowIndex,
+        support_role: support.support_role,
+        confidence: support.confidence ?? null,
+      });
+    }
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.riseup_import_proposals.deleteMany({
+        where: {
           household_id: householdId,
           import_audit_id: null,
-          proposal_kind: p.proposal_kind,
-          entity_kind: p.entity_kind,
-          target_entity_id: p.target_entity_id,
-          status: p.status,
-          confidence: p.confidence,
-          title: p.title,
-          summary: p.summary,
-          payload_json: p.payload_json as Prisma.InputJsonValue,
-          proposed_changes_json: p.proposed_changes_json as Prisma.InputJsonValue,
-          supporting_transactions: {
-            create: p.supportRows.map((support) => ({
-              id: crypto.randomUUID(),
-              household_id: householdId,
-              transaction_id: support.transaction_id ?? null,
-              riseup_import_key: support.riseup_import_key ?? null,
-              row_index: support.rowIndex,
-              support_role: support.support_role,
-              confidence: support.confidence ?? null,
-            })),
-          },
+          status: "proposed",
         },
       });
-      p.id = proposalId;
-    }
-  });
+
+      for (let i = 0; i < proposalRows.length; i += PROPOSAL_BATCH) {
+        await tx.riseup_import_proposals.createMany({
+          data: proposalRows.slice(i, i + PROPOSAL_BATCH),
+        });
+      }
+
+      for (let i = 0; i < supportRows.length; i += SUPPORT_BATCH) {
+        await tx.riseup_import_proposal_transactions.createMany({
+          data: supportRows.slice(i, i + SUPPORT_BATCH),
+        });
+      }
+    },
+    { maxWait: 15000, timeout: 120000 },
+  );
 
   return proposals;
 }
