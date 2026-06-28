@@ -1,7 +1,7 @@
 export type RiseUpImportGuideSection = {
   id: string;
   title: string;
-  paragraphs: string[];
+  paragraphs?: string[];
   bullets?: string[];
 };
 
@@ -54,6 +54,7 @@ const englishSections: RiseUpImportGuideSection[] = [
       "Proposals — staged suggestions waiting for Approve / Reject in the entity tabs.",
       "Patterns — recurring behavior detected across the file (cards, petrol, subscriptions, etc.).",
       "Summary bar — preview of what will happen when you click Save: how many Create, Update, and Skip.",
+      "Click Needs review, Proposals, or Patterns stat cards to jump to the relevant view.",
     ],
   },
   {
@@ -142,6 +143,7 @@ const hebrewSections: RiseUpImportGuideSection[] = [
       "הצעות — הצעות לאישור/דחייה בלשוניות הישויות.",
       "דפוסים — התנהגות חוזרת (כרטיסים, דלק, מנויים).",
       "סרגל הסיכום — תצוגה מקדימה של יצירה/עדכון/דילוג בעת שמירה.",
+      "לחצו על «דורשות בדיקה», «הצעות» או «דפוסים» לקפיצה לתצוגה הרלוונטית.",
     ],
   },
   {
@@ -212,9 +214,9 @@ const englishTooltips: Record<string, string> = {
   wizardTabDomainEntities: "Subscriptions, utilities, insurance, donations, and other entity proposals.",
   wizardTabTransactions: "Per-row import actions. Filter by month and work in pages of 100 rows.",
   wizardTabBackfill: "Link already-imported transactions to entities when historical proposals exist.",
-  statNeedsReview: "Rows flagged for manual review due to uncertain matching.",
-  statProposals: "Total staged entity proposals across all tabs.",
-  statPatterns: "Recurring patterns detected in the export (instruments, bills, subscriptions, etc.).",
+  statNeedsReview: "Rows flagged for manual review due to uncertain matching. Click to open Transactions filtered to needs review only.",
+  statProposals: "Total staged entity proposals across all tabs. Click to open the wizard tab with the most proposals.",
+  statPatterns: "Recurring patterns detected in the export (instruments, bills, subscriptions, etc.). Click to scroll to the pattern list.",
   statLegacyScanned: "Older RiseUp transactions checked for missing import keys.",
   statLegacyBackfilled: "Legacy transactions updated with import identity keys.",
   strongPatternsPanel: "High-confidence recurring patterns — each line shows type, duration, and average amount.",
@@ -257,9 +259,9 @@ const hebrewTooltips: Record<string, string> = {
   wizardTabDomainEntities: "מנויים, utilities, ביטוח, תרומות וכד'.",
   wizardTabTransactions: "פעולות ייבוא לכל שורה. סינון לפי חודש, 100 שורות בעמוד.",
   wizardTabBackfill: "קישור תנועות שכבר יובאו לישויות.",
-  statNeedsReview: "שורות שדורשות בדיקה ידנית.",
-  statProposals: "סך ההצעות בכל הלשוניות.",
-  statPatterns: "דפוסים חוזרים בייצוא.",
+  statNeedsReview: "שורות שדורשות בדיקה ידנית. לחצו לפתיחת «תנועות» עם סינון «רק שורות לבדיקה».",
+  statProposals: "סך ההצעות בכל הלשוניות. לחצו לפתיחת הלשונית עם הכי הרבה הצעות.",
+  statPatterns: "דפוסים חוזרים בייצוא. לחצו לגלילה לרשימת הדפוסים.",
   statLegacyScanned: "תנועות RiseUp ישנות שנבדקו לזהות ייבוא.",
   statLegacyBackfilled: "תנועות ישנות שעודכנו עם מפתח ייבוא.",
   strongPatternsPanel: "דפוסים חזקים — סוג, משך, ממוצע.",

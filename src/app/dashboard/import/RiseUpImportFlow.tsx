@@ -264,6 +264,7 @@ export function RiseUpImportFlow({
   const [overrides, setOverrides] = useState<Record<number, RowOverrideState>>({});
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextDraftSaveRef = useRef(false);
+  const patternsPanelRef = useRef<HTMLDivElement>(null);
 
   const applyWizardInitialState = (
     rows: RiseUpAnalyzedImportRow[],
@@ -378,18 +379,85 @@ export function RiseUpImportFlow({
     setTxPage(1);
   }, [txFilters]);
 
-  function selectWizardSection(section: RiseUpWizardSection) {
-    startSectionTransition(() => {
-      if (
-        section === "transaction_actions" &&
-        txFilters.month === "all" &&
-        paymentMonths.length > 0
-      ) {
-        setTxFilters((prev) => ({ ...prev, month: paymentMonths[0]! }));
+  function proposalCountForSection(section: RiseUpWizardSection): number {
+    return proposals.filter((p) => {
+      if (section === "instruments") {
+        return p.entity_kind === "bank_account" || p.entity_kind === "credit_card";
       }
+      if (section === "core_mappings") {
+        return p.entity_kind === "payee" || p.entity_kind === "category";
+      }
+      if (section === "domain_entities") {
+        return !["bank_account", "credit_card", "payee", "category"].includes(p.entity_kind);
+      }
+      if (section === "historical_backfill") {
+        return p.proposal_kind === "link_transactions";
+      }
+      return false;
+    }).length;
+  }
+
+  function selectWizardSection(
+    section: RiseUpWizardSection,
+    options?: {
+      txFilters?: Partial<RiseUpImportDraftTxFilters>;
+      autoPickLatestMonth?: boolean;
+    },
+  ) {
+    startSectionTransition(() => {
       setActiveSection(section);
+      if (section === "transaction_actions") {
+        setTxPage(1);
+        setTxFilters((prev) => {
+          const next = { ...prev, ...(options?.txFilters ?? {}) };
+          if (
+            options?.autoPickLatestMonth !== false &&
+            next.month === "all" &&
+            paymentMonths.length > 0 &&
+            options?.txFilters?.month === undefined
+          ) {
+            next.month = paymentMonths[0]!;
+          }
+          return next;
+        });
+      }
     });
   }
+
+  function openNeedsReview() {
+    if (!analyzeSummary?.needsReview) return;
+    selectWizardSection("transaction_actions", {
+      txFilters: { month: "all", importStatus: "all", needsReviewOnly: true },
+      autoPickLatestMonth: false,
+    });
+  }
+
+  function openProposals() {
+    if (!analyzeSummary?.proposals.total) return;
+    const proposalSections: RiseUpWizardSection[] = [
+      "instruments",
+      "core_mappings",
+      "domain_entities",
+      "historical_backfill",
+    ];
+    const bestSection =
+      proposalSections
+        .map((id) => ({
+          id,
+          count: proposalCountForSection(id),
+        }))
+        .sort((a, b) => b.count - a.count)
+        .find((entry) => entry.count > 0)?.id ?? "instruments";
+    selectWizardSection(bestSection);
+  }
+
+  function openPatterns() {
+    if (!(analyzeSummary?.patterns?.totalPatterns ?? 0)) return;
+    patternsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  const statCardClass =
+    "w-full rounded bg-slate-900 p-2 text-left transition hover:bg-slate-800 hover:ring-1 hover:ring-violet-600/40 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:cursor-default disabled:opacity-50";
 
   useEffect(() => {
     if (!analyzed || !fileContentHash) return;
@@ -1005,22 +1073,37 @@ export function RiseUpImportFlow({
             {analyzeSummary ? (
               <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-5">
                 <RiseUpImportHelpTip tip={tip("statNeedsReview")} block>
-                <div className="rounded bg-slate-900 p-2">
+                <button
+                  type="button"
+                  disabled={!analyzeSummary.needsReview}
+                  onClick={openNeedsReview}
+                  className={statCardClass}
+                >
                   <div className="text-slate-500">{isHe ? "שורות לבדיקה" : "Needs review"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.needsReview}</div>
-                </div>
+                </button>
                 </RiseUpImportHelpTip>
                 <RiseUpImportHelpTip tip={tip("statProposals")} block>
-                <div className="rounded bg-slate-900 p-2">
+                <button
+                  type="button"
+                  disabled={!analyzeSummary.proposals.total}
+                  onClick={openProposals}
+                  className={statCardClass}
+                >
                   <div className="text-slate-500">{isHe ? "הצעות" : "Proposals"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.proposals.total}</div>
-                </div>
+                </button>
                 </RiseUpImportHelpTip>
                 <RiseUpImportHelpTip tip={tip("statPatterns")} block>
-                <div className="rounded bg-slate-900 p-2">
+                <button
+                  type="button"
+                  disabled={!(analyzeSummary.patterns?.totalPatterns ?? 0)}
+                  onClick={openPatterns}
+                  className={statCardClass}
+                >
                   <div className="text-slate-500">{isHe ? "דפוסים" : "Patterns"}</div>
                   <div className="text-lg font-semibold">{analyzeSummary.patterns?.totalPatterns ?? 0}</div>
-                </div>
+                </button>
                 </RiseUpImportHelpTip>
                 <RiseUpImportHelpTip tip={tip("statLegacyScanned")} block>
                 <div className="rounded bg-slate-900 p-2">
@@ -1038,7 +1121,10 @@ export function RiseUpImportFlow({
             ) : null}
             {analyzeSummary?.patterns?.highlights?.length ? (
               <RiseUpImportHelpTip tip={tip("strongPatternsPanel")} block>
-              <div className="mt-3 rounded border border-slate-800 bg-slate-950/60 p-2 text-xs text-slate-300">
+              <div
+                ref={patternsPanelRef}
+                className="mt-3 rounded border border-slate-800 bg-slate-950/60 p-2 text-xs text-slate-300 scroll-mt-4"
+              >
                 <div className="mb-1 font-medium text-slate-200">
                   {isHe ? "דפוסים חזקים שזוהו" : "Strong detected patterns"}
                 </div>
