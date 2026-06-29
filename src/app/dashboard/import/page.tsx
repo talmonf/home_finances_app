@@ -98,27 +98,54 @@ export default async function ImportPage({ searchParams }: PageProps) {
           </p>
         </header>
 
-        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-2">
-          <Link
-            href="/dashboard/import"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              format === "bank"
-                ? "bg-sky-600 text-white"
-                : "text-slate-300 hover:bg-slate-800"
-            }`}
-          >
-            {isHebrew ? "בנק PDF / Excel" : "Bank PDF / Excel"}
-          </Link>
-          <Link
-            href="/dashboard/import?format=riseup"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              format === "riseup"
-                ? "bg-violet-600 text-white"
-                : "text-slate-300 hover:bg-slate-800"
-            }`}
-          >
-            {isHebrew ? "RiseUp (CSV)" : "RiseUp (CSV)"}
-          </Link>
+        <div className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-700 bg-slate-950/80 p-1">
+          {isHebrew ? (
+            <>
+              <Link
+                href="/dashboard/import?format=riseup"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  format === "riseup"
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                }`}
+              >
+                RiseUp (CSV)
+              </Link>
+              <Link
+                href="/dashboard/import"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  format === "bank"
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                }`}
+              >
+                PDF / Excel
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/dashboard/import"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  format === "bank"
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                }`}
+              >
+                Bank PDF / Excel
+              </Link>
+              <Link
+                href="/dashboard/import?format=riseup"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  format === "riseup"
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                }`}
+              >
+                RiseUp (CSV)
+              </Link>
+            </>
+          )}
         </div>
 
         {format === "riseup" ? (

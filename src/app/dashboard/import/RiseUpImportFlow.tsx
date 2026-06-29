@@ -26,6 +26,7 @@ import {
   type SubscriptionFamilyJobSelectMember,
 } from "@/components/subscription-family-job-selects";
 import { RiseUpImportUserGuide } from "@/components/riseup-import-user-guide";
+import { FileUploadField } from "@/components/file-upload-field";
 import { riseUpImportGuideContent } from "@/lib/riseup-import-guide-content";
 
 type Props = {
@@ -1006,12 +1007,16 @@ export function RiseUpImportFlow({
                     ? "קובץ CSV"
                     : "CSV file"}
               </label>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="block text-sm text-slate-200 file:mr-3 file:rounded file:border-0 file:bg-violet-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-violet-500"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
+              <FileUploadField
+                id="riseup-csv-file"
+                accept=".csv,text/csv"
+                onFileChange={setFile}
+                fileName={file?.name ?? null}
+                buttonLabel={isHe ? "בחירת קובץ" : "Choose file"}
+                noFileText={isHe ? "לא נבחר קובץ" : "No file selected"}
+                buttonClassName="inline-flex cursor-pointer rounded bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
+                textClassName="max-w-full truncate text-sm text-slate-200"
+              />
           </div>
                     <button
             type="button"
