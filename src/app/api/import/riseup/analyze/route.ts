@@ -478,6 +478,7 @@ export async function POST(req: NextRequest) {
     const restoredProposals = restoreProposalDraftDecisions(proposals, savedDraft);
 
     if (!resume) {
+      const fileContentBytes = new Uint8Array(buffer);
       await prisma.riseup_import_drafts.upsert({
         where: { household_id: householdId },
         create: {
@@ -485,14 +486,14 @@ export async function POST(req: NextRequest) {
           household_id: householdId,
           file_name: displayFileName,
           file_content_hash: fileContentHash,
-          file_content: buffer,
+          file_content: fileContentBytes,
           row_count: classifiedRows.length,
           draft_state_json: (savedDraftRow?.draft_state_json ?? {}) as Prisma.InputJsonValue,
         },
         update: {
           file_name: displayFileName,
           file_content_hash: fileContentHash,
-          file_content: buffer,
+          file_content: fileContentBytes,
           row_count: classifiedRows.length,
         },
       });
