@@ -334,19 +334,48 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    if (!file || file.size === 0) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File too large. Max 4 MB." }, { status: 400 });
-    }
-    const name = file.name.toLowerCase();
-    if (!name.endsWith(".csv")) {
-      return NextResponse.json({ error: "RiseUp analyze expects a .csv export." }, { status: 400 });
+    const resume = formData.get("resume") === "1";
+    let buffer: Buffer;
+    let displayFileName: string;
+
+    if (resume) {
+      const storedDraft = await prisma.riseup_import_drafts.findUnique({
+        where: { household_id: householdId },
+        select: {
+          file_name: true,
+          file_content: true,
+        },
+      });
+      if (!storedDraft?.file_content || storedDraft.file_content.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "No stored export for this draft. Re-upload the CSV once — it will be saved for future sessions.",
+          },
+          { status: 400 },
+        );
+      }
+      buffer = Buffer.from(storedDraft.file_content);
+      displayFileName = storedDraft.file_name;
+      if (buffer.length > MAX_FILE_SIZE) {
+        return NextResponse.json({ error: "Stored export is too large. Re-upload the CSV." }, { status: 400 });
+      }
+    } else {
+      const file = formData.get("file") as File | null;
+      if (!file || file.size === 0) {
+        return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json({ error: "File too large. Max 4 MB." }, { status: 400 });
+      }
+      const name = file.name.toLowerCase();
+      if (!name.endsWith(".csv")) {
+        return NextResponse.json({ error: "RiseUp analyze expects a .csv export." }, { status: 400 });
+      }
+      buffer = Buffer.from(await file.arrayBuffer());
+      displayFileName = file.name;
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
     const fileContentHash = computeRiseUpFileContentHash(buffer);
     const parsed = await parseRiseUpCsvBuffer(buffer);
     const legacySummary = await backfillLegacyRiseUpIdentities(householdId);
@@ -448,8 +477,29 @@ export async function POST(req: NextRequest) {
     });
     const restoredProposals = restoreProposalDraftDecisions(proposals, savedDraft);
 
+    if (!resume) {
+      await prisma.riseup_import_drafts.upsert({
+        where: { household_id: householdId },
+        create: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          file_name: displayFileName,
+          file_content_hash: fileContentHash,
+          file_content: buffer,
+          row_count: classifiedRows.length,
+          draft_state_json: (savedDraftRow?.draft_state_json ?? {}) as Prisma.InputJsonValue,
+        },
+        update: {
+          file_name: displayFileName,
+          file_content_hash: fileContentHash,
+          file_content: buffer,
+          row_count: classifiedRows.length,
+        },
+      });
+    }
+
     return NextResponse.json({
-      fileName: file.name,
+      fileName: displayFileName,
       fileContentHash,
       rowCount: classifiedRows.length,
       draftRestored: Boolean(savedDraft),

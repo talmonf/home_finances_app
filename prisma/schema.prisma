@@ -1375,6 +1375,7 @@ model riseup_import_drafts {
   household_id      String   @unique
   file_name         String
   file_content_hash String
+  file_content      Bytes?
   row_count         Int      @default(0)
   draft_state_json  Json     @default("{}")
   created_at        DateTime @default(now())

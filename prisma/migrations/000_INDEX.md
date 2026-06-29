@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 134_riseup_import_draft_file_content.sql (2026-06-28)
 - [x] 133_riseup_import_drafts.sql (2026-06-28)
 - [x] 132_riseup_entity_proposals_and_links.sql (2026-06-26)
 - [x] 131_categories_prisma_alignment.sql (2026-06-26)
@@ -154,6 +155,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 134 | `134_riseup_import_draft_file_content.sql` (2026-06-28) | ALTER | `riseup_import_drafts`: store CSV export bytes so import can resume without re-uploading the file. |
 | 133 | `133_riseup_import_drafts.sql` (2026-06-28) | CREATE | `riseup_import_drafts`: persist RiseUp import wizard review state (row actions, overrides, proposal decisions) keyed by CSV content hash for incremental multi-session imports. |
 | 132 | `132_riseup_entity_proposals_and_links.sql` (2026-06-26) | CREATE | RiseUp import: staged entity proposals, supporting proposal transactions, and generic transaction-entity links for utilities, insurance, donations, savings, digital methods, and future domains. |
 | 131 | `131_categories_prisma_alignment.sql` (2026-06-26) | ALTER | `categories`: add/backfill Prisma-expected `name`, `parent_id`, `is_active`, `created_at`, `updated_at`; parent FK and household active/name index for legacy databases. |

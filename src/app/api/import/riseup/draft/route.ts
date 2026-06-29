@@ -43,6 +43,14 @@ export async function GET(req: NextRequest) {
 
   const draft = await prisma.riseup_import_drafts.findUnique({
     where: { household_id: auth.householdId },
+    select: {
+      file_name: true,
+      file_content_hash: true,
+      row_count: true,
+      draft_state_json: true,
+      updated_at: true,
+      file_content: true,
+    },
   });
   if (!draft) {
     return NextResponse.json({ draft: null });
@@ -58,6 +66,7 @@ export async function GET(req: NextRequest) {
       ...summarizeRiseUpImportDraft(state, draft.updated_at),
       activeSection: state.activeSection ?? null,
       txFilters: state.txFilters ?? null,
+      hasStoredFile: Boolean(draft.file_content && draft.file_content.length > 0),
     },
   });
 }

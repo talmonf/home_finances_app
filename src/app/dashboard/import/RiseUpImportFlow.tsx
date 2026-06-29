@@ -54,6 +54,7 @@ type RiseUpSavedDraftSummary = {
   pendingProposalDecisions: number;
   activeSection: string | null;
   txFilters: RiseUpImportDraftTxFilters | null;
+  hasStoredFile?: boolean;
 };
 
 const defaultTxFilters: RiseUpImportDraftTxFilters = {
@@ -483,6 +484,36 @@ export function RiseUpImportFlow({
     txFilters,
   ]);
 
+  async function applyAnalyzeResponse(data: Record<string, unknown>) {
+    const rows = data.rows as RiseUpAnalyzedImportRow[];
+    setAnalyzed(rows);
+    setProposals((data.proposals as RiseUpImportProposal[] | undefined) ?? []);
+    setAnalyzeSummary((data.summary as RiseUpAnalyzeSummary | undefined) ?? null);
+    setFileName(String(data.fileName ?? ""));
+    setFileContentHash(String(data.fileContentHash ?? ""));
+    applyWizardInitialState(rows, {
+      actions: data.initialActions as Record<number, RiseUpImportAction> | undefined,
+      overrides: data.initialOverrides as Record<number, RowOverrideState> | undefined,
+      proposalActions: data.initialProposalActions as
+        | Record<string, "approve" | "reject" | "skip">
+        | undefined,
+      proposalWorkExpense: data.initialProposalWorkExpense as
+        | Record<string, RiseUpProposalWorkExpenseDraft>
+        | undefined,
+      activeSection: (data.activeSection as RiseUpWizardSection | undefined) ?? "instruments",
+      txFilters: (data.txFilters as RiseUpImportDraftTxFilters | undefined) ?? defaultTxFilters,
+    });
+    skipNextDraftSaveRef.current = true;
+    if (data.draftRestored) {
+      setSuccess(
+        isHe
+          ? `הוחזרה טיוטה שמורה (${data.draftRestoredRowCount ?? 0} החלטות שורות, ${data.draftRestoredProposalCount ?? 0} הצעות).`
+          : `Restored saved draft (${data.draftRestoredRowCount ?? 0} row decisions, ${data.draftRestoredProposalCount ?? 0} proposals).`,
+      );
+    }
+    void loadSavedDraftSummary();
+  }
+
   async function analyze() {
     if (!file) {
       setError(isHe ? "נא לבחור קובץ CSV" : "Please choose a CSV file");
@@ -501,35 +532,30 @@ export function RiseUpImportFlow({
         setLoading(false);
         return;
       }
-      const rows = data.rows as RiseUpAnalyzedImportRow[];
-      setAnalyzed(rows);
-      setProposals((data.proposals as RiseUpImportProposal[] | undefined) ?? []);
-      setAnalyzeSummary((data.summary as RiseUpAnalyzeSummary | undefined) ?? null);
-      setFileName(data.fileName ?? file.name);
-      setFileContentHash(String(data.fileContentHash ?? ""));
-      applyWizardInitialState(rows, {
-        actions: data.initialActions as Record<number, RiseUpImportAction> | undefined,
-        overrides: data.initialOverrides as Record<number, RowOverrideState> | undefined,
-        proposalActions: data.initialProposalActions as
-          | Record<string, "approve" | "reject" | "skip">
-          | undefined,
-        proposalWorkExpense: data.initialProposalWorkExpense as
-          | Record<string, RiseUpProposalWorkExpenseDraft>
-          | undefined,
-        activeSection: (data.activeSection as RiseUpWizardSection | undefined) ?? "instruments",
-        txFilters: (data.txFilters as RiseUpImportDraftTxFilters | undefined) ?? defaultTxFilters,
-      });
-      skipNextDraftSaveRef.current = true;
-      if (data.draftRestored) {
-        setSuccess(
-          isHe
-            ? `הוחזרה טיוטה שמורה (${data.draftRestoredRowCount ?? 0} החלטות שורות, ${data.draftRestoredProposalCount ?? 0} הצעות).`
-            : `Restored saved draft (${data.draftRestoredRowCount ?? 0} row decisions, ${data.draftRestoredProposalCount ?? 0} proposals).`,
-        );
-      }
-      void loadSavedDraftSummary();
+      await applyAnalyzeResponse(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analyze failed");
+    }
+    setLoading(false);
+  }
+
+  async function resumeFromDraft() {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const fd = new FormData();
+      fd.set("resume", "1");
+      const res = await fetch("/api/import/riseup/analyze", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Resume failed");
+        setLoading(false);
+        return;
+      }
+      await applyAnalyzeResponse(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Resume failed");
     }
     setLoading(false);
   }
@@ -921,7 +947,7 @@ export function RiseUpImportFlow({
       {!analyzed ? (
         <div className="space-y-3">
           {savedDraftSummary ? (
-                        <div className="rounded-lg border border-violet-700/60 bg-violet-950/30 p-3 text-sm text-violet-100">
+            <div className="rounded-lg border border-violet-700/60 bg-violet-950/30 p-3 text-sm text-violet-100">
               <div className="font-medium">
                 {isHe ? "יש טיוטת ייבוא שמורה" : "Saved import draft available"}
               </div>
@@ -932,23 +958,54 @@ export function RiseUpImportFlow({
               </p>
               <p className="mt-1 text-xs text-violet-200/80">
                 {isHe
-                  ? "העלה שוב את אותו קובץ CSV ולחץ «נתח קובץ» כדי להמשיך מהטיוטה."
-                  : "Re-upload the same CSV file and click Analyze file to continue from your saved draft."}
+                  ? "הטיוטה שומרת את ההחלטות שלך (צור/דלג, שדות, הצעות) — לא את שורות הקובץ. נדרש ניתוח מחדש כדי להתאים מול מסד הנתונים ולהחזיר את הבחירות."
+                  : "The draft saves your decisions (create/skip, field picks, proposals) — not the CSV rows themselves. Analyze re-runs matching against the database and restores your choices."}
               </p>
-                            <button
-                type="button"
-                className="mt-2 text-xs text-violet-300 underline hover:text-violet-100"
-                onClick={() => void clearSavedDraft()}
-              >
-                {isHe ? "מחק טיוטה שמורה" : "Discard saved draft"}
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {savedDraftSummary.hasStoredFile ? (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void resumeFromDraft()}
+                    className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-500 disabled:opacity-60"
+                  >
+                    {loading
+                      ? isHe
+                        ? "טוען…"
+                        : "Loading…"
+                      : isHe
+                        ? "המשך מהטיוטה"
+                        : "Continue from draft"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="text-xs text-violet-300 underline hover:text-violet-100"
+                  onClick={() => void clearSavedDraft()}
+                >
+                  {isHe ? "מחק טיוטה שמורה" : "Discard saved draft"}
+                </button>
+              </div>
+              {!savedDraftSummary.hasStoredFile ? (
+                <p className="mt-2 text-xs text-violet-200/70">
+                  {isHe
+                    ? "הקובץ לא נשמר מהפעם הקודמת — העלה שוב את אותו CSV פעם אחת; מכאן והלאה «המשך מהטיוטה» יעבוד בלי העלאה."
+                    : "The export file was not stored from your last session — re-upload the same CSV once; after that, Continue from draft works without re-uploading."}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <div className="flex flex-wrap items-end gap-3">
-                    <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
-              {isHe ? "קובץ CSV" : "CSV file"}
-            </label>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-400">
+                {savedDraftSummary?.hasStoredFile
+                  ? isHe
+                    ? "קובץ CSV (אופציונלי — להחלפת ייצוא)"
+                    : "CSV file (optional — replace export)"
+                  : isHe
+                    ? "קובץ CSV"
+                    : "CSV file"}
+              </label>
             <input
               type="file"
               accept=".csv,text/csv"
