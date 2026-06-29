@@ -1,5 +1,6 @@
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
+import { getHouseholdModuleFlags } from "@/lib/household-sections";
 import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -18,6 +19,22 @@ type PageProps = {
   }>;
 };
 
+function ModuleIndicator({ enabled, label }: { enabled: boolean; label: string }) {
+  return (
+    <span
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-sm font-semibold ${
+        enabled
+          ? "bg-emerald-500/15 text-emerald-300"
+          : "bg-slate-700/40 text-slate-500"
+      }`}
+      aria-label={`${label}: ${enabled ? "enabled" : "disabled"}`}
+      title={`${label}: ${enabled ? "enabled" : "disabled"}`}
+    >
+      {enabled ? "✓" : "✗"}
+    </span>
+  );
+}
+
 export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   if (!session?.user?.isSuperAdmin) {
@@ -30,6 +47,9 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
     orderBy: { created_at: "desc" },
     include: {
       _count: { select: { users: true } },
+      household_enabled_sections: {
+        select: { section_id: true, enabled: true },
+      },
     },
   });
 
@@ -240,13 +260,23 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                     <th className="py-2 pr-4">Country</th>
                     <th className="py-2 pr-4">Currency</th>
                     <th className="py-2 pr-4">Users</th>
+                    <th className="py-2 pr-4 text-center">Clinic</th>
+                    <th className="py-2 pr-4 text-center">Household</th>
                     <th className="py-2 pr-4">Created</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {households.map((h) => (
+                  {households.map((h) => {
+                    const moduleFlags = getHouseholdModuleFlags(
+                      h.household_enabled_sections.map((row) => ({
+                        sectionId: row.section_id,
+                        enabled: row.enabled,
+                      })),
+                    );
+
+                    return (
                     <tr
                       key={h.id}
                       className="border-b border-slate-800 last:border-0"
@@ -265,6 +295,15 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                         ) : (
                           <span className="text-slate-500">0</span>
                         )}
+                      </td>
+                      <td className="py-2 pr-4 text-center">
+                        <ModuleIndicator enabled={moduleFlags.clinicEnabled} label="Clinic" />
+                      </td>
+                      <td className="py-2 pr-4 text-center">
+                        <ModuleIndicator
+                          enabled={moduleFlags.householdEnabled}
+                          label="Household"
+                        />
                       </td>
                       <td className="py-2 pr-4 text-xs text-slate-400">
                         {h.created_at.toISOString().slice(0, 10)}
@@ -308,7 +347,8 @@ export default async function HouseholdsAdminPage({ searchParams }: PageProps) {
                         </form>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

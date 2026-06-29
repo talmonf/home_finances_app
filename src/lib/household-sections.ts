@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/auth";
-import { getDashboardSections } from "@/lib/dashboard-sections";
+import { DASHBOARD_SECTIONS, getDashboardSections } from "@/lib/dashboard-sections";
 import type { UiLanguage } from "@/lib/ui-language";
 
 export type EnabledSection = {
@@ -129,6 +129,24 @@ export async function upsertUserEnabledSections(params: {
       }),
     ),
   );
+}
+
+export type HouseholdModuleFlags = {
+  clinicEnabled: boolean;
+  householdEnabled: boolean;
+};
+
+/** Household-level module flags from stored section prefs (defaults match dashboard visibility). */
+export function getHouseholdModuleFlags(
+  sections: EnabledSection[],
+): HouseholdModuleFlags {
+  const clinicEnabled = isEffectiveDashboardSectionEnabled(sections, "privateClinic");
+  const householdEnabled = DASHBOARD_SECTIONS.some(
+    (section) =>
+      section.id !== "privateClinic" &&
+      isEffectiveDashboardSectionEnabled(sections, section.id),
+  );
+  return { clinicEnabled, householdEnabled };
 }
 
 /** True when the user’s effective dashboard has only the Private clinic section (same rule as home redirect). */
