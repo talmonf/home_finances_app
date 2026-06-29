@@ -29,6 +29,7 @@ import {
 import {
   HOME_FREQUENT_LINK_ADMIN_LABELS,
   HOME_FREQUENT_LINK_KEYS,
+  HOME_FREQUENT_LINK_REQUIRES_SECTION,
   homeFrequentLinksApplyToVisibleDashboard,
   parseHomeFrequentLinksJson,
 } from "@/lib/home-frequent-links";
@@ -327,8 +328,8 @@ export default async function EditHouseholdPage({
                   <div className="mt-3">
                     <p className="mb-4 text-xs text-slate-500">
                       Shortcuts at the top of the household home screen. Each can be hidden independently.
-                      Links to Clinic or Upcoming renewals only appear when that section is enabled
-                      for the household.
+                      Clinic shortcuts require the Clinic section; Upcoming renewals requires that section.
+                      RiseUp import appears when checked here — it does not depend on the Import statements tile.
                     </p>
                     <input type="hidden" name="home_frequent_links_form" value="1" />
                     <ul className="space-y-2">
@@ -346,6 +347,20 @@ export default async function EditHouseholdPage({
                           />
                           <label htmlFor={`hf_${key}`} className="cursor-pointer text-sm text-slate-200">
                             {HOME_FREQUENT_LINK_ADMIN_LABELS[key]}
+                            {HOME_FREQUENT_LINK_REQUIRES_SECTION[key] ? (
+                              <span className="mt-0.5 block text-xs text-slate-500">
+                                Requires &quot;
+                                {
+                                  DASHBOARD_SECTIONS.find(
+                                    (s) => s.id === HOME_FREQUENT_LINK_REQUIRES_SECTION[key],
+                                  )?.title
+                                }
+                                &quot; section for the user
+                                {!isSectionEnabled(HOME_FREQUENT_LINK_REQUIRES_SECTION[key]!) ? (
+                                  <span className="text-amber-400"> (currently disabled)</span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </label>
                         </li>
                       ))}

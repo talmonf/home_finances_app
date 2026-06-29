@@ -33,7 +33,7 @@ const DEFAULT_ENABLED: Record<HomeFrequentLinkKey, boolean> = {
   riseUpImport: true,
 };
 
-/** Target routes; visibility still gated by household feature toggles and enabled sections. */
+/** Target routes. Clinic / renewals links also require the matching dashboard section for the user. */
 const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
   privateClinic: "/dashboard/private-clinic",
   reportTreatment: "/dashboard/private-clinic/treatments?modal=new",
@@ -44,15 +44,19 @@ const LINK_HREF: Record<HomeFrequentLinkKey, string> = {
   riseUpImport: "/dashboard/import?format=riseup",
 };
 
-const REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
+/** Dashboard section that must be enabled for the user, or null when only the toggle above controls visibility. */
+export const HOME_FREQUENT_LINK_REQUIRES_SECTION: Record<HomeFrequentLinkKey, SectionId | null> = {
   privateClinic: "privateClinic",
   reportTreatment: "privateClinic",
   reportReceipt: "privateClinic",
   upcomingVisits: "privateClinic",
   upcomingAppointments: "privateClinic",
   upcomingRenewals: "upcomingRenewals",
-  riseUpImport: "importStatements",
+  /** Controlled by the household frequent-link toggle only (not the Import statements tile). */
+  riseUpImport: null,
 };
+
+const REQUIRES_SECTION = HOME_FREQUENT_LINK_REQUIRES_SECTION;
 
 export function parseHomeFrequentLinksJson(raw: unknown): Record<HomeFrequentLinkKey, boolean> {
   const out: Record<HomeFrequentLinkKey, boolean> = { ...DEFAULT_ENABLED };
@@ -114,7 +118,7 @@ export function homeFrequentLinksApplyToVisibleDashboard(
   return true;
 }
 
-/** Ordered shortcuts that are enabled in household settings and whose target section is enabled for the user. */
+/** Ordered shortcuts enabled in household settings; clinic/renewals links also need their section for the user. */
 export function homeFrequentLinksSectionTitle(language: "en" | "he"): string {
   return language === "he" ? "קישורים מועדפים" : "Frequent links";
 }
