@@ -364,6 +364,7 @@ export default async function Home({ searchParams }: HomeProps) {
           </>
         ) : (
           <HouseholdDashboardPanel
+            uiLanguage={uiLanguage}
             welcomeTitle={welcomeTitleNonAdmin}
             welcomeTitleMobile={welcomeTitleMobileNonAdmin}
             welcomeSubtitle={welcomeSubtitleNonAdmin}

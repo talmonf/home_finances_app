@@ -11,6 +11,7 @@ import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
 import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
 import { SignOutButton } from "@/components/sign-out-button";
+import { UiLanguageToggle } from "@/components/ui-language-toggle";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await getAuthSession();
@@ -90,6 +91,12 @@ export default async function RootLayout({
                       </span>
                     )}
                   </span>
+                  {householdMember ? (
+                    <>
+                      <UiLanguageToggle uiLanguage={uiLanguage} />
+                      <div className="h-4 w-px bg-slate-700" aria-hidden />
+                    </>
+                  ) : null}
                   <Link
                     href="/change-password"
                     className="rounded-lg border border-slate-600 px-3 py-1 font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"

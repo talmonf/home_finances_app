@@ -5,6 +5,8 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { SectionId } from "@/lib/dashboard-sections";
+import type { UiLanguage } from "@/lib/ui-language";
+import { dashboardHomeStrings } from "@/lib/ui-language";
 import { toggleSetupSectionDone } from "@/lib/setup-section-actions";
 import { SetupHouseholdCollapsible } from "@/components/setup-household-collapsible";
 import type { HomeFrequentLinkItem } from "@/lib/home-frequent-links";
@@ -30,6 +32,7 @@ export type DashboardOngoingTileProps = {
 };
 
 type HouseholdDashboardPanelProps = {
+  uiLanguage: UiLanguage;
   welcomeTitle: string;
   welcomeTitleMobile: string;
   welcomeSubtitle: string;
@@ -75,6 +78,7 @@ const FREQUENT_LINK_BUTTON_CLASSES: Record<HomeFrequentLinkItem["key"], string> 
 };
 
 export function HouseholdDashboardPanel({
+  uiLanguage,
   welcomeTitle,
   welcomeTitleMobile,
   welcomeSubtitle,
@@ -84,6 +88,7 @@ export function HouseholdDashboardPanel({
   setupTiles,
   ongoingTiles,
 }: HouseholdDashboardPanelProps) {
+  const copy = dashboardHomeStrings(uiLanguage);
   const router = useRouter();
   const pathname = usePathname();
   const normalizedPathname = useMemo(
@@ -109,9 +114,7 @@ export function HouseholdDashboardPanel({
   const filteredEmpty = filteredSetup.length === 0 && filteredOngoing.length === 0;
 
   const emptyMessage =
-    !hasAnyTiles && !queryLower
-      ? "Your super admin hasn't enabled any sections yet."
-      : "No dashboard tiles match your search.";
+    !hasAnyTiles && !queryLower ? copy.noSectionsEnabled : copy.noSearchMatches;
 
   return (
     <>
@@ -125,14 +128,14 @@ export function HouseholdDashboardPanel({
         </div>
         <div className="w-full max-w-[220px] shrink-0">
           <label htmlFor="dashboard-search" className="mb-1 block text-xs text-slate-400">
-            Search tiles
+            {copy.searchTilesLabel}
           </label>
           <input
             id="dashboard-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. donations"
+            placeholder={copy.searchPlaceholder}
             autoComplete="off"
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500"
           />
@@ -197,7 +200,7 @@ export function HouseholdDashboardPanel({
         ) : (
           <>
             {filteredSetup.length > 0 && (
-              <SetupHouseholdCollapsible expandWhen={Boolean(queryLower)}>
+              <SetupHouseholdCollapsible expandWhen={Boolean(queryLower)} title={copy.setupHousehold}>
                   {filteredSetup.map((section) => (
                     <div
                       key={section.id}
@@ -217,7 +220,7 @@ export function HouseholdDashboardPanel({
                                 : "bg-slate-500/15 text-slate-300"
                             }`}
                           >
-                            {section.isDone ? "Done" : "Not done"}
+                            {section.isDone ? copy.done : copy.notDone}
                           </span>
                         </div>
 
@@ -241,7 +244,7 @@ export function HouseholdDashboardPanel({
                             type="submit"
                             className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
                           >
-                            Mark done
+                            {copy.markDone}
                           </button>
                         </form>
                       )}
@@ -253,7 +256,7 @@ export function HouseholdDashboardPanel({
               {filteredOngoing.length > 0 && (
                 <>
                   <div className="mt-6 mb-4 text-sm font-semibold text-slate-200">
-                    Manage your finances
+                    {copy.manageFinances}
                   </div>
                   <div className="grid gap-4 md:grid-cols-3">
                     {filteredOngoing.map((section) => (

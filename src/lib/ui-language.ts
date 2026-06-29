@@ -19,6 +19,36 @@ export const UI_LANGUAGE_LABELS: Record<UiLanguage, string> = {
   he: "עברית",
 };
 
+/** Home dashboard panel (setup tiles, search, ongoing sections) */
+export function dashboardHomeStrings(lang: UiLanguage) {
+  if (lang === "he") {
+    return {
+      searchTilesLabel: "חיפוש אריחים",
+      searchPlaceholder: "לדוגמה: תרומות",
+      setupHousehold: "הגדרת משק הבית",
+      manageFinances: "ניהול הכספים שלך",
+      done: "הושלם",
+      notDone: "טרם הושלם",
+      markDone: "סימון כהושלם",
+      noSectionsEnabled: "מנהל העל שלך עדיין לא הפעיל אף אזור.",
+      noSearchMatches: "אין אריחים שמתאימים לחיפוש.",
+      languageLabel: "שפה",
+    };
+  }
+  return {
+    searchTilesLabel: "Search tiles",
+    searchPlaceholder: "e.g. donations",
+    setupHousehold: "Setup your household",
+    manageFinances: "Manage your finances",
+    done: "Done",
+    notDone: "Not done",
+    markDone: "Mark done",
+    noSectionsEnabled: "Your super admin hasn't enabled any sections yet.",
+    noSearchMatches: "No dashboard tiles match your search.",
+    languageLabel: "Language",
+  };
+}
+
 /** Top shell header (root layout) — matches household UI language when available */
 export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
   const { title: appTitle } = appBrandingStrings(portal, lang);
