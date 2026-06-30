@@ -52,7 +52,7 @@ type Props = {
     anyF: string;
     inactive: string;
     family: string;
-    selectedCount: (n: number) => string;
+    selectedCountTemplate: string;
   };
 };
 
@@ -63,7 +63,7 @@ function FilterCheckboxDropdown({
   options,
   selectedIds,
   onChange,
-  selectedCountLabel,
+  selectedCountTemplate,
 }: {
   name: string;
   label: string;
@@ -71,14 +71,14 @@ function FilterCheckboxDropdown({
   options: Option[];
   selectedIds: Set<string>;
   onChange: (next: Set<string>) => void;
-  selectedCountLabel: (n: number) => string;
+  selectedCountTemplate: string;
 }) {
   const summaryText =
     selectedIds.size === 0
       ? anyLabel
       : selectedIds.size === 1
         ? options.find((option) => selectedIds.has(option.id))?.label ?? anyLabel
-        : selectedCountLabel(selectedIds.size);
+        : selectedCountTemplate.replace("{count}", String(selectedIds.size));
 
   return (
     <div className="flex-none">
@@ -200,7 +200,7 @@ export function TreatmentsFiltersForm(props: Props) {
         options={programsForJob}
         selectedIds={selectedProgramIds}
         onChange={setProgramIds}
-        selectedCountLabel={props.labels.selectedCount}
+        selectedCountTemplate={props.labels.selectedCountTemplate}
       />
 
       <FilterCheckboxDropdown
@@ -210,7 +210,7 @@ export function TreatmentsFiltersForm(props: Props) {
         options={props.visitTypeOptions}
         selectedIds={visitTypeIds}
         onChange={setVisitTypeIds}
-        selectedCountLabel={props.labels.selectedCount}
+        selectedCountTemplate={props.labels.selectedCountTemplate}
       />
 
       <div className="flex-none">

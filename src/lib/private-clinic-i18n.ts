@@ -541,6 +541,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
     filterUnpaid: p("Unpaid", "לא שולם"),
     filterReported: p("Reported", "דווח"),
     filterNotReported: p("Not reported", "לא דווח"),
+    filterSelectedCountTemplate: p("{count} selected", "{count} נבחרו"),
     logTreatment: p("Log treatment", "רישום טיפול"),
     dateTime: c.dateTime,
     occurredTimeOptional: p("Time (optional, 24-hour, UTC)", "שעה (אופציונלי, 24 שעות, UTC)"),

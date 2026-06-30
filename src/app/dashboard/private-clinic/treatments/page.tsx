@@ -422,7 +422,7 @@ export default async function TreatmentsPage({
             anyF: c.anyF,
             inactive: c.inactive,
             family: familyLabel,
-            selectedCount: (n) => (uiLanguage === "he" ? `${n} נבחרו` : `${n} selected`),
+            selectedCountTemplate: tr.filterSelectedCountTemplate,
           }}
         />
       </section>
