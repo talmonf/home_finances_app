@@ -9,7 +9,9 @@ import {
   formatPrivateClinicJobLabel,
   jobWherePrivateClinicScoped,
 } from "@/lib/private-clinic/jobs-scope";
+import type { TherapyVisitType } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
+import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
 
 export type TreatmentsSortKey = "occurred_at" | "client" | "job" | "amount";
 export type TreatmentsSortDir = "asc" | "desc";
@@ -20,7 +22,8 @@ export type TreatmentsListFilters = {
   paid: TreatmentsPaidFilter;
   reported: TreatmentsReportedFilter;
   job: string;
-  program: string;
+  programs: string[];
+  visitTypes: TherapyVisitType[];
   client: string;
   family: string;
   receipt: string;
@@ -38,6 +41,7 @@ export type TreatmentListRowDto = {
   client_last_name: string | null;
   job_label: string;
   program_label: string | null;
+  visit_type: TherapyVisitType;
   family_name: string | null;
   amount: string | null;
   currency: string;
@@ -77,6 +81,65 @@ export function parseTreatmentsReportedFilter(raw: string | undefined): Treatmen
   return "all";
 }
 
+function parseSearchParamList(value: string | string[] | undefined): string[] {
+  if (value == null) return [];
+  const raw = Array.isArray(value) ? value : [value];
+  return [...new Set(raw.map((v) => v.trim()).filter(Boolean))];
+}
+
+export function parseTreatmentsProgramsFilter(raw: string | string[] | undefined): string[] {
+  return parseSearchParamList(raw);
+}
+
+export function parseTreatmentsVisitTypesFilter(raw: string | string[] | undefined): TherapyVisitType[] {
+  const valid = new Set<TherapyVisitType>(therapyVisitTypesOrdered());
+  return parseSearchParamList(raw).filter((value): value is TherapyVisitType =>
+    valid.has(value as TherapyVisitType),
+  );
+}
+
+function treatmentsListWhereInput(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TreatmentsListFilters;
+  from: Date | null;
+  to: Date | null;
+}): Prisma.therapy_treatmentsWhereInput {
+  const { householdId, familyMemberId, filters, from, to } = params;
+  return {
+    household_id: householdId,
+    job: jobWherePrivateClinicScoped(familyMemberId),
+    ...(filters.job ? { job_id: filters.job } : {}),
+    ...(filters.programs.length ? { program_id: { in: filters.programs } } : {}),
+    ...(filters.visitTypes.length ? { visit_type: { in: filters.visitTypes } } : {}),
+    ...(filters.client ? { client_id: filters.client } : {}),
+    ...(filters.family ? { family_id: filters.family } : {}),
+    ...(filters.receipt
+      ? {
+          receipt_allocations: {
+            some: {
+              receipt_id: filters.receipt,
+            },
+          },
+        }
+      : {}),
+    ...(from || to
+      ? {
+          occurred_at: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {}),
+    ...(filters.reported === "all"
+      ? {}
+      : {
+          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
+          reported_to_external_system: filters.reported === "reported",
+        }),
+  };
+}
+
 function parseDateFilter(raw: string): Date | null {
   const text = raw.trim();
   if (!text) return null;
@@ -107,37 +170,7 @@ export async function loadTreatmentsCursorPage(params: {
   const from = parseDateFilter(filters.from);
   const to = parseDateFilter(filters.to);
 
-  const baseWhere: Prisma.therapy_treatmentsWhereInput = {
-    household_id: householdId,
-    job: jobWherePrivateClinicScoped(familyMemberId),
-    ...(filters.job ? { job_id: filters.job } : {}),
-    ...(filters.program ? { program_id: filters.program } : {}),
-    ...(filters.client ? { client_id: filters.client } : {}),
-    ...(filters.family ? { family_id: filters.family } : {}),
-    ...(filters.receipt
-      ? {
-          receipt_allocations: {
-            some: {
-              receipt_id: filters.receipt,
-            },
-          },
-        }
-      : {}),
-    ...(from || to
-      ? {
-          occurred_at: {
-            ...(from ? { gte: from } : {}),
-            ...(to ? { lte: to } : {}),
-          },
-        }
-      : {}),
-    ...(filters.reported === "all"
-      ? {}
-      : {
-          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
-          reported_to_external_system: filters.reported === "reported",
-        }),
-  };
+  const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
   // Paid filtering depends on aggregated allocation amounts, so we over-fetch and then slice.
   const maxIterations = 6;
@@ -185,6 +218,7 @@ export async function loadTreatmentsCursorPage(params: {
         client_last_name: t.client.last_name,
         job_label: formatPrivateClinicJobLabel(t.job),
         program_label: t.program?.name ?? null,
+        visit_type: t.visit_type,
         family_name: t.family?.name ?? null,
         amount: t.amount != null ? t.amount.toString() : null,
         currency: t.currency,
@@ -226,37 +260,7 @@ export async function loadTreatmentsAmountTotal(params: {
   const from = parseDateFilter(filters.from);
   const to = parseDateFilter(filters.to);
 
-  const baseWhere: Prisma.therapy_treatmentsWhereInput = {
-    household_id: householdId,
-    job: jobWherePrivateClinicScoped(familyMemberId),
-    ...(filters.job ? { job_id: filters.job } : {}),
-    ...(filters.program ? { program_id: filters.program } : {}),
-    ...(filters.client ? { client_id: filters.client } : {}),
-    ...(filters.family ? { family_id: filters.family } : {}),
-    ...(filters.receipt
-      ? {
-          receipt_allocations: {
-            some: {
-              receipt_id: filters.receipt,
-            },
-          },
-        }
-      : {}),
-    ...(from || to
-      ? {
-          occurred_at: {
-            ...(from ? { gte: from } : {}),
-            ...(to ? { lte: to } : {}),
-          },
-        }
-      : {}),
-    ...(filters.reported === "all"
-      ? {}
-      : {
-          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
-          reported_to_external_system: filters.reported === "reported",
-        }),
-  };
+  const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
   const chunkSize = 200;
   let cursorId: string | undefined;
@@ -300,37 +304,7 @@ export async function loadTreatmentsListRecordCount(params: {
   const from = parseDateFilter(filters.from);
   const to = parseDateFilter(filters.to);
 
-  const baseWhere: Prisma.therapy_treatmentsWhereInput = {
-    household_id: householdId,
-    job: jobWherePrivateClinicScoped(familyMemberId),
-    ...(filters.job ? { job_id: filters.job } : {}),
-    ...(filters.program ? { program_id: filters.program } : {}),
-    ...(filters.client ? { client_id: filters.client } : {}),
-    ...(filters.family ? { family_id: filters.family } : {}),
-    ...(filters.receipt
-      ? {
-          receipt_allocations: {
-            some: {
-              receipt_id: filters.receipt,
-            },
-          },
-        }
-      : {}),
-    ...(from || to
-      ? {
-          occurred_at: {
-            ...(from ? { gte: from } : {}),
-            ...(to ? { lte: to } : {}),
-          },
-        }
-      : {}),
-    ...(filters.reported === "all"
-      ? {}
-      : {
-          job: { ...jobWherePrivateClinicScoped(familyMemberId), external_reporting_system: { not: null } },
-          reported_to_external_system: filters.reported === "reported",
-        }),
-  };
+  const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
   if (filters.paid === "all") {
     return prisma.therapy_treatments.count({ where: baseWhere });

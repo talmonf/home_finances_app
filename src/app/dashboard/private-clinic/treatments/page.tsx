@@ -21,6 +21,8 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
@@ -33,9 +35,11 @@ import {
   loadTreatmentsAmountTotal,
   loadTreatmentsListRecordCount,
   parseTreatmentsPaidFilter,
+  parseTreatmentsProgramsFilter,
   parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
   parseTreatmentsSortKey,
+  parseTreatmentsVisitTypesFilter,
   type TreatmentsListFilters,
 } from "./treatments-list-data";
 
@@ -45,7 +49,8 @@ type Search = {
   paid?: string;
   reported?: string;
   job?: string;
-  program?: string;
+  program?: string | string[];
+  visit_type?: string | string[];
   client?: string;
   family?: string;
   receipt?: string;
@@ -79,7 +84,8 @@ export default async function TreatmentsPage({
     paid: parseTreatmentsPaidFilter(sp.paid),
     reported: parseTreatmentsReportedFilter(sp.reported),
     job: sp.job?.trim() || "",
-    program: sp.program?.trim() || "",
+    programs: parseTreatmentsProgramsFilter(sp.program),
+    visitTypes: parseTreatmentsVisitTypesFilter(sp.visit_type),
     client: sp.client?.trim() || "",
     family: sp.family?.trim() || "",
     receipt: sp.receipt?.trim() || "",
@@ -259,7 +265,8 @@ export default async function TreatmentsPage({
   if (filters.paid !== "all") queryParams.set("paid", filters.paid);
   if (filters.reported !== "all") queryParams.set("reported", filters.reported);
   if (filters.job) queryParams.set("job", filters.job);
-  if (filters.program) queryParams.set("program", filters.program);
+  for (const programId of filters.programs) queryParams.append("program", programId);
+  for (const visitType of filters.visitTypes) queryParams.append("visit_type", visitType);
   if (filters.client) queryParams.set("client", filters.client);
   if (filters.family) queryParams.set("family", filters.family);
   if (filters.receipt) queryParams.set("receipt", filters.receipt);
@@ -371,7 +378,8 @@ export default async function TreatmentsPage({
           paid={filters.paid}
           reported={filters.reported}
           job={defaultClinicJobId(activeClinicJobs, sp.job !== undefined ? filters.job : undefined)}
-          program={filters.program}
+          programs={filters.programs}
+          visitTypes={filters.visitTypes}
           client={filters.client}
           family={filters.family}
           from={filters.from}
@@ -382,7 +390,11 @@ export default async function TreatmentsPage({
           showExternalReporting={showExternalReporting}
           familyEnabled={Boolean(settings?.family_therapy_enabled)}
           jobs={jobs.map((j) => ({ id: j.id, label: formatPrivateClinicJobLabel(j) }))}
-          programs={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
+          programOptions={programs.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
+          visitTypeOptions={therapyVisitTypesOrdered().map((visitType) => ({
+            id: visitType,
+            label: therapyVisitTypeLabel(uiLanguage, visitType),
+          }))}
           clients={clients.map((cl) => ({
             id: cl.id,
             label: `${cl.first_name} ${cl.last_name ?? ""}`.trim(),
@@ -400,6 +412,7 @@ export default async function TreatmentsPage({
             filterNotReported: tr.filterNotReported,
             job: c.job,
             program: c.program,
+            visitType: tr.visitType,
             client: c.client,
             from: c.from,
             to: c.to,
@@ -409,6 +422,7 @@ export default async function TreatmentsPage({
             anyF: c.anyF,
             inactive: c.inactive,
             family: familyLabel,
+            selectedCount: (n) => (uiLanguage === "he" ? `${n} נבחרו` : `${n} selected`),
           }}
         />
       </section>
@@ -461,6 +475,7 @@ export default async function TreatmentsPage({
               client: c.client,
               job: c.job,
               program: c.program,
+              visitType: tr.visitType,
               family: familyLabel,
               amount: c.amount,
               paid: c.paid,

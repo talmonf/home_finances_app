@@ -14,7 +14,8 @@ type Props = {
   paid: string;
   reported: string;
   job: string;
-  program: string;
+  programs: string[];
+  visitTypes: string[];
   client: string;
   family: string;
   from: string;
@@ -23,7 +24,8 @@ type Props = {
   showExternalReporting: boolean;
   familyEnabled: boolean;
   jobs: Option[];
-  programs: ProgramOption[];
+  programOptions: ProgramOption[];
+  visitTypeOptions: Option[];
   clients: Array<Option & { inactive?: boolean }>;
   families: Option[];
   /** When set with `filterResetLabel`, shows a compact link next to Apply */
@@ -40,6 +42,7 @@ type Props = {
     filterNotReported: string;
     job: string;
     program: string;
+    visitType: string;
     client: string;
     from: string;
     to: string;
@@ -49,19 +52,80 @@ type Props = {
     anyF: string;
     inactive: string;
     family: string;
+    selectedCount: (n: number) => string;
   };
 };
 
+function FilterCheckboxDropdown({
+  name,
+  label,
+  anyLabel,
+  options,
+  selectedIds,
+  onChange,
+  selectedCountLabel,
+}: {
+  name: string;
+  label: string;
+  anyLabel: string;
+  options: Option[];
+  selectedIds: Set<string>;
+  onChange: (next: Set<string>) => void;
+  selectedCountLabel: (n: number) => string;
+}) {
+  const summaryText =
+    selectedIds.size === 0
+      ? anyLabel
+      : selectedIds.size === 1
+        ? options.find((option) => selectedIds.has(option.id))?.label ?? anyLabel
+        : selectedCountLabel(selectedIds.size);
+
+  return (
+    <div className="flex-none">
+      <span className="block text-[11px] leading-4 text-slate-400">{label}</span>
+      <details className="relative">
+        <summary className="mt-0.5 w-auto min-w-[7.5rem] max-w-[11rem] cursor-pointer list-none rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 [&::-webkit-details-marker]:hidden">
+          <span className="block truncate">{summaryText}</span>
+        </summary>
+        <div className="absolute z-20 mt-1 max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-slate-600 bg-slate-800 p-2 shadow-lg">
+          {options.map((option) => (
+            <label key={option.id} className="flex cursor-pointer items-center gap-2 py-0.5 text-xs text-slate-100">
+              <input
+                type="checkbox"
+                name={name}
+                value={option.id}
+                checked={selectedIds.has(option.id)}
+                onChange={(e) => {
+                  const next = new Set(selectedIds);
+                  if (e.target.checked) next.add(option.id);
+                  else next.delete(option.id);
+                  onChange(next);
+                }}
+                className="rounded border-slate-500"
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export function TreatmentsFiltersForm(props: Props) {
   const [jobId, setJobId] = useState(() => defaultClinicJobId(props.jobs, props.job));
-  const [programId, setProgramId] = useState(props.program);
+  const [programIds, setProgramIds] = useState(() => new Set(props.programs));
+  const [visitTypeIds, setVisitTypeIds] = useState(() => new Set(props.visitTypes));
 
   const programsForJob = useMemo(
-    () => (jobId ? props.programs.filter((p) => p.jobId === jobId) : props.programs),
-    [jobId, props.programs],
+    () => (jobId ? props.programOptions.filter((p) => p.jobId === jobId) : props.programOptions),
+    [jobId, props.programOptions],
   );
 
-  const selectedProgramId = programId && programsForJob.some((p) => p.id === programId) ? programId : "";
+  const selectedProgramIds = useMemo(() => {
+    const valid = new Set(programsForJob.map((p) => p.id));
+    return new Set([...programIds].filter((id) => valid.has(id)));
+  }, [programIds, programsForJob]);
 
   return (
     <fieldset className="rounded-lg border border-slate-700 bg-slate-900/60 px-2 pb-2 pt-1">
@@ -107,7 +171,17 @@ export function TreatmentsFiltersForm(props: Props) {
         <select
           name="job"
           value={jobId}
-          onChange={(e) => setJobId(e.target.value)}
+          onChange={(e) => {
+            const nextJobId = e.target.value;
+            setJobId(nextJobId);
+            const validProgramIds = new Set(
+              (nextJobId
+                ? props.programOptions.filter((p) => p.jobId === nextJobId)
+                : props.programOptions
+              ).map((p) => p.id),
+            );
+            setProgramIds((prev) => new Set([...prev].filter((id) => validProgramIds.has(id))));
+          }}
           className="w-auto min-w-[8rem] max-w-[12rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         >
           <option value="">{props.labels.any}</option>
@@ -119,22 +193,25 @@ export function TreatmentsFiltersForm(props: Props) {
         </select>
       </div>
 
-      <div className="flex-none">
-        <label className="block text-[11px] leading-4 text-slate-400">{props.labels.program}</label>
-        <select
-          name="program"
-          value={selectedProgramId}
-          onChange={(e) => setProgramId(e.target.value)}
-          className="w-auto min-w-[7.5rem] max-w-[11rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-        >
-          <option value="">{props.labels.anyF}</option>
-          {programsForJob.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <FilterCheckboxDropdown
+        name="program"
+        label={props.labels.program}
+        anyLabel={props.labels.anyF}
+        options={programsForJob}
+        selectedIds={selectedProgramIds}
+        onChange={setProgramIds}
+        selectedCountLabel={props.labels.selectedCount}
+      />
+
+      <FilterCheckboxDropdown
+        name="visit_type"
+        label={props.labels.visitType}
+        anyLabel={props.labels.any}
+        options={props.visitTypeOptions}
+        selectedIds={visitTypeIds}
+        onChange={setVisitTypeIds}
+        selectedCountLabel={props.labels.selectedCount}
+      />
 
       <div className="flex-none">
         <label className="block text-[11px] leading-4 text-slate-400">{props.labels.client}</label>

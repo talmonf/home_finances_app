@@ -3,9 +3,11 @@ import { getCurrentHouseholdId, prisma, requireHouseholdMember } from "@/lib/aut
 import {
   loadTreatmentsCursorPage,
   parseTreatmentsPaidFilter,
+  parseTreatmentsProgramsFilter,
   parseTreatmentsReportedFilter,
   parseTreatmentsSortDir,
   parseTreatmentsSortKey,
+  parseTreatmentsVisitTypesFilter,
 } from "@/app/dashboard/private-clinic/treatments/treatments-list-data";
 
 export async function GET(req: NextRequest) {
@@ -35,7 +37,8 @@ export async function GET(req: NextRequest) {
       paid: parseTreatmentsPaidFilter(url.searchParams.get("paid") ?? undefined),
       reported: parseTreatmentsReportedFilter(url.searchParams.get("reported") ?? undefined),
       job: url.searchParams.get("job")?.trim() || "",
-      program: url.searchParams.get("program")?.trim() || "",
+      programs: parseTreatmentsProgramsFilter(url.searchParams.getAll("program")),
+      visitTypes: parseTreatmentsVisitTypesFilter(url.searchParams.getAll("visit_type")),
       client: url.searchParams.get("client")?.trim() || "",
       family: url.searchParams.get("family")?.trim() || "",
       receipt: url.searchParams.get("receipt")?.trim() || "",

@@ -10,6 +10,7 @@ import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { TreatmentListRowDto } from "./treatments-list-data";
 import { treatmentPaymentStatusLabel } from "@/lib/private-clinic-i18n";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import {
   createTherapyReceiptForSelectedTreatments,
   deleteReceiptAllocation,
@@ -22,6 +23,7 @@ type Labels = {
   client: string;
   job: string;
   program: string;
+  visitType: string;
   family: string;
   amount: string;
   paid: string;
@@ -375,6 +377,7 @@ export function TreatmentsListClient({
                 </button>
               </th>
               <th className="px-3 py-2 text-slate-300">{labels.program}</th>
+              <th className="px-3 py-2 text-slate-300">{labels.visitType}</th>
               {showFamily ? <th className="px-3 py-2 text-slate-300">{labels.family}</th> : null}
               <th className="px-3 py-2 text-right text-slate-300">
                 <button type="button" onClick={() => onSort("amount")} className="hover:text-slate-100">
@@ -444,6 +447,7 @@ export function TreatmentsListClient({
                   </td>
                   <td className="px-3 py-2 text-slate-400">{t.job_label}</td>
                   <td className="px-3 py-2 text-slate-400">{t.program_label ?? "—"}</td>
+                  <td className="px-3 py-2 text-slate-400">{therapyVisitTypeLabel(uiLanguage, t.visit_type)}</td>
                   {showFamily ? <td className="px-3 py-2 text-slate-400">{t.family_name ?? "—"}</td> : null}
                   <td className="px-3 py-2 text-right text-slate-200">
                     {t.amount != null && t.amount !== ""
