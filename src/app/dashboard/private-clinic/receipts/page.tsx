@@ -761,6 +761,7 @@ export default async function ReceiptsPage({
             subtotalTravel: r.periodPreviewSubtotalTravel,
             truncated: r.periodPreviewTruncated,
             suggestedCombinedTotal: r.suggestedCombinedTotal,
+            records: c.records,
             breakdownTemplate: r.periodPreviewBreakdownTemplate,
             suggestedMatchesGross: r.suggestedMatchesGross,
             diffFromGrossTemplate: r.periodPreviewDiffFromGrossTemplate,

@@ -33,6 +33,7 @@ export type ReceiptPeriodPreviewLabels = {
   subtotalTravel: string;
   truncated: string;
   suggestedCombinedTotal: string;
+  records: string;
   breakdownTemplate: string;
   suggestedMatchesGross: string;
   diffFromGrossTemplate: string;
@@ -466,6 +467,9 @@ export function ReceiptPeriodPreview({
 
               {sortedRows.length > 0 ? (
                 <div className="space-y-1">
+                  <p className="text-slate-400">
+                    {filteredRows.length} {labels.records}
+                  </p>
                   <p className="text-slate-400">
                     {fillLabelTemplate(labels.breakdownTemplate, {
                       treatments: filteredTotals.treatments.toFixed(2),
