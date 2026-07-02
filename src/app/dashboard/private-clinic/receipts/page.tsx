@@ -768,6 +768,7 @@ export default async function ReceiptsPage({
             filterType: c.type,
             filterProgram: c.program,
             filterVisitType: tr.visitType,
+            filterClient: c.client,
             filterAny: c.any,
             filterAnyF: c.anyF,
             filterSelectedCountTemplate: tr.filterSelectedCountTemplate,

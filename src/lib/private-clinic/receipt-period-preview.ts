@@ -11,6 +11,7 @@ export type ReceiptPeriodPreviewRow = {
   programId: string | null;
   programLabel: string;
   visitType: string | null;
+  clientId: string | null;
   clientLabel: string;
   amount: string;
   currency: string;
@@ -91,6 +92,7 @@ export async function loadReceiptPeriodPreview(params: {
         currency: true,
         program_id: true,
         visit_type: true,
+        client_id: true,
         client: { select: { first_name: true, last_name: true } },
         program: { select: { name: true } },
       },
@@ -115,6 +117,7 @@ export async function loadReceiptPeriodPreview(params: {
         participants: {
           take: 1,
           select: {
+            client_id: true,
             client: { select: { first_name: true, last_name: true } },
           },
         },
@@ -140,6 +143,7 @@ export async function loadReceiptPeriodPreview(params: {
           select: {
             program_id: true,
             visit_type: true,
+            client_id: true,
             client: { select: { first_name: true, last_name: true } },
             program: { select: { name: true } },
           },
@@ -150,7 +154,10 @@ export async function loadReceiptPeriodPreview(params: {
             program: { select: { name: true } },
             participants: {
               take: 1,
-              select: { client: { select: { first_name: true, last_name: true } } },
+              select: {
+                client_id: true,
+                client: { select: { first_name: true, last_name: true } },
+              },
             },
           },
         },
@@ -172,6 +179,7 @@ export async function loadReceiptPeriodPreview(params: {
       currency: row.currency || row.income_currency || "ILS",
       programId: row.program_id,
       programLabel: row.program?.name ?? "—",
+      clientId: row.participants[0]?.client_id ?? null,
       clientLabel: formatPersonName(row.participants[0]?.client),
     }))
     .filter((row): row is NonNullable<typeof row> & { amount: string } => row.amount != null);
@@ -187,6 +195,7 @@ export async function loadReceiptPeriodPreview(params: {
     programId: row.program_id,
     programLabel: row.program?.name ?? "—",
     visitType: row.visit_type,
+    clientId: row.client_id,
     clientLabel: formatPersonName(row.client),
     amount: row.amount!.toString(),
     currency: row.currency,
@@ -198,6 +207,7 @@ export async function loadReceiptPeriodPreview(params: {
     programId: row.programId,
     programLabel: row.programLabel,
     visitType: null,
+    clientId: row.clientId,
     clientLabel: row.clientLabel,
     amount: row.amount,
     currency: row.currency,
@@ -209,6 +219,7 @@ export async function loadReceiptPeriodPreview(params: {
     programId: row.treatment?.program_id ?? row.consultation?.program_id ?? null,
     programLabel: row.treatment?.program?.name ?? row.consultation?.program?.name ?? "—",
     visitType: row.treatment?.visit_type ?? null,
+    clientId: row.treatment?.client_id ?? row.consultation?.participants[0]?.client_id ?? null,
     clientLabel: formatPersonName(row.treatment?.client ?? row.consultation?.participants[0]?.client),
     amount: row.amount!.toString(),
     currency: row.currency,

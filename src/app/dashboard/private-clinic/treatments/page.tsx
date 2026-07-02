@@ -34,6 +34,7 @@ import {
   loadTreatmentsCursorPage,
   loadTreatmentsAmountTotal,
   loadTreatmentsListRecordCount,
+  loadTreatmentsClientFilterOptions,
   parseTreatmentsPaidFilter,
   parseTreatmentsProgramsFilter,
   parseTreatmentsReportedFilter,
@@ -138,7 +139,7 @@ export default async function TreatmentsPage({
   const linkedClientIds = linkedClientRows.map((r) => r.client_id);
   const linkedFamilyIds = linkedFamilyRows.map((r) => r.family_id).filter((x): x is string => Boolean(x));
 
-  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage, amountTotalsByCurrency, recordCount] =
+  const [jobs, programs, clients, settings, families, visitDefaultsRows, bankAccounts, digitalPaymentMethods, firstPage, amountTotalsByCurrency, recordCount, clientFilterOptions] =
     await Promise.all([
       prisma.jobs.findMany({
       where: {
@@ -226,6 +227,7 @@ export default async function TreatmentsPage({
       loadTreatmentsCursorPage({ householdId, familyMemberId, filters, take: 50 }),
       loadTreatmentsAmountTotal({ householdId, familyMemberId, filters }),
       loadTreatmentsListRecordCount({ householdId, familyMemberId, filters }),
+      loadTreatmentsClientFilterOptions({ householdId, familyMemberId, filters }),
   ]);
 
   const visitDefaults = visitDefaultsRows.map((r) => ({
@@ -395,11 +397,7 @@ export default async function TreatmentsPage({
             id: visitType,
             label: therapyVisitTypeLabel(uiLanguage, visitType),
           }))}
-          clients={clients.map((cl) => ({
-            id: cl.id,
-            label: `${cl.first_name} ${cl.last_name ?? ""}`.trim(),
-            inactive: !cl.is_active,
-          }))}
+          clients={clientFilterOptions}
           families={families.map((family) => ({ id: family.id, label: family.name }))}
           labels={{
             filters: tr.filters,

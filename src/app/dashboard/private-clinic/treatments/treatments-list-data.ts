@@ -340,3 +340,93 @@ export async function loadTreatmentsListRecordCount(params: {
 
   return count;
 }
+
+export type TreatmentsClientFilterOption = {
+  id: string;
+  label: string;
+  inactive: boolean;
+};
+
+export async function loadTreatmentsClientFilterOptions(params: {
+  householdId: string;
+  familyMemberId?: string | null;
+  filters: TreatmentsListFilters;
+}): Promise<TreatmentsClientFilterOption[]> {
+  const { householdId, familyMemberId, filters } = params;
+  const filtersWithoutClient = { ...filters, client: "" };
+  const from = parseDateFilter(filters.from);
+  const to = parseDateFilter(filters.to);
+  const baseWhere = treatmentsListWhereInput({
+    householdId,
+    familyMemberId,
+    filters: filtersWithoutClient,
+    from,
+    to,
+  });
+
+  const byClientId = new Map<string, { first_name: string; last_name: string | null; is_active: boolean }>();
+
+  if (filters.paid === "all") {
+    const rows = await prisma.therapy_treatments.findMany({
+      where: baseWhere,
+      distinct: ["client_id"],
+      select: {
+        client_id: true,
+        client: { select: { first_name: true, last_name: true, is_active: true } },
+      },
+    });
+    for (const row of rows) {
+      byClientId.set(row.client_id, row.client);
+    }
+  } else {
+    const chunkSize = 200;
+    let cursorId: string | undefined;
+
+    for (;;) {
+      const chunk = await prisma.therapy_treatments.findMany({
+        where: baseWhere,
+        orderBy: [{ occurred_at: "desc" }, { id: "desc" }],
+        ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+        take: chunkSize,
+        select: {
+          id: true,
+          client_id: true,
+          amount: true,
+          client: { select: { first_name: true, last_name: true, is_active: true } },
+          receipt_allocations: { select: { amount: true } },
+        },
+      });
+      if (chunk.length === 0) break;
+
+      for (const t of chunk) {
+        const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
+        const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+        if (paymentStatus !== filters.paid) continue;
+        if (!byClientId.has(t.client_id)) {
+          byClientId.set(t.client_id, t.client);
+        }
+      }
+
+      if (chunk.length < chunkSize) break;
+      cursorId = chunk[chunk.length - 1]?.id;
+    }
+  }
+
+  if (filters.client && !byClientId.has(filters.client)) {
+    const selectedClient = await prisma.therapy_clients.findFirst({
+      where: { id: filters.client, household_id: householdId },
+      select: { first_name: true, last_name: true, is_active: true },
+    });
+    if (selectedClient) {
+      byClientId.set(filters.client, selectedClient);
+    }
+  }
+
+  return [...byClientId.entries()]
+    .map(([id, client]) => ({
+      id,
+      label: `${client.first_name} ${client.last_name ?? ""}`.trim(),
+      inactive: !client.is_active,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}

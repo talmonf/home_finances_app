@@ -40,6 +40,7 @@ export type ReceiptPeriodPreviewLabels = {
   filterType: string;
   filterProgram: string;
   filterVisitType: string;
+  filterClient: string;
   filterAny: string;
   filterAnyF: string;
   filterSelectedCountTemplate: string;
@@ -87,11 +88,13 @@ function filterRows(
   entryTypeIds: Set<string>,
   programIds: Set<string>,
   visitTypeIds: Set<string>,
+  clientIds: Set<string>,
 ): ReceiptPeriodPreviewRow[] {
   return rows.filter((row) => {
     if (entryTypeIds.size > 0 && !entryTypeIds.has(row.entryType)) return false;
     if (programIds.size > 0 && (!row.programId || !programIds.has(row.programId))) return false;
     if (visitTypeIds.size > 0 && (!row.visitType || !visitTypeIds.has(row.visitType))) return false;
+    if (clientIds.size > 0 && (!row.clientId || !clientIds.has(row.clientId))) return false;
     return true;
   });
 }
@@ -199,6 +202,7 @@ export function ReceiptPeriodPreview({
   const [entryTypeIds, setEntryTypeIds] = useState<Set<string>>(() => new Set());
   const [programIds, setProgramIds] = useState<Set<string>>(() => new Set());
   const [visitTypeIds, setVisitTypeIds] = useState<Set<string>>(() => new Set());
+  const [clientIds, setClientIds] = useState<Set<string>>(() => new Set());
 
   const entryTypeOptions = useMemo<FilterOption[]>(
     () => [
@@ -226,6 +230,7 @@ export function ReceiptPeriodPreview({
     setEntryTypeIds(new Set());
     setProgramIds(new Set());
     setVisitTypeIds(new Set());
+    setClientIds(new Set());
   }, [coveredPeriodEnd, coveredPeriodStart, jobId]);
 
   useEffect(() => {
@@ -296,10 +301,33 @@ export function ReceiptPeriodPreview({
 
   const grossTotal = useMemo(() => decimalStringToNumber(grossAmount), [grossAmount]);
   const data = state.kind === "ready" ? state.data : null;
+
+  const clientOptions = useMemo<FilterOption[]>(() => {
+    if (!data) return [];
+    const rowsForOptions = filterRows(data.rows, entryTypeIds, selectedProgramIds, visitTypeIds, new Set());
+    const byId = new Map<string, string>();
+    for (const row of rowsForOptions) {
+      if (row.clientId) byId.set(row.clientId, row.clientLabel);
+    }
+    return [...byId.entries()]
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [data, entryTypeIds, selectedProgramIds, visitTypeIds]);
+
+  const validClientIds = useMemo(() => new Set(clientOptions.map((option) => option.id)), [clientOptions]);
+  const selectedClientIds = useMemo(
+    () => new Set([...clientIds].filter((id) => validClientIds.has(id))),
+    [clientIds, validClientIds],
+  );
+
+  useEffect(() => {
+    setClientIds((prev) => new Set([...prev].filter((id) => validClientIds.has(id))));
+  }, [validClientIds]);
+
   const filteredRows = useMemo(() => {
     if (!data) return [];
-    return filterRows(data.rows, entryTypeIds, selectedProgramIds, visitTypeIds);
-  }, [data, entryTypeIds, selectedProgramIds, visitTypeIds]);
+    return filterRows(data.rows, entryTypeIds, selectedProgramIds, visitTypeIds, selectedClientIds);
+  }, [data, entryTypeIds, selectedClientIds, selectedProgramIds, visitTypeIds]);
   const sortedRows = useMemo(() => {
     if (filteredRows.length === 0) return [];
     if (sortKey === null) return defaultSortRows(filteredRows);
@@ -368,6 +396,19 @@ export function ReceiptPeriodPreview({
                   doneLabel={labels.filterDone}
                   closeHint={labels.filterCloseHint}
                 />
+                <FilterCheckboxDropdown
+                  name="preview_client"
+                  label={labels.filterClient}
+                  anyLabel={labels.filterAny}
+                  options={clientOptions}
+                  selectedIds={selectedClientIds}
+                  onChange={setClientIds}
+                  selectedCountTemplate={labels.filterSelectedCountTemplate}
+                  selectAllLabel={labels.selectAll}
+                  deselectAllLabel={labels.deselectAll}
+                  doneLabel={labels.filterDone}
+                  closeHint={labels.filterCloseHint}
+                />
               </div>
 
               {sortedRows.length > 0 ? (
@@ -376,15 +417,15 @@ export function ReceiptPeriodPreview({
                     <thead className="bg-slate-900/70 text-left text-slate-200">
                       <tr>
                         <th className="px-3 py-2 font-medium">
-                          <button type="button" onClick={() => onSort("entryType")} className="hover:text-slate-100">
-                            {labels.tableType}
-                            {sortArrow("entryType")}
-                          </button>
-                        </th>
-                        <th className="px-3 py-2 font-medium">
                           <button type="button" onClick={() => onSort("occurredAtIso")} className="hover:text-slate-100">
                             {labels.tableDate}
                             {sortArrow("occurredAtIso")}
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 font-medium">
+                          <button type="button" onClick={() => onSort("entryType")} className="hover:text-slate-100">
+                            {labels.tableType}
+                            {sortArrow("entryType")}
                           </button>
                         </th>
                         <th className="px-3 py-2 font-medium">
@@ -416,8 +457,8 @@ export function ReceiptPeriodPreview({
                     <tbody>
                       {sortedRows.map((row) => (
                         <tr key={`${row.entryType}-${row.id}`} className="border-t border-slate-800">
-                          <td className="px-3 py-2">{typeLabel(row.entryType, labels)}</td>
                           <td className="px-3 py-2">{row.occurredAtIso}</td>
+                          <td className="px-3 py-2">{typeLabel(row.entryType, labels)}</td>
                           <td className="px-3 py-2">{row.programLabel}</td>
                           <td className="px-3 py-2">{visitTypeLabelForRow(row, visitTypeLabels)}</td>
                           <td className="px-3 py-2">{row.clientLabel}</td>
