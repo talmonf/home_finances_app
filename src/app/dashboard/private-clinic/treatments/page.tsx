@@ -423,6 +423,10 @@ export default async function TreatmentsPage({
             inactive: c.inactive,
             family: familyLabel,
             selectedCountTemplate: tr.filterSelectedCountTemplate,
+            selectAll: c.selectAll,
+            deselectAll: c.deselectAll,
+            filterDone: c.filterDone,
+            filterCloseHint: c.filterCloseHint,
           }}
         />
       </section>

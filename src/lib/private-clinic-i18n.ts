@@ -162,6 +162,10 @@ export function privateClinicCommon(lang: UiLanguage) {
     apply: p("Apply", "החל"),
     /** Short label next to Apply on filter forms */
     filterReset: p("Reset", "איפוס"),
+    selectAll: p("Select all", "בחירת הכל"),
+    deselectAll: p("Deselect all", "ניקוי בחירה"),
+    filterDone: p("Done", "סיום"),
+    filterCloseHint: p("Or click the filter field again to close.", "או לחצו שוב על שדה הסינון לסגירה."),
     all: p("All", "הכל"),
     any: p("Any", "כלשהו"),
     anyF: p("Any", "כלשהי"),

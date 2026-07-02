@@ -41,6 +41,10 @@ export type ReceiptPeriodPreviewLabels = {
   filterAny: string;
   filterAnyF: string;
   filterSelectedCountTemplate: string;
+  selectAll: string;
+  deselectAll: string;
+  filterDone: string;
+  filterCloseHint: string;
 };
 
 function fillLabelTemplate(template: string, values: Record<string, string>): string {
@@ -318,6 +322,10 @@ export function ReceiptPeriodPreview({
                   selectedIds={selectedProgramIds}
                   onChange={setProgramIds}
                   selectedCountTemplate={labels.filterSelectedCountTemplate}
+                  selectAllLabel={labels.selectAll}
+                  deselectAllLabel={labels.deselectAll}
+                  doneLabel={labels.filterDone}
+                  closeHint={labels.filterCloseHint}
                 />
                 <FilterCheckboxDropdown
                   name="preview_visit_type"
@@ -327,6 +335,10 @@ export function ReceiptPeriodPreview({
                   selectedIds={visitTypeIds}
                   onChange={setVisitTypeIds}
                   selectedCountTemplate={labels.filterSelectedCountTemplate}
+                  selectAllLabel={labels.selectAll}
+                  deselectAllLabel={labels.deselectAll}
+                  doneLabel={labels.filterDone}
+                  closeHint={labels.filterCloseHint}
                 />
               </div>
 

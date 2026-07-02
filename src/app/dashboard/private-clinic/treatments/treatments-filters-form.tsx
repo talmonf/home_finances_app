@@ -54,6 +54,10 @@ type Props = {
     inactive: string;
     family: string;
     selectedCountTemplate: string;
+    selectAll: string;
+    deselectAll: string;
+    filterDone: string;
+    filterCloseHint: string;
   };
 };
 
@@ -146,6 +150,10 @@ export function TreatmentsFiltersForm(props: Props) {
         selectedIds={selectedProgramIds}
         onChange={setProgramIds}
         selectedCountTemplate={props.labels.selectedCountTemplate}
+        selectAllLabel={props.labels.selectAll}
+        deselectAllLabel={props.labels.deselectAll}
+        doneLabel={props.labels.filterDone}
+        closeHint={props.labels.filterCloseHint}
       />
 
       <FilterCheckboxDropdown
@@ -156,6 +164,10 @@ export function TreatmentsFiltersForm(props: Props) {
         selectedIds={visitTypeIds}
         onChange={setVisitTypeIds}
         selectedCountTemplate={props.labels.selectedCountTemplate}
+        selectAllLabel={props.labels.selectAll}
+        deselectAllLabel={props.labels.deselectAll}
+        doneLabel={props.labels.filterDone}
+        closeHint={props.labels.filterCloseHint}
       />
 
       <div className="flex-none">

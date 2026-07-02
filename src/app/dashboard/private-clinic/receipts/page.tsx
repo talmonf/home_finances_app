@@ -769,6 +769,10 @@ export default async function ReceiptsPage({
             filterAny: c.any,
             filterAnyF: c.anyF,
             filterSelectedCountTemplate: tr.filterSelectedCountTemplate,
+            selectAll: c.selectAll,
+            deselectAll: c.deselectAll,
+            filterDone: c.filterDone,
+            filterCloseHint: c.filterCloseHint,
           }}
           periodPreviewVisitTypeOptions={therapyVisitTypesOrdered().map((visitType) => ({
             id: visitType,
