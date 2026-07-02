@@ -755,9 +755,9 @@ export default async function ReceiptsPage({
             subtotalTravel: r.periodPreviewSubtotalTravel,
             truncated: r.periodPreviewTruncated,
             suggestedCombinedTotal: r.suggestedCombinedTotal,
-            suggestedTotalsBreakdown: r.suggestedTotalsBreakdown,
+            breakdownTemplate: r.periodPreviewBreakdownTemplate,
             suggestedMatchesGross: r.suggestedMatchesGross,
-            suggestedDiffFromGross: r.suggestedDiffFromGross,
+            diffFromGrossTemplate: r.periodPreviewDiffFromGrossTemplate,
           }}
           formExtraContent={
             <div className="rounded border border-slate-700/80 bg-slate-900/40 p-3 text-xs text-slate-300">

@@ -847,6 +847,14 @@ export function privateClinicReceipts(lang: UiLanguage) {
       "Showing up to 200 rows per category.",
       "מוצגות עד 200 שורות לכל קטגוריה.",
     ),
+    periodPreviewBreakdownTemplate: p(
+      "Breakdown — T: {treatments}, C: {consultations}, TR: {travel}.",
+      "פירוט — T: {treatments}, C: {consultations}, TR: {travel}.",
+    ),
+    periodPreviewDiffFromGrossTemplate: p(
+      "Suggested total differs from gross by {diff} {currency}.",
+      "הסכום המוצע שונה מהברוטו ב-{diff} {currency}.",
+    ),
     autoLinkPromptTitle: p(
       "After creating, auto-link entries if selected-period totals match gross",
       "לאחר יצירה, לשייך אוטומטית רשומות אם סכומי התקופה שנבחרה תואמים לברוטו",

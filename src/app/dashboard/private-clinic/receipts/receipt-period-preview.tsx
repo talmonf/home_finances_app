@@ -22,10 +22,14 @@ export type ReceiptPeriodPreviewLabels = {
   subtotalTravel: string;
   truncated: string;
   suggestedCombinedTotal: string;
-  suggestedTotalsBreakdown: (treatments: string, consultations: string, travel: string) => string;
+  breakdownTemplate: string;
   suggestedMatchesGross: string;
-  suggestedDiffFromGross: (diff: string, currency: string) => string;
+  diffFromGrossTemplate: string;
 };
+
+function fillLabelTemplate(template: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), template);
+}
 
 type PreviewState =
   | { kind: "idle" }
@@ -187,16 +191,21 @@ export function ReceiptPeriodPreview({
               </div>
               <div className="space-y-1">
                 <p className="text-slate-400">
-                  {labels.suggestedTotalsBreakdown(
-                    data.totals.treatments.toFixed(2),
-                    data.totals.consultations.toFixed(2),
-                    data.totals.travel.toFixed(2),
-                  )}
+                  {fillLabelTemplate(labels.breakdownTemplate, {
+                    treatments: data.totals.treatments.toFixed(2),
+                    consultations: data.totals.consultations.toFixed(2),
+                    travel: data.totals.travel.toFixed(2),
+                  })}
                 </p>
                 {matchesGross ? (
                   <p className="text-emerald-300">{labels.suggestedMatchesGross}</p>
                 ) : (
-                  <p className="text-amber-300">{labels.suggestedDiffFromGross(diffFromGross.toFixed(2), tableCurrency)}</p>
+                  <p className="text-amber-300">
+                    {fillLabelTemplate(labels.diffFromGrossTemplate, {
+                      diff: diffFromGross.toFixed(2),
+                      currency: tableCurrency,
+                    })}
+                  </p>
                 )}
                 {data.truncated ? <p className="text-slate-500">{labels.truncated}</p> : null}
               </div>
