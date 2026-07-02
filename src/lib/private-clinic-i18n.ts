@@ -833,6 +833,10 @@ export function privateClinicReceipts(lang: UiLanguage) {
       "No unlinked treatments, consultations, or travel were found in the selected period.",
       "לא נמצאו טיפולים, ייעוצים או נסיעות לא מקושרים בתקופה שנבחרה.",
     ),
+    periodPreviewEmptyFiltered: p(
+      "No entries match the selected program or visit type filters.",
+      "אין רשומות שתואמות לסינון התכנית או סוג הביקור שנבחר.",
+    ),
     periodPreviewType: p("Type", "סוג"),
     periodPreviewDate: p("Date", "תאריך"),
     periodPreviewClient: p("Client", "לקוח"),

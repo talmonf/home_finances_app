@@ -30,6 +30,7 @@ export async function ReceiptModalForm({
   extraContent,
   formExtraContent,
   periodPreviewLabels,
+  periodPreviewVisitTypeOptions,
   clinicOnly = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -51,6 +52,7 @@ export async function ReceiptModalForm({
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
   periodPreviewLabels?: ReceiptModalPeriodPreviewLabels;
+  periodPreviewVisitTypeOptions?: { id: string; label: string }[];
   clinicOnly?: boolean;
 }) {
   const clientLabels: ReceiptModalLabels = {
@@ -106,6 +108,7 @@ export async function ReceiptModalForm({
       extraContent={extraContent}
       formExtraContent={formExtraContent}
       periodPreviewLabels={periodPreviewLabels}
+      periodPreviewVisitTypeOptions={periodPreviewVisitTypeOptions}
       showBankLink={!clinicOnly}
     >
       {!clinicOnly ? (

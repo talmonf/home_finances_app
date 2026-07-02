@@ -11,7 +11,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { privateClinicCommon, privateClinicReceipts } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 import { redirect } from "next/navigation";
 import {
@@ -46,6 +46,8 @@ import { ReceiptModalForm } from "./receipt-modal-form";
 import { ReceiptAllocationPicker } from "./receipt-allocation-picker";
 import type { Prisma } from "@/generated/prisma/client";
 import { endOfUtcDayForReceipt } from "@/lib/private-clinic/receipt-period-preview";
+import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +120,7 @@ export default async function ReceiptsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
+  const tr = privateClinicTreatments(uiLanguage);
   const clinicOnly = await householdUserOnlyPrivateClinicSection(
     householdId,
     session.user.id,
@@ -743,8 +746,11 @@ export default async function ReceiptsPage({
             loading: r.periodPreviewLoading,
             error: r.periodPreviewError,
             empty: r.periodPreviewEmpty,
+            emptyFiltered: r.periodPreviewEmptyFiltered,
             tableType: r.periodPreviewType,
             tableDate: r.periodPreviewDate,
+            tableProgram: c.program,
+            tableVisitType: tr.visitType,
             tableClient: r.periodPreviewClient,
             tableAmount: r.periodPreviewAmount,
             treatmentType: r.periodPreviewTreatmentType,
@@ -758,7 +764,16 @@ export default async function ReceiptsPage({
             breakdownTemplate: r.periodPreviewBreakdownTemplate,
             suggestedMatchesGross: r.suggestedMatchesGross,
             diffFromGrossTemplate: r.periodPreviewDiffFromGrossTemplate,
+            filterProgram: c.program,
+            filterVisitType: tr.visitType,
+            filterAny: c.any,
+            filterAnyF: c.anyF,
+            filterSelectedCountTemplate: tr.filterSelectedCountTemplate,
           }}
+          periodPreviewVisitTypeOptions={therapyVisitTypesOrdered().map((visitType) => ({
+            id: visitType,
+            label: therapyVisitTypeLabel(uiLanguage, visitType),
+          }))}
           formExtraContent={
             <div className="rounded border border-slate-700/80 bg-slate-900/40 p-3 text-xs text-slate-300">
               <label className="flex items-start gap-2">

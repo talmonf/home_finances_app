@@ -100,6 +100,7 @@ export function ReceiptModalFormClient({
   extraContent,
   formExtraContent,
   periodPreviewLabels,
+  periodPreviewVisitTypeOptions,
   showBankLink = true,
   children,
 }: {
@@ -116,6 +117,7 @@ export function ReceiptModalFormClient({
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
   periodPreviewLabels?: ReceiptModalPeriodPreviewLabels;
+  periodPreviewVisitTypeOptions?: { id: string; label: string }[];
   /** When false, bank link UI is omitted (clinic-only households). */
   showBankLink?: boolean;
   /** Server-rendered transaction picker (passed from parent Server Component). */
@@ -138,6 +140,10 @@ export function ReceiptModalFormClient({
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
     [programs, jobId],
+  );
+  const previewProgramOptions = useMemo(
+    () => programsForJob.map((p) => ({ id: p.id, label: p.label })),
+    [programsForJob],
   );
 
   const clientsForJob = useMemo(() => {
@@ -380,6 +386,8 @@ export function ReceiptModalFormClient({
               grossAmount={grossAmount}
               currency={currency}
               labels={periodPreviewLabels}
+              programOptions={previewProgramOptions}
+              visitTypeOptions={periodPreviewVisitTypeOptions ?? []}
             />
           ) : null}
 

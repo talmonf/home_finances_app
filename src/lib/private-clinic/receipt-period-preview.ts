@@ -8,6 +8,9 @@ export type ReceiptPeriodPreviewRow = {
   id: string;
   entryType: ReceiptPeriodPreviewEntryType;
   occurredAtIso: string;
+  programId: string | null;
+  programLabel: string;
+  visitType: string | null;
   clientLabel: string;
   amount: string;
   currency: string;
@@ -86,9 +89,12 @@ export async function loadReceiptPeriodPreview(params: {
         occurred_at: true,
         amount: true,
         currency: true,
+        program_id: true,
+        visit_type: true,
         client: { select: { first_name: true, last_name: true } },
+        program: { select: { name: true } },
       },
-      orderBy: { occurred_at: "desc" },
+      orderBy: { occurred_at: "asc" },
       take: RECEIPT_PERIOD_PREVIEW_TAKE,
     }),
     prisma.therapy_consultations.findMany({
@@ -105,14 +111,16 @@ export async function loadReceiptPeriodPreview(params: {
         income_amount: true,
         currency: true,
         income_currency: true,
+        program_id: true,
         participants: {
           take: 1,
           select: {
             client: { select: { first_name: true, last_name: true } },
           },
         },
+        program: { select: { name: true } },
       },
-      orderBy: { occurred_at: "desc" },
+      orderBy: { occurred_at: "asc" },
       take: RECEIPT_PERIOD_PREVIEW_TAKE,
     }),
     prisma.therapy_travel_entries.findMany({
@@ -128,9 +136,18 @@ export async function loadReceiptPeriodPreview(params: {
         occurred_at: true,
         amount: true,
         currency: true,
-        treatment: { select: { client: { select: { first_name: true, last_name: true } } } },
+        treatment: {
+          select: {
+            program_id: true,
+            visit_type: true,
+            client: { select: { first_name: true, last_name: true } },
+            program: { select: { name: true } },
+          },
+        },
         consultation: {
           select: {
+            program_id: true,
+            program: { select: { name: true } },
             participants: {
               take: 1,
               select: { client: { select: { first_name: true, last_name: true } } },
@@ -138,7 +155,7 @@ export async function loadReceiptPeriodPreview(params: {
           },
         },
       },
-      orderBy: [{ occurred_at: "desc" }, { created_at: "desc" }],
+      orderBy: [{ occurred_at: "asc" }, { created_at: "asc" }],
       take: RECEIPT_PERIOD_PREVIEW_TAKE,
     }),
   ]);
@@ -153,6 +170,8 @@ export async function loadReceiptPeriodPreview(params: {
       amount: consultationAmountToString(row),
       occurred_at: row.occurred_at,
       currency: row.currency || row.income_currency || "ILS",
+      programId: row.program_id,
+      programLabel: row.program?.name ?? "—",
       clientLabel: formatPersonName(row.participants[0]?.client),
     }))
     .filter((row): row is NonNullable<typeof row> & { amount: string } => row.amount != null);
@@ -165,6 +184,9 @@ export async function loadReceiptPeriodPreview(params: {
     id: row.id,
     entryType: "treatment",
     occurredAtIso: occurredAtToIso(row.occurred_at),
+    programId: row.program_id,
+    programLabel: row.program?.name ?? "—",
+    visitType: row.visit_type,
     clientLabel: formatPersonName(row.client),
     amount: row.amount!.toString(),
     currency: row.currency,
@@ -173,6 +195,9 @@ export async function loadReceiptPeriodPreview(params: {
     id: row.id,
     entryType: "consultation",
     occurredAtIso: occurredAtToIso(row.occurred_at),
+    programId: row.programId,
+    programLabel: row.programLabel,
+    visitType: null,
     clientLabel: row.clientLabel,
     amount: row.amount,
     currency: row.currency,
@@ -181,6 +206,9 @@ export async function loadReceiptPeriodPreview(params: {
     id: row.id,
     entryType: "travel",
     occurredAtIso: occurredAtToIso(row.occurred_at),
+    programId: row.treatment?.program_id ?? row.consultation?.program_id ?? null,
+    programLabel: row.treatment?.program?.name ?? row.consultation?.program?.name ?? "—",
+    visitType: row.treatment?.visit_type ?? null,
     clientLabel: formatPersonName(row.treatment?.client ?? row.consultation?.participants[0]?.client),
     amount: row.amount!.toString(),
     currency: row.currency,
@@ -195,8 +223,11 @@ export async function loadReceiptPeriodPreview(params: {
   totals.combined = totals.treatments + totals.consultations + totals.travel;
 
   const rows = [...treatmentPreviewRows, ...consultationPreviewRows, ...travelPreviewRows].sort((a, b) => {
-    if (a.occurredAtIso === b.occurredAtIso) return a.entryType.localeCompare(b.entryType);
-    return a.occurredAtIso < b.occurredAtIso ? 1 : -1;
+    const dateCmp = a.occurredAtIso.localeCompare(b.occurredAtIso);
+    if (dateCmp !== 0) return dateCmp;
+    const programCmp = a.programLabel.localeCompare(b.programLabel);
+    if (programCmp !== 0) return programCmp;
+    return a.clientLabel.localeCompare(b.clientLabel);
   });
 
   return {
