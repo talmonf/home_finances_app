@@ -48,7 +48,11 @@ export type ReceiptPeriodPreviewLabels = {
   deselectAll: string;
   filterDone: string;
   filterCloseHint: string;
+  clientEditModalTitle: string;
+  closeLabel: string;
 };
+
+const CLIENT_EDIT_BASE_PATH = "/dashboard/private-clinic/clients";
 
 function fillLabelTemplate(template: string, values: Record<string, string>): string {
   return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), template);
@@ -203,6 +207,7 @@ export function ReceiptPeriodPreview({
   const [programIds, setProgramIds] = useState<Set<string>>(() => new Set());
   const [visitTypeIds, setVisitTypeIds] = useState<Set<string>>(() => new Set());
   const [clientIds, setClientIds] = useState<Set<string>>(() => new Set());
+  const [openClientId, setOpenClientId] = useState<string | null>(null);
 
   const entryTypeOptions = useMemo<FilterOption[]>(
     () => [
@@ -231,6 +236,7 @@ export function ReceiptPeriodPreview({
     setProgramIds(new Set());
     setVisitTypeIds(new Set());
     setClientIds(new Set());
+    setOpenClientId(null);
   }, [coveredPeriodEnd, coveredPeriodStart, jobId]);
 
   useEffect(() => {
@@ -461,7 +467,19 @@ export function ReceiptPeriodPreview({
                           <td className="px-3 py-2">{typeLabel(row.entryType, labels)}</td>
                           <td className="px-3 py-2">{row.programLabel}</td>
                           <td className="px-3 py-2">{visitTypeLabelForRow(row, visitTypeLabels)}</td>
-                          <td className="px-3 py-2">{row.clientLabel}</td>
+                          <td className="px-3 py-2">
+                            {row.clientId ? (
+                              <button
+                                type="button"
+                                onClick={() => setOpenClientId(row.clientId)}
+                                className="text-sky-400 hover:text-sky-300 hover:underline"
+                              >
+                                {row.clientLabel}
+                              </button>
+                            ) : (
+                              row.clientLabel
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-right">
                             {Number(row.amount).toFixed(2)} {row.currency}
                           </td>
@@ -537,6 +555,37 @@ export function ReceiptPeriodPreview({
           )
         ) : null}
       </div>
+
+      {openClientId ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6"
+          onClick={() => setOpenClientId(null)}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="h-[85vh] w-full max-w-screen-2xl overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">
+              <h3 className="text-sm font-semibold text-slate-100">{labels.clientEditModalTitle}</h3>
+              <button
+                type="button"
+                onClick={() => setOpenClientId(null)}
+                className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+              >
+                {labels.closeLabel}
+              </button>
+            </div>
+            <iframe
+              title={labels.clientEditModalTitle}
+              src={`${CLIENT_EDIT_BASE_PATH}/${encodeURIComponent(openClientId)}/edit`}
+              className="h-[calc(85vh-46px)] w-full bg-slate-950"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

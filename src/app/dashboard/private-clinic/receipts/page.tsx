@@ -11,7 +11,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { privateClinicCommon, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
+import { privateClinicCommon, privateClinicClients, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 import { redirect } from "next/navigation";
 import {
@@ -119,6 +119,7 @@ export default async function ReceiptsPage({
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
+  const cl = privateClinicClients(uiLanguage);
   const r = privateClinicReceipts(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
   const clinicOnly = await householdUserOnlyPrivateClinicSection(
@@ -776,6 +777,8 @@ export default async function ReceiptsPage({
             deselectAll: c.deselectAll,
             filterDone: c.filterDone,
             filterCloseHint: c.filterCloseHint,
+            clientEditModalTitle: cl.editClientPageTitle,
+            closeLabel: uiLanguage === "he" ? "סגירה" : "Close",
           }}
           periodPreviewVisitTypeOptions={therapyVisitTypesOrdered().map((visitType) => ({
             id: visitType,
