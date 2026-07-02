@@ -764,6 +764,7 @@ export default async function ReceiptsPage({
             breakdownTemplate: r.periodPreviewBreakdownTemplate,
             suggestedMatchesGross: r.suggestedMatchesGross,
             diffFromGrossTemplate: r.periodPreviewDiffFromGrossTemplate,
+            filterType: c.type,
             filterProgram: c.program,
             filterVisitType: tr.visitType,
             filterAny: c.any,

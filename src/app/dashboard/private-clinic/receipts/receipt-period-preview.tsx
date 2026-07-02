@@ -36,6 +36,7 @@ export type ReceiptPeriodPreviewLabels = {
   breakdownTemplate: string;
   suggestedMatchesGross: string;
   diffFromGrossTemplate: string;
+  filterType: string;
   filterProgram: string;
   filterVisitType: string;
   filterAny: string;
@@ -82,10 +83,12 @@ function visitTypeLabelForRow(row: ReceiptPeriodPreviewRow, visitTypeLabels: Map
 
 function filterRows(
   rows: ReceiptPeriodPreviewRow[],
+  entryTypeIds: Set<string>,
   programIds: Set<string>,
   visitTypeIds: Set<string>,
 ): ReceiptPeriodPreviewRow[] {
   return rows.filter((row) => {
+    if (entryTypeIds.size > 0 && !entryTypeIds.has(row.entryType)) return false;
     if (programIds.size > 0 && (!row.programId || !programIds.has(row.programId))) return false;
     if (visitTypeIds.size > 0 && (!row.visitType || !visitTypeIds.has(row.visitType))) return false;
     return true;
@@ -192,8 +195,18 @@ export function ReceiptPeriodPreview({
   const [state, setState] = useState<PreviewState>({ kind: "idle" });
   const [sortKey, setSortKey] = useState<PreviewSortKey | null>(null);
   const [sortDir, setSortDir] = useState<PreviewSortDir>("asc");
+  const [entryTypeIds, setEntryTypeIds] = useState<Set<string>>(() => new Set());
   const [programIds, setProgramIds] = useState<Set<string>>(() => new Set());
   const [visitTypeIds, setVisitTypeIds] = useState<Set<string>>(() => new Set());
+
+  const entryTypeOptions = useMemo<FilterOption[]>(
+    () => [
+      { id: "treatment", label: labels.treatmentType },
+      { id: "consultation", label: labels.consultationType },
+      { id: "travel", label: labels.travelType },
+    ],
+    [labels.consultationType, labels.travelType, labels.treatmentType],
+  );
 
   const visitTypeLabels = useMemo(
     () => new Map(visitTypeOptions.map((option) => [option.id, option.label])),
@@ -209,6 +222,7 @@ export function ReceiptPeriodPreview({
   useEffect(() => {
     setSortKey(null);
     setSortDir("asc");
+    setEntryTypeIds(new Set());
     setProgramIds(new Set());
     setVisitTypeIds(new Set());
   }, [coveredPeriodEnd, coveredPeriodStart, jobId]);
@@ -283,8 +297,8 @@ export function ReceiptPeriodPreview({
   const data = state.kind === "ready" ? state.data : null;
   const filteredRows = useMemo(() => {
     if (!data) return [];
-    return filterRows(data.rows, selectedProgramIds, visitTypeIds);
-  }, [data, selectedProgramIds, visitTypeIds]);
+    return filterRows(data.rows, entryTypeIds, selectedProgramIds, visitTypeIds);
+  }, [data, entryTypeIds, selectedProgramIds, visitTypeIds]);
   const sortedRows = useMemo(() => {
     if (filteredRows.length === 0) return [];
     if (sortKey === null) return defaultSortRows(filteredRows);
@@ -314,6 +328,19 @@ export function ReceiptPeriodPreview({
           data.rows.length > 0 ? (
             <>
               <div className="flex flex-wrap items-end gap-x-2 gap-y-2">
+                <FilterCheckboxDropdown
+                  name="preview_entry_type"
+                  label={labels.filterType}
+                  anyLabel={labels.filterAny}
+                  options={entryTypeOptions}
+                  selectedIds={entryTypeIds}
+                  onChange={setEntryTypeIds}
+                  selectedCountTemplate={labels.filterSelectedCountTemplate}
+                  selectAllLabel={labels.selectAll}
+                  deselectAllLabel={labels.deselectAll}
+                  doneLabel={labels.filterDone}
+                  closeHint={labels.filterCloseHint}
+                />
                 <FilterCheckboxDropdown
                   name="preview_program"
                   label={labels.filterProgram}
