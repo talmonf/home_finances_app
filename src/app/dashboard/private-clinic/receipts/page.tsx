@@ -45,12 +45,9 @@ import { ReceiptsListClient } from "./receipts-list-client";
 import { ReceiptModalForm } from "./receipt-modal-form";
 import { ReceiptAllocationPicker } from "./receipt-allocation-picker";
 import type { Prisma } from "@/generated/prisma/client";
+import { endOfUtcDayForReceipt } from "@/lib/private-clinic/receipt-period-preview";
 
 export const dynamic = "force-dynamic";
-
-function endOfUtcDay(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
-}
 
 type ReceiptProgramForModal = Prisma.therapy_service_programsGetPayload<{ include: { job: true } }>;
 
@@ -274,7 +271,7 @@ export default async function ReceiptsPage({
       ? {
           occurred_at: {
             gte: editReceipt.covered_period_start,
-            lte: endOfUtcDay(editReceipt.covered_period_end),
+            lte: endOfUtcDayForReceipt(editReceipt.covered_period_end),
           },
         }
       : {};
@@ -475,8 +472,6 @@ export default async function ReceiptsPage({
     .reduce((sum, item) => sum + decimalStringToNumber(item.amount), 0);
   const suggestedCombinedTotal = suggestedTreatmentsTotal + suggestedConsultationsTotal + suggestedTravelTotal;
   const grossAmountValue = editReceipt ? decimalStringToNumber(editReceipt.total_amount.toString()) : 0;
-  const suggestedGrossDiff = suggestedCombinedTotal - grossAmountValue;
-  const suggestedMatchesGross = Math.abs(suggestedGrossDiff) < 0.005;
   const linkedTreatmentsTotal = treatmentsLinkedToReceipt.reduce(
     (sum, row) => sum + decimalStringToNumber(row.amount?.toString() ?? "0"),
     0,
@@ -742,6 +737,28 @@ export default async function ReceiptsPage({
             txNoneLinked: c.txNoneLinked,
           }}
           clinicOnly={clinicOnly}
+          periodPreviewLabels={{
+            title: r.periodPreviewTitle,
+            idle: r.periodPreviewIdle,
+            loading: r.periodPreviewLoading,
+            error: r.periodPreviewError,
+            empty: r.periodPreviewEmpty,
+            tableType: r.periodPreviewType,
+            tableDate: r.periodPreviewDate,
+            tableClient: r.periodPreviewClient,
+            tableAmount: r.periodPreviewAmount,
+            treatmentType: r.periodPreviewTreatmentType,
+            consultationType: r.periodPreviewConsultationType,
+            travelType: r.periodPreviewTravelType,
+            subtotalTreatments: r.periodPreviewSubtotalTreatments,
+            subtotalConsultations: r.periodPreviewSubtotalConsultations,
+            subtotalTravel: r.periodPreviewSubtotalTravel,
+            truncated: r.periodPreviewTruncated,
+            suggestedCombinedTotal: r.suggestedCombinedTotal,
+            suggestedTotalsBreakdown: r.suggestedTotalsBreakdown,
+            suggestedMatchesGross: r.suggestedMatchesGross,
+            suggestedDiffFromGross: r.suggestedDiffFromGross,
+          }}
           formExtraContent={
             <div className="rounded border border-slate-700/80 bg-slate-900/40 p-3 text-xs text-slate-300">
               <label className="flex items-start gap-2">

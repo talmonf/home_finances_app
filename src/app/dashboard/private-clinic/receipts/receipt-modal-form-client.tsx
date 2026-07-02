@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { ReceiptPeriodPreview, type ReceiptPeriodPreviewLabels } from "./receipt-period-preview";
 
 type JobOption = {
   id: string;
@@ -63,6 +64,8 @@ export type ReceiptModalLabels = {
   linkBankOptional: string;
 };
 
+export type ReceiptModalPeriodPreviewLabels = ReceiptPeriodPreviewLabels;
+
 export type ReceiptModalInitial = {
   id?: string;
   job_id?: string;
@@ -96,6 +99,7 @@ export function ReceiptModalFormClient({
   initial,
   extraContent,
   formExtraContent,
+  periodPreviewLabels,
   showBankLink = true,
   children,
 }: {
@@ -111,6 +115,7 @@ export function ReceiptModalFormClient({
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
+  periodPreviewLabels?: ReceiptModalPeriodPreviewLabels;
   /** When false, bank link UI is omitted (clinic-only households). */
   showBankLink?: boolean;
   /** Server-rendered transaction picker (passed from parent Server Component). */
@@ -125,6 +130,8 @@ export function ReceiptModalFormClient({
   const [receiptKind, setReceiptKind] = useState<string>(initial?.receipt_kind ?? "");
   const [coveredPeriodStart, setCoveredPeriodStart] = useState(initial?.covered_period_start ?? "");
   const [coveredPeriodEnd, setCoveredPeriodEnd] = useState(initial?.covered_period_end ?? "");
+  const [grossAmount, setGrossAmount] = useState(initial?.total_amount ?? "");
+  const [currency, setCurrency] = useState(initial?.currency ?? "ILS");
   const [isDirty, setIsDirty] = useState(mode === "create");
   const canSubmit = mode === "create" || isDirty;
 
@@ -300,7 +307,8 @@ export function ReceiptModalFormClient({
             <input
               name="total_amount"
               required
-              defaultValue={initial?.total_amount ?? ""}
+              value={grossAmount}
+              onChange={(e) => setGrossAmount(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -334,7 +342,8 @@ export function ReceiptModalFormClient({
             <label className="block text-xs text-slate-400">{labels.currency}</label>
             <input
               name="currency"
-              defaultValue={initial?.currency ?? "ILS"}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -362,6 +371,17 @@ export function ReceiptModalFormClient({
               />
             </div>
           </div>
+
+          {mode === "create" && periodPreviewLabels ? (
+            <ReceiptPeriodPreview
+              jobId={jobId}
+              coveredPeriodStart={coveredPeriodStart}
+              coveredPeriodEnd={coveredPeriodEnd}
+              grossAmount={grossAmount}
+              currency={currency}
+              labels={periodPreviewLabels}
+            />
+          ) : null}
 
           <div>
             <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>

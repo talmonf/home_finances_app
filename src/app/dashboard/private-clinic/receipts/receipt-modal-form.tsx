@@ -3,6 +3,7 @@ import {
   ReceiptModalFormClient,
   type ReceiptModalInitial,
   type ReceiptModalLabels,
+  type ReceiptModalPeriodPreviewLabels,
 } from "./receipt-modal-form-client";
 import type { ReactNode } from "react";
 
@@ -28,6 +29,7 @@ export async function ReceiptModalForm({
   initial,
   extraContent,
   formExtraContent,
+  periodPreviewLabels,
   clinicOnly = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -48,6 +50,7 @@ export async function ReceiptModalForm({
   initial?: ReceiptModalInitial;
   extraContent?: ReactNode;
   formExtraContent?: ReactNode;
+  periodPreviewLabels?: ReceiptModalPeriodPreviewLabels;
   clinicOnly?: boolean;
 }) {
   const clientLabels: ReceiptModalLabels = {
@@ -102,6 +105,7 @@ export async function ReceiptModalForm({
       initial={initial}
       extraContent={extraContent}
       formExtraContent={formExtraContent}
+      periodPreviewLabels={periodPreviewLabels}
       showBankLink={!clinicOnly}
     >
       {!clinicOnly ? (

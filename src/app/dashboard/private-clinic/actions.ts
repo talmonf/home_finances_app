@@ -63,6 +63,7 @@ import type {
 import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import type { PrivateClinicNavKey } from "@/lib/private-clinic-nav";
+import { endOfUtcDayForReceipt, loadReceiptPeriodPreview } from "@/lib/private-clinic/receipt-period-preview";
 
 const BASE = "/dashboard/private-clinic";
 
@@ -84,10 +85,6 @@ const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
 
 /** Stored on `therapy_appointments.cancellation_reason` when visits end due to client status or end date. */
 const CLIENT_DISCHARGE_APPOINTMENT_CANCELLATION = "Client inactive or end of care";
-
-function endOfUtcDayForReceipt(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
-}
 
 async function syncReceiptPaymentDateToAllocatedTreatments(
   householdId: string,
@@ -2633,57 +2630,22 @@ export async function createTherapyReceipt(formData: FormData) {
   let autoLinkAttempted = false;
   if (autoLinkSuggestedOnCreate && covered_period_start && covered_period_end) {
     autoLinkAttempted = true;
-    const rangeWhere = {
-      occurred_at: {
-        gte: covered_period_start,
-        lte: endOfUtcDayForReceipt(covered_period_end),
-      },
-    };
-    const [treatments, consultations, travelEntries] = await Promise.all([
-      prisma.therapy_treatments.findMany({
-        where: {
-          household_id: householdId,
-          job_id,
-          receipt_allocations: { none: {} },
-          amount: { not: null },
-          ...rangeWhere,
-        },
-        select: { id: true, amount: true },
-      }),
-      prisma.therapy_consultations.findMany({
-        where: {
-          household_id: householdId,
-          job_id,
-          receipt_allocations: { none: {} },
-          ...rangeWhere,
-        },
-        select: { id: true, amount: true, income_amount: true },
-      }),
-      prisma.therapy_travel_entries.findMany({
-        where: {
-          household_id: householdId,
-          receipt_allocations: { none: {} },
-          amount: { not: null },
-          OR: [{ job_id }, { treatment: { job_id } }, { consultation: { job_id } }],
-          ...rangeWhere,
-        },
-        select: { id: true, amount: true },
-      }),
-    ]);
-
-    const treatmentsTotal = treatments.reduce((sum, row) => sum + Number(row.amount?.toString() ?? "0"), 0);
-    const consultationsWithAmounts = consultations
-      .map((row) => ({ id: row.id, amount: row.amount ?? row.income_amount }))
-      .filter((row): row is { id: string; amount: NonNullable<typeof row.amount> } => row.amount != null);
-    const consultationsTotal = consultationsWithAmounts.reduce((sum, row) => sum + Number(row.amount.toString()), 0);
-    const travelTotal = travelEntries.reduce((sum, row) => sum + Number(row.amount?.toString() ?? "0"), 0);
-    const suggestedTotal = treatmentsTotal + consultationsTotal + travelTotal;
+    const preview = await loadReceiptPeriodPreview({
+      householdId,
+      jobId: job_id,
+      coveredPeriodStart: covered_period_start,
+      coveredPeriodEnd: covered_period_end,
+    });
+    const suggestedTotal = preview.totals.combined;
     const grossTotal = Number(totalStr.toString());
     const totalsMatch = Math.abs(suggestedTotal - grossTotal) < 0.005;
 
-    if (totalsMatch && (treatments.length > 0 || consultationsWithAmounts.length > 0 || travelEntries.length > 0)) {
+    if (
+      totalsMatch &&
+      (preview.treatmentRows.length > 0 || preview.consultationRows.length > 0 || preview.travelRows.length > 0)
+    ) {
       await prisma.$transaction(async (tx) => {
-        for (const row of treatments) {
+        for (const row of preview.treatmentRows) {
           await tx.therapy_receipt_allocations.upsert({
             where: { receipt_id_treatment_id: { receipt_id: id, treatment_id: row.id } },
             create: {
@@ -2696,7 +2658,7 @@ export async function createTherapyReceipt(formData: FormData) {
             update: { amount: row.amount! },
           });
         }
-        for (const row of consultationsWithAmounts) {
+        for (const row of preview.consultationRows) {
           await tx.therapy_receipt_consultation_allocations.upsert({
             where: {
               receipt_id_consultation_id: {
@@ -2714,7 +2676,7 @@ export async function createTherapyReceipt(formData: FormData) {
             update: { amount: row.amount },
           });
         }
-        for (const row of travelEntries) {
+        for (const row of preview.travelRows) {
           await tx.therapy_receipt_travel_allocations.upsert({
             where: {
               receipt_id_travel_entry_id: {
@@ -2727,9 +2689,9 @@ export async function createTherapyReceipt(formData: FormData) {
               household_id: householdId,
               receipt_id: id,
               travel_entry_id: row.id,
-              amount: row.amount!,
+              amount: row.amount,
             },
-            update: { amount: row.amount! },
+            update: { amount: row.amount },
           });
         }
       });
