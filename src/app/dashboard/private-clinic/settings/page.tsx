@@ -27,6 +27,19 @@ import { GoogleCalendarConnectionControls } from "./google-calendar-connection-c
 import { ClinicDigestEmailSection } from "./clinic-digest-email-section";
 import { ConsultationTypeEditRow } from "./consultation-type-edit-row";
 import { SettingsConsultationTypeFlashPopup } from "./settings-consultation-type-flash-popup";
+import {
+  disconnectMorningIntegration,
+  saveMorningIntegration,
+  testMorningIntegration,
+} from "./morning-integration-actions";
+import {
+  MorningIntegrationSection,
+  type MorningIntegrationInitial,
+} from "./morning-integration-section";
+import { jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
+import { formatJobDisplayLabel } from "@/lib/job-label";
+import { decryptSecret } from "@/lib/crypto/secret";
+import { maskApiKeyId } from "@/lib/morning/integration";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +49,9 @@ type Search = {
   modal?: string;
   digest?: string;
   reason?: string;
+  morning?: string;
+  morningReason?: string;
+  morningJob?: string;
 };
 
 export default async function PrivateClinicSettingsPage({
@@ -57,7 +73,15 @@ export default async function PrivateClinicSettingsPage({
   const modalMode = sp.modal;
 
   const session = await getAuthSession();
-  const [settings, consultationTypes, expenseCategories, currentUser] = await Promise.all([
+  const settingsUser = session?.user?.id
+    ? await prisma.users.findFirst({
+        where: { id: session.user.id, household_id: householdId, is_active: true },
+        select: { family_member_id: true },
+      })
+    : null;
+  const userFamilyMemberId = settingsUser?.family_member_id ?? null;
+  const [settings, consultationTypes, expenseCategories, currentUser, clinicJobs, morningIntegrations] =
+    await Promise.all([
     prisma.therapy_settings.findUnique({
       where: { household_id: householdId },
       select: {
@@ -92,14 +116,79 @@ export default async function PrivateClinicSettingsPage({
           },
         })
       : null,
+    prisma.jobs.findMany({
+      where: jobsWhereActiveForPrivateClinicPickers({
+        householdId,
+        familyMemberId: userFamilyMemberId,
+      }),
+      orderBy: [{ job_title: "asc" }],
+      select: { id: true, job_title: true, employer_name: true },
+    }),
+    prisma.job_morning_integrations.findMany({
+      where: { household_id: householdId },
+    }),
   ]);
   const gmailFromLoginEmail =
     currentUser?.email?.toLowerCase().endsWith("@gmail.com") ? currentUser.email : "";
   const defaultGoogleGmailAddress = currentUser?.google_gmail_address ?? gmailFromLoginEmail;
   const googleConnected = Boolean(currentUser?.google_calendar_refresh_token_encrypted);
 
+  const morningFlash =
+    sp.morning === "saved"
+      ? ({
+          kind: "ok" as const,
+          text:
+            sp.morningReason === "test_ok"
+              ? st.morningTestOk
+              : sp.morningReason === "disconnected"
+                ? st.morningDisconnected
+                : st.morningSaved,
+        })
+      : sp.morning === "error"
+        ? ({
+            kind: "err" as const,
+            text:
+              sp.morningReason === "missing_credentials"
+                ? st.morningErrMissingCredentials
+                : sp.morningReason === "job"
+                  ? st.morningErrJob
+                  : sp.morningReason || st.errGeneric,
+          })
+        : null;
+
+  const integrationsByJobId: Record<string, MorningIntegrationInitial> = {};
+  for (const row of morningIntegrations) {
+    let maskedApiKeyId: string | null = null;
+    if (row.api_key_id_encrypted) {
+      try {
+        maskedApiKeyId = maskApiKeyId(decryptSecret(row.api_key_id_encrypted));
+      } catch {
+        maskedApiKeyId = null;
+      }
+    }
+    integrationsByJobId[row.job_id] = {
+      jobId: row.job_id,
+      enabled: row.enabled,
+      environment: row.environment,
+      hasCredentials: Boolean(row.api_key_id_encrypted && row.api_secret_encrypted),
+      maskedApiKeyId,
+      businessName: row.business_name,
+      businessTaxId: row.business_tax_id,
+      defaultDocumentType: row.default_document_type,
+      lastTestedAt: row.last_tested_at
+        ? row.last_tested_at.toLocaleString(uiLanguage === "he" ? "he-IL" : "en-IL", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : null,
+      lastError: row.last_error,
+      receiptNumberingMode: row.receipt_numbering_mode,
+    };
+  }
+
   const flash =
-    sp.error === "google-gmail"
+    morningFlash ??
+    (sp.error === "google-gmail"
       ? ({ kind: "err" as const, text: "Please enter a valid Gmail address to enable integration." })
       : sp.error === "google-not-connected"
         ? ({ kind: "err" as const, text: "Connect your Google account before enabling integration." })
@@ -121,7 +210,7 @@ export default async function PrivateClinicSettingsPage({
                 ? ({ kind: "ok" as const, text: st.savedExpenseCat })
                 : sp.saved === "ctype" || sp.saved === "ctype-archived" || sp.saved === "ctype-removed"
                   ? null
-                  : null;
+                  : null);
 
   return (
     <div className="space-y-6">
@@ -191,6 +280,58 @@ export default async function PrivateClinicSettingsPage({
           </div>
         </form>
       </section>
+
+      <MorningIntegrationSection
+        jobs={clinicJobs.map((j) => ({
+          id: j.id,
+          label: formatJobDisplayLabel(j),
+        }))}
+        integrationsByJobId={integrationsByJobId}
+        initialJobId={sp.morningJob}
+        saveAction={saveMorningIntegration}
+        testAction={testMorningIntegration}
+        disconnectAction={disconnectMorningIntegration}
+        labels={{
+          title: st.morningTitle,
+          intro: st.morningIntro,
+          guideTitle: st.morningGuideTitle,
+          guideIntro: st.morningGuideIntro,
+          guideSteps: [
+            st.morningGuideStep1,
+            st.morningGuideStep2,
+            st.morningGuideStep3,
+            st.morningGuideStep4,
+            st.morningGuideStep5,
+            st.morningGuideStep6,
+          ],
+          guideDocsLink: st.morningGuideDocsLink,
+          job: st.morningJob,
+          environment: st.morningEnvironment,
+          sandbox: st.morningSandbox,
+          production: st.morningProduction,
+          enabled: st.morningEnabled,
+          apiKeyId: st.morningApiKeyId,
+          apiSecret: st.morningApiSecret,
+          apiSecretPlaceholder: st.morningApiSecretPlaceholder,
+          save: st.morningSave,
+          testConnection: st.morningTest,
+          testHint: st.morningTestHint,
+          testRequiresCredentials: st.morningTestRequiresCredentials,
+          disconnect: st.morningDisconnect,
+          connected: st.morningConnected,
+          notConnected: st.morningNotConnected,
+          businessName: st.morningBusinessName,
+          businessTaxId: st.morningBusinessTaxId,
+          documentType: st.morningDocumentType,
+          lastError: st.morningLastError,
+          lastTested: st.morningLastTested,
+          receiptNumberingMode: st.morningReceiptNumberingMode,
+          receiptNumberingManual: st.morningReceiptNumberingManual,
+          receiptNumberingAuto: st.morningReceiptNumberingAuto,
+          receiptNumberingAsk: st.morningReceiptNumberingAsk,
+          receiptNumberingHint: st.morningReceiptNumberingHint,
+        }}
+      />
 
       {session?.user?.isSuperAdmin ? null : (
         <ClinicDigestEmailSection

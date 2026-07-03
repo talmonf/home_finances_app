@@ -14,6 +14,8 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [ ] 136_receipt_numbering_mode_and_source.sql (2026-07-03)
+- [ ] 135_job_morning_integration.sql (2026-07-03)
 - [x] 134_riseup_import_draft_file_content.sql (2026-06-28)
 - [x] 133_riseup_import_drafts.sql (2026-06-28)
 - [x] 132_riseup_entity_proposals_and_links.sql (2026-06-26)
@@ -155,6 +157,8 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 136 | `136_receipt_numbering_mode_and_source.sql` (2026-07-03) | ALTER | `job_morning_integrations.receipt_numbering_mode`; `therapy_receipts.receipt_number_source` (manual / morning / pending_morning). |
+| 135 | `135_job_morning_integration.sql` (2026-07-03) | CREATE/ALTER | Morning (Green Invoice): `job_morning_integrations` per-job credentials; `therapy_clients.morning_client_id`; `therapy_receipts` Morning document + PDF storage fields. |
 | 134 | `134_riseup_import_draft_file_content.sql` (2026-06-28) | ALTER | `riseup_import_drafts`: store CSV export bytes so import can resume without re-uploading the file. |
 | 133 | `133_riseup_import_drafts.sql` (2026-06-28) | CREATE | `riseup_import_drafts`: persist RiseUp import wizard review state (row actions, overrides, proposal decisions) keyed by CSV content hash for incremental multi-session imports. |
 | 132 | `132_riseup_entity_proposals_and_links.sql` (2026-06-26) | CREATE | RiseUp import: staged entity proposals, supporting proposal transactions, and generic transaction-entity links for utilities, insurance, donations, savings, digital methods, and future domains. |

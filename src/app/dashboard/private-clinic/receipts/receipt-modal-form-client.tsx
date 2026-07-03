@@ -2,6 +2,13 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
+import type { MorningReceiptNumberingMode } from "@/generated/prisma/client";
+import {
+  defaultReceiptNumberingChoiceOnCreate,
+  resolveIssueViaMorningOnCreate,
+  showReceiptNumberingChoiceOnCreate,
+  type ReceiptNumberingChoice,
+} from "@/lib/morning/receipt-numbering";
 import { ReceiptPeriodPreview, type ReceiptPeriodPreviewLabels } from "./receipt-period-preview";
 
 type JobOption = {
@@ -62,6 +69,16 @@ export type ReceiptModalLabels = {
   paymentDate: string;
   paymentDateHint: string;
   linkBankOptional: string;
+  morningConnectedBadge: string;
+  morningReceiptNumberHint: string;
+  receiptNumberingChoiceLabel: string;
+  receiptNumberingMorning: string;
+  receiptNumberingManual: string;
+  receiptNumberingManualHint: string;
+  downloadDocument: string;
+  retryMorningIssue: string;
+  morningIssueFailed: string;
+  morningIssued: string;
 };
 
 export type ReceiptModalPeriodPreviewLabels = ReceiptPeriodPreviewLabels;
@@ -84,6 +101,16 @@ export type ReceiptModalInitial = {
   payment_date?: string;
   linked_transaction_id?: string;
   notes?: string;
+  morning_locked?: boolean;
+  morning_issue_failed?: boolean;
+  morning_issue_error?: string;
+  document_download_href?: string;
+  receipt_number_is_pending?: boolean;
+};
+
+export type MorningNumberingConfigForForm = {
+  enabled: boolean;
+  mode: MorningReceiptNumberingMode;
 };
 
 export function ReceiptModalFormClient({
@@ -102,6 +129,7 @@ export function ReceiptModalFormClient({
   periodPreviewLabels,
   periodPreviewVisitTypeOptions,
   showBankLink = true,
+  morningNumberingByJobId = {},
   children,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -120,11 +148,25 @@ export function ReceiptModalFormClient({
   periodPreviewVisitTypeOptions?: { id: string; label: string }[];
   /** When false, bank link UI is omitted (clinic-only households). */
   showBankLink?: boolean;
+  morningNumberingByJobId?: Record<string, MorningNumberingConfigForForm>;
   /** Server-rendered transaction picker (passed from parent Server Component). */
   children?: ReactNode;
 }) {
   const jobsById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
   const [jobId, setJobId] = useState(() => initial?.job_id ?? "");
+  const morningConfig = jobId ? morningNumberingByJobId[jobId] : undefined;
+  const morningEnabledForJob = Boolean(morningConfig?.enabled);
+  const numberingMode = morningConfig?.mode ?? "ask_each_time";
+  const [numberingChoice, setNumberingChoice] = useState<ReceiptNumberingChoice>(() =>
+    defaultReceiptNumberingChoiceOnCreate(numberingMode),
+  );
+  const issueViaMorningOnForm = resolveIssueViaMorningOnCreate({
+    morningIntegrationEnabled: morningEnabledForJob,
+    numberingMode,
+    formChoice: numberingChoice,
+  });
+  const showNumberingChoice =
+    mode === "create" && showReceiptNumberingChoiceOnCreate(morningEnabledForJob, numberingMode);
   const [programId, setProgramId] = useState(initial?.program_id ?? "");
   const [recipientType, setRecipientType] = useState<string>(initial?.recipient_type ?? "");
   const [paymentMethod, setPaymentMethod] = useState<string>(initial?.payment_method ?? "");
@@ -136,6 +178,8 @@ export function ReceiptModalFormClient({
   const [currency, setCurrency] = useState(initial?.currency ?? "ILS");
   const [isDirty, setIsDirty] = useState(mode === "create");
   const canSubmit = mode === "create" || isDirty;
+  const hideReceiptNumberInput =
+    Boolean(initial?.morning_locked) || (mode === "create" && issueViaMorningOnForm);
 
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
@@ -165,8 +209,20 @@ export function ReceiptModalFormClient({
       const previousMonth = previousMonthPeriod();
       setCoveredPeriodStart(previousMonth.start);
       setCoveredPeriodEnd(previousMonth.end);
-      setRecipientType("organization");
-      setClientId("");
+      const nextConfig = morningNumberingByJobId[nextJobId];
+      const nextMode = nextConfig?.mode ?? "ask_each_time";
+      const nextChoice = defaultReceiptNumberingChoiceOnCreate(nextMode);
+      const nextIssueViaMorning = resolveIssueViaMorningOnCreate({
+        morningIntegrationEnabled: Boolean(nextConfig?.enabled),
+        numberingMode: nextMode,
+        formChoice: nextChoice,
+      });
+      if (nextIssueViaMorning) {
+        setRecipientType("client");
+      } else {
+        setRecipientType("organization");
+        setClientId("");
+      }
     }
   }
 
@@ -200,6 +256,10 @@ export function ReceiptModalFormClient({
                 const v = e.target.value;
                 setJobId(v);
                 setProgramId("");
+                const nextConfig = morningNumberingByJobId[v];
+                setNumberingChoice(
+                  defaultReceiptNumberingChoiceOnCreate(nextConfig?.mode ?? "ask_each_time"),
+                );
                 applyJobDefaults(v);
                 if (recipientType === "client" && clientId && !clientBelongsToJob(clientId, v)) {
                   setClientId("");
@@ -234,13 +294,82 @@ export function ReceiptModalFormClient({
           </div>
 
           <div>
+            {showNumberingChoice ? (
+              <fieldset className="mb-2 space-y-2">
+                <legend className="text-xs text-slate-400">{labels.receiptNumberingChoiceLabel}</legend>
+                <label className="flex items-start gap-2 text-sm text-slate-200">
+                  <input
+                    type="radio"
+                    name="receipt_numbering_choice"
+                    value="morning"
+                    checked={numberingChoice === "morning"}
+                    onChange={() => setNumberingChoice("morning")}
+                    className="mt-1"
+                  />
+                  <span>{labels.receiptNumberingMorning}</span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-slate-200">
+                  <input
+                    type="radio"
+                    name="receipt_numbering_choice"
+                    value="manual"
+                    checked={numberingChoice === "manual"}
+                    onChange={() => setNumberingChoice("manual")}
+                    className="mt-1"
+                  />
+                  <span className="space-y-1">
+                    <span className="block">{labels.receiptNumberingManual}</span>
+                    <span className="block text-xs text-slate-400">{labels.receiptNumberingManualHint}</span>
+                  </span>
+                </label>
+              </fieldset>
+            ) : null}
+            {!showNumberingChoice && morningEnabledForJob && numberingMode === "morning_auto" ? (
+              <input type="hidden" name="receipt_numbering_choice" value="morning" />
+            ) : null}
+            {!showNumberingChoice && morningEnabledForJob && numberingMode === "manual" ? (
+              <input type="hidden" name="receipt_numbering_choice" value="manual" />
+            ) : null}
             <label className="block text-xs text-slate-400">{labels.receiptNumber}</label>
-            <input
-              name="receipt_number"
-              required
-              defaultValue={initial?.receipt_number ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+            {hideReceiptNumberInput ? (
+              <p className="mt-1 rounded-lg border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm text-slate-300">
+                {mode === "create" ? labels.morningReceiptNumberHint : initial?.receipt_number}
+              </p>
+            ) : (
+              <input
+                name="receipt_number"
+                required
+                defaultValue={
+                  initial?.receipt_number_is_pending ? "" : (initial?.receipt_number ?? "")
+                }
+                placeholder={
+                  initial?.receipt_number_is_pending ? initial.receipt_number : undefined
+                }
+                className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            )}
+            {mode === "create" && issueViaMorningOnForm ? (
+              <p className="mt-1 text-xs text-emerald-300">{labels.morningConnectedBadge}</p>
+            ) : null}
+            {initial?.receipt_number_is_pending ? (
+              <p className="mt-1 text-xs text-amber-200">{labels.receiptNumberingManualHint}</p>
+            ) : null}
+            {initial?.morning_locked && initial.document_download_href ? (
+              <a
+                href={initial.document_download_href}
+                className="mt-2 inline-flex text-xs text-sky-400 hover:text-sky-300"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {labels.downloadDocument}
+              </a>
+            ) : null}
+            {initial?.morning_issue_failed ? (
+              <p className="mt-2 text-xs text-rose-300">
+                {labels.morningIssueFailed}
+                {initial.morning_issue_error ? `: ${initial.morning_issue_error}` : ""}
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -254,11 +383,14 @@ export function ReceiptModalFormClient({
                 setRecipientType(v);
                 if (v === "organization") setClientId("");
               }}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              disabled={mode === "create" && issueViaMorningOnForm}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 disabled:opacity-70"
             >
               <option value=""></option>
               <option value="client">{labels.recipientClient}</option>
-              <option value="organization">{labels.recipientOrg}</option>
+              {mode === "create" && issueViaMorningOnForm ? null : (
+                <option value="organization">{labels.recipientOrg}</option>
+              )}
             </select>
           </div>
 

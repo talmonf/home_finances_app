@@ -32,6 +32,17 @@ import {
   resolveSessionDurationMinutes,
 } from "@/lib/therapy/session-duration";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
+import { getJobMorningIntegration } from "@/lib/morning/integration";
+import { issueTherapyReceiptViaMorning } from "@/lib/morning/receipt-issue-service";
+import {
+  parseReceiptNumberingChoice,
+  resolveIssueViaMorningOnCreate,
+} from "@/lib/morning/receipt-numbering";
+import {
+  assertReceiptNumberAvailable,
+  isPendingReceiptNumber,
+  makePendingReceiptNumber,
+} from "@/lib/therapy/receipt-number";
 import {
   cancelRecurringGoogleInstance,
   deleteGoogleCalendarEvent,
@@ -2560,8 +2571,42 @@ export async function createTherapyReceipt(formData: FormData) {
   const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
   const client_id_raw = (formData.get("client_id") as string)?.trim() || "";
 
-  if (!job_id || !receipt_number || !issued_at || !totalStr || !netStr || !receipt_kind || !recipient_type || !payment_method) {
+  const morningIntegration = job_id ? await getJobMorningIntegration(householdId, job_id) : null;
+  const morningEnabled = Boolean(
+    morningIntegration?.enabled &&
+      morningIntegration.api_key_id_encrypted &&
+      morningIntegration.api_secret_encrypted,
+  );
+  const numberingMode = morningIntegration?.receipt_numbering_mode ?? "ask_each_time";
+  const formChoice = parseReceiptNumberingChoice(formData.get("receipt_numbering_choice") as string);
+  const issueViaMorning = resolveIssueViaMorningOnCreate({
+    morningIntegrationEnabled: morningEnabled,
+    numberingMode,
+    formChoice,
+  });
+  const id = crypto.randomUUID();
+  const resolvedReceiptNumber = issueViaMorning ? makePendingReceiptNumber(id) : receipt_number;
+
+  if (
+    !job_id ||
+    (!issueViaMorning && !receipt_number) ||
+    !issued_at ||
+    !totalStr ||
+    !netStr ||
+    !receipt_kind ||
+    !recipient_type ||
+    !payment_method
+  ) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "missing");
+  }
+  if (issueViaMorning && recipient_type !== "client") {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "morning_client_only");
+  }
+  if (!issueViaMorning) {
+    const duplicate = await assertReceiptNumberAvailable(householdId, resolvedReceiptNumber, issued_at);
+    if (!duplicate.ok) {
+      redirectPrivateClinicScoped(formData, "error", fallbackPath, "duplicate_receipt_number");
+    }
   }
   if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
@@ -2599,7 +2644,6 @@ export async function createTherapyReceipt(formData: FormData) {
     linked_transaction_id = txRow?.id ?? null;
   }
 
-  const id = crypto.randomUUID();
   await prisma.therapy_receipts.create({
     data: {
       id,
@@ -2608,7 +2652,7 @@ export async function createTherapyReceipt(formData: FormData) {
       client_id: resolved_client_id,
       family_id: resolved_family_id,
       program_id,
-      receipt_number,
+      receipt_number: resolvedReceiptNumber,
       issued_at,
       total_amount: totalStr,
       net_amount: netStr,
@@ -2621,6 +2665,8 @@ export async function createTherapyReceipt(formData: FormData) {
       payment_date,
       notes: (formData.get("notes") as string)?.trim() || null,
       linked_transaction_id,
+      receipt_number_source: issueViaMorning ? "pending_morning" : "manual",
+      morning_issue_status: issueViaMorning ? "pending" : null,
     },
   });
 
@@ -2708,6 +2754,19 @@ export async function createTherapyReceipt(formData: FormData) {
   if (payment_date) {
     revalidatePath(`${BASE}/treatments`);
   }
+  if (issueViaMorning) {
+    const issue = await issueTherapyReceiptViaMorning(householdId, id);
+    if (!issue.ok) {
+      await logClinicUsage("receipts", "create", { resourceType: "receipt", resourceId: id });
+      revalidatePath(`${BASE}/receipts`);
+      const errParams = new URLSearchParams();
+      errParams.set("modal", "edit");
+      errParams.set("edit_id", id);
+      errParams.set("created", "1");
+      errParams.set("morningError", issue.error);
+      redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts?${errParams.toString()}`);
+    }
+  }
   await logClinicUsage("receipts", "create", { resourceType: "receipt", resourceId: id });
   revalidatePath(`${BASE}/receipts`);
   const successParams = new URLSearchParams();
@@ -2787,6 +2846,32 @@ export async function updateTherapyReceipt(formData: FormData) {
     resolved_family_id = c?.family_id ?? null;
   }
 
+  const morningLocked = Boolean(row.morning_document_id);
+  const receiptNumberRaw = (formData.get("receipt_number") as string)?.trim() || "";
+  const resolvedReceiptNumber = morningLocked
+    ? row.receipt_number
+    : receiptNumberRaw || row.receipt_number;
+
+  if (!morningLocked) {
+    const duplicate = await assertReceiptNumberAvailable(
+      householdId,
+      resolvedReceiptNumber,
+      issued_at,
+      id,
+    );
+    if (!duplicate.ok) {
+      redirectPrivateClinicScoped(formData, "error", fallbackPath, "duplicate_receipt_number");
+    }
+  }
+
+  const switchedToManualNumber =
+    !morningLocked &&
+    receiptNumberRaw &&
+    !isPendingReceiptNumber(receiptNumberRaw) &&
+    (row.morning_issue_status === "failed" ||
+      isPendingReceiptNumber(row.receipt_number) ||
+      row.receipt_number_source === "pending_morning");
+
   await prisma.therapy_receipts.update({
     where: { id },
     data: {
@@ -2794,7 +2879,14 @@ export async function updateTherapyReceipt(formData: FormData) {
       client_id: resolved_client_id,
       family_id: resolved_family_id,
       program_id,
-      receipt_number: (formData.get("receipt_number") as string)?.trim() || row.receipt_number,
+      receipt_number: resolvedReceiptNumber,
+      ...(switchedToManualNumber
+        ? {
+            receipt_number_source: "manual" as const,
+            morning_issue_status: null,
+            morning_issue_error: null,
+          }
+        : {}),
       issued_at,
       total_amount: totalStr,
       net_amount: netStr,
@@ -2816,6 +2908,39 @@ export async function updateTherapyReceipt(formData: FormData) {
   revalidatePath(`${BASE}/receipts/${id}`);
   revalidatePath(`${BASE}/treatments`);
   redirectPrivateClinicScoped(formData, "success", `${BASE}/receipts/${id}?updated=1`);
+}
+
+export async function retryMorningReceiptIssue(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackPath = `${BASE}/receipts`;
+  const id = (formData.get("id") as string)?.trim() || "";
+  const row = await prisma.therapy_receipts.findFirst({
+    where: { id, household_id: householdId },
+  });
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "notfound");
+  }
+  if (row.morning_document_id) {
+    redirectPrivateClinicScoped(formData, "success", `${fallbackPath}?modal=edit&edit_id=${id}`);
+  }
+
+  const issue = await issueTherapyReceiptViaMorning(householdId, id);
+  revalidatePath(`${BASE}/receipts`);
+  revalidatePath(`${BASE}/treatments`);
+  if (!issue.ok) {
+    const params = new URLSearchParams();
+    params.set("modal", "edit");
+    params.set("edit_id", id);
+    params.set("morningError", issue.error);
+    redirectPrivateClinicScoped(formData, "success", `${fallbackPath}?${params.toString()}`);
+  }
+  redirectPrivateClinicScoped(
+    formData,
+    "success",
+    `${fallbackPath}?modal=edit&edit_id=${id}&morningIssued=1`,
+  );
 }
 
 export async function deleteTherapyReceipt(formData: FormData) {
@@ -2958,6 +3083,10 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
   if (!(await assertJobForCurrentUserScope(householdId, userFm, jobId)) || !receiptKind) {
     redirectPrivateClinicScoped(formData, "error", fallbackPath, "job");
   }
+  const duplicate = await assertReceiptNumberAvailable(householdId, receiptNumber, issuedAt);
+  if (!duplicate.ok) {
+    redirectPrivateClinicScoped(formData, "error", fallbackPath, "duplicate_receipt_number");
+  }
   const receiptId = crypto.randomUUID();
   await prisma.$transaction(async (tx) => {
     await tx.therapy_receipts.create({
@@ -2969,6 +3098,7 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
         family_id: treatments[0]!.family_id,
         program_id: treatments[0]!.program_id,
         receipt_number: receiptNumber,
+        receipt_number_source: "manual",
         issued_at: issuedAt,
         total_amount: totalStr,
         net_amount: netStr,

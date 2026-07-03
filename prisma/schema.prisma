@@ -74,6 +74,7 @@ model households {
   car_licenses            car_licenses[]
   car_petrol_fillups      car_petrol_fillups[]
   jobs                    jobs[]
+  job_morning_integrations job_morning_integrations[]
   job_benefits            job_benefits[]
   job_documents           job_documents[]
   job_payroll_entries     job_payroll_entries[]
@@ -596,6 +597,30 @@ model jobs {
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
   subscriptions                    subscriptions[]
   transactions                     transactions[]
+  morning_integration              job_morning_integrations?
+}
+
+model job_morning_integrations {
+  job_id                  String             @id
+  household_id            String
+  enabled                 Boolean            @default(false)
+  environment             MorningEnvironment @default(sandbox)
+  api_key_id_encrypted    String?
+  api_secret_encrypted    String?
+  business_id             String?
+  business_name           String?
+  business_tax_id         String?
+  default_document_type   Int                        @default(400)
+  receipt_numbering_mode MorningReceiptNumberingMode @default(ask_each_time)
+  last_tested_at          DateTime?
+  last_error              String?
+  created_at              DateTime           @default(now())
+  updated_at              DateTime           @updatedAt
+
+  job       jobs       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id])
 }
 
 model job_benefits {
@@ -1817,6 +1842,37 @@ enum TherapyReceiptKind {
   @@map("therapy_receipt_kind")
 }
 
+enum MorningEnvironment {
+  sandbox
+  production
+
+  @@map("morning_environment")
+}
+
+enum MorningIssueStatus {
+  pending
+  issued
+  failed
+
+  @@map("morning_issue_status")
+}
+
+enum MorningReceiptNumberingMode {
+  manual
+  morning_auto
+  ask_each_time
+
+  @@map("morning_receipt_numbering_mode")
+}
+
+enum TherapyReceiptNumberSource {
+  manual
+  morning
+  pending_morning
+
+  @@map("therapy_receipt_number_source")
+}
+
 enum TherapyTreatmentPaymentMethod {
   bank_transfer
   digital_payment
@@ -2056,6 +2112,7 @@ model therapy_clients {
   phones             String?
   address            String?
   import_key         String?
+  morning_client_id  String?
   is_active          Boolean   @default(true)
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt
@@ -2295,6 +2352,16 @@ model therapy_receipts {
   notes                 String?
   linked_transaction_id String?
   import_key            String?
+  morning_document_id   String?
+  morning_issued_at     DateTime?
+  morning_issue_status  MorningIssueStatus?
+  morning_issue_error   String?
+  receipt_number_source TherapyReceiptNumberSource?
+  document_file_name    String?
+  document_mime_type    String?
+  document_storage_bucket String?
+  document_storage_key  String?
+  document_uploaded_at  DateTime?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
@@ -2311,6 +2378,7 @@ model therapy_receipts {
   @@index([household_id, job_id])
   @@index([household_id, covered_period_start, covered_period_end])
   @@index([family_id])
+  @@index([household_id, morning_document_id])
 }
 
 model therapy_receipt_allocations {

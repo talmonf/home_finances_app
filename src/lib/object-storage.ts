@@ -422,3 +422,44 @@ export async function uploadTherapyTreatmentAttachment(
     : null;
   return { bucket: cfg.bucket, key, publicUrl };
 }
+
+export type UploadTherapyReceiptDocumentResult = {
+  bucket: string;
+  key: string;
+  publicUrl: string | null;
+};
+
+/** Stored PDF for therapy receipts issued via Morning. */
+export async function uploadTherapyReceiptDocument(
+  householdId: string,
+  receiptId: string,
+  mimeType: string,
+  content: Buffer,
+): Promise<UploadTherapyReceiptDocumentResult> {
+  const cfg = getJobDocumentStorageConfig();
+  const key = `${householdId}/therapy-receipts/${receiptId}/receipt.pdf`;
+  const client = new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: content,
+      ContentType: mimeType || "application/pdf",
+      ...putObjectEncryptionFields(),
+    }),
+  );
+
+  const publicUrl = cfg.publicBaseUrl
+    ? `${cfg.publicBaseUrl.replace(/\/$/, "")}/${key}`
+    : null;
+  return { bucket: cfg.bucket, key, publicUrl };
+}

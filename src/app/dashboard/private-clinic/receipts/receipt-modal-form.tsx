@@ -1,6 +1,7 @@
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import {
   ReceiptModalFormClient,
+  type MorningNumberingConfigForForm,
   type ReceiptModalInitial,
   type ReceiptModalLabels,
   type ReceiptModalPeriodPreviewLabels,
@@ -13,6 +14,16 @@ type ReceiptModalFormLabels = ReceiptModalLabels & {
   linkTxPayment: string;
   linkTxPaymentHint: string;
   txNoneLinked: string;
+  morningConnectedBadge: string;
+  morningReceiptNumberHint: string;
+  downloadDocument: string;
+  retryMorningIssue: string;
+  morningIssueFailed: string;
+  morningIssued: string;
+  receiptNumberingChoiceLabel: string;
+  receiptNumberingMorning: string;
+  receiptNumberingManual: string;
+  receiptNumberingManualHint: string;
 };
 
 export async function ReceiptModalForm({
@@ -32,6 +43,7 @@ export async function ReceiptModalForm({
   periodPreviewLabels,
   periodPreviewVisitTypeOptions,
   clinicOnly = false,
+  morningNumberingByJobId = {},
 }: {
   action: (formData: FormData) => void | Promise<void>;
   mode: "create" | "edit";
@@ -54,6 +66,7 @@ export async function ReceiptModalForm({
   periodPreviewLabels?: ReceiptModalPeriodPreviewLabels;
   periodPreviewVisitTypeOptions?: { id: string; label: string }[];
   clinicOnly?: boolean;
+  morningNumberingByJobId?: Record<string, MorningNumberingConfigForForm>;
 }) {
   const clientLabels: ReceiptModalLabels = {
     titleNew: labels.titleNew,
@@ -91,6 +104,16 @@ export async function ReceiptModalForm({
     paymentDate: labels.paymentDate,
     paymentDateHint: labels.paymentDateHint,
     linkBankOptional: labels.linkBankOptional,
+    morningConnectedBadge: labels.morningConnectedBadge,
+    morningReceiptNumberHint: labels.morningReceiptNumberHint,
+    receiptNumberingChoiceLabel: labels.receiptNumberingChoiceLabel,
+    receiptNumberingMorning: labels.receiptNumberingMorning,
+    receiptNumberingManual: labels.receiptNumberingManual,
+    receiptNumberingManualHint: labels.receiptNumberingManualHint,
+    downloadDocument: labels.downloadDocument,
+    retryMorningIssue: labels.retryMorningIssue,
+    morningIssueFailed: labels.morningIssueFailed,
+    morningIssued: labels.morningIssued,
   };
 
   return (
@@ -110,6 +133,7 @@ export async function ReceiptModalForm({
       periodPreviewLabels={periodPreviewLabels}
       periodPreviewVisitTypeOptions={periodPreviewVisitTypeOptions}
       showBankLink={!clinicOnly}
+      morningNumberingByJobId={morningNumberingByJobId}
     >
       {!clinicOnly ? (
         <TherapyTransactionLinkSelect

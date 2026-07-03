@@ -24,8 +24,11 @@ import {
   deleteConsultationReceiptAllocation,
   linkTravelEntriesToReceipt,
   deleteTravelReceiptAllocation,
+  retryMorningReceiptIssue,
 } from "../actions";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { getMorningNumberingConfigMapForHousehold } from "@/lib/morning/integration";
+import { isPendingReceiptNumber } from "@/lib/therapy/receipt-number";
 import {
   jobWhereInPrivateClinicModule,
   jobWherePrivateClinicScoped,
@@ -105,6 +108,8 @@ type ReceiptSearch = {
   autoLink?: string;
   autoLinkApplied?: string;
   error?: string;
+  morningError?: string;
+  morningIssued?: string;
 };
 
 export default async function ReceiptsPage({
@@ -157,7 +162,7 @@ export default async function ReceiptsPage({
   });
   const familyMemberId = user?.family_member_id ?? null;
 
-  const [jobs, clients, firstPage, settings, families] = await Promise.all([
+  const [jobs, clients, firstPage, settings, families, morningNumberingByJobId] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -186,6 +191,7 @@ export default async function ReceiptsPage({
       select: { id: true, name: true },
       orderBy: [{ name: "asc" }],
     }),
+    getMorningNumberingConfigMapForHousehold(householdId),
   ]);
   const queryParams = new URLSearchParams();
   if (filters.job) queryParams.set("job", filters.job);
@@ -500,10 +506,34 @@ export default async function ReceiptsPage({
     sp.created ? "1" : "0"
   }:${sp.updated ? "1" : "0"}`;
 
+  const receiptMorningLabels = {
+    morningConnectedBadge: r.morningConnectedBadge,
+    morningReceiptNumberHint: r.morningReceiptNumberHint,
+    receiptNumberingChoiceLabel: r.receiptNumberingChoiceLabel,
+    receiptNumberingMorning: r.receiptNumberingMorning,
+    receiptNumberingManual: r.receiptNumberingManual,
+    receiptNumberingManualHint: r.receiptNumberingManualHint,
+    downloadDocument: r.downloadDocument,
+    retryMorningIssue: r.retryMorningIssue,
+    morningIssueFailed: r.morningIssueFailed,
+    morningIssued: r.morningIssued,
+  };
+
+  const receiptFormErrorMessage =
+    sp.error === "duplicate_receipt_number"
+      ? r.duplicateReceiptNumberError
+      : sp.error === "morning_client_only"
+        ? r.morningClientOnlyError
+        : sp.error
+          ? r.formError
+          : null;
+
   return (
     <div className="space-y-8">
-      {sp.error ? (
-        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">{r.formError}</p>
+      {receiptFormErrorMessage ? (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
+          {receiptFormErrorMessage}
+        </p>
       ) : null}
       {(sp.created || sp.updated || sp.deleted) && (
         <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
@@ -516,6 +546,16 @@ export default async function ReceiptsPage({
               : c.saved}
         </p>
       )}
+      {sp.morningIssued ? (
+        <p className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          {r.morningIssued}
+        </p>
+      ) : null}
+      {sp.morningError ? (
+        <p className="rounded-lg border border-rose-700 bg-rose-950/50 px-3 py-2 text-sm text-rose-100">
+          {r.morningIssueFailed}: {sp.morningError}
+        </p>
+      ) : null}
       <section className="space-y-3">
         <h2 className="text-lg font-medium text-slate-200">{r.filters}</h2>
         <form
@@ -739,8 +779,10 @@ export default async function ReceiptsPage({
             linkTxPayment: r.linkTxPayment,
             linkTxPaymentHint: r.linkTxPaymentHint,
             txNoneLinked: c.txNoneLinked,
+            ...receiptMorningLabels,
           }}
           clinicOnly={clinicOnly}
+          morningNumberingByJobId={morningNumberingByJobId}
           periodPreviewLabels={{
             title: r.periodPreviewTitle,
             idle: r.periodPreviewIdle,
@@ -867,8 +909,10 @@ export default async function ReceiptsPage({
             linkTxPayment: r.linkTxPayment,
             linkTxPaymentHint: r.linkTxPaymentHint,
             txNoneLinked: c.txNoneLinked,
+            ...receiptMorningLabels,
           }}
           clinicOnly={clinicOnly}
+          morningNumberingByJobId={morningNumberingByJobId}
           initial={{
             id: editReceipt.id,
             job_id: editReceipt.job_id,
@@ -887,9 +931,33 @@ export default async function ReceiptsPage({
             payment_method: editReceipt.payment_method,
             linked_transaction_id: editReceipt.linked_transaction_id ?? "",
             notes: editReceipt.notes ?? "",
+            morning_locked: Boolean(editReceipt.morning_document_id),
+            morning_issue_failed: editReceipt.morning_issue_status === "failed",
+            morning_issue_error: editReceipt.morning_issue_error ?? sp.morningError ?? undefined,
+            receipt_number_is_pending: isPendingReceiptNumber(editReceipt.receipt_number),
+            document_download_href: editReceipt.document_storage_key
+              ? `/api/private-clinic/receipts/${editReceipt.id}/document`
+              : undefined,
           }}
           extraContent={
             <div className="space-y-3 rounded border border-slate-700 bg-slate-950/50 p-3 text-xs text-slate-300">
+              {editReceipt.morning_issue_status === "failed" && !editReceipt.morning_document_id ? (
+                <form action={retryMorningReceiptIssue} className="mb-2">
+                  <input type="hidden" name="id" value={editReceipt.id} />
+                  <input type="hidden" name="redirect_on_success" value="" />
+                  <input
+                    type="hidden"
+                    name="redirect_on_error"
+                    value={`${baseListHref}&modal=edit&edit_id=${encodeURIComponent(editReceipt.id)}`}
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-amber-700/60 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-950/40"
+                  >
+                    {r.retryMorningIssue}
+                  </button>
+                </form>
+              ) : null}
               <div className="grid gap-2 rounded border border-slate-700/80 bg-slate-900/40 p-2 sm:grid-cols-2">
                 <div>
                   <p className="font-medium text-slate-200">{r.grossAmountSummary}</p>
