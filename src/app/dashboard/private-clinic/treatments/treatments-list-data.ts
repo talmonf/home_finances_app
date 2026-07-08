@@ -50,7 +50,7 @@ export type TreatmentListRowDto = {
   has_external_reporting_system: boolean;
   reported_to_external_system: boolean;
   payment_date_iso: string | null;
-  payment_method: "bank_transfer" | "digital_payment" | null;
+  payment_method: "bank_transfer" | "digital_payment" | "cash" | null;
   payment_bank_account_label: string | null;
   payment_digital_method_name: string | null;
   receipt_allocations: { id: string; receipt_id: string; receipt_number: string }[];
@@ -208,7 +208,7 @@ export async function loadTreatmentsCursorPage(params: {
 
     for (const t of chunk) {
       const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
-      const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+      const paymentStatus = treatmentPaymentStatus(t.amount, allocated, t.payment_date);
       if (filters.paid !== "all" && paymentStatus !== filters.paid) continue;
       out.push({
         id: t.id,
@@ -276,6 +276,7 @@ export async function loadTreatmentsAmountTotal(params: {
         id: true,
         amount: true,
         currency: true,
+        payment_date: true,
         receipt_allocations: { select: { amount: true } },
       },
     });
@@ -283,7 +284,7 @@ export async function loadTreatmentsAmountTotal(params: {
 
     for (const t of chunk) {
       const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
-      const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+      const paymentStatus = treatmentPaymentStatus(t.amount, allocated, t.payment_date);
       if (filters.paid !== "all" && paymentStatus !== filters.paid) continue;
       if (t.amount != null) addAmountToTotalsByCurrency(totals, decimalToNumber(t.amount), t.currency);
     }
@@ -323,6 +324,7 @@ export async function loadTreatmentsListRecordCount(params: {
       select: {
         id: true,
         amount: true,
+        payment_date: true,
         receipt_allocations: { select: { amount: true } },
       },
     });
@@ -330,7 +332,7 @@ export async function loadTreatmentsListRecordCount(params: {
 
     for (const t of chunk) {
       const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
-      const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+      const paymentStatus = treatmentPaymentStatus(t.amount, allocated, t.payment_date);
       if (paymentStatus === filters.paid) count += 1;
     }
 
@@ -392,6 +394,7 @@ export async function loadTreatmentsClientFilterOptions(params: {
           id: true,
           client_id: true,
           amount: true,
+          payment_date: true,
           client: { select: { first_name: true, last_name: true, is_active: true } },
           receipt_allocations: { select: { amount: true } },
         },
@@ -400,7 +403,7 @@ export async function loadTreatmentsClientFilterOptions(params: {
 
       for (const t of chunk) {
         const allocated = t.receipt_allocations.reduce((sum, a) => sum + decimalToNumber(a.amount), 0);
-        const paymentStatus = treatmentPaymentStatus(t.amount, allocated);
+        const paymentStatus = treatmentPaymentStatus(t.amount, allocated, t.payment_date);
         if (paymentStatus !== filters.paid) continue;
         if (!byClientId.has(t.client_id)) {
           byClientId.set(t.client_id, t.client);

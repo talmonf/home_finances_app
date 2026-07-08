@@ -3,14 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 
+type PaymentMethod = "bank_transfer" | "digital_payment" | "cash" | "";
+
+type ClientPaymentDefault = {
+  default_payment_method?: PaymentMethod | null;
+};
+
 type Props = {
   organizationPaidJobIds: string[];
+  mode?: "create" | "edit";
   initial?: {
     payment_date?: string;
-    payment_method?: "bank_transfer" | "digital_payment" | "";
+    payment_method?: PaymentMethod;
     payment_bank_account_id?: string;
     payment_digital_payment_method_id?: string;
   };
+  clientPaymentDefaults?: Record<string, ClientPaymentDefault>;
   labels: {
     paymentFieldsHint: string;
     paymentDate: string;
@@ -18,6 +26,7 @@ type Props = {
     paymentMethodUnset: string;
     paymentBankTransfer: string;
     paymentDigital: string;
+    paymentCash: string;
     paymentIntoAccount: string;
     paymentDigitalApp: string;
   };
@@ -27,13 +36,16 @@ type Props = {
 
 export function TreatmentPaymentFieldsSection({
   organizationPaidJobIds,
+  mode = "create",
   initial,
+  clientPaymentDefaults = {},
   labels,
   bankAccounts,
   digitalPaymentMethods,
 }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [jobId, setJobId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(initial?.payment_method ?? "");
   const controlClass =
     "mt-1 w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
 
@@ -43,13 +55,31 @@ export function TreatmentPaymentFieldsSection({
     const jobInput = form.querySelector('select[name="job_id"]') as HTMLSelectElement | null;
     if (!jobInput) return;
 
-    const sync = () => setJobId(jobInput.value || "");
-    sync();
-    jobInput.addEventListener("change", sync);
+    const syncJob = () => setJobId(jobInput.value || "");
+    syncJob();
+    jobInput.addEventListener("change", syncJob);
     return () => {
-      jobInput.removeEventListener("change", sync);
+      jobInput.removeEventListener("change", syncJob);
     };
   }, []);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    const form = rootRef.current?.closest("form");
+    if (!form) return;
+    const clientInput = form.querySelector('select[name="client_id"]') as HTMLSelectElement | null;
+    if (!clientInput) return;
+
+    const applyClientDefault = () => {
+      const defaults = clientPaymentDefaults[clientInput.value];
+      if (defaults?.default_payment_method) {
+        setPaymentMethod(defaults.default_payment_method);
+      }
+    };
+    applyClientDefault();
+    clientInput.addEventListener("change", applyClientDefault);
+    return () => clientInput.removeEventListener("change", applyClientDefault);
+  }, [clientPaymentDefaults, mode]);
 
   const isOrganizationPaidJob = useMemo(() => organizationPaidJobIds.includes(jobId), [organizationPaidJobIds, jobId]);
 
@@ -80,12 +110,14 @@ export function TreatmentPaymentFieldsSection({
               <label className="block text-xs text-slate-400">{labels.paymentMethod}</label>
               <select
                 name="payment_method"
-                defaultValue={initial?.payment_method ?? ""}
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 className={controlClass}
               >
                 <option value="">{labels.paymentMethodUnset}</option>
                 <option value="bank_transfer">{labels.paymentBankTransfer}</option>
                 <option value="digital_payment">{labels.paymentDigital}</option>
+                <option value="cash">{labels.paymentCash}</option>
               </select>
             </div>
             <div>

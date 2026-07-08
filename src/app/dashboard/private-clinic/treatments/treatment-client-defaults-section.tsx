@@ -17,6 +17,9 @@ type ClientOption = {
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+  agreed_fee_amount?: string | null;
+  agreed_fee_currency?: string | null;
+  default_payment_method?: "bank_transfer" | "digital_payment" | "cash" | null;
 };
 type VisitDefaultOption = {
   job_id: string;

@@ -528,7 +528,7 @@ async function resolveReceiptKindForJob(
 }
 
 function parseTreatmentPaymentMethod(raw: string | null | undefined): TherapyTreatmentPaymentMethod | null {
-  if (raw === "bank_transfer" || raw === "digital_payment") return raw;
+  if (raw === "bank_transfer" || raw === "digital_payment" || raw === "cash") return raw;
   return null;
 }
 
@@ -616,6 +616,31 @@ function parseKupatHolim(
 ): "clalit" | "maccabi" | "meuhedet" | "leumit" | null {
   if (raw === "clalit" || raw === "maccabi" || raw === "meuhedet" || raw === "leumit") return raw;
   return null;
+}
+
+function parsePersonalClientBillingFields(formData: FormData, isPersonalClient: boolean) {
+  if (!isPersonalClient) {
+    return {
+      agreed_fee_amount: null,
+      agreed_fee_currency: "ILS",
+      default_payment_method: null,
+    };
+  }
+  const amountRaw = (formData.get("agreed_fee_amount") as string | null)?.trim() || "";
+  let agreed_fee_amount: string | null = null;
+  if (amountRaw) {
+    const n = Number(amountRaw);
+    if (Number.isFinite(n) && n > 0) agreed_fee_amount = amountRaw;
+  }
+  const currencyRaw = (formData.get("agreed_fee_currency") as string | null)?.trim() || "ILS";
+  const default_payment_method = parseTreatmentPaymentMethod(
+    (formData.get("default_payment_method") as string | null)?.trim() || null,
+  );
+  return {
+    agreed_fee_amount,
+    agreed_fee_currency: currencyRaw || "ILS",
+    default_payment_method,
+  };
 }
 
 async function assertFamilyTherapyEnabled(householdId: string): Promise<void> {
@@ -1417,6 +1442,7 @@ export async function createTherapyClient(formData: FormData) {
   const family_id = family_id_raw ? await assertFamily(householdId, family_id_raw) : null;
   const billing_basis = parseBillingBasis((formData.get("billing_basis") as string | null) ?? null);
   const billing_timing = parseBillingTiming((formData.get("billing_timing") as string | null) ?? null);
+  const personalBilling = parsePersonalClientBillingFields(formData, family_id == null);
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
@@ -1489,6 +1515,9 @@ export async function createTherapyClient(formData: FormData) {
         visits_per_period_weeks,
         disability_status,
         rehab_basket_status,
+        agreed_fee_amount: personalBilling.agreed_fee_amount,
+        agreed_fee_currency: personalBilling.agreed_fee_currency,
+        default_payment_method: personalBilling.default_payment_method,
       },
     });
 
@@ -1548,6 +1577,7 @@ export async function updateTherapyClient(formData: FormData) {
   const family_id = family_id_raw ? await assertFamily(householdId, family_id_raw) : null;
   const billing_basis = parseBillingBasis((formData.get("billing_basis") as string | null) ?? null);
   const billing_timing = parseBillingTiming((formData.get("billing_timing") as string | null) ?? null);
+  const personalBilling = parsePersonalClientBillingFields(formData, family_id == null);
 
   const jobIdsRaw = formData.getAll("job_ids") as string[];
   const jobIds = [...new Set(jobIdsRaw.map((s) => String(s).trim()).filter(Boolean))];
@@ -1603,6 +1633,9 @@ export async function updateTherapyClient(formData: FormData) {
           disability_status,
           rehab_basket_status,
           is_active: formData.has("is_active"),
+          agreed_fee_amount: personalBilling.agreed_fee_amount,
+          agreed_fee_currency: personalBilling.agreed_fee_currency,
+          default_payment_method: personalBilling.default_payment_method,
         },
       });
 
@@ -3064,6 +3097,8 @@ export async function createTherapyReceiptForSelectedTreatments(formData: FormDa
     });
     if (!d) redirectPrivateClinicScoped(formData, "error", fallbackPath, "payment_digital_method");
     paymentDigitalPaymentMethodId = d.id;
+  } else if (receiptPaymentMethod === "cash") {
+    treatmentPaymentMethod = "cash";
   }
   const treatments = await prisma.therapy_treatments.findMany({
     where: { household_id: householdId, id: { in: treatmentIds } },

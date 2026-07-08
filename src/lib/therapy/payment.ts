@@ -11,6 +11,7 @@ export function decimalToNumber(v: unknown): number {
 export function treatmentPaymentStatus(
   treatmentAmount: unknown,
   allocatedSum: unknown,
+  paymentDate?: unknown,
 ): TherapyPaymentStatus {
   if (treatmentAmount == null) return "unpaid";
   const t =
@@ -22,7 +23,8 @@ export function treatmentPaymentStatus(
       ? (allocatedSum as { toNumber(): number }).toNumber()
       : Number(allocatedSum);
   if (!Number.isFinite(t) || t <= 0) return "unpaid";
-  if (a <= 0) return "unpaid";
   if (a + 1e-9 >= t) return "paid";
-  return "partial";
+  if (a > 0) return "partial";
+  if (paymentDate != null) return "paid";
+  return "unpaid";
 }

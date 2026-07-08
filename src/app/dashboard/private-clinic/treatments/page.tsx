@@ -299,6 +299,12 @@ export default async function TreatmentsPage({
             job_id: defaultClinicJobId(activeClinicJobs, prefilledClientForNewModal.default_job_id),
             program_id: prefilledClientForNewModal.default_program_id ?? "",
             visit_type: prefilledClientForNewModal.default_visit_type ?? undefined,
+            amount:
+              prefilledClientForNewModal.agreed_fee_amount != null
+                ? prefilledClientForNewModal.agreed_fee_amount.toString()
+                : undefined,
+            currency: prefilledClientForNewModal.agreed_fee_currency ?? undefined,
+            payment_method: prefilledClientForNewModal.default_payment_method ?? undefined,
           }
         : { job_id: defaultClinicJobId(activeClinicJobs) }
       : undefined;
@@ -533,6 +539,10 @@ export default async function TreatmentsPage({
             default_job_id: cl.default_job_id,
             default_program_id: cl.default_program_id,
             default_visit_type: cl.default_visit_type,
+            agreed_fee_amount:
+              cl.agreed_fee_amount != null ? cl.agreed_fee_amount.toString() : null,
+            agreed_fee_currency: cl.agreed_fee_currency,
+            default_payment_method: cl.default_payment_method,
           }))}
           jobs={jobs.map((j) => ({
             id: j.id,

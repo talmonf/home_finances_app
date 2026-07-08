@@ -92,12 +92,13 @@ export default async function PrivateClinicOverviewPage({
         },
       }),
       (async () => {
-        const clientsWithFrequency = await prisma.therapy_clients.findMany({
+        const { getUpcomingAppointmentsForHousehold, nextScheduledAppointmentByClientId } =
+          await import("@/lib/therapy/series-occurrences");
+
+        const allActiveClients = await prisma.therapy_clients.findMany({
           where: {
             household_id: householdId,
             is_active: true,
-            visits_per_period_count: { not: null },
-            visits_per_period_weeks: { not: null },
             ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
           },
           select: {
@@ -108,14 +109,17 @@ export default async function PrivateClinicOverviewPage({
           },
         });
 
-        const clientIds = clientsWithFrequency.map((row) => row.id);
+        const clientsWithFrequency = allActiveClients.filter(
+          (row) => row.visits_per_period_count != null && row.visits_per_period_weeks != null,
+        );
+        const allClientIds = allActiveClients.map((row) => row.id);
         const lastTreatmentRows =
-          clientIds.length > 0
+          allClientIds.length > 0
             ? await prisma.therapy_treatments.groupBy({
                 by: ["client_id"],
                 where: {
                   household_id: householdId,
-                  client_id: { in: clientIds },
+                  client_id: { in: allClientIds },
                 },
                 _max: { occurred_at: true },
               })
@@ -127,9 +131,20 @@ export default async function PrivateClinicOverviewPage({
             .map((row) => [row.client_id, row._max.occurred_at as Date]),
         );
 
+        const upcomingAppointments =
+          allClientIds.length > 0
+            ? await getUpcomingAppointmentsForHousehold({
+                householdId,
+                clientIds: allClientIds,
+              })
+            : [];
+        const nextAppointmentByClientId = nextScheduledAppointmentByClientId(upcomingAppointments);
+
         const today = startOfTodayLocal();
         let total = 0;
         let overdue = 0;
+        const countedClientIds = new Set<string>();
+
         for (const row of clientsWithFrequency) {
           const lastVisitAt = lastVisitByClientId.get(row.id);
           const nextDue = lastVisitAt
@@ -142,11 +157,22 @@ export default async function PrivateClinicOverviewPage({
               ? dateOnlyLocal(row.start_date)
               : null;
           if (!nextDue) continue;
+          countedClientIds.add(row.id);
           total += 1;
           if (dateOnlyLocal(nextDue).getTime() < today.getTime()) {
             overdue += 1;
           }
         }
+
+        for (const [clientId, appointment] of nextAppointmentByClientId) {
+          if (countedClientIds.has(clientId)) continue;
+          countedClientIds.add(clientId);
+          total += 1;
+          if (dateOnlyLocal(appointment.startAt).getTime() < today.getTime()) {
+            overdue += 1;
+          }
+        }
+
         return { total, overdue };
       })(),
       prisma.therapy_settings.findUnique({

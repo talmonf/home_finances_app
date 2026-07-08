@@ -1,13 +1,14 @@
 import { HouseholdDateField } from "@/components/household-date-field";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { OBFUSCATED } from "@/lib/privacy-display";
-import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
+import { privateClinicClients, privateClinicCommon, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import type { TherapyClientEndReason } from "@/lib/therapy/client-end-reason";
 import { createTherapyClient, updateTherapyClient } from "../actions";
 import { ClientJobProgramFields } from "./client-job-program-fields";
 import { TherapyClientCareEndFields } from "./therapy-client-care-end-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
+import { PersonalClientBillingFields } from "./personal-client-billing-fields";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 type CommonStrings = ReturnType<typeof privateClinicCommon>;
@@ -37,6 +38,9 @@ export type TherapyClientFormEditRow = {
   family_id: string | null;
   billing_basis: "per_treatment" | "per_month" | null;
   billing_timing: "in_advance" | "in_arrears" | null;
+  agreed_fee_amount: string | { toString(): string } | null;
+  agreed_fee_currency: string | null;
+  default_payment_method: "bank_transfer" | "digital_payment" | "cash" | null;
   is_active: boolean;
   client_jobs: { job_id: string }[];
 };
@@ -433,6 +437,27 @@ export function TherapyClientForm({
           </select>
         </div>
       ) : null}
+
+      <PersonalClientBillingFields
+        familiesEnabled={families.length > 0}
+        familySelectId={families.length > 0 ? `${idPrefix}_family_id` : undefined}
+        initialFamilyId={client?.family_id}
+        initialAgreedFeeAmount={
+          client?.agreed_fee_amount != null ? String(client.agreed_fee_amount) : null
+        }
+        initialAgreedFeeCurrency={client?.agreed_fee_currency ?? "ILS"}
+        initialDefaultPaymentMethod={client?.default_payment_method ?? null}
+        labels={{
+          agreedFeeOptional: cl.agreedFeeOptional,
+          agreedFeeCurrency: cl.agreedFeeCurrency,
+          defaultPaymentMethodOptional: cl.defaultPaymentMethodOptional,
+          personalClientBillingHint: cl.personalClientBillingHint,
+          paymentMethodUnset: privateClinicTreatments(uiLanguage).paymentMethodUnset,
+          paymentBankTransfer: privateClinicTreatments(uiLanguage).paymentBankTransfer,
+          paymentDigital: privateClinicTreatments(uiLanguage).paymentDigital,
+          paymentCash: privateClinicTreatments(uiLanguage).paymentCash,
+        }}
+      />
 
       <ClientJobProgramFields
         jobs={jobs}

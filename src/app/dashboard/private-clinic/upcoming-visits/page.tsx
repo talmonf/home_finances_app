@@ -83,12 +83,10 @@ export default async function UpcomingVisitsPage({
       })
     : [];
 
-  const clients = await prisma.therapy_clients.findMany({
+  const allActiveClients = await prisma.therapy_clients.findMany({
     where: {
       household_id: householdId,
       is_active: true,
-      visits_per_period_count: { not: null },
-      visits_per_period_weeks: { not: null },
       ...(familyFilter ? { family_id: familyFilter } : {}),
       ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
     },
@@ -100,27 +98,32 @@ export default async function UpcomingVisitsPage({
     },
   });
 
+  const clients = allActiveClients.filter(
+    (row) => row.visits_per_period_count != null && row.visits_per_period_weeks != null,
+  );
+
   const today = startOfTodayLocal();
   const now = new Date();
-  const clientIds = clients.map((x) => x.id);
-  const clientById = new Map(clients.map((row) => [row.id, row]));
+  const allClientIds = allActiveClients.map((x) => x.id);
+  const clientById = new Map(allActiveClients.map((row) => [row.id, row]));
   const allUpcoming =
-    clientIds.length > 0
+    allClientIds.length > 0
       ? await getUpcomingAppointmentsForHousehold({
           householdId,
-          clientIds,
+          clientIds: allClientIds,
         })
       : [];
 
   const nextAppointmentByClientId = nextScheduledAppointmentByClientId(allUpcoming);
 
+  const clientIds = clients.map((x) => x.id);
   const lastTreatmentRows =
-    clientIds.length > 0
+    allClientIds.length > 0
       ? await prisma.therapy_treatments.groupBy({
           by: ["client_id"],
           where: {
             household_id: householdId,
-            client_id: { in: clientIds },
+            client_id: { in: allClientIds },
           },
           _max: { occurred_at: true },
         })
@@ -228,6 +231,39 @@ export default async function UpcomingVisitsPage({
     });
   }
 
+  const scheduledClientIds = new Set(scheduled.map((row) => row.clientId));
+  for (const [clientId, nextAppointment] of nextAppointmentByClientId) {
+    if (scheduledClientIds.has(clientId)) continue;
+    const row = clientById.get(clientId);
+    if (!row) continue;
+
+    const nextDue = dateOnlyLocal(nextAppointment.startAt);
+    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
+    const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
+    scheduled.push({
+      clientId: row.id,
+      name,
+      jobLabel: formatJobDisplayLabel(row.default_job),
+      programId: row.default_program_id,
+      programLabel: row.default_program?.name ?? c.none,
+      kupatHolimLabel:
+        row.kupat_holim === "clalit"
+          ? cl.kupatClalit
+          : row.kupat_holim === "maccabi"
+            ? cl.kupatMaccabi
+            : row.kupat_holim === "meuhedet"
+              ? cl.kupatMeuhedet
+              : row.kupat_holim === "leumit"
+                ? cl.kupatLeumit
+                : c.none,
+      lastVisit: lastVisitAtByClientId.get(row.id) ?? null,
+      nextDue,
+      isOverdue,
+      isDueToday,
+      nextAppointment,
+    });
+  }
+
   scheduled.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
 
   const showScheduledColumn = scheduled.some((row) => row.nextAppointment != null);
@@ -307,7 +343,7 @@ export default async function UpcomingVisitsPage({
         </form>
       ) : null}
 
-      {clients.length === 0 ? (
+      {allActiveClients.length === 0 ? (
         <p className="text-sm text-slate-500">{uv.empty}</p>
       ) : (
         <>
@@ -461,8 +497,8 @@ export default async function UpcomingVisitsPage({
                           {r.kupatHolimLabel}
                         </td>
                         {settings?.family_therapy_enabled ? (
-                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>
-                            {clients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}
+                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={allActiveClients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>
+                            {allActiveClients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}
                           </td>
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">

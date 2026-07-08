@@ -1876,6 +1876,7 @@ enum TherapyReceiptNumberSource {
 enum TherapyTreatmentPaymentMethod {
   bank_transfer
   digital_payment
+  cash
 
   @@map("therapy_treatment_payment_method")
 }
@@ -2113,6 +2114,9 @@ model therapy_clients {
   address            String?
   import_key         String?
   morning_client_id  String?
+  agreed_fee_amount        Decimal?                      @db.Decimal(15, 2)
+  agreed_fee_currency      String                        @default("ILS")
+  default_payment_method   TherapyTreatmentPaymentMethod?
   is_active          Boolean   @default(true)
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt

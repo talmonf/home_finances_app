@@ -105,12 +105,10 @@ export async function computeClinicDigestData(args: {
       visitType: a.visitType,
     }));
 
-  const clients = await prisma.therapy_clients.findMany({
+  const allActiveClients = await prisma.therapy_clients.findMany({
     where: {
       household_id: householdId,
       is_active: true,
-      visits_per_period_count: { not: null },
-      visits_per_period_weeks: { not: null },
       ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
     },
     orderBy: [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }],
@@ -121,26 +119,31 @@ export async function computeClinicDigestData(args: {
     },
   });
 
+  const clients = allActiveClients.filter(
+    (row) => row.visits_per_period_count != null && row.visits_per_period_weeks != null,
+  );
+
   const today = startOfTodayLocal();
-  const clientIds = clients.map((x) => x.id);
+  const allClientIds = allActiveClients.map((x) => x.id);
 
   const clientUpcoming =
-    clientIds.length > 0
+    allClientIds.length > 0
       ? await getUpcomingAppointmentsForHousehold({
           householdId,
-          clientIds,
+          clientIds: allClientIds,
         })
       : [];
 
   const nextAppointmentByClientId = nextScheduledAppointmentByClientId(clientUpcoming);
 
+  const clientIds = clients.map((x) => x.id);
   const lastTreatmentRows =
-    clientIds.length > 0
+    allClientIds.length > 0
       ? await prisma.therapy_treatments.groupBy({
           by: ["client_id"],
           where: {
             household_id: householdId,
-            client_id: { in: clientIds },
+            client_id: { in: allClientIds },
           },
           _max: { occurred_at: true },
         })
@@ -196,6 +199,29 @@ export async function computeClinicDigestData(args: {
       kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
       familyName: row.family?.name ?? null,
       lastVisit: lastAt,
+      nextDue,
+      isOverdue: nextDay.getTime() < today.getTime(),
+      isDueToday: nextDay.getTime() === today.getTime(),
+      nextAppointment,
+    });
+  }
+
+  const visitClientIds = new Set(visits.map((row) => row.clientId));
+  for (const [clientId, nextAppointment] of nextAppointmentByClientId) {
+    if (visitClientIds.has(clientId)) continue;
+    const row = allActiveClients.find((c) => c.id === clientId);
+    if (!row) continue;
+
+    const nextDue = dateOnlyLocal(nextAppointment.startAt);
+    const nextDay = dateOnlyLocal(nextDue);
+    visits.push({
+      clientId: row.id,
+      name: clientDisplayName(row.first_name, row.last_name),
+      jobLabel: formatJobDisplayLabel(row.default_job),
+      programLabel: row.default_program?.name ?? noneLabel,
+      kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
+      familyName: row.family?.name ?? null,
+      lastVisit: lastVisitAtByClientId.get(row.id) ?? null,
       nextDue,
       isOverdue: nextDay.getTime() < today.getTime(),
       isDueToday: nextDay.getTime() === today.getTime(),

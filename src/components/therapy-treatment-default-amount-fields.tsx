@@ -37,6 +37,8 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     default_job_id: string;
     default_program_id: string | null;
     default_visit_type: TherapyVisitType | null;
+    agreed_fee_amount?: string | null;
+    agreed_fee_currency?: string | null;
   }[];
   defaultClientId?: string;
   defaultValues?: {
@@ -95,6 +97,13 @@ export function TherapyTreatmentDefaultAmountFields(props: {
         initialVisit,
       )
     : null;
+  const clientAgreedFee =
+    defaultClient?.agreed_fee_amount != null && String(defaultClient.agreed_fee_amount).trim() !== ""
+      ? {
+          amount: String(defaultClient.agreed_fee_amount),
+          currency: defaultClient.agreed_fee_currency ?? "ILS",
+        }
+      : null;
 
   const [jobId, setJobId] = useState(firstJobId);
   const [programId, setProgramId] = useState(initialProgramId);
@@ -103,12 +112,12 @@ export function TherapyTreatmentDefaultAmountFields(props: {
   const [amount, setAmount] = useState(
     defaultValues?.amount !== undefined && defaultValues.amount !== ""
       ? defaultValues.amount
-      : (initialResolved?.amount ?? ""),
+      : (clientAgreedFee?.amount ?? initialResolved?.amount ?? ""),
   );
   const [currency, setCurrency] = useState(
     defaultValues?.currency !== undefined && defaultValues.currency !== ""
       ? defaultValues.currency
-      : (initialResolved?.currency ?? "ILS"),
+      : (clientAgreedFee?.currency ?? initialResolved?.currency ?? "ILS"),
   );
   const [initialHour = "", initialMinute = ""] = (defaultValues?.occurred_time ?? "").slice(0, 5).split(":");
   const [occurredHour, setOccurredHour] = useState(initialHour);
@@ -132,6 +141,15 @@ export function TherapyTreatmentDefaultAmountFields(props: {
 
   const applyDefault = useCallback(
     (j: string, p: string, vt: TherapyVisitType | "") => {
+      const client = clients.find((cl) => cl.id === defaultClientId);
+      if (
+        client?.agreed_fee_amount != null &&
+        String(client.agreed_fee_amount).trim() !== ""
+      ) {
+        setAmount(String(client.agreed_fee_amount));
+        setCurrency(client.agreed_fee_currency ?? "ILS");
+        return;
+      }
       if (!vt) return;
       const d = resolveTherapyVisitTypeDefault(visitDefaults, j, p, vt);
       if (d) {
@@ -139,7 +157,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
         setCurrency(d.currency);
       }
     },
-    [visitDefaults],
+    [visitDefaults, clients, defaultClientId],
   );
 
   const onJobChange = (nextJobId: string) => {

@@ -19,6 +19,9 @@ type ClientOption = {
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+  agreed_fee_amount?: string | null;
+  agreed_fee_currency?: string | null;
+  default_payment_method?: "bank_transfer" | "digital_payment" | "cash" | null;
 };
 type VisitDefaultOption = {
   job_id: string;
@@ -54,6 +57,7 @@ type Labels = {
     paymentMethodUnset: string;
     paymentBankTransfer: string;
     paymentDigital: string;
+    paymentCash: string;
     paymentIntoAccount: string;
     paymentDigitalApp: string;
     markReportedInExternalSystem: string;
@@ -90,7 +94,7 @@ export type TreatmentModalInitial = {
   visit_type?: "clinic" | "home" | "phone" | "video";
   linked_transaction_id?: string;
   payment_date?: string;
-  payment_method?: "bank_transfer" | "digital_payment" | "";
+  payment_method?: "bank_transfer" | "digital_payment" | "cash" | "";
   payment_bank_account_id?: string;
   payment_digital_payment_method_id?: string;
   reported_to_external_system?: boolean;
@@ -202,10 +206,17 @@ export function TreatmentModalForm({
             />
           </div>
           <TreatmentPaymentFieldsSection
+            mode={mode}
             organizationPaidJobIds={jobs
               .filter((job) => job.is_private_clinic && Boolean(job.external_reporting_system))
               .map((job) => job.id)}
             initial={initial}
+            clientPaymentDefaults={Object.fromEntries(
+              clients.map((cl) => [
+                cl.id,
+                { default_payment_method: cl.default_payment_method ?? null },
+              ]),
+            )}
             labels={{
               paymentFieldsHint: labels.tr.paymentFieldsHint,
               paymentDate: labels.tr.paymentDate,
@@ -213,6 +224,7 @@ export function TreatmentModalForm({
               paymentMethodUnset: labels.tr.paymentMethodUnset,
               paymentBankTransfer: labels.tr.paymentBankTransfer,
               paymentDigital: labels.tr.paymentDigital,
+              paymentCash: labels.tr.paymentCash,
               paymentIntoAccount: labels.tr.paymentIntoAccount,
               paymentDigitalApp: labels.tr.paymentDigitalApp,
             }}

@@ -457,6 +457,13 @@ export function privateClinicClients(lang: UiLanguage) {
     errJob: p("That job is not available for your account.", "המשרה אינה זמינה לחשבון שלך."),
     errProgram: p("Default program must belong to the default job.", "תכנית ברירת המחדל חייבת להשתייך למשרת ברירת המחדל."),
     errVisitType: p("Default visit type is invalid.", "סוג ביקור ברירת המחדל אינו תקין."),
+    agreedFeeOptional: p("Agreed fee (optional)", "שכר מוסכם (אופציונלי)"),
+    agreedFeeCurrency: p("Currency", "מטבע"),
+    defaultPaymentMethodOptional: p("Default payment method (optional)", "אמצעי תשלום ברירת מחדל (אופציונלי)"),
+    personalClientBillingHint: p(
+      "For personal clients (not in a family). Used as defaults when logging a treatment.",
+      "ללקוחות אישיים (ללא משפחה). משמש כברירת מחדל בעת רישום טיפול.",
+    ),
     errNotfound: p("Client not found.", "הלקוח לא נמצא."),
     errRange: p("End date cannot be before start date.", "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה."),
     errEndReason: p(
@@ -562,6 +569,7 @@ export function privateClinicTreatments(lang: UiLanguage) {
     paymentMethodUnset: p("Not set", "לא הוגדר"),
     paymentBankTransfer: p("Bank transfer", "העברה בנקאית"),
     paymentDigital: p("Digital payment", "תשלום דיגיטלי"),
+    paymentCash: p("Cash", "מזומן"),
     paymentIntoAccount: p("Paid into account", "חשבון שאליו הופקד"),
     paymentDigitalApp: p("Digital method", "אפליקציה / אמצעי"),
     paymentDetailsCol: p("Payment date", "תאריך תשלום"),
