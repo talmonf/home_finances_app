@@ -295,7 +295,8 @@ export default async function UpcomingVisitsPage({
       visitType: client?.default_visit_type ?? "clinic",
       startDate: toDateLocalInput(isOverdue ? today : nextDue),
       durationMinutes: String(
-        client?.default_program?.default_session_length_minutes ??
+        client?.default_session_length_minutes ??
+          client?.default_program?.default_session_length_minutes ??
           client?.default_job?.default_session_length_minutes ??
           "",
       ),

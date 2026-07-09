@@ -7,9 +7,20 @@ test("resolveSessionDurationMinutes applies fallback/override order", () => {
     systemDefaultMinutes: 45,
     jobDefaultMinutes: 50,
     programDefaultMinutes: 55,
+    clientDefaultMinutes: 58,
     appointmentDurationMinutes: 60,
   });
   assert.equal(resolved, 60);
+});
+
+test("resolveSessionDurationMinutes uses client override before appointment", () => {
+  const resolved = resolveSessionDurationMinutes({
+    jobDefaultMinutes: 50,
+    programDefaultMinutes: 55,
+    clientDefaultMinutes: 58,
+    appointmentDurationMinutes: null,
+  });
+  assert.equal(resolved, 58);
 });
 
 test("resolveSessionDurationMinutes falls back to system when others are missing", () => {

@@ -10,6 +10,7 @@ import {
 } from "../actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
 type JobOption = { id: string; label: string; defaultDurationMinutes: number | null };
 type ProgramOption = { id: string; jobId: string; label: string; defaultDurationMinutes: number | null };
 type ClientOption = {
@@ -18,6 +19,7 @@ type ClientOption = {
   defaultJobId: string | null;
   defaultProgramId: string | null;
   defaultVisitType: string | null;
+  defaultDurationMinutes: number | null;
 };
 type DowOption = { v: number; label: string };
 type VisitOption = { value: string; label: string };
@@ -121,7 +123,26 @@ export function AppointmentAddForm({
     if (!startHour || !startMinute) return "";
     return `${startHour}:${startMinute}`;
   }, [startHour, startMinute]);
-  const selectedJobDefaultDuration = jobId ? jobById.get(jobId)?.defaultDurationMinutes ?? null : null;
+  const resolveDurationPrefill = (
+    nextClientId: string,
+    nextJobId: string,
+    nextProgramId: string,
+  ): number | null => {
+    const client = nextClientId ? clientById.get(nextClientId) : undefined;
+    const programDuration = nextProgramId
+      ? programById.get(nextProgramId)?.defaultDurationMinutes ?? null
+      : null;
+    const jobDuration = nextJobId ? jobById.get(nextJobId)?.defaultDurationMinutes ?? null : null;
+    return resolveSessionDurationMinutes({
+      jobDefaultMinutes: jobDuration,
+      programDefaultMinutes: programDuration,
+      clientDefaultMinutes: client?.defaultDurationMinutes ?? null,
+    });
+  };
+
+  const applyDurationPrefill = (nextDuration: number | null) => {
+    if (nextDuration && nextDuration > 0) setDurationMinutes(String(nextDuration));
+  };
 
   const startAtValue = useMemo(() => {
     if (!startDate || !startTime) return "";
@@ -165,16 +186,14 @@ export function AppointmentAddForm({
     const selectedClient = clientById.get(nextClientId);
     if (!selectedClient) return;
     if (!jobId && selectedClient.defaultJobId) {
-      setJobId(selectedClient.defaultJobId);
-      setProgramId(selectedClient.defaultProgramId ?? "");
+      const nextJobId = selectedClient.defaultJobId;
+      const nextProgramId = selectedClient.defaultProgramId ?? "";
+      setJobId(nextJobId);
+      setProgramId(nextProgramId);
       if (selectedClient.defaultVisitType) setVisitType(selectedClient.defaultVisitType);
-      const selectedProgramDuration = selectedClient.defaultProgramId
-        ? programById.get(selectedClient.defaultProgramId)?.defaultDurationMinutes ?? null
-        : null;
-      const selectedJobDuration =
-        jobById.get(selectedClient.defaultJobId)?.defaultDurationMinutes ?? null;
-      const nextDuration = selectedProgramDuration ?? selectedJobDuration;
-      if (nextDuration && nextDuration > 0) setDurationMinutes(String(nextDuration));
+      applyDurationPrefill(resolveDurationPrefill(nextClientId, nextJobId, nextProgramId));
+    } else {
+      applyDurationPrefill(resolveDurationPrefill(nextClientId, jobId, programId));
     }
   };
 
@@ -236,10 +255,7 @@ export function AppointmentAddForm({
               const nextJobId = e.target.value;
               setJobId(nextJobId);
               setProgramId("");
-              const nextDuration = nextJobId
-                ? jobById.get(nextJobId)?.defaultDurationMinutes ?? null
-                : null;
-              if (nextDuration && nextDuration > 0) setDurationMinutes(String(nextDuration));
+              applyDurationPrefill(resolveDurationPrefill(clientId, nextJobId, ""));
             }}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >
@@ -259,11 +275,7 @@ export function AppointmentAddForm({
             onChange={(e) => {
               const nextProgramId = e.target.value;
               setProgramId(nextProgramId);
-              const programDuration = nextProgramId
-                ? programById.get(nextProgramId)?.defaultDurationMinutes ?? null
-                : null;
-              const nextDuration = programDuration ?? selectedJobDefaultDuration;
-              if (nextDuration && nextDuration > 0) setDurationMinutes(String(nextDuration));
+              applyDurationPrefill(resolveDurationPrefill(clientId, jobId, nextProgramId));
             }}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           >

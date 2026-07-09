@@ -14,6 +14,7 @@ import {
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
+import { resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
 import { redirect } from "next/navigation";
 import { AppointmentAddForm } from "../appointment-add-form";
 
@@ -103,10 +104,27 @@ export default async function NewAppointmentPage({
     defaultJobId: cl.default_job_id ?? null,
     defaultProgramId: cl.default_program_id ?? null,
     defaultVisitType: cl.default_visit_type ?? null,
+    defaultDurationMinutes: cl.default_session_length_minutes ?? null,
   }));
   const fromUpcoming = sp.fromUpcoming === "1";
   const startDatePrefill = (sp.startDate ?? "").trim() || (sp.startAt ?? "").trim().slice(0, 10) || undefined;
-  const durationMinutesPrefill = (sp.durationMinutes ?? "").trim() || undefined;
+  const prefillClient = sp.client ? clients.find((cl) => cl.id === sp.client) : undefined;
+  const prefillJobId = defaultClinicJobId(jobOpts, sp.job ?? prefillClient?.default_job_id ?? undefined);
+  const prefillProgramId = (sp.program ?? "").trim() || prefillClient?.default_program_id || undefined;
+  const durationMinutesPrefill =
+    (sp.durationMinutes ?? "").trim() ||
+    (() => {
+      const resolved = resolveSessionDurationMinutes({
+        clientDefaultMinutes: prefillClient?.default_session_length_minutes ?? null,
+        programDefaultMinutes: prefillProgramId
+          ? (programs.find((p) => p.id === prefillProgramId)?.default_session_length_minutes ?? null)
+          : null,
+        jobDefaultMinutes: prefillJobId
+          ? (jobs.find((j) => j.id === prefillJobId)?.default_session_length_minutes ?? null)
+          : null,
+      });
+      return resolved ? String(resolved) : undefined;
+    })();
 
   return (
     <div className="space-y-6">

@@ -19,6 +19,7 @@ export function resolveSessionDurationMinutes(params: {
   therapySettingsDefaultMinutes?: number | null;
   jobDefaultMinutes?: number | null;
   programDefaultMinutes?: number | null;
+  clientDefaultMinutes?: number | null;
   appointmentDurationMinutes?: number | null;
 }): number | null {
   const candidates = [
@@ -26,6 +27,7 @@ export function resolveSessionDurationMinutes(params: {
     params.therapySettingsDefaultMinutes,
     params.jobDefaultMinutes,
     params.programDefaultMinutes,
+    params.clientDefaultMinutes,
     params.appointmentDurationMinutes,
   ];
 

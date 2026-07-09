@@ -1488,6 +1488,9 @@ export async function createTherapyClient(formData: FormData) {
     formData,
     fallbackPath: fallbackErrorPath,
   });
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
 
   await prisma.$transaction(async (tx) => {
     await tx.therapy_clients.create({
@@ -1504,6 +1507,7 @@ export async function createTherapyClient(formData: FormData) {
         default_job_id,
         default_program_id,
         default_visit_type,
+        default_session_length_minutes,
         kupat_holim,
         family_id,
         billing_basis,
@@ -1605,6 +1609,9 @@ export async function updateTherapyClient(formData: FormData) {
     formData,
     fallbackPath: `${BASE}/clients/${id}/edit`,
   });
+  const default_session_length_minutes = parsePositiveInt(
+    (formData.get("default_session_length_minutes") as string | null) ?? null,
+  );
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -1621,6 +1628,7 @@ export async function updateTherapyClient(formData: FormData) {
           default_job_id,
           default_program_id,
           default_visit_type,
+          default_session_length_minutes,
           kupat_holim,
           family_id,
           billing_basis,
@@ -3692,11 +3700,12 @@ async function getGoogleCalendarUserForSync(
 
 async function resolveAppointmentDurationMinutes(params: {
   householdId: string;
+  clientId: string | null;
   jobId: string;
   programId: string | null;
   appointmentDurationMinutes: number | null;
 }) {
-  const [settings, job, program] = await Promise.all([
+  const [settings, job, program, client] = await Promise.all([
     prisma.therapy_settings.findUnique({
       where: { household_id: params.householdId },
       select: { default_session_length_minutes: true },
@@ -3711,6 +3720,12 @@ async function resolveAppointmentDurationMinutes(params: {
           select: { default_session_length_minutes: true },
         })
       : null,
+    params.clientId
+      ? prisma.therapy_clients.findFirst({
+          where: { id: params.clientId, household_id: params.householdId },
+          select: { default_session_length_minutes: true },
+        })
+      : null,
   ]);
 
   return resolveSessionDurationMinutes({
@@ -3718,6 +3733,7 @@ async function resolveAppointmentDurationMinutes(params: {
     therapySettingsDefaultMinutes: settings?.default_session_length_minutes ?? null,
     jobDefaultMinutes: job?.default_session_length_minutes ?? null,
     programDefaultMinutes: program?.default_session_length_minutes ?? null,
+    clientDefaultMinutes: client?.default_session_length_minutes ?? null,
     appointmentDurationMinutes: params.appointmentDurationMinutes,
   });
 }
@@ -3998,6 +4014,7 @@ export async function createTherapyAppointment(formData: FormData) {
   });
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
+    clientId: client_id,
     jobId: job_id,
     programId: programIdOrNull,
     appointmentDurationMinutes: appointmentDurationMinutesInput,
@@ -4367,6 +4384,7 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
   if (!start_at || Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
+    clientId: before.client_id,
     jobId: before.job_id,
     programId: before.program_id,
     appointmentDurationMinutes:
@@ -4491,6 +4509,7 @@ export async function updateTherapyAppointment(formData: FormData) {
 
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
+    clientId: client_id,
     jobId: job_id,
     programId: programIdOrNull,
     appointmentDurationMinutes:
@@ -4791,6 +4810,7 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
   const durationInput = parsePositiveInt((formData.get("duration_minutes") as string | null) ?? null);
   const resolvedDuration = await resolveAppointmentDurationMinutes({
     householdId,
+    clientId: client_id,
     jobId: job_id,
     programId: programIdOrNull,
     appointmentDurationMinutes: durationInput,
@@ -4868,6 +4888,7 @@ export async function updateTherapyAppointmentSeriesFromDate(formData: FormData)
   const time_of_day = new Date(1970, 0, 1, hh || 0, mm || 0, 0, 0);
   const resolvedDuration = await resolveAppointmentDurationMinutes({
     householdId,
+    clientId: oldSeries.client_id,
     jobId: oldSeries.job_id,
     programId: oldSeries.program_id,
     appointmentDurationMinutes: durationInput ?? oldSeries.duration_minutes,

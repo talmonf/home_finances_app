@@ -34,6 +34,7 @@ export type TherapyClientFormEditRow = {
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
+  default_session_length_minutes: number | null;
   kupat_holim: "clalit" | "maccabi" | "meuhedet" | "leumit" | null;
   family_id: string | null;
   billing_basis: "per_treatment" | "per_month" | null;
@@ -94,6 +95,7 @@ export function TherapyClientForm({
     defaultJob: cl.defaultJob,
     defaultProgramOptional: cl.defaultProgramOptional,
     defaultVisitTypeOptional: cl.defaultVisitTypeOptional,
+    defaultSessionLengthOptional: c.defaultSessionLengthMinutes,
     selectJob: cl.selectJob,
     none: c.none,
     alsoSeenUnder: cl.alsoSeenUnder,
@@ -465,6 +467,7 @@ export function TherapyClientForm({
         defaultJobId={client?.default_job_id}
         defaultProgramId={client?.default_program_id}
         defaultVisitType={client?.default_visit_type}
+        defaultSessionLengthMinutes={client?.default_session_length_minutes}
         defaultKupatHolim={client?.kupat_holim}
         defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
         labels={jobFieldLabels}

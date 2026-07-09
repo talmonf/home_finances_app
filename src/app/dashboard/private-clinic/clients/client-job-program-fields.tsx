@@ -16,6 +16,7 @@ export type ClientJobProgramFieldLabels = {
   defaultJob: string;
   defaultProgramOptional: string;
   defaultVisitTypeOptional: string;
+  defaultSessionLengthOptional: string;
   kupatHolimOptional: string;
   selectJob: string;
   none: string;
@@ -34,6 +35,7 @@ const DEFAULT_LABELS: ClientJobProgramFieldLabels = {
   defaultJob: "Default job",
   defaultProgramOptional: "Default program (optional)",
   defaultVisitTypeOptional: "Default visit type (optional)",
+  defaultSessionLengthOptional: "Default session length (minutes, optional)",
   kupatHolimOptional: "Kupat Holim (optional)",
   selectJob: "Select job",
   none: "None",
@@ -54,6 +56,7 @@ export function ClientJobProgramFields({
   defaultJobId,
   defaultProgramId,
   defaultVisitType,
+  defaultSessionLengthMinutes,
   defaultKupatHolim,
   defaultCheckedJobIds,
   requiredProgram,
@@ -67,6 +70,7 @@ export function ClientJobProgramFields({
   defaultJobId?: string | null;
   defaultProgramId?: string | null;
   defaultVisitType?: "clinic" | "home" | "phone" | "video" | null;
+  defaultSessionLengthMinutes?: number | null;
   defaultKupatHolim?: "clalit" | "maccabi" | "meuhedet" | "leumit" | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
@@ -198,6 +202,19 @@ export function ClientJobProgramFields({
           <option value="phone">{labels.visitPhone}</option>
           <option value="video">{labels.visitVideo}</option>
         </select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="block text-xs text-slate-400">{labels.defaultSessionLengthOptional}</label>
+        <input
+          name="default_session_length_minutes"
+          type="number"
+          min={1}
+          max={999}
+          step={1}
+          defaultValue={defaultSessionLengthMinutes ?? ""}
+          className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
       </div>
 
       <div className="space-y-1">

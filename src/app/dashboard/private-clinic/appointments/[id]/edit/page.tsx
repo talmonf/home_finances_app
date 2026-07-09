@@ -148,6 +148,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
       : isoDateOnly(addDays(apt.start_at, 7));
   const defaultDurationMinutes = String(
     apt.duration_minutes ??
+      apt.client.default_session_length_minutes ??
       apt.program?.default_session_length_minutes ??
       apt.job.default_session_length_minutes ??
       50,

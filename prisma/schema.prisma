@@ -2106,6 +2106,7 @@ model therapy_clients {
   default_job_id     String
   default_program_id String?
   default_visit_type TherapyVisitType?
+  default_session_length_minutes Int?
   kupat_holim        TherapyKupatHolim?
   billing_basis      TherapyBillingBasis?
   billing_timing     TherapyBillingTiming?
