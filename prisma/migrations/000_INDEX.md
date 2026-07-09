@@ -14,7 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
-- [ ] 138_therapy_clients_default_session_length.sql (2026-07-09)
+- [x 138_therapy_clients_default_session_length.sql (2026-07-09)
 - [x] 137_therapy_clients_agreed_fee_and_payment_defaults.sql (2026-07-08)
 - [x] 136_receipt_numbering_mode_and_source.sql (2026-07-03)
 - [x] 135_job_morning_integration.sql (2026-07-03)
