@@ -555,7 +555,10 @@ export function privateClinicTreatments(lang: UiLanguage) {
     filterSelectedCountTemplate: p("{count} selected", "{count} נבחרו"),
     logTreatment: p("Log treatment", "רישום טיפול"),
     dateTime: c.dateTime,
-    occurredTimeOptional: p("Time (optional, 24-hour, UTC)", "שעה (אופציונלי, 24 שעות, UTC)"),
+    occurredTimeOptional: p(
+      "Time (optional, 24-hour, Israel time)",
+      "שעה (אופציונלי, 24 שעות, שעון ישראל)",
+    ),
     visitType: p("Visit type", "סוג ביקור"),
     saveTreatment: p("Save treatment", "שמירת טיפול"),
     treatmentsCount: (n: number) => p(`Treatments (${n})`, `טיפולים (${n})`),

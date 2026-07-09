@@ -28,9 +28,9 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-const ISRAEL_TIME_ZONE = "Asia/Jerusalem";
+export const ISRAEL_TIME_ZONE = "Asia/Jerusalem";
 
-function getDateTimePartsInIsraelTime(d: Date): {
+export function getDateTimePartsInIsraelTime(d: Date): {
   year: number;
   month: number;
   day: number;
@@ -55,6 +55,62 @@ function getDateTimePartsInIsraelTime(d: Date): {
     hour: get("hour"),
     minute: get("minute"),
   };
+}
+
+/** Wall-clock date/time in `timeZone` → UTC `Date` (iterative offset correction). */
+export function zonedTimeToUtcDate(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timeZone: string,
+): Date | null {
+  if (
+    year < 1980 ||
+    year > 2100 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+  const targetUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guessMs = targetUtcMs;
+  for (let i = 0; i < 2; i += 1) {
+    const guess = new Date(guessMs);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(guess);
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((p) => p.type === type)?.value ?? "0");
+    const asUtcMs = Date.UTC(
+      get("year"),
+      get("month") - 1,
+      get("day"),
+      get("hour"),
+      get("minute"),
+      get("second"),
+    );
+    guessMs = targetUtcMs - (asUtcMs - guessMs);
+  }
+  const out = new Date(guessMs);
+  return Number.isNaN(out.getTime()) ? null : out;
 }
 
 export function formatYmdParts(
