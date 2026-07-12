@@ -509,8 +509,8 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
   return {
     pageTitle: p("Upcoming visits", "ביקורים קרובים"),
     pageIntro: p(
-      "Active clients with a visit frequency, ordered by estimated next visit after the last logged treatment.",
-      "לקוחות פעילים עם תדירות ביקורים, ממוינים לפי מועד הביקור הבא המשוער אחרי הטיפול האחרון שרשמתם.",
+      "Active clients with a visit frequency. Default order is next visit due; click a column header to sort.",
+      "לקוחות פעילים עם תדירות ביקורים. ברירת המחדל היא לפי מועד הביקור הבא; לחצו על כותרת עמודה למיון.",
     ),
     colClient: p("Client", "לקוח"),
     colLastVisit: p("Last visit", "ביקור אחרון"),

@@ -22,12 +22,116 @@ import { UpcomingVisitAppointmentActions } from "./upcoming-visit-appointment-ac
 
 export const dynamic = "force-dynamic";
 
+const UPCOMING_VISITS_BASE = "/dashboard/private-clinic/upcoming-visits";
+
 type NextAppointmentRef = {
   id: string | null;
   seriesId: string | null;
   occurrenceDate: string | null;
   startAt: Date;
 };
+
+type SortKey =
+  | "client"
+  | "next_due"
+  | "scheduled"
+  | "overdue"
+  | "last_visit"
+  | "job"
+  | "program"
+  | "kupat_holim"
+  | "family";
+
+type SortDir = "asc" | "desc";
+
+function parseSortKey(raw: string | undefined): SortKey {
+  const allowed: SortKey[] = [
+    "client",
+    "next_due",
+    "scheduled",
+    "overdue",
+    "last_visit",
+    "job",
+    "program",
+    "kupat_holim",
+    "family",
+  ];
+  return allowed.includes(raw as SortKey) ? (raw as SortKey) : "next_due";
+}
+
+function parseSortDir(raw: string | undefined): SortDir {
+  return raw === "desc" ? "desc" : "asc";
+}
+
+function upcomingVisitsHref(p: { family?: string; sort: SortKey; dir: SortDir }) {
+  const sp = new URLSearchParams();
+  if (p.family?.trim()) sp.set("family", p.family.trim());
+  if (p.sort !== "next_due") sp.set("sort", p.sort);
+  if (p.dir !== "asc") sp.set("dir", p.dir);
+  const qs = sp.toString();
+  return qs ? `${UPCOMING_VISITS_BASE}?${qs}` : UPCOMING_VISITS_BASE;
+}
+
+function SortHeader({
+  column,
+  label,
+  sort,
+  dir,
+  family,
+  sortHintAsc,
+  sortHintDesc,
+  sticky,
+}: {
+  column: SortKey;
+  label: string;
+  sort: SortKey;
+  dir: SortDir;
+  family: string;
+  sortHintAsc: string;
+  sortHintDesc: string;
+  sticky?: boolean;
+}) {
+  const nextDir: SortDir = sort === column ? (dir === "asc" ? "desc" : "asc") : "asc";
+  const href = upcomingVisitsHref({ family, sort: column, dir: nextDir });
+  const active = sort === column;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
+      className={
+        sticky
+          ? "sticky start-0 z-20 bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
+          : "px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+      }
+    >
+      <Link
+        href={href}
+        className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300"
+        title={active ? (dir === "asc" ? sortHintDesc : sortHintAsc) : sortHintAsc}
+      >
+        <span>{label}</span>
+        {active ? <span aria-hidden="true">{dir === "asc" ? "↑" : "↓"}</span> : null}
+      </Link>
+    </th>
+  );
+}
+
+function compareNullableDate(
+  a: Date | null | undefined,
+  b: Date | null | undefined,
+  direction: number,
+): number {
+  const aTime = a?.getTime() ?? null;
+  const bTime = b?.getTime() ?? null;
+  if (aTime == null && bTime == null) return 0;
+  if (aTime == null) return 1;
+  if (bTime == null) return -1;
+  return (aTime - bTime) * direction;
+}
+
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
 
 function visitDueFlags(
   nextDue: Date,
@@ -47,7 +151,7 @@ function visitDueFlags(
 export default async function UpcomingVisitsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ family?: string }>;
+  searchParams?: Promise<{ family?: string; sort?: string; dir?: string }>;
 }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -60,7 +164,7 @@ export default async function UpcomingVisitsPage({
   const uv = privateClinicUpcomingVisits(uiLanguage);
   const ap = privateClinicAppointments(uiLanguage);
   const cl = privateClinicClients(uiLanguage);
-  const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
+  const familyLabel = cl.colFamily;
   const anyFamilyLabel = uiLanguage === "he" ? "כל משפחה" : "Any family";
 
   const user = await prisma.users.findFirst({
@@ -70,7 +174,8 @@ export default async function UpcomingVisitsPage({
   const familyMemberId = user?.family_member_id ?? null;
   const sp = searchParams ? await searchParams : {};
   const familyFilter = (sp.family ?? "").trim();
-
+  const sort = parseSortKey(sp.sort);
+  const dir = parseSortDir(sp.dir);
   const settings = await prisma.therapy_settings.findUnique({
     where: { household_id: householdId },
     select: { family_therapy_enabled: true },
@@ -140,11 +245,45 @@ export default async function UpcomingVisitsPage({
     programId: string | null;
     programLabel: string;
     kupatHolimLabel: string;
+    familyLabel: string;
     lastVisit: Date | null;
     nextDue: Date;
     isOverdue: boolean;
     isDueToday: boolean;
     nextAppointment: NextAppointmentRef | null;
+  };
+
+  const toScheduledRow = (
+    row: (typeof allActiveClients)[number],
+    nextDue: Date,
+    lastVisit: Date | null,
+    nextAppointment: NextAppointmentRef | null,
+  ): ScheduledRow => {
+    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
+    const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
+    return {
+      clientId: row.id,
+      name,
+      jobLabel: formatJobDisplayLabel(row.default_job),
+      programId: row.default_program_id,
+      programLabel: row.default_program?.name ?? c.none,
+      kupatHolimLabel:
+        row.kupat_holim === "clalit"
+          ? cl.kupatClalit
+          : row.kupat_holim === "maccabi"
+            ? cl.kupatMaccabi
+            : row.kupat_holim === "meuhedet"
+              ? cl.kupatMeuhedet
+              : row.kupat_holim === "leumit"
+                ? cl.kupatLeumit
+                : c.none,
+      familyLabel: row.family?.name ?? "—",
+      lastVisit,
+      nextDue,
+      isOverdue,
+      isDueToday,
+      nextAppointment,
+    };
   };
 
   const scheduled: ScheduledRow[] = [];
@@ -164,71 +303,13 @@ export default async function UpcomingVisitsPage({
 
       const nextDue = dateOnlyLocal(row.start_date);
       const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
-      const { isOverdue, isDueToday } = visitDueFlags(
-        nextDue,
-        today,
-        now,
-        nextAppointment,
-      );
-
-      const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
-      scheduled.push({
-        clientId: row.id,
-        name,
-        jobLabel: formatJobDisplayLabel(row.default_job),
-        programId: row.default_program_id,
-        programLabel: row.default_program?.name ?? c.none,
-        kupatHolimLabel:
-          row.kupat_holim === "clalit"
-            ? cl.kupatClalit
-            : row.kupat_holim === "maccabi"
-              ? cl.kupatMaccabi
-              : row.kupat_holim === "meuhedet"
-                ? cl.kupatMeuhedet
-                : row.kupat_holim === "leumit"
-                  ? cl.kupatLeumit
-                  : c.none,
-        lastVisit: null,
-        nextDue,
-        isOverdue,
-        isDueToday,
-        nextAppointment,
-      });
+      scheduled.push(toScheduledRow(row, nextDue, null, nextAppointment));
       continue;
     }
 
     const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
     const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
-    const { isOverdue, isDueToday } = visitDueFlags(
-      nextDue,
-      today,
-      now,
-      nextAppointment,
-    );
-
-    const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
-    scheduled.push({
-      clientId: row.id,
-      name,
-      jobLabel: formatJobDisplayLabel(row.default_job),
-      programId: row.default_program_id,
-      programLabel: row.default_program?.name ?? c.none,
-      kupatHolimLabel:
-        row.kupat_holim === "clalit"
-          ? cl.kupatClalit
-          : row.kupat_holim === "maccabi"
-            ? cl.kupatMaccabi
-            : row.kupat_holim === "meuhedet"
-              ? cl.kupatMeuhedet
-              : row.kupat_holim === "leumit"
-                ? cl.kupatLeumit
-                : c.none,
-      lastVisit: lastAt,
-      nextDue,
-      isOverdue,
-      isDueToday,
-      nextAppointment,
-    });
+    scheduled.push(toScheduledRow(row, nextDue, lastAt, nextAppointment));
   }
 
   const scheduledClientIds = new Set(scheduled.map((row) => row.clientId));
@@ -238,33 +319,53 @@ export default async function UpcomingVisitsPage({
     if (!row) continue;
 
     const nextDue = dateOnlyLocal(nextAppointment.startAt);
-    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
-    const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
-    scheduled.push({
-      clientId: row.id,
-      name,
-      jobLabel: formatJobDisplayLabel(row.default_job),
-      programId: row.default_program_id,
-      programLabel: row.default_program?.name ?? c.none,
-      kupatHolimLabel:
-        row.kupat_holim === "clalit"
-          ? cl.kupatClalit
-          : row.kupat_holim === "maccabi"
-            ? cl.kupatMaccabi
-            : row.kupat_holim === "meuhedet"
-              ? cl.kupatMeuhedet
-              : row.kupat_holim === "leumit"
-                ? cl.kupatLeumit
-                : c.none,
-      lastVisit: lastVisitAtByClientId.get(row.id) ?? null,
-      nextDue,
-      isOverdue,
-      isDueToday,
-      nextAppointment,
-    });
+    scheduled.push(
+      toScheduledRow(row, nextDue, lastVisitAtByClientId.get(row.id) ?? null, nextAppointment),
+    );
   }
 
-  scheduled.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+  const direction = dir === "asc" ? 1 : -1;
+  scheduled.sort((a, b) => {
+    let cmp = 0;
+    switch (sort) {
+      case "client":
+        cmp = compareText(a.name, b.name) * direction;
+        break;
+      case "scheduled":
+        cmp = compareNullableDate(
+          a.nextAppointment?.startAt,
+          b.nextAppointment?.startAt,
+          direction,
+        );
+        break;
+      case "overdue":
+        cmp = (Number(a.isOverdue) - Number(b.isOverdue)) * direction;
+        break;
+      case "last_visit":
+        cmp = compareNullableDate(a.lastVisit, b.lastVisit, direction);
+        break;
+      case "job":
+        cmp = compareText(a.jobLabel, b.jobLabel) * direction;
+        break;
+      case "program":
+        cmp = compareText(a.programLabel, b.programLabel) * direction;
+        break;
+      case "kupat_holim":
+        cmp = compareText(a.kupatHolimLabel, b.kupatHolimLabel) * direction;
+        break;
+      case "family":
+        cmp = compareText(a.familyLabel, b.familyLabel) * direction;
+        break;
+      case "next_due":
+      default:
+        cmp = (a.nextDue.getTime() - b.nextDue.getTime()) * direction;
+        break;
+    }
+    if (cmp !== 0) return cmp;
+    cmp = a.nextDue.getTime() - b.nextDue.getTime();
+    if (cmp !== 0) return cmp;
+    return compareText(a.name, b.name);
+  });
 
   const showScheduledColumn = scheduled.some((row) => row.nextAppointment != null);
   const showOverdueColumn = scheduled.some((row) => row.isOverdue);
@@ -315,6 +416,8 @@ export default async function UpcomingVisitsPage({
           method="get"
           className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3 sm:gap-x-3 sm:p-4"
         >
+          {sort !== "next_due" ? <input type="hidden" name="sort" value={sort} /> : null}
+          {dir !== "asc" ? <input type="hidden" name="dir" value={dir} /> : null}
           <div className="min-w-0 flex-1 basis-[12rem]">
             <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
             <select
@@ -338,7 +441,10 @@ export default async function UpcomingVisitsPage({
               {c.apply}
             </button>
             {familyFilter ? (
-              <PrivateClinicFilterResetButton href="/dashboard/private-clinic/upcoming-visits" label={c.filterReset} />
+              <PrivateClinicFilterResetButton
+                href={upcomingVisitsHref({ sort, dir })}
+                label={c.filterReset}
+              />
             ) : null}
           </div>
         </form>
@@ -354,65 +460,93 @@ export default async function UpcomingVisitsPage({
                 <table className="min-w-full divide-y divide-slate-700 text-sm">
                   <thead className="bg-slate-900/80">
                     <tr>
-                      <th
-                        scope="col"
-                        className="sticky start-0 z-20 bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
-                      >
-                        {uv.colClient}
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colNextDue}
-                      </th>
+                      <SortHeader
+                        column="client"
+                        label={uv.colClient}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                        sticky
+                      />
+                      <SortHeader
+                        column="next_due"
+                        label={uv.colNextDue}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                      />
                       {showScheduledColumn ? (
-                        <th
-                          scope="col"
-                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                        >
-                          {uv.colScheduled}
-                        </th>
+                        <SortHeader
+                          column="scheduled"
+                          label={uv.colScheduled}
+                          sort={sort}
+                          dir={dir}
+                          family={familyFilter}
+                          sortHintAsc={cl.sortHintAsc}
+                          sortHintDesc={cl.sortHintDesc}
+                        />
                       ) : null}
                       {showOverdueColumn ? (
-                        <th
-                          scope="col"
-                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                        >
-                          {uv.colOverdue}
-                        </th>
+                        <SortHeader
+                          column="overdue"
+                          label={uv.colOverdue}
+                          sort={sort}
+                          dir={dir}
+                          family={familyFilter}
+                          sortHintAsc={cl.sortHintAsc}
+                          sortHintDesc={cl.sortHintDesc}
+                        />
                       ) : null}
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colLastVisit}
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colJob}
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colProgram}
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                      >
-                        {uv.colKupatHolim}
-                      </th>
+                      <SortHeader
+                        column="last_visit"
+                        label={uv.colLastVisit}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                      />
+                      <SortHeader
+                        column="job"
+                        label={uv.colJob}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                      />
+                      <SortHeader
+                        column="program"
+                        label={uv.colProgram}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                      />
+                      <SortHeader
+                        column="kupat_holim"
+                        label={uv.colKupatHolim}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
+                      />
                       {settings?.family_therapy_enabled ? (
-                        <th
-                          scope="col"
-                          className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-                        >
-                          Family
-                        </th>
+                        <SortHeader
+                          column="family"
+                          label={familyLabel}
+                          sort={sort}
+                          dir={dir}
+                          family={familyFilter}
+                          sortHintAsc={cl.sortHintAsc}
+                          sortHintDesc={cl.sortHintDesc}
+                        />
                       ) : null}
                       <th
                         scope="col"
@@ -498,8 +632,8 @@ export default async function UpcomingVisitsPage({
                           {r.kupatHolimLabel}
                         </td>
                         {settings?.family_therapy_enabled ? (
-                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={allActiveClients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}>
-                            {allActiveClients.find((cRow) => cRow.id === r.clientId)?.family?.name ?? "—"}
+                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.familyLabel}>
+                            {r.familyLabel}
                           </td>
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
