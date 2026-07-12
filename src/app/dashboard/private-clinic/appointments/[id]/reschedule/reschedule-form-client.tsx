@@ -114,13 +114,15 @@ export function RescheduleFormClient({
       <div className="space-y-1">
         <span className="block text-sm text-slate-300">{labels.start}</span>
         <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
-          <HouseholdDateIsoControl
-            valueIso={startDate}
-            onIsoChange={syncBothDates}
-            required
-            className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            aria-label={labels.startDate}
-          />
+          <div className="w-fit shrink-0">
+            <HouseholdDateIsoControl
+              valueIso={startDate}
+              onIsoChange={syncBothDates}
+              required
+              className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              aria-label={labels.startDate}
+            />
+          </div>
           <div className="flex shrink-0 items-center gap-1">
             <select
               value={startTimeHour}
@@ -166,14 +168,16 @@ export function RescheduleFormClient({
 
       <div className="space-y-1">
         <span className="block text-sm text-slate-300">{labels.endOptional}</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <HouseholdDateIsoControl
-            valueIso={endDate}
-            onIsoChange={syncBothDates}
-            className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            aria-label={labels.endOptional}
-          />
-          <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
+          <div className="w-fit shrink-0">
+            <HouseholdDateIsoControl
+              valueIso={endDate}
+              onIsoChange={syncBothDates}
+              className="w-[11.5rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              aria-label={labels.endOptional}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <select
               value={endTimeHour}
               onChange={(e) => setEndTimeHour(e.target.value)}
