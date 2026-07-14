@@ -255,21 +255,19 @@ export default async function PrivateClinicSettingsPage({
             />
             {st.googleCalendarEnabled}
           </label>
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">{st.gmailAddress}</label>
-            <GoogleCalendarConnectionControls
-              googleConnected={googleConnected}
-              initialGmailAddress={defaultGoogleGmailAddress}
-              labels={{
-                accountConnected: st.googleAccountConnected,
-                accountNotConnected: st.googleAccountNotConnected,
-                connectAccount: st.connectGoogleAccount,
-                reconnectAccount: st.reconnectGoogleAccount,
-                gmailChangedReconnect: st.gmailChangedReconnect,
-                gmailPlaceholder: st.gmailPlaceholder,
-              }}
-            />
-          </div>
+          <GoogleCalendarConnectionControls
+            googleConnected={googleConnected}
+            initialGmailAddress={defaultGoogleGmailAddress}
+            labels={{
+              accountConnected: st.googleAccountConnected,
+              accountNotConnected: st.googleAccountNotConnected,
+              connectAccount: st.connectGoogleAccount,
+              reconnectAccount: st.reconnectGoogleAccount,
+              gmailAddress: st.gmailAddress,
+              gmailChangedReconnect: st.gmailChangedReconnect,
+              gmailPlaceholder: st.gmailPlaceholder,
+            }}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"

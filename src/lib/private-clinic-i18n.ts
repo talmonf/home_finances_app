@@ -1429,7 +1429,7 @@ export function privateClinicSettings(lang: UiLanguage) {
     googleAccountConnected: p("Google account connected.", "חשבון Google מחובר."),
     googleAccountNotConnected: p("Google account not connected yet.", "חשבון Google עדיין לא מחובר."),
     connectGoogleAccount: p("Connect Google account", "חיבור חשבון Google"),
-    reconnectGoogleAccount: p("Reconnect Google account", "חיבור מחדש לחשבון Google"),
+    reconnectGoogleAccount: p("Reconnect", "חיבור מחדש"),
     gmailChangedReconnect: p(
       "Gmail changed. Reconnect to apply it for calendar sync.",
       "כתובת Gmail השתנתה. חברו מחדש כדי להחיל אותה לסנכרון היומן.",
