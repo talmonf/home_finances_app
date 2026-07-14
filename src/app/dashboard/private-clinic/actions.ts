@@ -4778,7 +4778,7 @@ export async function reportTreatmentFromAppointment(formData: FormData) {
   revalidatePath(`${BASE}/travel`);
   revalidatePath(`${BASE}/reports`);
   revalidatePath(`${BASE}/upcoming-visits`);
-  redirect(`${BASE}/appointments/${appointmentId}/edit?saved=1`);
+  redirect(`${BASE}/appointments/${appointmentId}/edit?saved=treatment`);
 }
 
 export async function createTherapyAppointmentSeries(formData: FormData) {

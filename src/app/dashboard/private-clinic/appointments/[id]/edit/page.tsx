@@ -41,7 +41,7 @@ const LIST = "/dashboard/private-clinic/appointments";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string; saved?: string }>;
+  searchParams?: Promise<{ error?: string; saved?: string; warn?: string }>;
 };
 
 export default async function EditAppointmentPage({ params, searchParams }: PageProps) {
@@ -111,7 +111,10 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
     label: therapyVisitTypeLabel(uiLanguage, v),
   }));
 
-  const redirectOnSuccess = `${LIST}/${id}/edit?saved=1`;
+  const redirectOnSuccess = `${LIST}/${id}/edit?saved=appointment`;
+  const googleSyncFailed = query.warn === "google-sync";
+  const treatmentSaved = query.saved === "1" || query.saved === "treatment";
+  const appointmentSaved = query.saved === "appointment";
   const now = new Date();
   const clientUpcoming = await getUpcomingAppointmentsForHousehold({
     householdId,
@@ -254,9 +257,28 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         </div>
       ) : null}
 
-      {query.saved === "1" ? (
+      {treatmentSaved ? (
         <div className="rounded-xl border border-emerald-700/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100/90">
           {ap.reportTreatmentSaved}
+        </div>
+      ) : null}
+
+      {appointmentSaved ? (
+        <div className="rounded-xl border border-emerald-700/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100/90">
+          {c.saved}
+        </div>
+      ) : null}
+
+      {googleSyncFailed ? (
+        <div className="rounded-xl border border-amber-700/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+          <p className="font-medium">{ap.googleSyncFailedWarn}</p>
+          <p className="mt-1 text-amber-100/90">{ap.googleSyncFailedHint}</p>
+          <Link
+            href="/dashboard/private-clinic/settings"
+            className="mt-2 inline-block text-sm font-medium text-sky-300 hover:text-sky-200 hover:underline"
+          >
+            {ap.googleSyncOpenSettings}
+          </Link>
         </div>
       ) : null}
 
