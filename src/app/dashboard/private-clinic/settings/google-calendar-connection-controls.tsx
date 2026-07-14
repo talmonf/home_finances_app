@@ -44,14 +44,12 @@ export function GoogleCalendarConnectionControls({
         {googleConnected ? labels.accountConnected : labels.accountNotConnected}
       </div>
 
-      {!googleConnected || hasGmailChanged ? (
-        <a
-          href="/api/integrations/google/calendar/connect?returnTo=/dashboard/private-clinic/settings"
-          className="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-100 hover:bg-slate-800"
-        >
-          {googleConnected ? labels.reconnectAccount : labels.connectAccount}
-        </a>
-      ) : null}
+      <a
+        href="/api/integrations/google/calendar/connect?returnTo=/dashboard/private-clinic/settings"
+        className="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-100 hover:bg-slate-800"
+      >
+        {googleConnected ? labels.reconnectAccount : labels.connectAccount}
+      </a>
 
       {googleConnected && hasGmailChanged ? (
         <span className="text-xs text-slate-400">{labels.gmailChangedReconnect}</span>
