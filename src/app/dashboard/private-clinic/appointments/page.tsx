@@ -57,6 +57,10 @@ export default async function AppointmentsPage({
     client?: string;
     from?: string;
     to?: string;
+    created?: string;
+    updated?: string;
+    series?: string;
+    warn?: string;
   }>;
 }) {
   const session = await requireHouseholdMember();
@@ -65,6 +69,7 @@ export default async function AppointmentsPage({
 
   const sp = searchParams ? await searchParams : {};
   const filters = parseAppointmentListFilters(sp);
+  const googleSyncFailed = sp.warn === "google-sync";
 
   const user = await prisma.users.findFirst({
     where: { id: session.user.id, household_id: householdId, is_active: true },
@@ -126,6 +131,19 @@ export default async function AppointmentsPage({
           {ap.addAppointment}
         </Link>
       </div>
+
+      {googleSyncFailed ? (
+        <div className="rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">
+          <p className="font-medium">{ap.googleSyncFailedWarn}</p>
+          <p className="mt-1 text-amber-100/90">{ap.googleSyncFailedHint}</p>
+          <Link
+            href="/dashboard/private-clinic/settings"
+            className="mt-2 inline-block text-sm font-medium text-sky-300 hover:text-sky-200 hover:underline"
+          >
+            {ap.googleSyncOpenSettings}
+          </Link>
+        </div>
+      ) : null}
 
       <form
         method="get"

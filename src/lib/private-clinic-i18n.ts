@@ -1143,6 +1143,15 @@ export function privateClinicAppointments(lang: UiLanguage) {
     editRecurrence: p("Edit recurrence", "עריכת חזרתיות"),
     editRecurrenceTitle: p("Edit recurrence from this date", "עריכת חזרתיות מתאריך זה"),
     googleSeriesSyncError: p("Google Calendar sync error", "שגיאת סנכרון Google Calendar"),
+    googleSyncFailedWarn: p(
+      "Appointment saved, but it was not synced to Google Calendar.",
+      "התור נשמר, אך לא סונכרן ל-Google Calendar.",
+    ),
+    googleSyncFailedHint: p(
+      "Try reconnecting your Google account in Clinic Settings.",
+      "נסו לחבר מחדש את חשבון Google בהגדרות הקליניקה.",
+    ),
+    googleSyncOpenSettings: p("Open Google Calendar settings", "פתיחת הגדרות Google Calendar"),
     remove: p("Remove", "הסרה"),
     additionalClients: p("Additional clients", "לקוחות נוספים"),
     addAdditionalClient: p("Add additional client", "הוספת לקוח נוסף"),

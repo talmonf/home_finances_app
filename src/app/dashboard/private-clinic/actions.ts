@@ -4429,7 +4429,7 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
       where: { id: userId, household_id: householdId },
       select: { ui_language: true },
     });
-    await syncAppointmentToGoogleCalendar({
+    const syncError = await syncAppointmentToGoogleCalendar({
       householdId,
       actingUserId: userId,
       actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
@@ -4446,6 +4446,10 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
         job: { job_title: after.job.job_title },
       },
     });
+    revalidatePath(`${BASE}/appointments`);
+    revalidatePath(`${BASE}/reports`);
+    const updatedSuffix = syncError ? "updated=1&warn=google-sync" : "updated=1";
+    appointmentsSuccessRedirect(formData, `${BASE}/appointments?${updatedSuffix}`);
   }
 
   revalidatePath(`${BASE}/appointments`);
@@ -4567,7 +4571,7 @@ export async function updateTherapyAppointment(formData: FormData) {
       where: { id: userId, household_id: householdId },
       select: { ui_language: true },
     });
-    await syncAppointmentToGoogleCalendar({
+    const syncError = await syncAppointmentToGoogleCalendar({
       householdId,
       actingUserId: userId,
       actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
@@ -4584,6 +4588,10 @@ export async function updateTherapyAppointment(formData: FormData) {
         job: { job_title: after.job.job_title },
       },
     });
+    revalidatePath(`${BASE}/appointments`);
+    revalidatePath(`${BASE}/reports`);
+    const updatedSuffix = syncError ? "updated=1&warn=google-sync" : "updated=1";
+    appointmentsSuccessRedirect(formData, `${BASE}/appointments?${updatedSuffix}`);
   }
 
   revalidatePath(`${BASE}/appointments`);
@@ -4840,7 +4848,7 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
     where: { id: userId, household_id: householdId },
     select: { ui_language: true },
   });
-  await syncSeriesToGoogleCalendar({
+  const syncError = await syncSeriesToGoogleCalendar({
     householdId,
     actingUserId: userId,
     actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
@@ -4849,7 +4857,8 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
 
   revalidatePath(`${BASE}/appointments`);
   revalidatePath(`${BASE}/reports`);
-  appointmentsSuccessRedirect(formData, `${BASE}/appointments?series=1`);
+  const seriesSuffix = syncError ? "series=1&warn=google-sync" : "series=1";
+  appointmentsSuccessRedirect(formData, `${BASE}/appointments?${seriesSuffix}`);
 }
 
 export async function updateTherapyAppointmentSeriesFromDate(formData: FormData) {

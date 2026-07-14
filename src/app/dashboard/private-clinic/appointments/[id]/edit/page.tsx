@@ -163,6 +163,21 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         <h2 className="mt-2 text-lg font-medium text-slate-200">{ap.editTitle}</h2>
       </div>
 
+      {apt.google_calendar_last_error ? (
+        <div className="rounded-xl border border-rose-700/50 bg-rose-950/30 px-4 py-3 text-sm text-rose-100/90">
+          <p className="font-medium">
+            {ap.googleSeriesSyncError}: {apt.google_calendar_last_error}
+          </p>
+          <p className="mt-1 text-xs text-rose-100/80">{ap.googleSyncFailedHint}</p>
+          <Link
+            href="/dashboard/private-clinic/settings"
+            className="mt-2 inline-block text-sm font-medium text-sky-300 hover:text-sky-200 hover:underline"
+          >
+            {ap.googleSyncOpenSettings}
+          </Link>
+        </div>
+      ) : null}
+
       {apt.series_id && apt.series ? (
         <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100/90">
           <p className="font-medium">{ap.partOfSeries}</p>
