@@ -192,6 +192,11 @@ export default async function PrivateClinicSettingsPage({
       ? ({ kind: "err" as const, text: "Please enter a valid Gmail address to enable integration." })
       : sp.error === "google-not-connected"
         ? ({ kind: "err" as const, text: "Connect your Google account before enabling integration." })
+      : sp.error === "google-oauth-host"
+        ? ({
+            kind: "err" as const,
+            text: "Open Clinic Settings on your main site URL (the same host as Google redirect), then reconnect.",
+          })
       : sp.error === "google-oauth" || sp.error === "google-oauth-state"
         ? ({ kind: "err" as const, text: "Google connection failed. Please try connecting again." })
       : sp.error === "cat"

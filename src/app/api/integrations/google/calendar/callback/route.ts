@@ -1,28 +1,33 @@
 import { getAuthSession, prisma } from "@/lib/auth";
 import { exchangeGoogleCodeForTokens, saveGoogleTokensForUser } from "@/lib/google-calendar/oauth";
+import {
+  clearGoogleOAuthCookies,
+  GOOGLE_OAUTH_RETURN_COOKIE,
+  GOOGLE_OAUTH_STATE_COOKIE,
+} from "@/lib/google-calendar/oauth-cookies";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const STATE_COOKIE = "gc_oauth_state";
-const RETURN_COOKIE = "gc_oauth_return_to";
-
 export async function GET(request: Request) {
-  const session = await getAuthSession();
-  if (!session?.user?.id || session.user.isSuperAdmin) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+
+  const session = await getAuthSession();
+  if (!session?.user?.id || session.user.isSuperAdmin) {
+    // Preserve the Google callback so login can finish the OAuth exchange.
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", `${url.pathname}${url.search}`);
+    return NextResponse.redirect(loginUrl);
+  }
+
   const cookieStore = await cookies();
-  const expectedState = cookieStore.get(STATE_COOKIE)?.value ?? null;
-  const returnTo = cookieStore.get(RETURN_COOKIE)?.value ?? "/dashboard/private-clinic/settings";
-  cookieStore.delete(STATE_COOKIE);
-  cookieStore.delete(RETURN_COOKIE);
+  const expectedState = cookieStore.get(GOOGLE_OAUTH_STATE_COOKIE)?.value ?? null;
+  const returnTo = cookieStore.get(GOOGLE_OAUTH_RETURN_COOKIE)?.value ?? "/dashboard/private-clinic/settings";
 
   if (!code || !state || !expectedState || state !== expectedState) {
-    return NextResponse.redirect(new URL(`${returnTo}?error=google-oauth-state`, request.url));
+    const response = NextResponse.redirect(new URL(`${returnTo}?error=google-oauth-state`, request.url));
+    return clearGoogleOAuthCookies(response);
   }
 
   try {
@@ -34,15 +39,18 @@ export async function GET(request: Request) {
       expiryDateMs: tokens.expiry_date ?? null,
       scope: tokens.scope ?? null,
     });
-    return NextResponse.redirect(new URL(`${returnTo}?saved=google-connected`, request.url));
+    const response = NextResponse.redirect(new URL(`${returnTo}?saved=google-connected`, request.url));
+    return clearGoogleOAuthCookies(response);
   } catch (error) {
     await prisma.users.update({
       where: { id: session.user.id },
       data: {
-        google_calendar_sync_error: error instanceof Error ? error.message.slice(0, 1000) : "OAuth callback failed",
+        google_calendar_sync_error:
+          error instanceof Error ? error.message.slice(0, 1000) : "OAuth callback failed",
         google_calendar_sync_error_at: new Date(),
       },
     });
-    return NextResponse.redirect(new URL(`${returnTo}?error=google-oauth`, request.url));
+    const response = NextResponse.redirect(new URL(`${returnTo}?error=google-oauth`, request.url));
+    return clearGoogleOAuthCookies(response);
   }
 }
