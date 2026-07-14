@@ -332,7 +332,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           startDate: ap.startDate,
           startTime: ap.startTime,
           durationMinutes: ap.durationMinutes,
-          cancellationReason: ap.cancel,
+          cancellationReason: ap.cancellationReason,
           statusScheduled: ap.statusScheduled,
           statusCompleted: ap.statusCompleted,
           statusCancelled: ap.statusCancelled,

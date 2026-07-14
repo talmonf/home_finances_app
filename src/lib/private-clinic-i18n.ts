@@ -1112,6 +1112,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     recurringToggle: p("Recurring appointment", "תור חוזר"),
     actionsCol: p("Actions", "פעולות"),
     cancel: p("Cancel", "ביטול"),
+    cancellationReason: p("Cancellation reason", "סיבת ביטול"),
     reschedule: p("Reschedule", "עריכה"),
     edit: p("Edit", "עריכה"),
     logTreatment: p("Log treatment", "דיווח טיפול"),

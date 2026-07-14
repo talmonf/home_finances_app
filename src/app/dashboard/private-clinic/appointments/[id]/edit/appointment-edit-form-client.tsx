@@ -55,6 +55,7 @@ export function AppointmentEditFormClient(props: Props) {
     props.labels.startTime.includes("שעה") || props.labels.startDateTime.includes("שעה") ? "דקות" : "minute";
   const [jobId, setJobId] = useState(props.initialJobId);
   const [programId, setProgramId] = useState(props.initialProgramId);
+  const [status, setStatus] = useState(props.initialStatus);
   const [additionalClientIds, setAdditionalClientIds] = useState(
     props.initialAdditionalClientIds.filter(Boolean),
   );
@@ -242,7 +243,8 @@ export function AppointmentEditFormClient(props: Props) {
         <select
           name="status"
           required
-          defaultValue={props.initialStatus}
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="scheduled">{props.labels.statusScheduled}</option>
@@ -250,14 +252,16 @@ export function AppointmentEditFormClient(props: Props) {
           <option value="cancelled">{props.labels.statusCancelled}</option>
         </select>
       </label>
-      <label className="space-y-1 md:col-span-2">
-        <span className="block text-xs text-slate-300">{props.labels.cancellationReason}</span>
-        <input
-          name="cancellation_reason"
-          defaultValue={props.initialCancellationReason}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-      </label>
+      {status === "cancelled" ? (
+        <label className="space-y-1 md:col-span-2">
+          <span className="block text-xs text-slate-300">{props.labels.cancellationReason}</span>
+          <input
+            name="cancellation_reason"
+            defaultValue={props.initialCancellationReason}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+        </label>
+      ) : null}
       <div className="space-y-1">
         <span className="block text-xs text-slate-300">{props.labels.startDateTime}</span>
         <div className="grid gap-2 sm:grid-cols-[11.5rem_8.5rem]">
