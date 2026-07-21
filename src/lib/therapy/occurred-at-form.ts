@@ -48,6 +48,36 @@ export function parseTherapyOccurredAtFromForm(
   return zonedTimeToUtcDate(y, mo, day, hh, mm, 0, ISRAEL_TIME_ZONE);
 }
 
+/**
+ * Parse `yyyy-mm-dd` or `yyyy-mm-ddTHH:mm` from SplitDateTimeField.
+ * Wall-clock times are Israel (Asia/Jerusalem). `T00:00` (optional time left unset)
+ * is stored as date-only UTC midnight so list formatting can omit the time.
+ */
+export function parseTherapyOccurredAtDatetimeLocal(raw: string): Date | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const [datePart, timePart] = trimmed.split("T");
+  if (!datePart) return null;
+  const hm = (timePart ?? "").slice(0, 5);
+  const timeForParse = !hm || hm === "00:00" ? "" : hm;
+  return parseTherapyOccurredAtFromForm(datePart, timeForParse);
+}
+
+/** Initial value for SplitDateTimeField: Israel wall clock, or date-only when UTC midnight. */
+export function occurredAtToSplitDatetimeInitial(d: Date | null | undefined): string {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  if (isUtcMidnight(d)) {
+    return d.toISOString().slice(0, 10);
+  }
+  const parts = getDateTimePartsInIsraelTime(d);
+  const y = String(parts.year).padStart(4, "0");
+  const mo = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
+  const hh = String(parts.hour).padStart(2, "0");
+  const mm = String(parts.minute).padStart(2, "0");
+  return `${y}-${mo}-${day}T${hh}:${mm}`;
+}
+
 export function defaultOccurredTimeInputValue(d: Date): string {
   if (Number.isNaN(d.getTime()) || isUtcMidnight(d)) return "";
   const parts = getDateTimePartsInIsraelTime(d);

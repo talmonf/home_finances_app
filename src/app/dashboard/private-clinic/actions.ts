@@ -19,7 +19,10 @@ import {
   appointmentToSnapshot,
   logTherapyAppointmentAudit,
 } from "@/lib/therapy/appointment-audit";
-import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
+import {
+  parseTherapyOccurredAtDatetimeLocal,
+  parseTherapyOccurredAtFromForm,
+} from "@/lib/therapy/occurred-at-form";
 import { parseVisitCount, parseVisitWeeks } from "@/lib/therapy/visit-frequency";
 import {
   parseTherapyClientEndReason,
@@ -5290,8 +5293,8 @@ export async function createTherapyConsultation(formData: FormData) {
     if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
   }
 
-  const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
+  const occurred_at = parseTherapyOccurredAtDatetimeLocal(occurred_at_raw);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
   const amountStr = parseMoney((formData.get("amount") as string) || null);
   const linked_transaction_id = await resolveTransactionLink(
@@ -5386,8 +5389,8 @@ export async function updateTherapyConsultation(formData: FormData) {
     if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
   }
 
-  const occurred_at = new Date(occurred_at_raw);
-  if (Number.isNaN(occurred_at.getTime())) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
+  const occurred_at = parseTherapyOccurredAtDatetimeLocal(occurred_at_raw);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
 
   const amountStr = parseMoney((formData.get("amount") as string) || null);
   const linked_transaction_id = await resolveTransactionLink(
@@ -5498,8 +5501,8 @@ export async function createTherapyTravelEntry(formData: FormData) {
     consultationIdOut = c.id;
   }
 
-  const occurred_at = occurredRaw ? new Date(occurredRaw) : null;
-  if (occurredRaw && occurred_at && Number.isNaN(occurred_at.getTime())) {
+  const occurred_at = occurredRaw ? parseTherapyOccurredAtDatetimeLocal(occurredRaw) : null;
+  if (occurredRaw && !occurred_at) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
   }
 
@@ -5570,8 +5573,8 @@ export async function updateTherapyTravelEntry(formData: FormData) {
   }
 
   const occurredRaw = (formData.get("occurred_at") as string)?.trim() || "";
-  const occurred_at = occurredRaw ? new Date(occurredRaw) : null;
-  if (occurredRaw && occurred_at && Number.isNaN(occurred_at.getTime())) {
+  const occurred_at = occurredRaw ? parseTherapyOccurredAtDatetimeLocal(occurredRaw) : null;
+  if (occurredRaw && !occurred_at) {
     redirect(`${BASE}/travel?error=date`);
   }
 

@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import { formatClientNameForDisplay } from "@/lib/privacy-display";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { occurredAtToSplitDatetimeInitial } from "@/lib/therapy/occurred-at-form";
 import { privateClinicCommon, privateClinicTravel } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
@@ -380,7 +381,9 @@ export default async function TravelPage({
               "",
             treatment_id: editEntry.treatment_id ?? "",
             consultation_id: editEntry.consultation_id ?? "",
-            occurred_at: editEntry.occurred_at ? editEntry.occurred_at.toISOString().slice(0, 16) : "",
+            occurred_at: editEntry.occurred_at
+              ? occurredAtToSplitDatetimeInitial(editEntry.occurred_at)
+              : "",
             amount: editEntry.amount?.toString() ?? "",
             currency: editEntry.currency,
             km: editEntry.km != null ? String(editEntry.km) : "",

@@ -39,6 +39,7 @@ import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav
 import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
+import { occurredAtToSplitDatetimeInitial } from "@/lib/therapy/occurred-at-form";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
 
@@ -482,7 +483,7 @@ export async function ConsultationsPageContent({
             job_id: editConsultation.job_id,
             program_id: editConsultation.program_id ?? "",
             consultation_type_id: editConsultation.consultation_type_id,
-            occurred_at: editConsultation.occurred_at.toISOString().slice(0, 16),
+            occurred_at: occurredAtToSplitDatetimeInitial(editConsultation.occurred_at),
             amount: editConsultation.amount?.toString() ?? editConsultation.income_amount?.toString() ?? "",
             currency: editConsultation.currency ?? editConsultation.income_currency,
             linked_transaction_id:
