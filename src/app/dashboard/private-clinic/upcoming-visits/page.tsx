@@ -100,7 +100,7 @@ function SortHeader({
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
       className={
         sticky
-          ? "sticky start-0 z-20 bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
+          ? "sticky start-0 z-20 w-[1%] whitespace-nowrap bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
           : "px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
       }
     >
@@ -605,7 +605,7 @@ export default async function UpcomingVisitsPage({
                         }
                       >
                         <td
-                          className={`sticky start-0 z-10 whitespace-nowrap px-3 py-2 text-slate-200 shadow-[8px_0_12px_-12px_rgb(15_23_42)] ${
+                          className={`sticky start-0 z-10 w-[1%] whitespace-nowrap px-3 py-2 text-slate-200 shadow-[8px_0_12px_-12px_rgb(15_23_42)] ${
                             r.isOverdue
                               ? "bg-rose-950"
                               : r.isDueToday
@@ -613,21 +613,23 @@ export default async function UpcomingVisitsPage({
                                 : "bg-slate-900"
                           }`}
                         >
-                          {obfuscate ? (
-                            OBFUSCATED
-                          ) : (
-                            <Link
-                              href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
-                              className="font-medium text-sky-400 hover:text-sky-300"
-                            >
-                              {r.name}
-                            </Link>
-                          )}
-                          {r.onHold ? (
-                            <span className="ms-2 rounded bg-slate-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-100">
-                              {uv.onHold}
-                            </span>
-                          ) : null}
+                          <div className="flex items-center justify-between gap-3">
+                            {obfuscate ? (
+                              <span>{OBFUSCATED}</span>
+                            ) : (
+                              <Link
+                                href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
+                                className="font-medium text-sky-400 hover:text-sky-300"
+                              >
+                                {r.name}
+                              </Link>
+                            )}
+                            {r.onHold ? (
+                              <span className="shrink-0 rounded bg-slate-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-100">
+                                {uv.onHold}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <span className="font-medium text-slate-100">

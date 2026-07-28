@@ -758,13 +758,28 @@ export default async function ClientsPage({
                   : c.noDate;
                 const endDisp = row.end_date ? formatHouseholdDate(row.end_date, dateDisplayFormat) : c.noDate;
                 const treatmentsHref = `/dashboard/private-clinic/treatments?client=${encodeURIComponent(row.id)}`;
+                const clientDetailsHref = `${CLIENTS_BASE}/${encodeURIComponent(row.id)}/edit`;
+                const clientName = obfuscate ? OBFUSCATED : row.first_name;
+                const clientLastName = obfuscate ? OBFUSCATED : row.last_name ?? "";
                 return (
                   <tr key={row.id} className="hover:bg-slate-800/50">
                     <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                      {obfuscate ? OBFUSCATED : row.first_name}
+                      <Link
+                        href={clientDetailsHref}
+                        className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                      >
+                        {clientName}
+                      </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                      {obfuscate ? OBFUSCATED : row.last_name ?? ""}
+                      {clientLastName ? (
+                        <Link
+                          href={clientDetailsHref}
+                          className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                        >
+                          {clientLastName}
+                        </Link>
+                      ) : null}
                     </td>
                     <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={jobLabel}>
                       {jobLabel}
@@ -798,7 +813,7 @@ export default async function ClientsPage({
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       <Link
-                        href={`${CLIENTS_BASE}/${row.id}/edit`}
+                        href={clientDetailsHref}
                         className="font-medium text-sky-400 hover:text-sky-300"
                       >
                         {c.edit}
