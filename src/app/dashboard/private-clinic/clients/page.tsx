@@ -93,6 +93,27 @@ function kupatHolimLabel(
   return c.none;
 }
 
+/** Active → On hold → Inactive (for status column sort). */
+function clientStatusSortRank(row: { is_active: boolean; on_hold: boolean }): number {
+  if (!row.is_active) return 2;
+  if (row.on_hold) return 1;
+  return 0;
+}
+
+function clientNameSortKey(row: { first_name: string | null; last_name: string | null; id: string }) {
+  return `${row.first_name ?? ""} ${row.last_name ?? ""}`.toLowerCase();
+}
+
+function compareClientsByNameThenId(
+  a: { first_name: string | null; last_name: string | null; id: string },
+  b: { first_name: string | null; last_name: string | null; id: string },
+  dir: Prisma.SortOrder,
+): number {
+  const nameCmp = clientNameSortKey(a).localeCompare(clientNameSortKey(b));
+  if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
+  return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+}
+
 function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_clientsOrderByWithRelationInput[] {
   switch (sort) {
     case "first_name":
@@ -118,7 +139,8 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
     case "program":
       return [{ default_program: { name: dir } }, { id: dir }];
     case "active":
-      return [{ is_active: dir }, { id: dir }];
+      // Status includes on_hold; sorted in-memory below.
+      return [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }];
     default:
       return [{ first_name: dir }, { last_name: dir }, { id: dir }];
   }
@@ -409,11 +431,7 @@ export default async function ClientsPage({
           } else if (!aDue && bDue) {
             return 1;
           }
-          const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
-          const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
-          const nameCmp = aName.localeCompare(bName);
-          if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
-          return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+          return compareClientsByNameThenId(a, b, dir);
         })
       : sort === "treatments_count"
         ? [...clients].sort((a, b) => {
@@ -421,11 +439,7 @@ export default async function ClientsPage({
             const bCount = treatmentCountByClientId.get(b.id) ?? 0;
             const countDiff = aCount - bCount;
             if (countDiff !== 0) return dir === "asc" ? countDiff : -countDiff;
-            const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
-            const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
-            const nameCmp = aName.localeCompare(bName);
-            if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
-            return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+            return compareClientsByNameThenId(a, b, dir);
           })
       : sort === "kupat_holim"
         ? [...clients].sort((a, b) => {
@@ -436,11 +450,13 @@ export default async function ClientsPage({
             if (aIsNone !== bIsNone) return aIsNone ? 1 : -1;
             const cmp = aLabel.localeCompare(bLabel, uiLanguage);
             if (cmp !== 0) return dir === "asc" ? cmp : -cmp;
-            const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
-            const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
-            const nameCmp = aName.localeCompare(bName);
-            if (nameCmp !== 0) return dir === "asc" ? nameCmp : -nameCmp;
-            return dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+            return compareClientsByNameThenId(a, b, dir);
+          })
+      : sort === "active"
+        ? [...clients].sort((a, b) => {
+            const rankDiff = clientStatusSortRank(a) - clientStatusSortRank(b);
+            if (rankDiff !== 0) return dir === "asc" ? rankDiff : -rankDiff;
+            return compareClientsByNameThenId(a, b, "asc");
           })
       : clients;
 
@@ -632,6 +648,15 @@ export default async function ClientsPage({
                   sortHintDesc={cl.sortHintDesc}
                 />
                 <SortHeader
+                  column="active"
+                  label={c.status}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
+                <SortHeader
                   column="job"
                   label={cl.colJob}
                   sort={sort}
@@ -705,18 +730,6 @@ export default async function ClientsPage({
                   sortHintAsc={cl.sortHintAsc}
                   sortHintDesc={cl.sortHintDesc}
                 />
-                <SortHeader
-                  column="active"
-                  label={c.status}
-                  sort={sort}
-                  dir={dir}
-                  filters={listFilters}
-                  sortHintAsc={cl.sortHintAsc}
-                  sortHintDesc={cl.sortHintDesc}
-                />
-                <th scope="col" className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {cl.colActions}
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 bg-slate-900/40">
@@ -781,6 +794,20 @@ export default async function ClientsPage({
                         </Link>
                       ) : null}
                     </td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      {!row.is_active ? (
+                        <span className="text-slate-400">{c.inactive}</span>
+                      ) : row.on_hold ? (
+                        <span
+                          className="inline-flex rounded bg-amber-600/80 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-slate-950"
+                          title={cl.onHoldHelp}
+                        >
+                          {cl.onHoldBadge}
+                        </span>
+                      ) : (
+                        <span className="text-emerald-400/90">{c.active}</span>
+                      )}
+                    </td>
                     <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={jobLabel}>
                       {jobLabel}
                     </td>
@@ -808,17 +835,6 @@ export default async function ClientsPage({
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{startDisp}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{endDisp}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                      {!row.is_active ? c.inactive : row.on_hold ? cl.onHoldBadge : c.active}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <Link
-                        href={clientDetailsHref}
-                        className="font-medium text-sky-400 hover:text-sky-300"
-                      >
-                        {c.edit}
-                      </Link>
-                    </td>
                   </tr>
                 );
               })}
