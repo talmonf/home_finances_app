@@ -115,7 +115,11 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
   } else {
     htmlParts.push(`<ul style="margin:0;padding-${he ? "right" : "left"}:20px;">`);
     for (const v of data.visits) {
-      const dueStr = formatHouseholdDate(v.nextDue, dateDisplayFormat);
+      const dueStr = v.onHold
+        ? he
+          ? "מושהה"
+          : "On hold"
+        : formatHouseholdDate(v.nextDue, dateDisplayFormat);
       const lastStr = formatHouseholdDate(v.lastVisit, dateDisplayFormat);
       const badge = v.isOverdue ? copy.overdue : v.isDueToday ? copy.dueToday : "";
       const apptStr = v.nextAppointment

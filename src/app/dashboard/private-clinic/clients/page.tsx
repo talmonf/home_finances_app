@@ -369,7 +369,7 @@ export default async function ClientsPage({
 
   const nextVisitDueByClientId = new Map<string, Date | null>();
   for (const client of clients) {
-    if (!client.is_active) {
+    if (!client.is_active || client.on_hold) {
       nextVisitDueByClientId.set(client.id, null);
       continue;
     }
@@ -384,7 +384,7 @@ export default async function ClientsPage({
   }
   const nextVisitSortAtByClientId = new Map<string, Date | null>();
   for (const client of clients) {
-    if (!client.is_active) {
+    if (!client.is_active || client.on_hold) {
       nextVisitSortAtByClientId.set(client.id, null);
       continue;
     }
@@ -734,6 +734,9 @@ export default async function ClientsPage({
                 if (!row.is_active) {
                   nextVisitDisp = "—";
                   nextVisitTitle = undefined;
+                } else if (row.on_hold) {
+                  nextVisitDisp = cl.onHoldBadge;
+                  nextVisitTitle = cl.onHoldHelp;
                 } else if (nextScheduledAppointment) {
                   const apptText = formatHouseholdDateUtcWithTime(nextScheduledAppointment, dateDisplayFormat);
                   nextVisitDisp = `${cl.nextVisitScheduledLabel}: ${apptText}`;
@@ -791,7 +794,7 @@ export default async function ClientsPage({
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{startDisp}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">{endDisp}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                      {row.is_active ? c.active : c.inactive}
+                      {!row.is_active ? c.inactive : row.on_hold ? cl.onHoldBadge : c.active}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       <Link

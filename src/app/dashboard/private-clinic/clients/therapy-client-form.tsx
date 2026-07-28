@@ -43,6 +43,7 @@ export type TherapyClientFormEditRow = {
   agreed_fee_currency: string | null;
   default_payment_method: "bank_transfer" | "digital_payment" | "cash" | null;
   is_active: boolean;
+  on_hold: boolean;
   client_jobs: { job_id: string }[];
 };
 
@@ -514,13 +515,22 @@ export function TherapyClientForm({
       </div>
 
       {mode === "edit" && client ? (
-        <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
-          <span className="flex items-center gap-2">
-            <input type="checkbox" name="is_active" defaultChecked={client.is_active} />
-            {cl.statusLabel}
-          </span>
-          <span className="text-xs font-normal text-slate-500">{cl.statusHelp}</span>
-        </label>
+        <>
+          <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+            <span className="flex items-center gap-2">
+              <input type="checkbox" name="is_active" defaultChecked={client.is_active} />
+              {cl.statusLabel}
+            </span>
+            <span className="text-xs font-normal text-slate-500">{cl.statusHelp}</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+            <span className="flex items-center gap-2">
+              <input type="checkbox" name="on_hold" defaultChecked={client.on_hold} />
+              {cl.onHoldLabel}
+            </span>
+            <span className="text-xs font-normal text-slate-500">{cl.onHoldHelp}</span>
+          </label>
+        </>
       ) : null}
 
       <PendingSubmitButtonWithSpinner

@@ -16,7 +16,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import { getUpcomingAppointmentsForHousehold, nextScheduledAppointmentByClientId } from "@/lib/therapy/series-occurrences";
-import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { nextVisitDueDateAfterLastTreatment, effectiveNextVisitDue } from "@/lib/therapy/visit-frequency";
 import { LogTreatmentLink } from "./log-treatment-link";
 import { UpcomingVisitAppointmentActions } from "./upcoming-visit-appointment-actions";
 
@@ -134,11 +134,20 @@ function compareText(a: string, b: string): number {
 }
 
 function visitDueFlags(
-  nextDue: Date,
+  nextDue: Date | null,
   today: Date,
   now: Date,
   nextAppointment: NextAppointmentRef | null,
+  onHold: boolean,
 ) {
+  if (onHold || nextDue == null) {
+    return {
+      visitDueOverdue: false,
+      appointmentOverdue: false,
+      isOverdue: false,
+      isDueToday: false,
+    };
+  }
   const nextDay = dateOnlyLocal(nextDue);
   const visitDueOverdue = nextDay.getTime() < today.getTime();
   const appointmentOverdue =
@@ -247,7 +256,8 @@ export default async function UpcomingVisitsPage({
     kupatHolimLabel: string;
     familyLabel: string;
     lastVisit: Date | null;
-    nextDue: Date;
+    nextDue: Date | null;
+    onHold: boolean;
     isOverdue: boolean;
     isDueToday: boolean;
     nextAppointment: NextAppointmentRef | null;
@@ -255,11 +265,12 @@ export default async function UpcomingVisitsPage({
 
   const toScheduledRow = (
     row: (typeof allActiveClients)[number],
-    nextDue: Date,
+    nextDue: Date | null,
     lastVisit: Date | null,
     nextAppointment: NextAppointmentRef | null,
   ): ScheduledRow => {
-    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment);
+    const onHold = row.on_hold;
+    const { isOverdue, isDueToday } = visitDueFlags(nextDue, today, now, nextAppointment, onHold);
     const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
     return {
       clientId: row.id,
@@ -280,6 +291,7 @@ export default async function UpcomingVisitsPage({
       familyLabel: row.family?.name ?? "—",
       lastVisit,
       nextDue,
+      onHold,
       isOverdue,
       isDueToday,
       nextAppointment,
@@ -294,21 +306,36 @@ export default async function UpcomingVisitsPage({
     const vw = row.visits_per_period_weeks;
     if (vc == null || vw == null) continue;
 
-    const lastAt = lastVisitAtByClientId.get(row.id);
+    const lastAt = lastVisitAtByClientId.get(row.id) ?? null;
+    const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+
+    if (row.on_hold) {
+      scheduled.push(toScheduledRow(row, null, lastAt, nextAppointment));
+      continue;
+    }
+
     if (!lastAt) {
       if (!row.start_date) {
         needsFirstVisit.push(row);
         continue;
       }
 
-      const nextDue = dateOnlyLocal(row.start_date);
-      const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+      const cadenceDue = dateOnlyLocal(row.start_date);
+      const nextDue = effectiveNextVisitDue({
+        onHold: false,
+        scheduledStartAt: nextAppointment?.startAt,
+        cadenceDue,
+      });
       scheduled.push(toScheduledRow(row, nextDue, null, nextAppointment));
       continue;
     }
 
-    const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
-    const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+    const cadenceDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
+    const nextDue = effectiveNextVisitDue({
+      onHold: false,
+      scheduledStartAt: nextAppointment?.startAt,
+      cadenceDue,
+    });
     scheduled.push(toScheduledRow(row, nextDue, lastAt, nextAppointment));
   }
 
@@ -318,7 +345,11 @@ export default async function UpcomingVisitsPage({
     const row = clientById.get(clientId);
     if (!row) continue;
 
-    const nextDue = dateOnlyLocal(nextAppointment.startAt);
+    const nextDue = effectiveNextVisitDue({
+      onHold: row.on_hold,
+      scheduledStartAt: nextAppointment.startAt,
+      cadenceDue: null,
+    });
     scheduled.push(
       toScheduledRow(row, nextDue, lastVisitAtByClientId.get(row.id) ?? null, nextAppointment),
     );
@@ -326,6 +357,9 @@ export default async function UpcomingVisitsPage({
 
   const direction = dir === "asc" ? 1 : -1;
   scheduled.sort((a, b) => {
+    // On-hold clients always appear after active cadence/scheduled rows.
+    const holdCmp = Number(a.onHold) - Number(b.onHold);
+    if (holdCmp !== 0) return holdCmp;
     let cmp = 0;
     switch (sort) {
       case "client":
@@ -358,11 +392,11 @@ export default async function UpcomingVisitsPage({
         break;
       case "next_due":
       default:
-        cmp = (a.nextDue.getTime() - b.nextDue.getTime()) * direction;
+        cmp = compareNullableDate(a.nextDue, b.nextDue, direction);
         break;
     }
     if (cmp !== 0) return cmp;
-    cmp = a.nextDue.getTime() - b.nextDue.getTime();
+    cmp = compareNullableDate(a.nextDue, b.nextDue, 1);
     if (cmp !== 0) return cmp;
     return compareText(a.name, b.name);
   });
@@ -386,7 +420,7 @@ export default async function UpcomingVisitsPage({
     return local.toISOString().slice(0, 10);
   };
 
-  const scheduleAppointmentHref = (clientId: string, nextDue: Date, isOverdue: boolean) => {
+  const scheduleAppointmentHref = (clientId: string, nextDue: Date | null, isOverdue: boolean) => {
     const client = clientById.get(clientId);
     const qp = new URLSearchParams({
       fromUpcoming: "1",
@@ -394,7 +428,7 @@ export default async function UpcomingVisitsPage({
       job: client?.default_job_id ?? "",
       program: client?.default_program_id ?? "",
       visitType: client?.default_visit_type ?? "clinic",
-      startDate: toDateLocalInput(isOverdue ? today : nextDue),
+      startDate: toDateLocalInput(isOverdue || !nextDue ? today : nextDue),
       durationMinutes: String(
         client?.default_session_length_minutes ??
           client?.default_program?.default_session_length_minutes ??
@@ -565,7 +599,9 @@ export default async function UpcomingVisitsPage({
                             ? "bg-rose-950/25 hover:bg-rose-950/35"
                             : r.isDueToday
                               ? "bg-amber-950/20 hover:bg-amber-950/30"
-                              : "hover:bg-slate-800/50"
+                              : r.onHold
+                                ? "bg-slate-800/30 hover:bg-slate-800/45"
+                                : "hover:bg-slate-800/50"
                         }
                       >
                         <td
@@ -587,6 +623,11 @@ export default async function UpcomingVisitsPage({
                               {r.name}
                             </Link>
                           )}
+                          {r.onHold ? (
+                            <span className="ms-2 rounded bg-slate-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-100">
+                              {uv.onHold}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <span className="font-medium text-slate-100">

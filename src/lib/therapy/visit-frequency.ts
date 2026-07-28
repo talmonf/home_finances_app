@@ -33,3 +33,18 @@ export function nextVisitDueDateAfterLastTreatment(
   const days = Math.ceil(averageDaysBetweenVisits(visitsPerPeriod, weeksInPeriod));
   return addDays(lastDay, days);
 }
+
+/**
+ * Effective next-visit date for upcoming-visits style lists.
+ * On hold → none. Else a scheduled appointment date overrides cadence.
+ * Cancelling the appointment restores cadence automatically (no scheduled start).
+ */
+export function effectiveNextVisitDue(params: {
+  onHold: boolean;
+  scheduledStartAt?: Date | null;
+  cadenceDue?: Date | null;
+}): Date | null {
+  if (params.onHold) return null;
+  if (params.scheduledStartAt) return dateOnlyLocal(params.scheduledStartAt);
+  return params.cadenceDue ?? null;
+}

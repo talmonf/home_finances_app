@@ -2119,6 +2119,8 @@ model therapy_clients {
   agreed_fee_currency      String                        @default("ILS")
   default_payment_method   TherapyTreatmentPaymentMethod?
   is_active          Boolean   @default(true)
+  /// Active client with no cadence next-visit (shown at end of Upcoming visits; not overdue).
+  on_hold            Boolean   @default(false)
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt
 

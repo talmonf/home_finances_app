@@ -413,6 +413,12 @@ export function privateClinicClients(lang: UiLanguage) {
       "Uncheck for inactive — client is hidden from default lists and end-date reminders are not shown.",
       "בטלו סימון ללקוח לא פעיל — לא יופיע ברשימות ברירת מחדל ולא יוצגו תזכורות לפי תאריך סיום.",
     ),
+    onHoldLabel: p("On hold", "מושהה"),
+    onHoldHelp: p(
+      "Still an active client, but no next visit is due. Appears at the end of Upcoming visits with a blank next visit (not overdue).",
+      "עדיין לקוח פעיל, אך אין מועד לביקור הבא. מופיע בסוף ביקורים קרובים עם ביקור הבא ריק (ללא איחור).",
+    ),
+    onHoldBadge: p("On hold", "מושהה"),
     filters: p("Filters", "סינון"),
     filterSearchLabel: p("Search", "חיפוש"),
     filterSearchPlaceholder: p("Name or ID number", "שם או מספר ת״ז"),
@@ -509,9 +515,10 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
   return {
     pageTitle: p("Upcoming visits", "ביקורים קרובים"),
     pageIntro: p(
-      "Active clients with a visit frequency. Default order is next visit due; click a column header to sort.",
-      "לקוחות פעילים עם תדירות ביקורים. ברירת המחדל היא לפי מועד הביקור הבא; לחצו על כותרת עמודה למיון.",
+      "Active clients with a visit frequency. Default order is next visit due; click a column header to sort. Scheduled appointments set the next visit; clients on hold appear last with a blank next visit.",
+      "לקוחות פעילים עם תדירות ביקורים. ברירת המחדל היא לפי מועד הביקור הבא; לחצו על כותרת עמודה למיון. תור מתוזמן קובע את הביקור הבא; לקוחות מושהים מופיעים בסוף עם ביקור הבא ריק.",
     ),
+    onHold: p("On hold", "מושהה"),
     colClient: p("Client", "לקוח"),
     colLastVisit: p("Last visit", "ביקור אחרון"),
     colNextDue: cl.colNextVisitDue,

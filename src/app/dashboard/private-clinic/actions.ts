@@ -1644,6 +1644,7 @@ export async function updateTherapyClient(formData: FormData) {
           disability_status,
           rehab_basket_status,
           is_active: formData.has("is_active"),
+          on_hold: formData.has("is_active") && formData.has("on_hold"),
           agreed_fee_amount: personalBilling.agreed_fee_amount,
           agreed_fee_currency: personalBilling.agreed_fee_currency,
           default_payment_method: personalBilling.default_payment_method,
@@ -1689,6 +1690,7 @@ export async function updateTherapyClient(formData: FormData) {
   await logClinicUsage("clients", "update", { resourceType: "client", resourceId: id });
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/clients/${id}/edit`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reminders`);
   redirect(`${BASE}/clients?updated=1`);
 }

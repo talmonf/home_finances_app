@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 139_therapy_clients_on_hold.sql (2026-07-28)
 - [x] 138_therapy_clients_default_session_length.sql (2026-07-09)
 - [x] 137_therapy_clients_agreed_fee_and_payment_defaults.sql (2026-07-08)
 - [x] 136_receipt_numbering_mode_and_source.sql (2026-07-03)
@@ -159,6 +160,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 139 | `139_therapy_clients_on_hold.sql` (2026-07-28) | ALTER | `therapy_clients`: `on_hold` — active client with no cadence next visit (Upcoming visits: blank due, not overdue, sorted last). |
 | 138 | `138_therapy_clients_default_session_length.sql` (2026-07-09) | ALTER | `therapy_clients`: optional `default_session_length_minutes` (overrides job/program for new appointments). |
 | 137 | `137_therapy_clients_agreed_fee_and_payment_defaults.sql` (2026-07-08) | ALTER | `therapy_clients`: agreed fee + default payment method for personal clients; `therapy_treatment_payment_method` adds `cash`. |
 | 136 | `136_receipt_numbering_mode_and_source.sql` (2026-07-03) | ALTER | `job_morning_integrations.receipt_numbering_mode`; `therapy_receipts.receipt_number_source` (manual / morning / pending_morning). |

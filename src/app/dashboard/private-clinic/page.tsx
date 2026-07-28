@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import PrivateClinicOverviewCardsClient from "./private-clinic-overview-cards-client";
 import { getUpcomingAppointmentsForHousehold } from "@/lib/therapy/series-occurrences";
-import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { nextVisitDueDateAfterLastTreatment, effectiveNextVisitDue } from "@/lib/therapy/visit-frequency";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +104,7 @@ export default async function PrivateClinicOverviewPage({
           select: {
             id: true,
             start_date: true,
+            on_hold: true,
             visits_per_period_count: true,
             visits_per_period_weeks: true,
           },
@@ -146,8 +147,14 @@ export default async function PrivateClinicOverviewPage({
         const countedClientIds = new Set<string>();
 
         for (const row of clientsWithFrequency) {
+          const appointment = nextAppointmentByClientId.get(row.id) ?? null;
+          if (row.on_hold) {
+            countedClientIds.add(row.id);
+            total += 1;
+            continue;
+          }
           const lastVisitAt = lastVisitByClientId.get(row.id);
-          const nextDue = lastVisitAt
+          const cadenceDue = lastVisitAt
             ? nextVisitDueDateAfterLastTreatment(
                 lastVisitAt,
                 row.visits_per_period_count ?? 1,
@@ -156,6 +163,11 @@ export default async function PrivateClinicOverviewPage({
             : row.start_date
               ? dateOnlyLocal(row.start_date)
               : null;
+          const nextDue = effectiveNextVisitDue({
+            onHold: false,
+            scheduledStartAt: appointment?.startAt,
+            cadenceDue,
+          });
           if (!nextDue) continue;
           countedClientIds.add(row.id);
           total += 1;
@@ -166,6 +178,12 @@ export default async function PrivateClinicOverviewPage({
 
         for (const [clientId, appointment] of nextAppointmentByClientId) {
           if (countedClientIds.has(clientId)) continue;
+          const client = allActiveClients.find((c) => c.id === clientId);
+          if (client?.on_hold) {
+            countedClientIds.add(clientId);
+            total += 1;
+            continue;
+          }
           countedClientIds.add(clientId);
           total += 1;
           if (dateOnlyLocal(appointment.startAt).getTime() < today.getTime()) {

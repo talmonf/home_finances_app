@@ -6,7 +6,7 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { dateOnlyLocal, startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
-import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { nextVisitDueDateAfterLastTreatment, effectiveNextVisitDue } from "@/lib/therapy/visit-frequency";
 import type { TherapyVisitType } from "@/generated/prisma/client";
 
 export type ClinicDigestAppointmentRow = {
@@ -25,7 +25,8 @@ export type ClinicDigestVisitRow = {
   kupatHolimLabel: string;
   familyName: string | null;
   lastVisit: Date | null;
-  nextDue: Date;
+  nextDue: Date | null;
+  onHold: boolean;
   isOverdue: boolean;
   isDueToday: boolean;
   nextAppointment: { id: string | null; startAt: Date } | null;
@@ -156,6 +157,34 @@ export async function computeClinicDigestData(args: {
   const visits: ClinicDigestVisitRow[] = [];
   const needsFirstVisit: ClinicDigestNeedsFirstVisitRow[] = [];
 
+  const pushVisit = (
+    row: (typeof clients)[number],
+    lastVisit: Date | null,
+    cadenceDue: Date | null,
+    nextAppointment: { id: string | null; startAt: Date } | null,
+  ) => {
+    const nextDue = effectiveNextVisitDue({
+      onHold: row.on_hold,
+      scheduledStartAt: nextAppointment?.startAt,
+      cadenceDue,
+    });
+    const nextDay = nextDue ? dateOnlyLocal(nextDue) : null;
+    visits.push({
+      clientId: row.id,
+      name: clientDisplayName(row.first_name, row.last_name),
+      jobLabel: formatJobDisplayLabel(row.default_job),
+      programLabel: row.default_program?.name ?? noneLabel,
+      kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
+      familyName: row.family?.name ?? null,
+      lastVisit,
+      nextDue,
+      onHold: row.on_hold,
+      isOverdue: !row.on_hold && nextDay != null && nextDay.getTime() < today.getTime(),
+      isDueToday: !row.on_hold && nextDay != null && nextDay.getTime() === today.getTime(),
+      nextAppointment,
+    });
+  };
+
   for (const row of clients) {
     const vc = row.visits_per_period_count;
     const vw = row.visits_per_period_weeks;
@@ -163,47 +192,23 @@ export async function computeClinicDigestData(args: {
 
     const name = clientDisplayName(row.first_name, row.last_name);
     const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
-    const lastAt = lastVisitAtByClientId.get(row.id);
+    const lastAt = lastVisitAtByClientId.get(row.id) ?? null;
+
+    if (row.on_hold) {
+      pushVisit(row, lastAt, null, nextAppointment);
+      continue;
+    }
 
     if (!lastAt) {
       if (!row.start_date) {
         needsFirstVisit.push({ clientId: row.id, name, nextAppointment });
         continue;
       }
-
-      const nextDue = dateOnlyLocal(row.start_date);
-      const nextDay = dateOnlyLocal(nextDue);
-      visits.push({
-        clientId: row.id,
-        name,
-        jobLabel: formatJobDisplayLabel(row.default_job),
-        programLabel: row.default_program?.name ?? noneLabel,
-        kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
-        familyName: row.family?.name ?? null,
-        lastVisit: null,
-        nextDue,
-        isOverdue: nextDay.getTime() < today.getTime(),
-        isDueToday: nextDay.getTime() === today.getTime(),
-        nextAppointment,
-      });
+      pushVisit(row, null, dateOnlyLocal(row.start_date), nextAppointment);
       continue;
     }
 
-    const nextDue = nextVisitDueDateAfterLastTreatment(lastAt, vc, vw);
-    const nextDay = dateOnlyLocal(nextDue);
-    visits.push({
-      clientId: row.id,
-      name,
-      jobLabel: formatJobDisplayLabel(row.default_job),
-      programLabel: row.default_program?.name ?? noneLabel,
-      kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
-      familyName: row.family?.name ?? null,
-      lastVisit: lastAt,
-      nextDue,
-      isOverdue: nextDay.getTime() < today.getTime(),
-      isDueToday: nextDay.getTime() === today.getTime(),
-      nextAppointment,
-    });
+    pushVisit(row, lastAt, nextVisitDueDateAfterLastTreatment(lastAt, vc, vw), nextAppointment);
   }
 
   const visitClientIds = new Set(visits.map((row) => row.clientId));
@@ -212,24 +217,16 @@ export async function computeClinicDigestData(args: {
     const row = allActiveClients.find((c) => c.id === clientId);
     if (!row) continue;
 
-    const nextDue = dateOnlyLocal(nextAppointment.startAt);
-    const nextDay = dateOnlyLocal(nextDue);
-    visits.push({
-      clientId: row.id,
-      name: clientDisplayName(row.first_name, row.last_name),
-      jobLabel: formatJobDisplayLabel(row.default_job),
-      programLabel: row.default_program?.name ?? noneLabel,
-      kupatHolimLabel: kupatHolimLabel(row.kupat_holim, kupatLabels),
-      familyName: row.family?.name ?? null,
-      lastVisit: lastVisitAtByClientId.get(row.id) ?? null,
-      nextDue,
-      isOverdue: nextDay.getTime() < today.getTime(),
-      isDueToday: nextDay.getTime() === today.getTime(),
-      nextAppointment,
-    });
+    pushVisit(row, lastVisitAtByClientId.get(row.id) ?? null, null, nextAppointment);
   }
 
-  visits.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+  visits.sort((a, b) => {
+    const holdCmp = Number(a.onHold) - Number(b.onHold);
+    if (holdCmp !== 0) return holdCmp;
+    const aTime = a.nextDue?.getTime() ?? Number.POSITIVE_INFINITY;
+    const bTime = b.nextDue?.getTime() ?? Number.POSITIVE_INFINITY;
+    return aTime - bTime;
+  });
 
   return { appointments, visits, needsFirstVisit };
 }
