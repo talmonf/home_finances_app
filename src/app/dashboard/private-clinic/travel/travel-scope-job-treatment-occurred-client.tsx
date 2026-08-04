@@ -177,7 +177,14 @@ export function TravelJobTreatmentConsultationOccurredFields({
       <div className="md:col-span-2">
         <label className="block text-xs font-medium text-slate-400">{occurredAtLabel}</label>
         <div className="mt-1">
-          <SplitDateTimeField key={occurredFieldTick} name="occurred_at" uiLanguage={uiLanguage} initialValue={occurredInitial} />
+          <SplitDateTimeField
+            key={occurredFieldTick}
+            name="occurred_at"
+            required
+            timeOptional
+            uiLanguage={uiLanguage}
+            initialValue={occurredInitial}
+          />
         </div>
       </div>
     </>
