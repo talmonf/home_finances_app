@@ -164,7 +164,9 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                 <tr className="border-b border-slate-700 bg-slate-800/80">
                   <th className="px-4 py-3 font-medium text-slate-300">Date</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Category</th>
-                  <th className="px-4 py-3 font-medium text-slate-300">Renewal Type</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">
+                    {isHebrew ? "פרטים" : "Details"}
+                  </th>
                   <th className="px-4 py-3 font-medium text-slate-300">Item</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Owner / Context</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Manage</th>
