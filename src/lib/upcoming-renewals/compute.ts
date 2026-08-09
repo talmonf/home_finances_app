@@ -13,7 +13,29 @@ export type RenewalRow = {
   href: string;
   /** Extra middle segments for email/dashboard (e.g. alternate calendar already passed). */
   extraEmailSegments?: string[];
+  /**
+   * Years since the original birth / wedding / special date for the upcoming occurrence.
+   * Present for Birthday, Anniversary, and Special date rows when the source year is known.
+   */
+  yearsSince?: number;
 };
+
+export type RenewalIntervalFilter = "annual" | "monthly" | "both";
+
+/** Monthly subscriptions/loan repayments use renewalType "Monthly"; everything else is annual cadence. */
+export function matchesRenewalIntervalFilter(
+  row: RenewalRow,
+  filter: RenewalIntervalFilter,
+): boolean {
+  if (filter === "both") return true;
+  const isMonthly = row.renewalType === "Monthly";
+  return filter === "monthly" ? isMonthly : !isMonthly;
+}
+
+export function parseRenewalIntervalFilter(value: string | undefined): RenewalIntervalFilter {
+  if (value === "monthly" || value === "both" || value === "annual") return value;
+  return "annual";
+}
 
 const PURCHASE_CATEGORY_LABELS: Record<string, string> = {
   electronics: "Electronics",

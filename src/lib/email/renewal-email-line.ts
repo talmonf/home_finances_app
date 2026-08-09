@@ -1,4 +1,5 @@
 import type { RenewalRow } from "@/lib/upcoming-renewals/compute";
+import { formatYearsSinceLabel } from "@/lib/upcoming-renewals/years-since";
 
 const REDUNDANT_FAMILY_RENEWAL_TYPES = new Set([
   "Birthday",
@@ -11,9 +12,22 @@ const HIDDEN_EMAIL_OWNERS = new Set(["Household", "משק הבית"]);
 
 const FAMILY_EVENT_CATEGORIES = new Set(["Birthday", "Anniversary", "Special date"]);
 
+function pushYearsSinceSegment(
+  segments: string[],
+  row: RenewalRow,
+  language: "en" | "he",
+): void {
+  if (row.yearsSince == null || row.yearsSince < 0) return;
+  segments.push(formatYearsSinceLabel(row.yearsSince, language));
+}
+
 /** Middle segments after the date for birthday/anniversary rows. */
-export function renewalEmailLineSegments(row: RenewalRow): string[] {
+export function renewalEmailLineSegments(
+  row: RenewalRow,
+  language: "en" | "he" = "en",
+): string[] {
   const segments: string[] = [row.itemName];
+  pushYearsSinceSegment(segments, row, language);
   const renewalType = row.renewalType.trim();
   if (renewalType && !REDUNDANT_FAMILY_RENEWAL_TYPES.has(renewalType)) {
     segments.push(renewalType);
@@ -37,8 +51,11 @@ function renewalEmailLineSegmentsDefault(row: RenewalRow): string[] {
   return segments;
 }
 
-export function renewalEmailMiddleSegments(row: RenewalRow): string[] {
+export function renewalEmailMiddleSegments(
+  row: RenewalRow,
+  language: "en" | "he" = "en",
+): string[] {
   return FAMILY_EVENT_CATEGORIES.has(row.category)
-    ? renewalEmailLineSegments(row)
+    ? renewalEmailLineSegments(row, language)
     : renewalEmailLineSegmentsDefault(row);
 }

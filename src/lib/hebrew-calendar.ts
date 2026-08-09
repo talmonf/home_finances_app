@@ -67,6 +67,34 @@ export function gregorianDateToHebrewComponents(d: Date): HebrewDateComponents {
   };
 }
 
+/** Convert a local calendar Date (not a DB DATE) to Hebrew components. */
+export function gregorianLocalDateToHebrewComponents(d: Date): HebrewDateComponents {
+  const local = dateOnlyLocal(d);
+  const h = new HDate(local);
+  return {
+    day: h.getDate(),
+    month: hebcalMonthToStored(h.getMonth()),
+    year: h.getFullYear(),
+  };
+}
+
+/**
+ * Full Hebrew occurrence label used in renewals email/UI, e.g.
+ * `Hebrew: 7 Elul 5786 (Wed night-Thu 19/08/2026-20/08/2026)`.
+ */
+export function formatHebrewOccurrenceLabel(
+  language: "en" | "he",
+  occurrenceDate: Date,
+  hebrewMonthDay?: { month: number; day: number },
+): string {
+  const h = gregorianLocalDateToHebrewComponents(occurrenceDate);
+  const day = hebrewMonthDay?.day ?? h.day;
+  const month = hebrewMonthDay?.month ?? h.month;
+  const label = formatHebrewDateLabel({ day, month, year: h.year }, language);
+  const timing = formatHebrewNightDayRangeLabel(language, occurrenceDate);
+  return language === "he" ? `עברי: ${label} (${timing})` : `Hebrew: ${label} (${timing})`;
+}
+
 export function hebrewComponentsToGregorian(
   components: HebrewDateComponents & { year: number },
 ): Date {

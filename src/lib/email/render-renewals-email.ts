@@ -101,7 +101,7 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
       const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
       const n = daysFromToday(r.renewalDate, today);
       const timing = timingLabel(n, r.category);
-      const middle = renewalEmailMiddleSegments(r);
+      const middle = renewalEmailMiddleSegments(r, language);
       const middleText = middle.join(" · ");
       const line = `${dateStr} · ${middleText} (${timing})`;
       textBody += `  - ${line}\n`;

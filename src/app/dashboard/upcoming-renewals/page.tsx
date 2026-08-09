@@ -9,11 +9,14 @@ import {
   computeUpcomingRenewals,
   dateOnlyLocal,
   fetchFamilyMembersForHousehold,
+  matchesRenewalIntervalFilter,
+  parseRenewalIntervalFilter,
   RENEWAL_CATEGORY_ORDER,
   startOfToday,
   type RenewalRow,
 } from "@/lib/upcoming-renewals/compute";
 import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
+import { formatYearsSinceLabel } from "@/lib/upcoming-renewals/years-since";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -23,6 +26,7 @@ type PageProps = {
   searchParams?: Promise<{
     category?: string;
     owner?: string;
+    interval?: string;
   }>;
 };
 
@@ -34,16 +38,18 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const language = isHebrew ? "he" : "en";
   const today = startOfToday();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const categoryFilter = resolvedSearchParams?.category ?? "all";
   const ownerFilter = resolvedSearchParams?.owner ?? "all";
+  const intervalFilter = parseRenewalIntervalFilter(resolvedSearchParams?.interval);
 
   const [rows, familyMembers] = await Promise.all([
     computeUpcomingRenewals({
       householdId,
       today,
-      language: isHebrew ? "he" : "en",
+      language,
     }),
     fetchFamilyMembersForHousehold(householdId),
   ]);
@@ -59,7 +65,8 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   const filteredRows = rows.filter((r) => {
     const categoryOk = effectiveCategoryFilter === "all" ? true : r.category === effectiveCategoryFilter;
     const ownerOk = effectiveOwnerFilter === "all" ? true : r.ownerId === effectiveOwnerFilter;
-    return categoryOk && ownerOk;
+    const intervalOk = matchesRenewalIntervalFilter(r, intervalFilter);
+    return categoryOk && ownerOk && intervalOk;
   });
 
   const categoryOrder = [...RENEWAL_CATEGORY_ORDER];
@@ -115,6 +122,22 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
               </select>
             </div>
 
+            <div className="flex flex-col">
+              <label htmlFor="interval" className="mb-0.5 text-xs font-medium text-slate-400">
+                {isHebrew ? "תדירות" : "Interval"}
+              </label>
+              <select
+                id="interval"
+                name="interval"
+                defaultValue={intervalFilter}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
+              >
+                <option value="annual">{isHebrew ? "שנתי" : "Annual"}</option>
+                <option value="monthly">{isHebrew ? "חודשי" : "Monthly"}</option>
+                <option value="both">{isHebrew ? "שניהם" : "Both"}</option>
+              </select>
+            </div>
+
             <button
               type="submit"
               className="rounded-lg bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-sky-500"
@@ -152,6 +175,10 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                   const isPassed = dateOnlyLocal(row.renewalDate) < today;
                   const overdue = isPassed;
                   const overdueLabel = overdueLabelForCategory(row.category, isHebrew);
+                  const yearsLabel =
+                    row.yearsSince != null && row.yearsSince >= 0
+                      ? formatYearsSinceLabel(row.yearsSince, language)
+                      : null;
                   return (
                     <tr key={row.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td
@@ -164,8 +191,20 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-slate-300">{row.category}</td>
-                      <td className="px-4 py-3 text-slate-300">{row.renewalType}</td>
-                      <td className="px-4 py-3 text-slate-100">{row.itemName}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        <div>{row.renewalType}</div>
+                        {row.extraEmailSegments?.map((segment) => (
+                          <div key={segment} className="mt-0.5 text-xs text-slate-400">
+                            {segment}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {row.itemName}
+                        {yearsLabel ? (
+                          <span className="ms-2 text-slate-400">· {yearsLabel}</span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{row.owner}</td>
                       <td className="px-4 py-3">
                         <Link

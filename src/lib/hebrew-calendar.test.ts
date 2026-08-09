@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   gregorianDateToHebrewComponents,
+  gregorianLocalDateToHebrewComponents,
   hebrewComponentsToGregorian,
   nextGregorianOccurrenceForHebrewMonthDay,
   nextAnnualGregorianOccurrence,
   formatHebrewNightDayRangeLabel,
+  formatHebrewOccurrenceLabel,
   passedHebrewOccurrenceThisCycle,
   passedGregorianOccurrenceThisCycle,
 } from "@/lib/hebrew-calendar";
@@ -42,16 +44,14 @@ test("nextAnnualGregorianOccurrence rolls to next year", () => {
   assert.equal(next.getDate(), 15);
 });
 
-test("formatHebrewNightDayRangeLabel uses actual weekdays", () => {
-  const naama = new Date(2026, 5, 12);
+test("formatHebrewOccurrenceLabel matches renewals email format", () => {
+  const d = new Date(2026, 7, 20); // 20 Aug 2026
+  const label = formatHebrewOccurrenceLabel("en", d);
+  assert.match(label, /^Hebrew: \d+ \w+ \d{4} \(/);
+  assert.match(label, /20\/08\/2026/);
   assert.equal(
-    formatHebrewNightDayRangeLabel("en", naama),
-    "Thu night-Fri 11/06/2026-12/06/2026",
-  );
-  const anniversary = new Date(2026, 5, 27);
-  assert.equal(
-    formatHebrewNightDayRangeLabel("en", anniversary),
-    "Fri night-Sat 26/06/2026-27/06/2026",
+    formatHebrewOccurrenceLabel("en", d, { month: 6, day: 7 }),
+    `Hebrew: 7 Elul ${gregorianLocalDateToHebrewComponents(d).year} (${formatHebrewNightDayRangeLabel("en", d)})`,
   );
 });
 

@@ -164,3 +164,30 @@ test("filterRenewalRowsByDaysAhead keeps paired special-date rows when either da
   const filtered = filterRenewalRowsByDaysAhead(rows, today, 14);
   assert.deepEqual(filtered.map((r) => r.id), ["special-date-gregorian-s1", "special-date-hebrew-s1"]);
 });
+
+test("matchesRenewalIntervalFilter defaults annual to non-monthly rows", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const {
+    matchesRenewalIntervalFilter,
+    parseRenewalIntervalFilter,
+  } = await import("@/lib/upcoming-renewals/compute");
+
+  assert.equal(parseRenewalIntervalFilter(undefined), "annual");
+  assert.equal(parseRenewalIntervalFilter("bogus"), "annual");
+  assert.equal(parseRenewalIntervalFilter("both"), "both");
+
+  const monthly = row("m", "2026-05-08T00:00:00.000Z");
+  const annual = { ...row("a", "2026-05-08T00:00:00.000Z"), renewalType: "Annual" };
+  const birthday = {
+    ...row("b", "2026-05-08T00:00:00.000Z"),
+    category: "Birthday",
+    renewalType: "Birthday",
+  };
+
+  assert.equal(matchesRenewalIntervalFilter(monthly, "monthly"), true);
+  assert.equal(matchesRenewalIntervalFilter(monthly, "annual"), false);
+  assert.equal(matchesRenewalIntervalFilter(annual, "annual"), true);
+  assert.equal(matchesRenewalIntervalFilter(birthday, "annual"), true);
+  assert.equal(matchesRenewalIntervalFilter(monthly, "both"), true);
+  assert.equal(matchesRenewalIntervalFilter(birthday, "both"), true);
+});

@@ -28,6 +28,17 @@ test("renewalEmailLineSegments omits redundant type and Household", () => {
   );
 });
 
+test("renewalEmailLineSegments includes years since when present", () => {
+  assert.deepEqual(
+    renewalEmailLineSegments(familyRow({ renewalType: "Anniversary", yearsSince: 12 })),
+    ["A & B", "12 years"],
+  );
+  assert.deepEqual(
+    renewalEmailLineSegments(familyRow({ renewalType: "Anniversary", yearsSince: 1 }), "he"),
+    ["A & B", "שנה אחת"],
+  );
+});
+
 test("renewalEmailLineSegments shows event type for special dates", () => {
   const specialDateRow = (partial: Partial<RenewalRow> & Pick<RenewalRow, "renewalType">): RenewalRow => ({
     id: "special-date-gregorian-s1",
@@ -43,6 +54,23 @@ test("renewalEmailLineSegments shows event type for special dates", () => {
   assert.deepEqual(
     renewalEmailLineSegments(specialDateRow({ renewalType: "Death" })),
     ["Grandfather Moshe", "Death"],
+  );
+  assert.deepEqual(
+    renewalEmailLineSegments(
+      specialDateRow({
+        renewalType: "Death",
+        yearsSince: 10,
+        extraEmailSegments: [
+          "Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)",
+        ],
+      }),
+    ),
+    [
+      "Grandfather Moshe",
+      "10 years",
+      "Death",
+      "Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)",
+    ],
   );
   assert.deepEqual(
     renewalEmailLineSegments(

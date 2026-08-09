@@ -8,6 +8,7 @@ import {
   calendarDateFromDb,
   formatHebrewDateLabel,
   formatHebrewNightDayRangeLabel,
+  formatHebrewOccurrenceLabel,
   gregorianDateToHebrewComponents,
   nextAnnualGregorianOccurrence,
   nextGregorianOccurrenceForHebrewMonthDay,
@@ -15,6 +16,10 @@ import {
   passedHebrewOccurrenceThisCycle,
 } from "@/lib/hebrew-calendar";
 import { dateOnlyLocal, type RenewalRow } from "@/lib/upcoming-renewals/compute";
+import {
+  yearsSinceGregorian,
+  yearsSinceHebrew,
+} from "@/lib/upcoming-renewals/years-since";
 
 type FamilyMemberRow = {
   id: string;
@@ -106,6 +111,7 @@ function consolidateDualCalendarRows(params: {
       {
         ...gregorianRow,
         extraEmailSegments: [
+          ...(gregorianRow.extraEmailSegments ?? []),
           formatPassedHebrewNote(
             language,
             hebrewMonthDay!.month,
@@ -121,7 +127,10 @@ function consolidateDualCalendarRows(params: {
     return [
       {
         ...hebrewRow,
-        extraEmailSegments: [formatPassedGregorianNote(language, passedGregorian)],
+        extraEmailSegments: [
+          ...(hebrewRow.extraEmailSegments ?? []),
+          formatPassedGregorianNote(language, passedGregorian),
+        ],
       },
     ];
   }
@@ -139,13 +148,7 @@ function hebrewOccurrenceRenewalType(
   day: number,
   occurrenceDate: Date,
 ): string {
-  const h = gregorianDateToHebrewComponents(occurrenceDate);
-  const label = formatHebrewDateLabel(
-    { day, month, year: h.year },
-    language,
-  );
-  const timing = formatHebrewNightDayRangeLabel(language, occurrenceDate);
-  return language === "he" ? `עברי: ${label} (${timing})` : `Hebrew: ${label} (${timing})`;
+  return formatHebrewOccurrenceLabel(language, occurrenceDate, { month, day });
 }
 
 function birthdayRowsForMember(
@@ -153,7 +156,6 @@ function birthdayRowsForMember(
   today: Date,
   language: "en" | "he",
 ): RenewalRow[] {
-  const he = language === "he";
   const href = `/dashboard/family-members/${member.id}`;
 
   let gregorianRow: RenewalRow | null = null;
@@ -176,8 +178,9 @@ function birthdayRowsForMember(
       owner: member.full_name,
       ownerId: member.id,
       renewalDate: nextGregorian,
-      renewalType: he ? "יום הולדת" : "Birthday",
+      renewalType: formatHebrewOccurrenceLabel(language, nextGregorian),
       href,
+      yearsSince: yearsSinceGregorian(dob, nextGregorian),
     };
   }
 
@@ -192,6 +195,10 @@ function birthdayRowsForMember(
         month: member.hebrew_date_of_birth_month,
         day: member.hebrew_date_of_birth_day,
       };
+      const hebrewYears =
+        member.hebrew_date_of_birth_year != null
+          ? yearsSinceHebrew(member.hebrew_date_of_birth_year, nextHebrew)
+          : null;
       hebrewRow = {
         id: `birthday-hebrew-${member.id}`,
         category: "Birthday",
@@ -206,6 +213,7 @@ function birthdayRowsForMember(
           nextHebrew,
         ),
         href,
+        ...(hebrewYears != null ? { yearsSince: hebrewYears } : {}),
       };
     }
   }
@@ -246,8 +254,9 @@ function anniversaryRowsForMarriage(
       owner,
       ownerId: null,
       renewalDate: nextGregorian,
-      renewalType: he ? "יום נישואין" : "Anniversary",
+      renewalType: formatHebrewOccurrenceLabel(language, nextGregorian),
       href,
+      yearsSince: yearsSinceGregorian(wd, nextGregorian),
     };
   }
 
@@ -262,6 +271,10 @@ function anniversaryRowsForMarriage(
         month: marriage.wedding_hebrew_month,
         day: marriage.wedding_hebrew_day,
       };
+      const hebrewYears =
+        marriage.wedding_hebrew_year != null
+          ? yearsSinceHebrew(marriage.wedding_hebrew_year, nextHebrew)
+          : null;
       hebrewRow = {
         id: `anniversary-hebrew-${marriage.id}`,
         category: "Anniversary",
@@ -276,6 +289,7 @@ function anniversaryRowsForMarriage(
           nextHebrew,
         ),
         href,
+        ...(hebrewYears != null ? { yearsSince: hebrewYears } : {}),
       };
     }
   }
@@ -330,6 +344,8 @@ function specialDateRowsForRecord(
       renewalDate: nextGregorian,
       renewalType: eventTypeLabel,
       href,
+      yearsSince: yearsSinceGregorian(gd, nextGregorian),
+      extraEmailSegments: [formatHebrewOccurrenceLabel(language, nextGregorian)],
     };
   }
 
@@ -341,6 +357,8 @@ function specialDateRowsForRecord(
     });
     if (nextHebrew) {
       hebrewMonthDay = { month: record.hebrew_month, day: record.hebrew_day };
+      const hebrewYears =
+        record.hebrew_year != null ? yearsSinceHebrew(record.hebrew_year, nextHebrew) : null;
       hebrewRow = {
         id: `special-date-hebrew-${record.id}`,
         category: "Special date",
@@ -355,6 +373,7 @@ function specialDateRowsForRecord(
           nextHebrew,
         ),
         href,
+        ...(hebrewYears != null ? { yearsSince: hebrewYears } : {}),
       };
     }
   }
