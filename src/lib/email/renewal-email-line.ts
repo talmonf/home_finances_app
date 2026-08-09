@@ -29,7 +29,7 @@ export function renewalEmailLineSegments(
   const segments: string[] = [row.itemName];
   pushYearsSinceSegment(segments, row, language);
   const renewalType = row.renewalType.trim();
-  if (renewalType && !REDUNDANT_FAMILY_RENEWAL_TYPES.has(renewalType)) {
+  if (renewalType && renewalType !== "—" && !REDUNDANT_FAMILY_RENEWAL_TYPES.has(renewalType)) {
     segments.push(renewalType);
   }
   if (row.extraEmailSegments?.length) {

@@ -76,6 +76,23 @@ function formatPassedGregorianNote(language: "en" | "he", passedOccurrenceDate: 
     : `Gregorian: ${dateLabel} — already passed`;
 }
 
+function daysBetweenLocal(from: Date, to: Date): number {
+  const a = dateOnlyLocal(from).getTime();
+  const b = dateOnlyLocal(to).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+/** A "this cycle already passed" note is only useful when the pass was recent and the next occurrence is far off. */
+function shouldAnnotatePassedAlternate(params: {
+  passedOccurrence: Date;
+  today: Date;
+  nextOccurrence: Date;
+}): boolean {
+  const passedDaysAgo = daysBetweenLocal(params.passedOccurrence, params.today);
+  const daysUntilNext = daysBetweenLocal(params.today, params.nextOccurrence);
+  return passedDaysAgo >= 0 && passedDaysAgo <= 180 && daysUntilNext > 180;
+}
+
 function consolidateDualCalendarRows(params: {
   today: Date;
   language: "en" | "he";
@@ -106,7 +123,18 @@ function consolidateDualCalendarRows(params: {
         )
       : null;
 
-  if (passedHebrew && gUpcoming) {
+  // Only fold into one row when the other calendar's occurrence already passed *recently*
+  // and its next occurrence is far (next cycle). Otherwise keep both upcoming rows —
+  // e.g. English in September and Hebrew later the same autumn.
+  if (
+    passedHebrew &&
+    gUpcoming &&
+    shouldAnnotatePassedAlternate({
+      passedOccurrence: passedHebrew,
+      today,
+      nextOccurrence: hebrewRow.renewalDate,
+    })
+  ) {
     return [
       {
         ...gregorianRow,
@@ -123,7 +151,15 @@ function consolidateDualCalendarRows(params: {
     ];
   }
 
-  if (passedGregorian && hUpcoming) {
+  if (
+    passedGregorian &&
+    hUpcoming &&
+    shouldAnnotatePassedAlternate({
+      passedOccurrence: passedGregorian,
+      today,
+      nextOccurrence: gregorianRow.renewalDate,
+    })
+  ) {
     return [
       {
         ...hebrewRow,
@@ -178,7 +214,7 @@ function birthdayRowsForMember(
       owner: member.full_name,
       ownerId: member.id,
       renewalDate: nextGregorian,
-      renewalType: formatHebrewOccurrenceLabel(language, nextGregorian),
+      renewalType: "",
       href,
       yearsSince: yearsSinceGregorian(dob, nextGregorian),
     };
@@ -254,7 +290,7 @@ function anniversaryRowsForMarriage(
       owner,
       ownerId: null,
       renewalDate: nextGregorian,
-      renewalType: formatHebrewOccurrenceLabel(language, nextGregorian),
+      renewalType: "",
       href,
       yearsSince: yearsSinceGregorian(wd, nextGregorian),
     };
@@ -345,7 +381,6 @@ function specialDateRowsForRecord(
       renewalType: eventTypeLabel,
       href,
       yearsSince: yearsSinceGregorian(gd, nextGregorian),
-      extraEmailSegments: [formatHebrewOccurrenceLabel(language, nextGregorian)],
     };
   }
 
