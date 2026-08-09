@@ -80,4 +80,12 @@ test("renewalEmailLineSegments shows event type for special dates", () => {
     ),
     ["Grandfather Moshe", "Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)"],
   );
+  assert.deepEqual(
+    renewalEmailLineSegments(
+      specialDateRow({
+        renewalType: "Death; Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)",
+      }),
+    ),
+    ["Grandfather Moshe", "Death; Hebrew: 28 Sivan 5786 (Fri night-Sat 12/06/2026-13/06/2026)"],
+  );
 });

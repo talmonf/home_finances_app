@@ -6,16 +6,11 @@ import {
 import type { FamilySpecialDateEventType } from "@/generated/prisma/enums";
 import {
   calendarDateFromDb,
-  formatHebrewDateLabel,
-  formatHebrewNightDayRangeLabel,
   formatHebrewOccurrenceLabel,
-  gregorianDateToHebrewComponents,
   nextAnnualGregorianOccurrence,
   nextGregorianOccurrenceForHebrewMonthDay,
-  passedGregorianOccurrenceThisCycle,
-  passedHebrewOccurrenceThisCycle,
 } from "@/lib/hebrew-calendar";
-import { dateOnlyLocal, type RenewalRow } from "@/lib/upcoming-renewals/compute";
+import { type RenewalRow } from "@/lib/upcoming-renewals/compute";
 import {
   yearsSinceGregorian,
   yearsSinceHebrew,
@@ -52,129 +47,15 @@ type SpecialDateRow = {
   family_member: { id: string; full_name: string; is_active: boolean } | null;
 };
 
-function formatPassedHebrewNote(
-  language: "en" | "he",
-  month: number,
-  day: number,
-  passedOccurrenceDate: Date,
-): string {
-  const h = gregorianDateToHebrewComponents(passedOccurrenceDate);
-  const label = formatHebrewDateLabel({ day, month, year: h.year }, language);
-  const timing = formatHebrewNightDayRangeLabel(language, passedOccurrenceDate);
-  return language === "he"
-    ? `עברי: ${label} (${timing}) — עבר`
-    : `Hebrew: ${label} (${timing}) — already passed`;
-}
-
-function formatPassedGregorianNote(language: "en" | "he", passedOccurrenceDate: Date): string {
-  const dd = String(passedOccurrenceDate.getDate()).padStart(2, "0");
-  const mm = String(passedOccurrenceDate.getMonth() + 1).padStart(2, "0");
-  const yyyy = passedOccurrenceDate.getFullYear();
-  const dateLabel = `${dd}/${mm}/${yyyy}`;
-  return language === "he"
-    ? `לועזי: ${dateLabel} — עבר`
-    : `Gregorian: ${dateLabel} — already passed`;
-}
-
-function daysBetweenLocal(from: Date, to: Date): number {
-  const a = dateOnlyLocal(from).getTime();
-  const b = dateOnlyLocal(to).getTime();
-  return Math.round((b - a) / 86400000);
-}
-
-/** A "this cycle already passed" note is only useful when the pass was recent and the next occurrence is far off. */
-function shouldAnnotatePassedAlternate(params: {
-  passedOccurrence: Date;
-  today: Date;
-  nextOccurrence: Date;
-}): boolean {
-  const passedDaysAgo = daysBetweenLocal(params.passedOccurrence, params.today);
-  const daysUntilNext = daysBetweenLocal(params.today, params.nextOccurrence);
-  return passedDaysAgo >= 0 && passedDaysAgo <= 180 && daysUntilNext > 180;
-}
-
+/** Keep Gregorian and Hebrew as separate rows; never annotate one with the other's past occurrence. */
 function consolidateDualCalendarRows(params: {
-  today: Date;
-  language: "en" | "he";
   gregorianRow: RenewalRow | null;
   hebrewRow: RenewalRow | null;
-  gregorianMonthDay?: { month: number; day: number };
-  hebrewMonthDay?: { month: number; day: number };
 }): RenewalRow[] {
-  const { today, language, gregorianRow, hebrewRow, gregorianMonthDay, hebrewMonthDay } = params;
+  const { gregorianRow, hebrewRow } = params;
   if (!gregorianRow && !hebrewRow) return [];
   if (!gregorianRow) return [hebrewRow!];
   if (!hebrewRow) return [gregorianRow];
-
-  const todayD = dateOnlyLocal(today);
-  const gUpcoming = dateOnlyLocal(gregorianRow.renewalDate) >= todayD;
-  const hUpcoming = dateOnlyLocal(hebrewRow.renewalDate) >= todayD;
-
-  const passedHebrew =
-    hebrewMonthDay != null
-      ? passedHebrewOccurrenceThisCycle(hebrewMonthDay.month, hebrewMonthDay.day, today)
-      : null;
-  const passedGregorian =
-    gregorianMonthDay != null
-      ? passedGregorianOccurrenceThisCycle(
-          gregorianMonthDay.month,
-          gregorianMonthDay.day,
-          today,
-        )
-      : null;
-
-  // Only fold into one row when the other calendar's occurrence already passed *recently*
-  // and its next occurrence is far (next cycle). Otherwise keep both upcoming rows —
-  // e.g. English in September and Hebrew later the same autumn.
-  if (
-    passedHebrew &&
-    gUpcoming &&
-    shouldAnnotatePassedAlternate({
-      passedOccurrence: passedHebrew,
-      today,
-      nextOccurrence: hebrewRow.renewalDate,
-    })
-  ) {
-    return [
-      {
-        ...gregorianRow,
-        extraEmailSegments: [
-          ...(gregorianRow.extraEmailSegments ?? []),
-          formatPassedHebrewNote(
-            language,
-            hebrewMonthDay!.month,
-            hebrewMonthDay!.day,
-            passedHebrew,
-          ),
-        ],
-      },
-    ];
-  }
-
-  if (
-    passedGregorian &&
-    hUpcoming &&
-    shouldAnnotatePassedAlternate({
-      passedOccurrence: passedGregorian,
-      today,
-      nextOccurrence: gregorianRow.renewalDate,
-    })
-  ) {
-    return [
-      {
-        ...hebrewRow,
-        extraEmailSegments: [
-          ...(hebrewRow.extraEmailSegments ?? []),
-          formatPassedGregorianNote(language, passedGregorian),
-        ],
-      },
-    ];
-  }
-
-  if (gUpcoming && hUpcoming) {
-    return [gregorianRow, hebrewRow];
-  }
-
   return [gregorianRow, hebrewRow];
 }
 
@@ -195,9 +76,7 @@ function birthdayRowsForMember(
   const href = `/dashboard/family-members/${member.id}`;
 
   let gregorianRow: RenewalRow | null = null;
-  let gregorianMonthDay: { month: number; day: number } | undefined;
   let hebrewRow: RenewalRow | null = null;
-  let hebrewMonthDay: { month: number; day: number } | undefined;
 
   if (member.date_of_birth) {
     const dob = calendarDateFromDb(member.date_of_birth);
@@ -206,7 +85,6 @@ function birthdayRowsForMember(
       dob.getDate(),
       today,
     );
-    gregorianMonthDay = { month: dob.getMonth(), day: dob.getDate() };
     gregorianRow = {
       id: `birthday-gregorian-${member.id}`,
       category: "Birthday",
@@ -227,10 +105,6 @@ function birthdayRowsForMember(
       fromDate: today,
     });
     if (nextHebrew) {
-      hebrewMonthDay = {
-        month: member.hebrew_date_of_birth_month,
-        day: member.hebrew_date_of_birth_day,
-      };
       const hebrewYears =
         member.hebrew_date_of_birth_year != null
           ? yearsSinceHebrew(member.hebrew_date_of_birth_year, nextHebrew)
@@ -254,14 +128,7 @@ function birthdayRowsForMember(
     }
   }
 
-  return consolidateDualCalendarRows({
-    today,
-    language,
-    gregorianRow,
-    hebrewRow,
-    gregorianMonthDay,
-    hebrewMonthDay,
-  });
+  return consolidateDualCalendarRows({ gregorianRow, hebrewRow });
 }
 
 function anniversaryRowsForMarriage(
@@ -275,14 +142,11 @@ function anniversaryRowsForMarriage(
   const href = "/dashboard/family-members/marriages";
 
   let gregorianRow: RenewalRow | null = null;
-  let gregorianMonthDay: { month: number; day: number } | undefined;
   let hebrewRow: RenewalRow | null = null;
-  let hebrewMonthDay: { month: number; day: number } | undefined;
 
   if (marriage.wedding_date) {
     const wd = calendarDateFromDb(marriage.wedding_date);
     const nextGregorian = nextAnnualGregorianOccurrence(wd.getMonth(), wd.getDate(), today);
-    gregorianMonthDay = { month: wd.getMonth(), day: wd.getDate() };
     gregorianRow = {
       id: `anniversary-gregorian-${marriage.id}`,
       category: "Anniversary",
@@ -303,10 +167,6 @@ function anniversaryRowsForMarriage(
       fromDate: today,
     });
     if (nextHebrew) {
-      hebrewMonthDay = {
-        month: marriage.wedding_hebrew_month,
-        day: marriage.wedding_hebrew_day,
-      };
       const hebrewYears =
         marriage.wedding_hebrew_year != null
           ? yearsSinceHebrew(marriage.wedding_hebrew_year, nextHebrew)
@@ -330,14 +190,7 @@ function anniversaryRowsForMarriage(
     }
   }
 
-  return consolidateDualCalendarRows({
-    today,
-    language,
-    gregorianRow,
-    hebrewRow,
-    gregorianMonthDay,
-    hebrewMonthDay,
-  });
+  return consolidateDualCalendarRows({ gregorianRow, hebrewRow });
 }
 
 function specialDateRowsForRecord(
@@ -363,14 +216,11 @@ function specialDateRowsForRecord(
   const owner = itemName;
 
   let gregorianRow: RenewalRow | null = null;
-  let gregorianMonthDay: { month: number; day: number } | undefined;
   let hebrewRow: RenewalRow | null = null;
-  let hebrewMonthDay: { month: number; day: number } | undefined;
 
   if (record.gregorian_date) {
     const gd = calendarDateFromDb(record.gregorian_date);
     const nextGregorian = nextAnnualGregorianOccurrence(gd.getMonth(), gd.getDate(), today);
-    gregorianMonthDay = { month: gd.getMonth(), day: gd.getDate() };
     gregorianRow = {
       id: `special-date-gregorian-${record.id}`,
       category: "Special date",
@@ -391,7 +241,6 @@ function specialDateRowsForRecord(
       fromDate: today,
     });
     if (nextHebrew) {
-      hebrewMonthDay = { month: record.hebrew_month, day: record.hebrew_day };
       const hebrewYears =
         record.hebrew_year != null ? yearsSinceHebrew(record.hebrew_year, nextHebrew) : null;
       hebrewRow = {
@@ -401,26 +250,19 @@ function specialDateRowsForRecord(
         owner,
         ownerId,
         renewalDate: nextHebrew,
-        renewalType: hebrewOccurrenceRenewalType(
+        renewalType: `${eventTypeLabel}; ${hebrewOccurrenceRenewalType(
           language,
           record.hebrew_month,
           record.hebrew_day,
           nextHebrew,
-        ),
+        )}`,
         href,
         ...(hebrewYears != null ? { yearsSince: hebrewYears } : {}),
       };
     }
   }
 
-  return consolidateDualCalendarRows({
-    today,
-    language,
-    gregorianRow,
-    hebrewRow,
-    gregorianMonthDay,
-    hebrewMonthDay,
-  });
+  return consolidateDualCalendarRows({ gregorianRow, hebrewRow });
 }
 
 export async function loadUpcomingFamilyEventRows(params: {
@@ -472,12 +314,8 @@ export async function loadUpcomingFamilyEventRows(params: {
 
 /** @internal Exported for unit tests only. */
 export function consolidateDualCalendarRowsForTest(params: {
-  today: Date;
-  language: "en" | "he";
   gregorianRow: RenewalRow | null;
   hebrewRow: RenewalRow | null;
-  gregorianMonthDay?: { month: number; day: number };
-  hebrewMonthDay?: { month: number; day: number };
 }): RenewalRow[] {
   return consolidateDualCalendarRows(params);
 }
