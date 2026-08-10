@@ -338,13 +338,19 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             />
           </div>
 
-          <div className="flex items-end sm:col-span-2 lg:col-span-4">
+          <div className="flex flex-wrap items-end gap-3 sm:col-span-2 lg:col-span-4">
             <button
               type="submit"
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
             >
               {isHebrew ? "שמירת שינויים" : "Save changes"}
             </button>
+            <Link
+              href={`/dashboard/credit-cards?modal=new&cloneFrom=${encodeURIComponent(card.id)}`}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-slate-700"
+            >
+              {isHebrew ? "שכפול כרטיס" : "Clone card"}
+            </Link>
           </div>
         </form>
       </div>

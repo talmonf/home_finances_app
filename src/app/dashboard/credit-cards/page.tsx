@@ -6,7 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
@@ -21,6 +21,13 @@ export const dynamic = "force-dynamic";
 
 function formatExpiryMonthYear(d: Date | null) {
   if (!d) return "—";
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  const year = `${d.getFullYear()}`.slice(-2);
+  return `${month}/${year}`;
+}
+
+function formatExpiryMonthYearForForm(d: Date | null) {
+  if (!d) return "";
   const month = `${d.getMonth() + 1}`.padStart(2, "0");
   const year = `${d.getFullYear()}`.slice(-2);
   return `${month}/${year}`;
@@ -94,6 +101,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     modal?: string;
+    cloneFrom?: string;
     sort?: string;
     dir?: string;
     memberId?: string;
@@ -114,6 +122,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
+  const cloneFromId = (resolvedSearchParams?.cloneFrom ?? "").trim();
   const sort = resolvedSearchParams?.sort ?? "card";
   const dir = resolvedSearchParams?.dir === "desc" ? "desc" : "asc";
 
@@ -122,24 +131,30 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
   const cardStatusFilter = normalizeCardStatusFilter(resolvedSearchParams?.cardStatus);
   const rawCardScheme = (resolvedSearchParams?.cardScheme ?? "").trim();
 
-  const [familyMembers, bankAccounts, totalCardCount, schemeRows, creditCardsSetupDone] = await Promise.all([
-    prisma.family_members.findMany({
-      where: { household_id: householdId, is_active: true },
-      orderBy: { full_name: "asc" },
-    }),
-    prisma.bank_accounts.findMany({
-      where: { household_id: householdId, is_active: true },
-      orderBy: { account_name: "asc" },
-    }),
-    prisma.credit_cards.count({ where: { household_id: householdId } }),
-    prisma.credit_cards.findMany({
-      where: { household_id: householdId },
-      select: { scheme: true },
-      distinct: ["scheme"],
-      orderBy: { scheme: "asc" },
-    }),
-    getSetupSectionIsDone(householdId, "creditCards"),
-  ]);
+  const [familyMembers, bankAccounts, totalCardCount, schemeRows, creditCardsSetupDone, cloneSource] =
+    await Promise.all([
+      prisma.family_members.findMany({
+        where: { household_id: householdId, is_active: true },
+        orderBy: { full_name: "asc" },
+      }),
+      prisma.bank_accounts.findMany({
+        where: { household_id: householdId, is_active: true },
+        orderBy: { account_name: "asc" },
+      }),
+      prisma.credit_cards.count({ where: { household_id: householdId } }),
+      prisma.credit_cards.findMany({
+        where: { household_id: householdId },
+        select: { scheme: true },
+        distinct: ["scheme"],
+        orderBy: { scheme: "asc" },
+      }),
+      getSetupSectionIsDone(householdId, "creditCards"),
+      modalMode === "new" && cloneFromId
+        ? prisma.credit_cards.findFirst({
+            where: { id: cloneFromId, household_id: householdId },
+          })
+        : Promise.resolve(null),
+    ]);
 
   const householdSchemes = schemeRows.map((r) => r.scheme);
   const householdSchemeSet = new Set<string>(householdSchemes);
@@ -509,6 +524,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     id="card_name"
                     name="card_name"
                     required
+                    defaultValue={cloneSource?.card_name ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. Bank Mizrachi Visa / SuperPharm card"
                   />
@@ -521,7 +537,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     id="scheme"
                     name="scheme"
                     required
-                    defaultValue="visa"
+                    defaultValue={cloneSource?.scheme ?? "visa"}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   >
                     <option value="visa">Visa</option>
@@ -540,6 +556,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     id="issuer_name"
                     name="issuer_name"
                     required
+                    defaultValue={cloneSource?.issuer_name ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. Bank Mizrachi / Chase / Citi / Amex"
                   />
@@ -551,6 +568,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="co_brand"
                     name="co_brand"
+                    defaultValue={cloneSource?.co_brand ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. SuperPharm / Amazon / Delta"
                   />
@@ -562,6 +580,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="product_name"
                     name="product_name"
+                    defaultValue={cloneSource?.product_name ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. Lifestyle / Sapphire Preferred"
                   />
@@ -577,6 +596,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     inputMode="numeric"
                     pattern="\d{4}"
                     maxLength={4}
+                    defaultValue={cloneSource?.card_last_four ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="1234"
                   />
@@ -591,6 +611,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="digital_wallet_identifier"
                     name="digital_wallet_identifier"
+                    defaultValue={cloneSource?.digital_wallet_identifier ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. GooglePay 9952"
                   />
@@ -606,6 +627,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     min="1"
                     max="31"
                     step="1"
+                    defaultValue={cloneSource?.charge_day_of_month ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="e.g. 2"
                   />
@@ -620,6 +642,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     type="number"
                     min="0"
                     step="0.01"
+                    defaultValue={
+                      cloneSource?.monthly_cost == null ? "" : Number(cloneSource.monthly_cost)
+                    }
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="Leave blank if unknown"
                   />
@@ -631,7 +656,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="currency"
                     name="currency"
-                    defaultValue="ILS"
+                    defaultValue={cloneSource?.currency ?? "ILS"}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
@@ -642,6 +667,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <HouseholdDateField
                     id="issue_date"
                     name="issue_date"
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(cloneSource?.issue_date ?? null)}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
@@ -654,6 +680,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     name="expiry_month_year"
                     required
                     placeholder="MM/YY"
+                    defaultValue={formatExpiryMonthYearForForm(cloneSource?.expiry_date ?? null)}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
@@ -664,6 +691,9 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <HouseholdDateField
                     id="no_charge_policy_valid_until"
                     name="no_charge_policy_valid_until"
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(
+                      cloneSource?.no_charge_policy_valid_until ?? null,
+                    )}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   />
                 </div>
@@ -674,6 +704,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="website_url"
                     name="website_url"
+                    defaultValue={cloneSource?.website_url ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="Optional"
                   />
@@ -685,6 +716,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <input
                     id="notes"
                     name="notes"
+                    defaultValue={cloneSource?.notes ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                     placeholder="Any notes about this card"
                   />
@@ -697,6 +729,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     id="family_member_id"
                     name="family_member_id"
                     required
+                    defaultValue={cloneSource?.family_member_id ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   >
                     <option value="">Select…</option>
@@ -714,6 +747,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <select
                     id="settlement_bank_account_id"
                     name="settlement_bank_account_id"
+                    defaultValue={cloneSource?.settlement_bank_account_id ?? ""}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                   >
                     <option value="">None</option>
