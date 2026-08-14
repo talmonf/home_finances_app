@@ -5283,13 +5283,7 @@ export async function createTherapyConsultation(formData: FormData) {
   if (!(await assertConsultationType(householdId, consultation_type_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
   }
-  const programCountForJob = await prisma.therapy_service_programs.count({
-    where: { household_id: householdId, job_id },
-  });
   const program_id: string | null = program_id_raw || null;
-  if (programCountForJob > 0) {
-    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
-  }
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
     if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
@@ -5379,13 +5373,7 @@ export async function updateTherapyConsultation(formData: FormData) {
   if (!(await assertConsultationType(householdId, consultation_type_id, row.consultation_type_id))) {
     redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
   }
-  const programCountForJob = await prisma.therapy_service_programs.count({
-    where: { household_id: householdId, job_id },
-  });
   const program_id: string | null = program_id_raw || null;
-  if (programCountForJob > 0) {
-    if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
-  }
   if (program_id) {
     const prog = await assertProgram(householdId, program_id);
     if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");

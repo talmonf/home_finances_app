@@ -356,7 +356,7 @@ export async function ConsultationsPageContent({
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="shrink-0 text-lg font-medium text-slate-200">{co.consultationsHeading}</h2>
           {firstPage.rows.length > 0 ? (
-            <p className="min-w-0 flex-1 text-right text-sm font-medium text-slate-200">
+            <p className="min-w-0 w-full flex-1 basis-full text-sm font-medium text-slate-200 sm:w-auto sm:basis-auto sm:text-right">
               {formatListAmountTotalLine(
                 obfuscate,
                 c.total,
@@ -367,9 +367,9 @@ export async function ConsultationsPageContent({
               )}
             </p>
           ) : (
-            <div className="flex-1" />
+            <div className="hidden flex-1 sm:block" />
           )}
-          <div className="shrink-0">
+          <div className="w-full shrink-0 sm:w-auto">
             <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
           </div>
         </div>

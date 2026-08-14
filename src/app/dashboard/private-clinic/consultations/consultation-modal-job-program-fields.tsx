@@ -64,7 +64,6 @@ export function ConsultationModalJobProgramFields({
         <select
           name="program_id"
           value={programId}
-          required={programsForJob.length > 0}
           onChange={(e) => setProgramId(e.target.value)}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
