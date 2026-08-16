@@ -322,6 +322,7 @@ export async function GET() {
         end_date: s.end_date ? String(s.end_date) : "",
         duration_minutes: s.duration_minutes ?? "",
         is_active: s.is_active,
+        note: s.note ?? "",
         google_calendar_event_id: s.google_calendar_event_id ?? "",
       })),
     ),
@@ -352,6 +353,7 @@ export async function GET() {
         treatment_id: a.treatment_id ?? "",
         reschedule_reason: a.reschedule_reason ?? "",
         cancellation_reason: a.cancellation_reason ?? "",
+        note: a.note ?? "",
       })),
     ),
     sheet(

@@ -2478,6 +2478,7 @@ model therapy_appointment_series {
   end_date     DateTime? @db.Date
   duration_minutes Int?
   is_active    Boolean  @default(true)
+  note         String?
   google_calendar_event_id String?
   google_calendar_last_synced_at DateTime?
   google_calendar_last_error String?
@@ -2532,6 +2533,7 @@ model therapy_appointments {
   treatment_id String?
   reschedule_reason String?
   cancellation_reason String?
+  note         String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 

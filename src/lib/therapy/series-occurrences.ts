@@ -26,6 +26,7 @@ export type SeriesRuleInput = {
   end_date: Date | null;
   duration_minutes: number | null;
   is_active: boolean;
+  note: string | null;
 };
 
 export type VirtualSeriesOccurrence = {
@@ -38,6 +39,7 @@ export type VirtualSeriesOccurrence = {
   programId: string | null;
   visitType: TherapyVisitType;
   durationMinutes: number | null;
+  note: string | null;
 };
 
 export type UpcomingAppointmentRow = {
@@ -53,6 +55,7 @@ export type UpcomingAppointmentRow = {
   durationMinutes: number | null;
   status: "scheduled" | "completed" | "cancelled";
   treatmentId: string | null;
+  note: string | null;
   client?: { first_name: string; last_name: string | null };
   job?: { job_title: string; id: string };
 };
@@ -137,6 +140,7 @@ export function expandSeriesOccurrences(
         programId: series.program_id,
         visitType: series.visit_type,
         durationMinutes: series.duration_minutes,
+        note: series.note,
       });
     }
     d = addDays(d, step);
@@ -149,6 +153,7 @@ export type NextScheduledAppointmentRef = {
   seriesId: string | null;
   occurrenceDate: string | null;
   startAt: Date;
+  note: string | null;
 };
 
 /** Earliest scheduled from today onward, else the most recent past scheduled (still actionable). */
@@ -174,6 +179,7 @@ export function nextScheduledAppointmentByClientId(
       seriesId: pick.seriesId,
       occurrenceDate: pick.occurrenceDate,
       startAt: pick.startAt,
+      note: pick.note,
     });
   }
   return result;
@@ -224,6 +230,7 @@ export function mergeAppointmentsWithSeriesExpansion(
       durationMinutes: v.durationMinutes,
       status: "scheduled",
       treatmentId: null,
+      note: v.note,
     });
   }
 
@@ -298,6 +305,7 @@ export async function ensureAppointmentInstance(params: {
       end_at: endAt,
       duration_minutes: series.duration_minutes,
       status: "scheduled",
+      note: series.note,
     },
     include: appointmentInclude,
   });
@@ -451,6 +459,7 @@ export async function listAppointmentsForHousehold(params: {
     durationMinutes: a.duration_minutes,
     status: a.status,
     treatmentId: a.treatment_id,
+    note: a.note,
     client: a.client,
     job: { job_title: a.job.job_title, id: a.job.id },
   }));
@@ -511,6 +520,7 @@ export async function listAppointmentsForHousehold(params: {
         end_date: series.end_date,
         duration_minutes: series.duration_minutes,
         is_active: series.is_active,
+        note: series.note,
       },
       rangeStart,
       rangeEnd,
@@ -591,6 +601,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
     durationMinutes: a.duration_minutes,
     status: a.status,
     treatmentId: a.treatment_id,
+    note: a.note,
     client: a.client,
     job: { job_title: a.job.job_title, id: a.job.id },
   }));
@@ -644,6 +655,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
         end_date: series.end_date,
         duration_minutes: series.duration_minutes,
         is_active: series.is_active,
+        note: series.note,
       },
       rangeStart,
       rangeEnd,

@@ -1202,6 +1202,7 @@ export function privateClinicAppointments(lang: UiLanguage) {
     other: p("Other", "אחר"),
     notes: p("Notes", "הערות"),
     notesRequiredForOther: p("Notes are required when Other is selected.", "חובה למלא הערות כשנבחר \"אחר\"."),
+    appointmentNote: p("Note", "הערה"),
     therapistCancelled: p("Therapist cancelled", "המטפל ביטל"),
     patientCancelled: p("Patient cancelled", "המטופל ביטל"),
     therapistRescheduled: p("Therapist rescheduled", "המטפל דחה"),

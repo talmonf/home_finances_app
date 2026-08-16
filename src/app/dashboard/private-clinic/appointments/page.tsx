@@ -251,7 +251,7 @@ export default async function AppointmentsPage({
                         : "border-b border-slate-700/80 hover:bg-slate-800/50"
                     }
                   >
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                    <td className="px-3 py-2 text-slate-300">
                       <span className="font-medium text-slate-100">
                         {formatHouseholdDateUtcWithTime(a.startAt, dateDisplayFormat)}
                       </span>
@@ -262,6 +262,11 @@ export default async function AppointmentsPage({
                       ) : null}
                       {a.kind === "virtual" ? (
                         <span className="ml-2 text-xs text-amber-400/80">↻</span>
+                      ) : null}
+                      {a.note ? (
+                        <div className="mt-0.5 max-w-[16rem] text-xs text-slate-400" title={a.note}>
+                          {a.note}
+                        </div>
                       ) : null}
                     </td>
                     <td className="px-3 py-2 text-slate-100">

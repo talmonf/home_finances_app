@@ -29,6 +29,7 @@ type NextAppointmentRef = {
   seriesId: string | null;
   occurrenceDate: string | null;
   startAt: Date;
+  note: string | null;
 };
 
 type SortKey =
@@ -642,12 +643,24 @@ export default async function UpcomingVisitsPage({
                           ) : null}
                         </td>
                         {showScheduledColumn ? (
-                          <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                          <td className="px-3 py-2 text-slate-300">
                             {r.nextAppointment ? (
-                              formatHouseholdDateUtcWithTime(
-                                r.nextAppointment.startAt,
-                                dateDisplayFormat,
-                              )
+                              <div>
+                                <div className="whitespace-nowrap">
+                                  {formatHouseholdDateUtcWithTime(
+                                    r.nextAppointment.startAt,
+                                    dateDisplayFormat,
+                                  )}
+                                </div>
+                                {r.nextAppointment.note ? (
+                                  <div
+                                    className="mt-0.5 max-w-[16rem] whitespace-normal text-xs text-slate-400"
+                                    title={r.nextAppointment.note}
+                                  >
+                                    {r.nextAppointment.note}
+                                  </div>
+                                ) : null}
+                              </div>
                             ) : (
                               "—"
                             )}

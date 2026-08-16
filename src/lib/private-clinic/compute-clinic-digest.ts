@@ -15,6 +15,7 @@ export type ClinicDigestAppointmentRow = {
   clientName: string;
   jobLabel: string;
   visitType: TherapyVisitType;
+  note: string | null;
 };
 
 export type ClinicDigestVisitRow = {
@@ -29,13 +30,13 @@ export type ClinicDigestVisitRow = {
   onHold: boolean;
   isOverdue: boolean;
   isDueToday: boolean;
-  nextAppointment: { id: string | null; startAt: Date } | null;
+  nextAppointment: { id: string | null; startAt: Date; note: string | null } | null;
 };
 
 export type ClinicDigestNeedsFirstVisitRow = {
   clientId: string;
   name: string;
-  nextAppointment: { id: string | null; startAt: Date } | null;
+  nextAppointment: { id: string | null; startAt: Date; note: string | null } | null;
 };
 
 export type ClinicDigestData = {
@@ -104,6 +105,7 @@ export async function computeClinicDigestData(args: {
         : "—",
       jobLabel: a.job ? formatJobDisplayLabel({ job_title: a.job.job_title, employer_name: null }) : "—",
       visitType: a.visitType,
+      note: a.note,
     }));
 
   const allActiveClients = await prisma.therapy_clients.findMany({
@@ -161,7 +163,7 @@ export async function computeClinicDigestData(args: {
     row: (typeof clients)[number],
     lastVisit: Date | null,
     cadenceDue: Date | null,
-    nextAppointment: { id: string | null; startAt: Date } | null,
+    nextAppointment: { id: string | null; startAt: Date; note: string | null } | null,
   ) => {
     const nextDue = effectiveNextVisitDue({
       onHold: row.on_hold,

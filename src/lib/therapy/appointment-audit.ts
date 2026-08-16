@@ -17,6 +17,7 @@ export type AppointmentAuditSnapshot = {
   participant_names: string[];
   cancellation_reason: string | null;
   reschedule_reason: string | null;
+  note: string | null;
 };
 
 export function formatClientNameForAudit(firstName: string, lastName: string | null): string {
@@ -38,6 +39,7 @@ export function appointmentToSnapshot(row: {
   family_id: string | null;
   cancellation_reason?: string | null;
   reschedule_reason?: string | null;
+  note?: string | null;
   participants?: { client_id: string; client: { first_name: string; last_name: string | null } }[];
   client: { first_name: string; last_name: string | null };
   job: { job_title: string; employer_name: string | null };
@@ -61,6 +63,7 @@ export function appointmentToSnapshot(row: {
     ),
     cancellation_reason: row.cancellation_reason ?? null,
     reschedule_reason: row.reschedule_reason ?? null,
+    note: row.note ?? null,
   };
 }
 

@@ -128,6 +128,7 @@ export async function materializeSeriesAppointments(params: {
         start_at: startAt,
         end_at: null,
         status: "scheduled",
+        note: series.note,
       },
       include: appointmentInclude,
     });

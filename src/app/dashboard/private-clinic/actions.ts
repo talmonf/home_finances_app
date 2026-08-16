@@ -447,6 +447,14 @@ function parsePositiveInt(raw: string | null | undefined): number | null {
   return rounded > 0 ? rounded : null;
 }
 
+const APPOINTMENT_NOTE_MAX_LEN = 2000;
+
+function parseAppointmentNote(formData: FormData): string | null {
+  const raw = (formData.get("note") as string | null)?.trim() || "";
+  if (!raw) return null;
+  return raw.length > APPOINTMENT_NOTE_MAX_LEN ? raw.slice(0, APPOINTMENT_NOTE_MAX_LEN) : raw;
+}
+
 function parseLitres(raw: string | null | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;
@@ -4045,6 +4053,7 @@ export async function createTherapyAppointment(formData: FormData) {
       end_at: resolvedEndAt,
       duration_minutes: resolvedDurationMinutes,
       status: "scheduled",
+      note: parseAppointmentNote(formData),
     },
     include: APPOINTMENT_AUDIT_INCLUDE,
   });
@@ -4094,6 +4103,7 @@ export async function createTherapyAppointment(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reports`);
   const createdSuffix = syncError ? "created=1&warn=google-sync" : "created=1";
   appointmentsSuccessRedirect(formData, `${BASE}/appointments?${createdSuffix}`);
@@ -4548,6 +4558,7 @@ export async function updateTherapyAppointment(formData: FormData) {
         status === "cancelled"
           ? (formData.get("cancellation_reason") as string | null)?.trim() || null
           : null,
+      note: parseAppointmentNote(formData),
     },
   });
   await syncAppointmentParticipants({
@@ -4594,12 +4605,14 @@ export async function updateTherapyAppointment(formData: FormData) {
       },
     });
     revalidatePath(`${BASE}/appointments`);
+    revalidatePath(`${BASE}/upcoming-visits`);
     revalidatePath(`${BASE}/reports`);
     const updatedSuffix = syncError ? "updated=1&warn=google-sync" : "updated=1";
     appointmentsSuccessRedirect(formData, `${BASE}/appointments?${updatedSuffix}`);
   }
 
   revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reports`);
   appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
 }
@@ -4845,6 +4858,7 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
       end_date,
       duration_minutes: resolvedDuration,
       is_active: true,
+      note: parseAppointmentNote(formData),
     },
     include: { client: true, job: true },
   });
@@ -4861,6 +4875,7 @@ export async function createTherapyAppointmentSeries(formData: FormData) {
   });
 
   revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reports`);
   const seriesSuffix = syncError ? "series=1&warn=google-sync" : "series=1";
   appointmentsSuccessRedirect(formData, `${BASE}/appointments?${seriesSuffix}`);
@@ -4943,6 +4958,7 @@ export async function updateTherapyAppointmentSeriesFromDate(formData: FormData)
       end_date,
       duration_minutes: resolvedDuration,
       is_active: true,
+      note: oldSeries.note,
     },
     include: { client: true, job: true },
   });
@@ -4959,6 +4975,7 @@ export async function updateTherapyAppointmentSeriesFromDate(formData: FormData)
   });
 
   revalidatePath(`${BASE}/appointments`);
+  revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reports`);
   appointmentsSuccessRedirect(formData, `${BASE}/appointments?updated=1`);
 }

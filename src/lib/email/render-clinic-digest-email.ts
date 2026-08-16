@@ -47,6 +47,10 @@ function escapeAttr(s: string): string {
   return escapeHtml(s).replaceAll("'", "&#39;");
 }
 
+function compactNote(note: string | null | undefined): string {
+  return note?.replace(/\s+/g, " ").trim() ?? "";
+}
+
 export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): {
   subject: string;
   html: string;
@@ -95,10 +99,11 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
     for (const a of data.appointments) {
       const when = formatHouseholdDateUtcWithTime(a.startAt, dateDisplayFormat);
       const visitType = therapyVisitTypeLabel(uiLang, a.visitType);
-      const line = `${when} · ${a.clientName} · ${a.jobLabel} · ${visitType}`;
+      const note = compactNote(a.note);
+      const line = `${when} · ${a.clientName} · ${a.jobLabel} · ${visitType}${note ? ` · ${note}` : ""}`;
       textBody += `  - ${line}\n`;
       htmlParts.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(when)}</strong> · ${escapeHtml(a.clientName)} · ${escapeHtml(a.jobLabel)} · ${escapeHtml(visitType)}</li>`,
+        `<li style="margin:6px 0;"><strong>${escapeHtml(when)}</strong> · ${escapeHtml(a.clientName)} · ${escapeHtml(a.jobLabel)} · ${escapeHtml(visitType)}${note ? ` · ${escapeHtml(note)}` : ""}</li>`,
       );
     }
     htmlParts.push(`</ul>`);
@@ -125,13 +130,14 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
       const apptStr = v.nextAppointment
         ? copy.scheduledOn(formatHouseholdDateUtcWithTime(v.nextAppointment.startAt, dateDisplayFormat))
         : "";
-      const line = `${dueStr}${badge ? ` (${badge})` : ""} · ${v.name} · ${v.jobLabel} · ${v.programLabel}${apptStr ? ` · ${apptStr}` : ""} · ${he ? "אחרון" : "Last"}: ${lastStr}`;
+      const note = compactNote(v.nextAppointment?.note);
+      const line = `${dueStr}${badge ? ` (${badge})` : ""} · ${v.name} · ${v.jobLabel} · ${v.programLabel}${apptStr ? ` · ${apptStr}` : ""}${note ? ` · ${note}` : ""} · ${he ? "אחרון" : "Last"}: ${lastStr}`;
       textBody += `  - ${line}\n`;
       const badgeHtml = badge
         ? ` <span style="color:${v.isOverdue ? "#b91c1c" : "#b45309"};">(${escapeHtml(badge)})</span>`
         : "";
       htmlParts.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(dueStr)}</strong>${badgeHtml} · ${escapeHtml(v.name)} · ${escapeHtml(v.jobLabel)} · ${escapeHtml(v.programLabel)}${apptStr ? ` · <em>${escapeHtml(apptStr)}</em>` : ""} · ${escapeHtml(he ? "אחרון" : "Last")}: ${escapeHtml(lastStr)}</li>`,
+        `<li style="margin:6px 0;"><strong>${escapeHtml(dueStr)}</strong>${badgeHtml} · ${escapeHtml(v.name)} · ${escapeHtml(v.jobLabel)} · ${escapeHtml(v.programLabel)}${apptStr ? ` · <em>${escapeHtml(apptStr)}</em>` : ""}${note ? ` · ${escapeHtml(note)}` : ""} · ${escapeHtml(he ? "אחרון" : "Last")}: ${escapeHtml(lastStr)}</li>`,
       );
     }
     htmlParts.push(`</ul>`);
@@ -148,10 +154,11 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
       const apptStr = row.nextAppointment
         ? copy.scheduledOn(formatHouseholdDateUtcWithTime(row.nextAppointment.startAt, dateDisplayFormat))
         : "";
-      const line = `${row.name}${apptStr ? ` · ${apptStr}` : ""}`;
+      const note = compactNote(row.nextAppointment?.note);
+      const line = `${row.name}${apptStr ? ` · ${apptStr}` : ""}${note ? ` · ${note}` : ""}`;
       textBody += `  - ${line}\n`;
       htmlParts.push(
-        `<li style="margin:4px 0;">${escapeHtml(row.name)}${apptStr ? ` · <em>${escapeHtml(apptStr)}</em>` : ""}</li>`,
+        `<li style="margin:4px 0;">${escapeHtml(row.name)}${apptStr ? ` · <em>${escapeHtml(apptStr)}</em>` : ""}${note ? ` · ${escapeHtml(note)}` : ""}</li>`,
       );
     }
     htmlParts.push(`</ul>`);

@@ -318,6 +318,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         initialStartAt={dateToDatetimeLocalValue(apt.start_at)}
         initialEndAt={apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : ""}
         initialDurationMinutes={apt.duration_minutes ? String(apt.duration_minutes) : ""}
+        initialNote={apt.note ?? ""}
         labels={{
           client: c.client,
           job: c.job,
@@ -336,6 +337,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
           statusScheduled: ap.statusScheduled,
           statusCompleted: ap.statusCompleted,
           statusCancelled: ap.statusCancelled,
+          note: ap.appointmentNote,
           save: ap.save,
         }}
         jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}

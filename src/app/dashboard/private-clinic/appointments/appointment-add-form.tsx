@@ -46,6 +46,7 @@ type Props = {
     savingLabel: string;
     weekly: string;
     biweekly: string;
+    noteLabel: string;
   };
   visitOptions: VisitOption[];
   jobs: JobOption[];
@@ -443,6 +444,16 @@ export function AppointmentAddForm({
             />
           </label>
         ) : null}
+
+        <label className="space-y-1 md:col-span-2">
+          <span className="block text-xs text-slate-300">{copy.noteLabel}</span>
+          <textarea
+            name="note"
+            rows={2}
+            maxLength={2000}
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+        </label>
 
         <PendingSubmitButton
           label={submitLabel}

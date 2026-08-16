@@ -157,6 +157,7 @@ export default async function NewAppointmentPage({
           savingLabel: uiLanguage === "he" ? "שומר..." : "Saving...",
           weekly: ap.weekly,
           biweekly: ap.biweekly,
+          noteLabel: ap.appointmentNote,
         }}
         visitOptions={visitOptions}
         jobs={jobOpts}

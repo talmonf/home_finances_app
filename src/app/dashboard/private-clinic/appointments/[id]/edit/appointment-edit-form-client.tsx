@@ -22,6 +22,7 @@ type Props = {
   initialStartAt: string;
   initialEndAt: string;
   initialDurationMinutes: string;
+  initialNote: string;
   labels: {
     client: string;
     job: string;
@@ -40,6 +41,7 @@ type Props = {
     statusScheduled: string;
     statusCompleted: string;
     statusCancelled: string;
+    note: string;
     save: string;
   };
   jobs: JobOption[];
@@ -370,6 +372,16 @@ export function AppointmentEditFormClient(props: Props) {
           </div>
         </div>
       </div>
+      <label className="space-y-1 md:col-span-2">
+        <span className="block text-xs text-slate-300">{props.labels.note}</span>
+        <textarea
+          name="note"
+          rows={2}
+          maxLength={2000}
+          defaultValue={props.initialNote}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </label>
       <button
         type="submit"
         className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 md:col-span-2"
