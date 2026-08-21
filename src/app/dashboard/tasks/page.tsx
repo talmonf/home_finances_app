@@ -12,6 +12,8 @@ import {
   formatHouseholdDate,
   type HouseholdDateDisplayFormat,
 } from "@/lib/household-date-format";
+import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { DashboardModal } from "@/components/dashboard-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ type PageProps = {
     status?: string;
     sort?: string;
     dir?: string;
+    modal?: string;
   }>;
 };
 
@@ -135,6 +138,7 @@ function buildTasksQueryString(params: {
   created?: string | null;
   updated?: string | null;
   error?: string | null;
+  modal?: string | null;
 }) {
   const sp = new URLSearchParams();
   if (params.status) sp.set("status", params.status);
@@ -143,6 +147,7 @@ function buildTasksQueryString(params: {
   if (params.created) sp.set("created", params.created);
   if (params.updated) sp.set("updated", params.updated);
   if (params.error) sp.set("error", params.error);
+  if (params.modal) sp.set("modal", params.modal);
   const q = sp.toString();
   return q ? `?${q}` : "";
 }
@@ -171,6 +176,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const statusFilter = resolvedSearchParams?.status?.trim() || null;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
   const rawSort = resolvedSearchParams?.sort?.trim();
   const sortKey = SORT_COLUMNS.includes(rawSort as SortColumn) ? (rawSort as SortColumn) : undefined;
@@ -261,175 +267,9 @@ export default async function TasksPage({ searchParams }: PageProps) {
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "משימה חדשה" : "New task"}</h2>
-          <form
-            action={createTask}
-            className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <div className="sm:col-span-2">
-              <label htmlFor="subject" className="mb-1 block text-xs font-medium text-slate-400">
-                Subject
-              </label>
-              <input
-                id="subject"
-                name="subject"
-                required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Task subject"
-              />
-            </div>
-            <div>
-              <label htmlFor="priority" className="mb-1 block text-xs font-medium text-slate-400">
-                Priority
-              </label>
-              <select
-                id="priority"
-                name="priority"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="type" className="mb-1 block text-xs font-medium text-slate-400">
-                Type
-              </label>
-              <select
-                id="type"
-                name="type"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="manual">Manual</option>
-                <option value="automatic">Automatic</option>
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
-                Description
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label htmlFor="schedule_date" className="mb-1 block text-xs font-medium text-slate-400">
-                Schedule Date
-              </label>
-              <input
-                id="schedule_date"
-                name="schedule_date"
-                type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="due_date" className="mb-1 block text-xs font-medium text-slate-400">
-                Due Date
-              </label>
-              <input
-                id="due_date"
-                name="due_date"
-                type="date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="family_member_id_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Family member assignee
-              </label>
-              <select
-                name="family_member_id"
-                id="family_member_id_new"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label="Family member"
-              >
-                <option value="">Select family member</option>
-                {familyMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="assigned_user_id_new" className="mb-1 mt-2 block text-xs font-medium text-slate-400">
-                Advisor assignee
-              </label>
-              <select
-                name="assigned_user_id"
-                id="assigned_user_id_new"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                aria-label="Advisor"
-              >
-                <option value="">Select advisor</option>
-                {advisors.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת משימה" : "Add task"}
-              </button>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="link_1_title_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Link 1 title
-              </label>
-              <input
-                id="link_1_title_new"
-                name="link_1_title"
-                className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Vendor portal"
-              />
-              <label htmlFor="link_1_url_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Link 1 URL
-              </label>
-              <input
-                id="link_1_url_new"
-                name="link_1_url"
-                type="url"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="https://..."
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="link_2_title_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Link 2 title
-              </label>
-              <input
-                id="link_2_title_new"
-                name="link_2_title"
-                className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="e.g. Reference doc"
-              />
-              <label htmlFor="link_2_url_new" className="mb-1 block text-xs font-medium text-slate-400">
-                Link 2 URL
-              </label>
-              <input
-                id="link_2_url_new"
-                name="link_2_url"
-                type="url"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="https://..."
-              />
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "משימות" : "Tasks"}</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {statusOptions.map((opt) => (
                 <Link
                   key={opt.value || "all"}
@@ -443,12 +283,21 @@ export default async function TasksPage({ searchParams }: PageProps) {
                   {opt.label}
                 </Link>
               ))}
+              <DashboardAddButton
+                href={`/dashboard/tasks${buildTasksQueryString({
+                  status: statusFilter,
+                  sort: sortKey ?? null,
+                  dir: sortKey ? sortDir : null,
+                  modal: "new",
+                })}`}
+                label={isHebrew ? "הוספת משימה" : "Add task"}
+              />
             </div>
           </div>
 
           {tasks.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין משימות עדיין. ניתן ליצור למעלה." : "No tasks yet. Create one above."}
+              {isHebrew ? "אין משימות עדיין. ניתן להוסיף באמצעות הכפתור למעלה." : "No tasks yet. Add one using the button above."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -592,6 +441,191 @@ export default async function TasksPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+        {modalMode === "new" ? (
+          <DashboardModal
+            title={isHebrew ? "משימה חדשה" : "New task"}
+            closeHref={`/dashboard/tasks${buildTasksQueryString({
+              status: statusFilter,
+              sort: sortKey ?? null,
+              dir: sortKey ? sortDir : null,
+            })}`}
+            closeLabel={isHebrew ? "סגירה" : "Close"}
+          >
+            <form
+              action={createTask}
+              className="grid gap-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {resolvedSearchParams?.error ? (
+                <div className="sm:col-span-2 lg:col-span-4 rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
+                  {decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))}
+                </div>
+              ) : null}
+              <div className="sm:col-span-2">
+                <label htmlFor="subject" className="mb-1 block text-xs font-medium text-slate-400">
+                  Subject
+                </label>
+                <input
+                  id="subject"
+                  name="subject"
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Task subject"
+                />
+              </div>
+              <div>
+                <label htmlFor="priority" className="mb-1 block text-xs font-medium text-slate-400">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="type" className="mb-1 block text-xs font-medium text-slate-400">
+                  Type
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                >
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={2}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label htmlFor="schedule_date" className="mb-1 block text-xs font-medium text-slate-400">
+                  Schedule Date
+                </label>
+                <input
+                  id="schedule_date"
+                  name="schedule_date"
+                  type="date"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="due_date" className="mb-1 block text-xs font-medium text-slate-400">
+                  Due Date
+                </label>
+                <input
+                  id="due_date"
+                  name="due_date"
+                  type="date"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="family_member_id_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Family member assignee
+                </label>
+                <select
+                  name="family_member_id"
+                  id="family_member_id_new"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  aria-label="Family member"
+                >
+                  <option value="">Select family member</option>
+                  {familyMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="assigned_user_id_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Advisor assignee
+                </label>
+                <select
+                  name="assigned_user_id"
+                  id="assigned_user_id_new"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  aria-label="Advisor"
+                >
+                  <option value="">Select advisor</option>
+                  {advisors.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="link_1_title_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Link 1 title
+                </label>
+                <input
+                  id="link_1_title_new"
+                  name="link_1_title"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="e.g. Vendor portal"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="link_2_title_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Link 2 title
+                </label>
+                <input
+                  id="link_2_title_new"
+                  name="link_2_title"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="e.g. Reference doc"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="link_1_url_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Link 1 URL
+                </label>
+                <input
+                  id="link_1_url_new"
+                  name="link_1_url"
+                  type="url"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="link_2_url_new" className="mb-1 block text-xs font-medium text-slate-400">
+                  Link 2 URL
+                </label>
+                <input
+                  id="link_2_url_new"
+                  name="link_2_url"
+                  type="url"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                >
+                  {isHebrew ? "הוספת משימה" : "Add task"}
+                </button>
+              </div>
+            </form>
+          </DashboardModal>
+        ) : null}
       </div>
     </div>
   );

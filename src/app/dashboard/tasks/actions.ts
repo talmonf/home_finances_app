@@ -28,6 +28,10 @@ function parseDateInput(raw: string | null | undefined) {
   return { date: parsed, valid: true };
 }
 
+function createTaskErrorPath(message: string) {
+  return `/dashboard/tasks?modal=new&error=${message}`;
+}
+
 export async function createTask(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -46,9 +50,9 @@ export async function createTask(formData: FormData) {
   const scheduleDateInput = (formData.get("schedule_date") as string | null) ?? null;
   const dueDateInput = (formData.get("due_date") as string | null) ?? null;
 
-  if (!subject) redirect("/dashboard/tasks?error=Subject+is+required");
+  if (!subject) redirect(createTaskErrorPath("Subject+is+required"));
   if (family_member_id && assigned_user_id) {
-    redirect("/dashboard/tasks?error=Select+only+one+assignee");
+    redirect(createTaskErrorPath("Select+only+one+assignee"));
   }
 
   const normalizedLink1 = normalizeUrl(link1UrlInput);
@@ -56,16 +60,16 @@ export async function createTask(formData: FormData) {
   const scheduleDate = parseDateInput(scheduleDateInput);
   const dueDate = parseDateInput(dueDateInput);
   if (!normalizedLink1.valid || !normalizedLink2.valid) {
-    redirect("/dashboard/tasks?error=Links+must+use+valid+http(s)+URLs");
+    redirect(createTaskErrorPath("Links+must+use+valid+http(s)+URLs"));
   }
   if (!scheduleDate.valid || !dueDate.valid) {
-    redirect("/dashboard/tasks?error=Schedule+Date+and+Due+Date+must+be+valid+dates");
+    redirect(createTaskErrorPath("Schedule+Date+and+Due+Date+must+be+valid+dates"));
   }
   if ((link1Title && !normalizedLink1.url) || (!link1Title && normalizedLink1.url)) {
-    redirect("/dashboard/tasks?error=Link+1+requires+both+title+and+URL");
+    redirect(createTaskErrorPath("Link+1+requires+both+title+and+URL"));
   }
   if ((link2Title && !normalizedLink2.url) || (!link2Title && normalizedLink2.url)) {
-    redirect("/dashboard/tasks?error=Link+2+requires+both+title+and+URL");
+    redirect(createTaskErrorPath("Link+2+requires+both+title+and+URL"));
   }
 
   let finalFamilyMemberId: string | null = null;
@@ -74,13 +78,13 @@ export async function createTask(formData: FormData) {
     const fm = await prisma.family_members.findFirst({
       where: { id: family_member_id, household_id: householdId },
     });
-    if (!fm) redirect("/dashboard/tasks?error=Invalid+family+member+assignee");
+    if (!fm) redirect(createTaskErrorPath("Invalid+family+member+assignee"));
     finalFamilyMemberId = family_member_id;
   } else if (assigned_user_id) {
     const u = await prisma.users.findFirst({
       where: { id: assigned_user_id, household_id: householdId, user_type: "financial_advisor", is_active: true },
     });
-    if (!u) redirect("/dashboard/tasks?error=Invalid+advisor+assignee");
+    if (!u) redirect(createTaskErrorPath("Invalid+advisor+assignee"));
     finalAssignedUserId = assigned_user_id;
   }
 
