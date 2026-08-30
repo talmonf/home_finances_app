@@ -10,17 +10,19 @@ import {
   type HouseholdDateDisplayFormat,
 } from "@/lib/household-date-format";
 import {
-  MedicalAppointmentPaymentMethod as PaymentMethodValues,
-  MedicalReimbursementSource as ReimbursementSourceValues,
   type MedicalAppointmentPaymentMethod,
   type MedicalReimbursementSource,
 } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createMedicalAppointment } from "./actions";
+import { MedicalAppointmentModalForm } from "./medical-appointment-modal-form";
+import { getI18n } from "@/lib/i18n";
 import { medicalPaymentLabel, reimbursementSourceLabel } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
+
+const LIST_BASE = "/dashboard/medical-appointments";
 
 function startOfToday() {
   const now = new Date();
@@ -32,6 +34,7 @@ type PageProps = {
     created?: string;
     updated?: string;
     error?: string;
+    modal?: string;
   }>;
 };
 
@@ -148,7 +151,12 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const i18n = getI18n(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
+  const errorMessage = resolvedSearchParams?.error
+    ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
+    : null;
   const today = startOfToday();
 
   const [appointments, familyMembers, creditCards, bankAccounts, digitalMethods] = await Promise.all([
@@ -184,8 +192,9 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
     }),
   ]);
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
+  const showPageBanner =
+    Boolean(resolvedSearchParams?.created || resolvedSearchParams?.updated) ||
+    Boolean(errorMessage && !modalMode);
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -201,293 +210,40 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
               insurance.
             </p>
           </div>
-          {(resolvedSearchParams?.created ||
-            resolvedSearchParams?.updated ||
-            resolvedSearchParams?.error) && (
+          {showPageBanner ? (
             <div
               className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
-                resolvedSearchParams?.error
+                errorMessage && !modalMode
                   ? "border-rose-600 bg-rose-950/60 text-rose-100"
                   : "border-emerald-600 bg-emerald-950/40 text-emerald-100"
               }`}
             >
               <span>
-                {resolvedSearchParams?.error
-                  ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
+                {errorMessage && !modalMode
+                  ? errorMessage
                   : resolvedSearchParams?.created
                     ? "Appointment added."
                     : "Updated."}
               </span>
             </div>
-          )}
+          ) : null}
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "הוספת תור" : "Add appointment"}</h2>
-          <form
-            action={createMedicalAppointment}
-            className="space-y-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4"
-          >
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Visit</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label htmlFor="appointment_date" className="mb-1 block text-xs font-medium text-slate-400">
-                    Appointment date
-                  </label>
-                  <input id="appointment_date" name="appointment_date" type="date" required className={inputClass} />
-                </div>
-                <div>
-                  <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
-                    Provider / clinic
-                  </label>
-                  <input
-                    id="provider_name"
-                    name="provider_name"
-                    required
-                    className={inputClass}
-                    placeholder="e.g. Dr. Cohen, Ichilov outpatient"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
-                    Family member (optional)
-                  </label>
-                  <select id="family_member_id" name="family_member_id" className={inputClass}>
-                    <option value="">—</option>
-                    {familyMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="visit_description" className="mb-1 block text-xs font-medium text-slate-400">
-                    Visit type / specialty (optional)
-                  </label>
-                  <input
-                    id="visit_description"
-                    name="visit_description"
-                    className={inputClass}
-                    placeholder="e.g. Dermatology follow-up, MRI referral"
-                  />
-                </div>
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <label htmlFor="visit_notes" className="mb-1 block text-xs font-medium text-slate-400">
-                    Visit notes (optional)
-                  </label>
-                  <textarea
-                    id="visit_notes"
-                    name="visit_notes"
-                    rows={3}
-                    className={inputClass}
-                    placeholder="Anything to remember about this visit"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">{isHebrew ? "תשלום" : "Payment"}</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <label htmlFor="amount_out_of_pocket" className="mb-1 block text-xs font-medium text-slate-400">
-                    {isHebrew ? "השתתפות עצמית (אופציונלי)" : "Amount out of pocket (optional)"}
-                  </label>
-                  <input
-                    id="amount_out_of_pocket"
-                    name="amount_out_of_pocket"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
-                    Currency
-                  </label>
-                  <input id="currency" name="currency" defaultValue="ILS" className={inputClass} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="payment_method" className="mb-1 block text-xs font-medium text-slate-400">
-                    How you paid (optional)
-                  </label>
-                  <select id="payment_method" name="payment_method" className={inputClass} defaultValue="">
-                    <option value="">Not specified yet</option>
-                    {Object.values(PaymentMethodValues).map((value) => (
-                      <option key={value} value={value}>
-                        {medicalPaymentLabel(uiLanguage, value)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="credit_card_id" className="mb-1 block text-xs font-medium text-slate-400">
-                    Credit card (if paid by card)
-                  </label>
-                  <select id="credit_card_id" name="credit_card_id" className={inputClass}>
-                    <option value="">—</option>
-                    {creditCards.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.card_name} · ****{c.card_last_four}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="bank_account_id" className="mb-1 block text-xs font-medium text-slate-400">
-                    Bank account (if transfer / debit)
-                  </label>
-                  <select id="bank_account_id" name="bank_account_id" className={inputClass}>
-                    <option value="">—</option>
-                    {bankAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.account_name} · {a.bank_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="digital_payment_method_id"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Digital wallet (if Bit, PayBox, etc.)
-                  </label>
-                  <select id="digital_payment_method_id" name="digital_payment_method_id" className={inputClass}>
-                    <option value="">—</option>
-                    {digitalMethods.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Kupat holim reimbursement</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <label
-                    htmlFor="kupat_holim_request_submitted_at"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request submitted on (optional)
-                  </label>
-                  <input
-                    id="kupat_holim_request_submitted_at"
-                    name="kupat_holim_request_submitted_at"
-                    type="date"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
-                    Notes (reference #, status, etc.)
-                  </label>
-                  <input id="kupat_holim_notes" name="kupat_holim_notes" className={inputClass} />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Private medical insurance</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <label
-                    htmlFor="private_insurance_request_submitted_at"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    Request submitted on (optional)
-                  </label>
-                  <input
-                    id="private_insurance_request_submitted_at"
-                    name="private_insurance_request_submitted_at"
-                    type="date"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
-                    Notes
-                  </label>
-                  <input id="private_insurance_notes" name="private_insurance_notes" className={inputClass} />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Reimbursement received</h3>
-              <p className="mb-3 text-xs text-slate-500">
-                When money is paid back, record it once here (usually either kupat holim or private insurance).
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <label
-                    htmlFor="reimbursement_amount_received"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    {isHebrew ? "סכום שהתקבל (אופציונלי)" : "Amount received (optional)"}
-                  </label>
-                  <input
-                    id="reimbursement_amount_received"
-                    name="reimbursement_amount_received"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="reimbursement_received_at"
-                    className="mb-1 block text-xs font-medium text-slate-400"
-                  >
-                    {isHebrew ? "תאריך קבלה (אופציונלי)" : "Date received (optional)"}
-                  </label>
-                  <input
-                    id="reimbursement_received_at"
-                    name="reimbursement_received_at"
-                    type="date"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="reimbursement_source" className="mb-1 block text-xs font-medium text-slate-400">
-                    Paid by (required if amount or date is set)
-                  </label>
-                  <select id="reimbursement_source" name="reimbursement_source" className={inputClass}>
-                    <option value="">—</option>
-                    {Object.values(ReimbursementSourceValues).map((value) => (
-                      <option key={value} value={value}>
-                        {reimbursementSourceLabel(uiLanguage, value)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
-              >
-                {isHebrew ? "הוספת תור" : "Add appointment"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-medium text-slate-200">History</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium text-slate-200">{i18n.medical.history}</h2>
+            <Link
+              href={`${LIST_BASE}?modal=new`}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+            >
+              {i18n.medical.addAppointment}
+            </Link>
+          </div>
           {appointments.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              {isHebrew ? "אין תורים עדיין. אפשר להוסיף למעלה." : "No appointments yet. Add one above."}
+              {isHebrew
+                ? "אין תורים עדיין. לחצו על ״הוספת תור״ כדי להוסיף."
+                : "No appointments yet. Use “Add appointment” to add one."}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -571,6 +327,22 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
             </div>
           )}
         </section>
+
+        {modalMode === "new" ? (
+          <MedicalAppointmentModalForm
+            action={createMedicalAppointment}
+            closeHref={LIST_BASE}
+            closeLabel={i18n.common.cancel}
+            title={i18n.medical.addAppointment}
+            errorMessage={errorMessage}
+            isHebrew={isHebrew}
+            uiLanguage={uiLanguage}
+            familyMembers={familyMembers}
+            creditCards={creditCards}
+            bankAccounts={bankAccounts}
+            digitalMethods={digitalMethods}
+          />
+        ) : null}
       </div>
     </div>
   );

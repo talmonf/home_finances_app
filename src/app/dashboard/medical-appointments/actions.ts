@@ -19,6 +19,12 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function redirectWithError(basePath: string, message: string): never {
+  const u = new URL(basePath, "http://local.invalid");
+  u.searchParams.set("error", message);
+  redirect(`${u.pathname}${u.search}`);
+}
+
 function parseOptionalAmount(raw: string | null): { ok: true; value: number | null } | { ok: false } {
   const t = raw?.trim();
   if (!t) return { ok: true, value: null };
@@ -81,7 +87,7 @@ async function parseMedicalAppointmentForm(
 
   const amountParsed = parseOptionalAmount(formData.get("amount_out_of_pocket") as string | null);
   if (!amountParsed.ok) {
-    redirect(`${errorPath}?error=Invalid+amount+out+of+pocket`);
+    redirectWithError(errorPath, "Invalid amount out of pocket");
   }
   const amount_out_of_pocket = amountParsed.value;
 
@@ -104,25 +110,25 @@ async function parseMedicalAppointmentForm(
     formData.get("reimbursement_amount_received") as string | null,
   );
   if (!reimbursementAmountParsed.ok) {
-    redirect(`${errorPath}?error=Invalid+reimbursement+amount`);
+    redirectWithError(errorPath, "Invalid reimbursement amount");
   }
   const reimbursement_amount_received = reimbursementAmountParsed.value;
 
   if (!provider_name || !appointment_date_raw) {
-    redirect(`${errorPath}?error=Provider+and+appointment+date+required`);
+    redirectWithError(errorPath, "Provider and appointment date required");
   }
 
   let payment_method: MedicalAppointmentPaymentMethod | null = null;
   if (payment_method_raw) {
     if (!PAYMENT_METHODS.includes(payment_method_raw as MedicalAppointmentPaymentMethod)) {
-      redirect(`${errorPath}?error=Invalid+payment+method`);
+      redirectWithError(errorPath, "Invalid payment method");
     }
     payment_method = payment_method_raw as MedicalAppointmentPaymentMethod;
   }
 
   const appointment_date = new Date(appointment_date_raw);
   if (Number.isNaN(appointment_date.getTime())) {
-    redirect(`${errorPath}?error=Invalid+appointment+date`);
+    redirectWithError(errorPath, "Invalid appointment date");
   }
 
   if (family_member_id) {
@@ -131,7 +137,7 @@ async function parseMedicalAppointmentForm(
       select: { id: true },
     });
     if (!member) {
-      redirect(`${errorPath}?error=Invalid+family+member`);
+      redirectWithError(errorPath, "Invalid family member");
     }
   }
 
@@ -156,7 +162,7 @@ async function parseMedicalAppointmentForm(
       },
     });
     if (!card) {
-      redirect(`${errorPath}?error=Credit+card+must+be+active+and+not+expired`);
+      redirectWithError(errorPath, "Credit card must be active and not expired");
     }
   }
 
@@ -170,7 +176,7 @@ async function parseMedicalAppointmentForm(
       select: { id: true },
     });
     if (!acct) {
-      redirect(`${errorPath}?error=Invalid+bank+account`);
+      redirectWithError(errorPath, "Invalid bank account");
     }
   }
 
@@ -186,7 +192,7 @@ async function parseMedicalAppointmentForm(
       select: { id: true },
     });
     if (!dpm) {
-      redirect(`${errorPath}?error=Invalid+digital+payment+method`);
+      redirectWithError(errorPath, "Invalid digital payment method");
     }
   }
 
@@ -194,7 +200,7 @@ async function parseMedicalAppointmentForm(
   if (kupat_holim_request_submitted_raw) {
     kupat_holim_request_submitted_at = new Date(kupat_holim_request_submitted_raw);
     if (Number.isNaN(kupat_holim_request_submitted_at.getTime())) {
-      redirect(`${errorPath}?error=Invalid+kupat+holim+request+date`);
+      redirectWithError(errorPath, "Invalid kupat holim request date");
     }
   }
 
@@ -202,7 +208,7 @@ async function parseMedicalAppointmentForm(
   if (private_insurance_request_submitted_raw) {
     private_insurance_request_submitted_at = new Date(private_insurance_request_submitted_raw);
     if (Number.isNaN(private_insurance_request_submitted_at.getTime())) {
-      redirect(`${errorPath}?error=Invalid+private+insurance+request+date`);
+      redirectWithError(errorPath, "Invalid private insurance request date");
     }
   }
 
@@ -210,14 +216,14 @@ async function parseMedicalAppointmentForm(
   if (reimbursement_received_raw) {
     reimbursement_received_at = new Date(reimbursement_received_raw);
     if (Number.isNaN(reimbursement_received_at.getTime())) {
-      redirect(`${errorPath}?error=Invalid+reimbursement+received+date`);
+      redirectWithError(errorPath, "Invalid reimbursement received date");
     }
   }
 
   const hasReimbursementPayment =
     reimbursement_amount_received != null || reimbursement_received_at != null;
   if (hasReimbursementPayment && !reimbursement_source) {
-    redirect(`${errorPath}?error=Reimbursement+source+required+when+amount+or+date+is+set`);
+    redirectWithError(errorPath, "Reimbursement source required when amount or date is set");
   }
 
   return {
@@ -245,14 +251,15 @@ async function parseMedicalAppointmentForm(
 export async function createMedicalAppointment(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
+  const createErrorPath = "/dashboard/medical-appointments?modal=new";
   if (!householdId) {
-    redirect("/dashboard/medical-appointments?error=No+household");
+    redirectWithError(createErrorPath, "No household");
   }
 
   const payload = await parseMedicalAppointmentForm(
     formData,
     householdId,
-    "/dashboard/medical-appointments",
+    createErrorPath,
   );
 
   await prisma.medical_appointments.create({
