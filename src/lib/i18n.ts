@@ -15,6 +15,9 @@ const STRINGS = {
       title: "Medical appointments",
       addAppointment: "Add appointment",
       history: "History",
+      upcoming: "Upcoming",
+      notReimbursed: "Not reimbursed",
+      reimbursed: "Reimbursed",
     },
     donations: {
       title: "Donations",
@@ -36,6 +39,9 @@ const STRINGS = {
       title: "תורים רפואיים",
       addAppointment: "הוספת תור",
       history: "היסטוריה",
+      upcoming: "קרוב",
+      notReimbursed: "ממתין להחזר",
+      reimbursed: "הוחזר",
     },
     donations: {
       title: "תרומות",

@@ -29,6 +29,37 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+type AppointmentListStatus = "upcoming" | "notReimbursed" | "reimbursed";
+
+function isReimbursementRecorded(
+  receivedAt: Date | null,
+  source: MedicalReimbursementSource | null,
+  amount: unknown,
+) {
+  return receivedAt != null || source != null || amount != null;
+}
+
+function classifyAppointmentStatus(
+  appointmentDate: Date,
+  today: Date,
+  reimbursed: boolean,
+): AppointmentListStatus {
+  if (appointmentDate >= today) return "upcoming";
+  return reimbursed ? "reimbursed" : "notReimbursed";
+}
+
+const STATUS_PILL_CLASS: Record<AppointmentListStatus, string> = {
+  upcoming: "bg-sky-500/15 text-sky-300",
+  notReimbursed: "bg-amber-500/15 text-amber-200",
+  reimbursed: "bg-emerald-500/15 text-emerald-300",
+};
+
+const STATUS_ROW_CLASS: Record<AppointmentListStatus, string> = {
+  upcoming: "border-l-2 border-sky-500",
+  notReimbursed: "border-l-2 border-amber-500",
+  reimbursed: "border-l-2 border-emerald-600/60",
+};
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -196,6 +227,30 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
     Boolean(resolvedSearchParams?.created || resolvedSearchParams?.updated) ||
     Boolean(errorMessage && !modalMode);
 
+  const statusLabels: Record<AppointmentListStatus, string> = {
+    upcoming: i18n.medical.upcoming,
+    notReimbursed: i18n.medical.notReimbursed,
+    reimbursed: i18n.medical.reimbursed,
+  };
+  const statusCounts: Record<AppointmentListStatus, number> = {
+    upcoming: 0,
+    notReimbursed: 0,
+    reimbursed: 0,
+  };
+  const appointmentStatuses = appointments.map((row) => {
+    const status = classifyAppointmentStatus(
+      row.appointment_date,
+      today,
+      isReimbursementRecorded(
+        row.reimbursement_received_at,
+        row.reimbursement_source,
+        row.reimbursement_amount_received,
+      ),
+    );
+    statusCounts[status] += 1;
+    return status;
+  });
+
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -231,7 +286,22 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
 
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-medium text-slate-200">{i18n.medical.history}</h2>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+              <h2 className="text-lg font-medium text-slate-200">{i18n.medical.history}</h2>
+              {appointments.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {(["upcoming", "notReimbursed", "reimbursed"] as const).map((status) => (
+                    <span
+                      key={status}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 ${STATUS_PILL_CLASS[status]}`}
+                    >
+                      <span>{statusLabels[status]}</span>
+                      <span className="tabular-nums font-semibold">{statusCounts[status]}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <Link
               href={`${LIST_BASE}?modal=new`}
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
@@ -263,11 +333,21 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-700/80 align-top hover:bg-slate-800/40">
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-200">
-                        {formatHouseholdDate(row.appointment_date, dateDisplayFormat)}
-                      </td>
+                  {appointments.map((row, index) => {
+                    const status = appointmentStatuses[index];
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-slate-700/80 align-top hover:bg-slate-800/40 ${STATUS_ROW_CLASS[status]}`}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap text-slate-200">
+                          <div>{formatHouseholdDate(row.appointment_date, dateDisplayFormat)}</div>
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL_CLASS[status]}`}
+                          >
+                            {statusLabels[status]}
+                          </span>
+                        </td>
                       <td className="px-4 py-3 text-slate-100">
                         <div className="font-medium">{row.provider_name}</div>
                         {row.visit_description ? (
@@ -320,8 +400,9 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           {isHebrew ? "עריכה" : "Edit"}
                         </Link>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
