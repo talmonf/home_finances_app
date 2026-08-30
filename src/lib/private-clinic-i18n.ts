@@ -372,6 +372,11 @@ export function privateClinicClients(lang: UiLanguage) {
     mobilePhone: p("Mobile phone", "טלפון נייד"),
     homePhone: p("Home phone", "טלפון בית"),
     address: p("Address", "כתובת"),
+    teamMembers: p("Other team members", "חברי צוות נוספים"),
+    teamMembersHint: p(
+      "Optional. People you work with for this patient (for example a nurse, physician, or occupational therapist).",
+      "אופציונלי. אנשי מקצוע שעובדים איתך עם מטופל זה (למשל אחות, רופא או מרפא בעיסוק).",
+    ),
     visitFrequency: p("Visit frequency", "תדירות ביקורים"),
     visitFrequencyClientHint: p(
       "Optional. Leave blank to inherit from the default program (if it defines one).",
@@ -447,6 +452,7 @@ export function privateClinicClients(lang: UiLanguage) {
     colProgram: p("Default program", "תכנית ברירת מחדל"),
     colKupatHolim: p("Kupat Holim", "קופת חולים"),
     colFamily: p("Family", "משפחה"),
+    colTeamMembers: p("Team members", "חברי צוות"),
     colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
     colNextVisitDue: p("Next visit", "הביקור הבא"),
     nextVisitScheduledLabel: p("Scheduled", "מתוזמן"),
@@ -527,6 +533,7 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
     colJob: cl.colJob,
     colProgram: cl.colProgram,
     colKupatHolim: cl.colKupatHolim,
+    colTeamMembers: cl.colTeamMembers,
     colActions: cl.colActions,
     overdue: p("Overdue", "באיחור"),
     dueToday: p("Today", "היום"),

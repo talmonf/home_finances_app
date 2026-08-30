@@ -31,6 +31,7 @@ export type TherapyClientFormEditRow = {
   disability_status: string | null;
   rehab_basket_status: string | null;
   notes: string | null;
+  team_members: string | null;
   default_job_id: string;
   default_program_id: string | null;
   default_visit_type: "clinic" | "home" | "phone" | "video" | null;
@@ -388,6 +389,19 @@ export function TherapyClientForm({
             className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         )}
+      </div>
+
+      <div className="space-y-1 md:col-span-2">
+        <label htmlFor={`${idPrefix}_team_members`} className="block text-xs text-slate-400">
+          {cl.teamMembers}
+        </label>
+        <p className="text-xs text-slate-500">{cl.teamMembersHint}</p>
+        <input
+          id={`${idPrefix}_team_members`}
+          name="team_members"
+          defaultValue={client?.team_members ?? ""}
+          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
       </div>
 
       <div className="space-y-1">

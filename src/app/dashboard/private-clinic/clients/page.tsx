@@ -62,6 +62,7 @@ type SortKey =
   | "next_visit_due"
   | "family"
   | "program"
+  | "team_members"
   | "active";
 
 function parseSortKey(s: string | undefined): SortKey {
@@ -76,6 +77,7 @@ function parseSortKey(s: string | undefined): SortKey {
     "next_visit_due",
     "family",
     "program",
+    "team_members",
     "active",
   ];
   return allowed.includes(s as SortKey) ? (s as SortKey) : "first_name";
@@ -138,6 +140,8 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ family: { name: dir } }, { id: dir }];
     case "program":
       return [{ default_program: { name: dir } }, { id: dir }];
+    case "team_members":
+      return [{ team_members: dir }, { id: dir }];
     case "active":
       // Status includes on_hold; sorted in-memory below.
       return [{ first_name: "asc" }, { last_name: "asc" }, { id: "asc" }];
@@ -648,6 +652,15 @@ export default async function ClientsPage({
                   sortHintDesc={cl.sortHintDesc}
                 />
                 <SortHeader
+                  column="team_members"
+                  label={cl.colTeamMembers}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
+                <SortHeader
                   column="active"
                   label={c.status}
                   sort={sort}
@@ -793,6 +806,9 @@ export default async function ClientsPage({
                           {clientLastName}
                         </Link>
                       ) : null}
+                    </td>
+                    <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={row.team_members ?? undefined}>
+                      {row.team_members?.trim() ? row.team_members : "—"}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       {!row.is_active ? (

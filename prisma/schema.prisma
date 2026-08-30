@@ -2103,6 +2103,8 @@ model therapy_clients {
   end_date           DateTime? @db.Date
   end_reason         TherapyClientEndReason?
   notes              String?
+  /// Other clinicians/staff who work with this patient (free text).
+  team_members       String?
   default_job_id     String
   default_program_id String?
   default_visit_type TherapyVisitType?

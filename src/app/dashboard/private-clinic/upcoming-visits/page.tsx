@@ -41,7 +41,8 @@ type SortKey =
   | "job"
   | "program"
   | "kupat_holim"
-  | "family";
+  | "family"
+  | "team_members";
 
 type SortDir = "asc" | "desc";
 
@@ -56,6 +57,7 @@ function parseSortKey(raw: string | undefined): SortKey {
     "program",
     "kupat_holim",
     "family",
+    "team_members",
   ];
   return allowed.includes(raw as SortKey) ? (raw as SortKey) : "next_due";
 }
@@ -256,6 +258,7 @@ export default async function UpcomingVisitsPage({
     programLabel: string;
     kupatHolimLabel: string;
     familyLabel: string;
+    teamMembers: string;
     lastVisit: Date | null;
     nextDue: Date | null;
     onHold: boolean;
@@ -290,6 +293,7 @@ export default async function UpcomingVisitsPage({
                 ? cl.kupatLeumit
                 : c.none,
       familyLabel: row.family?.name ?? "—",
+      teamMembers: row.team_members?.trim() || "",
       lastVisit,
       nextDue,
       onHold,
@@ -390,6 +394,9 @@ export default async function UpcomingVisitsPage({
         break;
       case "family":
         cmp = compareText(a.familyLabel, b.familyLabel) * direction;
+        break;
+      case "team_members":
+        cmp = compareText(a.teamMembers, b.teamMembers) * direction;
         break;
       case "next_due":
       default:
@@ -504,6 +511,15 @@ export default async function UpcomingVisitsPage({
                         sortHintAsc={cl.sortHintAsc}
                         sortHintDesc={cl.sortHintDesc}
                         sticky
+                      />
+                      <SortHeader
+                        column="team_members"
+                        label={uv.colTeamMembers}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
                       />
                       <SortHeader
                         column="next_due"
@@ -632,6 +648,9 @@ export default async function UpcomingVisitsPage({
                             ) : null}
                           </div>
                         </td>
+                        <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={r.teamMembers || undefined}>
+                          {r.teamMembers || "—"}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <span className="font-medium text-slate-100">
                             {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
@@ -729,9 +748,16 @@ export default async function UpcomingVisitsPage({
                   const name =
                     [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
                   const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
+                  const teamMembers = row.team_members?.trim() || "";
                   return (
                     <li key={row.id}>
                       <span>{obfuscate ? OBFUSCATED : name}</span>
+                      {teamMembers ? (
+                        <span className="text-slate-400">
+                          {" "}
+                          ({uv.colTeamMembers}: {teamMembers})
+                        </span>
+                      ) : null}
                       {" — "}
                       <Link
                         href={treatmentLogHref(row.id, nextAppointment?.id)}
