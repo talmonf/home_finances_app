@@ -18,6 +18,7 @@ const STRINGS = {
       upcoming: "Upcoming",
       notReimbursed: "Not reimbursed",
       reimbursed: "Reimbursed",
+      noMatchingAppointments: "No appointments in this filter.",
     },
     donations: {
       title: "Donations",
@@ -42,6 +43,7 @@ const STRINGS = {
       upcoming: "קרוב",
       notReimbursed: "ממתין להחזר",
       reimbursed: "הוחזר",
+      noMatchingAppointments: "אין תורים במסנן זה.",
     },
     donations: {
       title: "תרומות",

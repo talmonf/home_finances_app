@@ -54,11 +54,32 @@ const STATUS_PILL_CLASS: Record<AppointmentListStatus, string> = {
   reimbursed: "bg-emerald-500/15 text-emerald-300",
 };
 
+const STATUS_PILL_ACTIVE_CLASS: Record<AppointmentListStatus, string> = {
+  upcoming: "ring-1 ring-sky-400",
+  notReimbursed: "ring-1 ring-amber-400",
+  reimbursed: "ring-1 ring-emerald-400",
+};
+
 const STATUS_ROW_CLASS: Record<AppointmentListStatus, string> = {
   upcoming: "border-l-2 border-sky-500",
   notReimbursed: "border-l-2 border-amber-500",
   reimbursed: "border-l-2 border-emerald-600/60",
 };
+
+const STATUS_FILTERS: AppointmentListStatus[] = ["upcoming", "notReimbursed", "reimbursed"];
+
+function parseStatusFilter(raw: string | undefined): AppointmentListStatus | null {
+  if (raw === "upcoming" || raw === "notReimbursed" || raw === "reimbursed") return raw;
+  return null;
+}
+
+function medicalAppointmentsHref(opts: { status?: AppointmentListStatus | null; modal?: "new" } = {}) {
+  const sp = new URLSearchParams();
+  if (opts.status) sp.set("status", opts.status);
+  if (opts.modal) sp.set("modal", opts.modal);
+  const q = sp.toString();
+  return q ? `${LIST_BASE}?${q}` : LIST_BASE;
+}
 
 type PageProps = {
   searchParams?: Promise<{
@@ -66,6 +87,7 @@ type PageProps = {
     updated?: string;
     error?: string;
     modal?: string;
+    status?: string;
   }>;
 };
 
@@ -185,6 +207,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
   const i18n = getI18n(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
+  const statusFilter = parseStatusFilter(resolvedSearchParams?.status);
   const errorMessage = resolvedSearchParams?.error
     ? decodeURIComponent(resolvedSearchParams.error.replace(/\+/g, " "))
     : null;
@@ -250,6 +273,13 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
     statusCounts[status] += 1;
     return status;
   });
+  const visibleAppointments = appointments.flatMap((row, index) => {
+    const status = appointmentStatuses[index];
+    if (statusFilter && status !== statusFilter) return [];
+    return [{ row, status }];
+  });
+  const listHref = medicalAppointmentsHref({ status: statusFilter });
+  const addHref = medicalAppointmentsHref({ status: statusFilter, modal: "new" });
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -290,20 +320,40 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
               <h2 className="text-lg font-medium text-slate-200">{i18n.medical.history}</h2>
               {appointments.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  {(["upcoming", "notReimbursed", "reimbursed"] as const).map((status) => (
-                    <span
-                      key={status}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 ${STATUS_PILL_CLASS[status]}`}
-                    >
-                      <span>{statusLabels[status]}</span>
-                      <span className="tabular-nums font-semibold">{statusCounts[status]}</span>
-                    </span>
-                  ))}
+                  {STATUS_FILTERS.map((status) => {
+                    const isActive = statusFilter === status;
+                    return (
+                      <Link
+                        key={status}
+                        href={isActive ? LIST_BASE : medicalAppointmentsHref({ status })}
+                        aria-pressed={isActive}
+                        title={
+                          isActive
+                            ? isHebrew
+                              ? "הצגת כל התורים"
+                              : "Show all appointments"
+                            : isHebrew
+                              ? `סינון: ${statusLabels[status]}`
+                              : `Filter: ${statusLabels[status]}`
+                        }
+                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-0.5 transition hover:brightness-125 ${STATUS_PILL_CLASS[status]} ${
+                          isActive
+                            ? STATUS_PILL_ACTIVE_CLASS[status]
+                            : statusFilter
+                              ? "opacity-55 hover:opacity-100"
+                              : ""
+                        }`}
+                      >
+                        <span>{statusLabels[status]}</span>
+                        <span className="tabular-nums font-semibold">{statusCounts[status]}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
             <Link
-              href={`${LIST_BASE}?modal=new`}
+              href={addHref}
               className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
             >
               {i18n.medical.addAppointment}
@@ -314,6 +364,10 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
               {isHebrew
                 ? "אין תורים עדיין. לחצו על ״הוספת תור״ כדי להוסיף."
                 : "No appointments yet. Use “Add appointment” to add one."}
+            </p>
+          ) : visibleAppointments.length === 0 ? (
+            <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              {i18n.medical.noMatchingAppointments}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
@@ -333,8 +387,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.map((row, index) => {
-                    const status = appointmentStatuses[index];
+                  {visibleAppointments.map(({ row, status }) => {
                     return (
                       <tr
                         key={row.id}
@@ -412,7 +465,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
         {modalMode === "new" ? (
           <MedicalAppointmentModalForm
             action={createMedicalAppointment}
-            closeHref={LIST_BASE}
+            closeHref={listHref}
             closeLabel={i18n.common.cancel}
             title={i18n.medical.addAppointment}
             errorMessage={errorMessage}
