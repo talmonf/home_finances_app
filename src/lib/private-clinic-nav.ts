@@ -40,6 +40,12 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
     label: "Work subscriptions",
     placement: "more",
   },
+  {
+    key: "dashboard",
+    href: "/dashboard/private-clinic/dashboard",
+    label: "Dashboard",
+    placement: "more",
+  },
   { key: "reports", href: "/dashboard/private-clinic/reports", label: "Reports", placement: "more" },
   {
     key: "gettingStarted",

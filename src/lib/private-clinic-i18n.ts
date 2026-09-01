@@ -19,6 +19,7 @@ const NAV_LABELS_HE: Record<PrivateClinicNavKey, string> = {
   petrol: "דלק",
   clinicInsurance: "ביטוח קליניקה",
   workSubscriptions: "מנויים מקצועיים",
+  dashboard: "דשבורד",
   reminders: "תזכורות",
   settings: "הגדרות",
   importExport: "יבוא / ייצוא",
@@ -1252,6 +1253,60 @@ export function privateClinicReports(lang: UiLanguage) {
     ),
     therapistDiaryYearFrom: p("From year", "משנה"),
     therapistDiaryYearTo: p("To year", "עד שנה"),
+  };
+}
+
+export function privateClinicDashboard(lang: UiLanguage) {
+  const p = (en: string, he: string) => pc(lang, en, he);
+  const c = privateClinicCommon(lang);
+  return {
+    title: p("Dashboard", "דשבורד"),
+    intro: p(
+      "Monthly clinic income from treatments, consultations, and travel. Filter by job, program, and date range.",
+      "הכנסה חודשית מטיפולים, ייעוצים ונסיעות. סינון לפי משרה, תוכנית וטווח תאריכים.",
+    ),
+    backToClinic: p("← Clinic", "קליניקה →"),
+    filters: p("Filters", "סינון"),
+    job: c.job,
+    program: c.program,
+    from: c.from,
+    to: c.to,
+    apply: c.apply,
+    filterReset: c.filterReset,
+    any: c.any,
+    anyF: c.anyF,
+    selectAll: c.selectAll,
+    deselectAll: c.deselectAll,
+    filterDone: c.filterDone,
+    filterCloseHint: c.filterCloseHint,
+    selectedCountTemplate: p("{count} selected", "{count} נבחרו"),
+    totalIncome: p("Total income", "סה״כ הכנסה"),
+    payableLines: p("Payable lines", "שורות לתשלום"),
+    activeClients: p("Active clients", "לקוחות פעילים"),
+    incomeByMonth: p("Income by month", "הכנסה לפי חודש"),
+    breakdownByJob: p("By job", "לפי משרה"),
+    breakdownByProgram: p("By program", "לפי תוכנית"),
+    activeClientsByMonth: p("Active clients by month", "לקוחות פעילים לפי חודש"),
+    noProgram: p("No program", "ללא תוכנית"),
+    noData: p("No data in this range.", "אין נתונים בטווח זה."),
+    stackedByJob: p("Stacked by job", "מוערם לפי משרה"),
+    stackedByProgram: p("Stacked by program", "מוערם לפי תוכנית"),
+    chartCurrencyNote: (currency: string) =>
+      p(
+        `Chart shows ${currency}. Other currencies are included in the total above.`,
+        `התרשים מציג ${currency}. מטבעות אחרים כלולים בסה״כ למעלה.`,
+      ),
+    clientsInMonth: (monthLabel: string) =>
+      p(`Care period overlapping ${monthLabel}`, `תקופת טיפול החופפת ל־${monthLabel}`),
+    visitsByMonth: p("Visits by month", "ביקורים לפי חודש"),
+    stackedByVisitType: p("Stacked by visit type", "מוערם לפי סוג ביקור"),
+    visitsAndDaysPerClient: p("Visits and days in service per client", "ביקורים וימי שירות לפי לקוח"),
+    visits: p("Visits", "ביקורים"),
+    daysInService: p("Days in service", "ימי שירות"),
+    perClientHint: p(
+      "Days in service are inclusive days from each client’s first treatment to last treatment in this range.",
+      "ימי שירות הם ימים כוללניים מהטיפול הראשון ועד האחרון של כל לקוח בטווח זה.",
+    ),
   };
 }
 
