@@ -35,3 +35,32 @@ export function resolveTherapyVisitTypeDefault(
   }
   return null;
 }
+
+/** Client agreed fee wins; otherwise the job/program visit-type default. */
+export function resolveTreatmentFeePrefill(params: {
+  agreedFeeAmount?: string | number | { toString(): string } | null;
+  agreedFeeCurrency?: string | null;
+  visitDefaults: VisitTypeDefaultRow[];
+  jobId: string;
+  programId: string | null;
+  visitType: TherapyVisitType;
+}): { amount: string; currency: string } {
+  const agreedAmount =
+    params.agreedFeeAmount != null ? String(params.agreedFeeAmount).trim() : "";
+  if (agreedAmount !== "") {
+    return {
+      amount: agreedAmount,
+      currency: params.agreedFeeCurrency?.trim() || "ILS",
+    };
+  }
+  const visitDefault = resolveTherapyVisitTypeDefault(
+    params.visitDefaults,
+    params.jobId,
+    params.programId ?? "",
+    params.visitType,
+  );
+  return {
+    amount: visitDefault?.amount ?? "",
+    currency: visitDefault?.currency ?? "ILS",
+  };
+}

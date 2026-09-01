@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { TreatmentClientDefaultsSection } from "./treatment-client-defaults-section";
 import { TreatmentPaymentFieldsSection } from "./treatment-payment-fields-section";
 import { TreatmentTravelSessionFields } from "./treatment-travel-session-fields";
+import { TreatmentAppointmentContextFields } from "./treatment-appointment-context-fields";
 
 type JobOption = {
   id: string;
@@ -125,6 +126,12 @@ export function TreatmentModalForm({
   initial,
   extraContent,
   appointmentId,
+  appointmentAlreadyLinked = false,
+  appointmentLinkedTreatmentHref,
+  appointmentAlreadyLinkedLabel,
+  viewLinkedTreatmentLabel,
+  lockClient = false,
+  appointmentContext,
   deleteAction,
   canDelete = true,
   deleteRedirectOnSuccess,
@@ -148,6 +155,30 @@ export function TreatmentModalForm({
   initial?: TreatmentModalInitial;
   extraContent?: ReactNode;
   appointmentId?: string;
+  appointmentAlreadyLinked?: boolean;
+  appointmentLinkedTreatmentHref?: string;
+  appointmentAlreadyLinkedLabel?: string;
+  viewLinkedTreatmentLabel?: string;
+  lockClient?: boolean;
+  appointmentContext?: {
+    additionalParticipantIds: string[];
+    showScheduleNext: boolean;
+    defaultNextDate: string;
+    defaultNextHour: string;
+    defaultNextMinute: string;
+    defaultDurationMinutes: string;
+    labels: {
+      client: string;
+      additionalClients: string;
+      addAdditionalClient: string;
+      remove: string;
+      scheduleNextAppointment: string;
+      scheduleNextAppointmentHint: string;
+      startDate: string;
+      startTime: string;
+      durationMinutes: string;
+    };
+  };
   deleteAction?: (formData: FormData) => void | Promise<void>;
   canDelete?: boolean;
   deleteRedirectOnSuccess?: string;
@@ -162,6 +193,19 @@ export function TreatmentModalForm({
             {labels.c.cancel}
           </a>
         </div>
+        {mode === "create" && appointmentAlreadyLinked ? (
+          <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-3 text-sm text-amber-100/90">
+            <p>{appointmentAlreadyLinkedLabel}</p>
+            {appointmentLinkedTreatmentHref ? (
+              <a
+                href={appointmentLinkedTreatmentHref}
+                className="mt-2 inline-flex text-xs text-amber-200 underline-offset-2 hover:underline"
+              >
+                {viewLinkedTreatmentLabel}
+              </a>
+            ) : null}
+          </div>
+        ) : (
         <form action={action} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
           <input type="hidden" name="redirect_on_error" value={redirectOnError} />
@@ -178,6 +222,7 @@ export function TreatmentModalForm({
             programs={programs}
             visitDefaults={visitDefaults}
             initial={initial}
+            lockClient={lockClient}
             labels={{
               client: labels.c.client,
               job: labels.c.job,
@@ -241,6 +286,18 @@ export function TreatmentModalForm({
             }}
             initial={initial}
           />
+          {mode === "create" && appointmentContext ? (
+            <TreatmentAppointmentContextFields
+              clients={clients.map((cl) => ({ id: cl.id, label: cl.label }))}
+              initialAdditionalParticipantIds={appointmentContext.additionalParticipantIds}
+              showScheduleNext={appointmentContext.showScheduleNext}
+              defaultNextDate={appointmentContext.defaultNextDate}
+              defaultNextHour={appointmentContext.defaultNextHour}
+              defaultNextMinute={appointmentContext.defaultNextMinute}
+              defaultDurationMinutes={appointmentContext.defaultDurationMinutes}
+              labels={appointmentContext.labels}
+            />
+          ) : null}
           {mode === "create" ? (
             <div className="md:col-span-2 grid gap-3 rounded-lg border border-slate-700/80 bg-slate-800/40 p-3 md:grid-cols-2">
               <p className="md:col-span-2 text-xs text-slate-400">{labels.tr.addTreatmentAttachmentHint}</p>
@@ -300,6 +357,7 @@ export function TreatmentModalForm({
             </a>
           </div>
         </form>
+        )}
         {mode === "edit" && initial?.id && deleteAction ? (
           canDelete ? (
             <ConfirmDeleteForm

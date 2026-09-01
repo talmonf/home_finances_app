@@ -52,6 +52,7 @@ export function TreatmentClientDefaultsSection({
   initial,
   labels,
   externalReportingJobIds,
+  lockClient = false,
 }: {
   mode: "create" | "edit";
   uiLanguage: "en" | "he";
@@ -59,6 +60,7 @@ export function TreatmentClientDefaultsSection({
   jobs: JobOption[];
   programs: ProgramOption[];
   visitDefaults: VisitDefaultOption[];
+  lockClient?: boolean;
   initial?: {
     client_id?: string;
     client_label?: string;
@@ -82,7 +84,7 @@ export function TreatmentClientDefaultsSection({
 
   return (
     <>
-      {mode === "create" ? (
+      {mode === "create" && !lockClient ? (
         <div>
           <label className="block text-xs text-slate-400">{labels.client}</label>
           <select
@@ -106,6 +108,9 @@ export function TreatmentClientDefaultsSection({
           <div className="mt-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">
             {initial?.client_label || "—"}
           </div>
+          {mode === "create" && lockClient && selectedClientId ? (
+            <input type="hidden" name="client_id" value={selectedClientId} />
+          ) : null}
         </div>
       )}
 

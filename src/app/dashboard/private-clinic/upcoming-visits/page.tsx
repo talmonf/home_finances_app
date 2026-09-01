@@ -412,16 +412,7 @@ export default async function UpcomingVisitsPage({
   const showScheduledColumn = scheduled.some((row) => row.nextAppointment != null);
   const showOverdueColumn = scheduled.some((row) => row.isOverdue);
 
-  const treatmentsBase = "/dashboard/private-clinic/treatments";
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
-  const treatmentLogHref = (clientId: string, appointmentId?: string | null) => {
-    const qp = new URLSearchParams({
-      client: clientId,
-      modal: "new",
-    });
-    if (appointmentId) qp.set("appointment", appointmentId);
-    return `${treatmentsBase}?${qp.toString()}`;
-  };
 
   const toDateLocalInput = (date: Date) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -713,10 +704,9 @@ export default async function UpcomingVisitsPage({
                         ) : null}
                         <td className="whitespace-nowrap px-3 py-2">
                           <LogTreatmentLink
-                            href={treatmentLogHref(r.clientId, r.nextAppointment?.id)}
                             label={uv.logTreatment}
                             clientId={r.clientId}
-                            appointmentId={r.nextAppointment?.id}
+                            nextAppointment={r.nextAppointment}
                           />
                           {" · "}
                           <UpcomingVisitAppointmentActions
@@ -759,12 +749,11 @@ export default async function UpcomingVisitsPage({
                         </span>
                       ) : null}
                       {" — "}
-                      <Link
-                        href={treatmentLogHref(row.id, nextAppointment?.id)}
-                        className="text-sky-400 hover:text-sky-300"
-                      >
-                        {uv.logTreatment}
-                      </Link>
+                      <LogTreatmentLink
+                        label={uv.logTreatment}
+                        clientId={row.id}
+                        nextAppointment={nextAppointment}
+                      />
                       {" · "}
                       <UpcomingVisitAppointmentActions
                         nextAppointment={nextAppointment}

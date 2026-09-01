@@ -24,24 +24,22 @@ import {
   updateTherapyAppointment,
   endTherapyRecurringSeries,
   deleteTherapyAppointmentSeries,
-  reportTreatmentFromAppointment,
 } from "../../../actions";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { dateToDatetimeLocalValue, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
-import { addDays } from "@/lib/private-clinic/reminders-logic";
-import { getUpcomingAppointmentsForHousehold, isoDateOnly } from "@/lib/therapy/series-occurrences";
-import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { isoDateOnly } from "@/lib/therapy/series-occurrences";
+import { logTreatmentHref } from "@/lib/therapy/log-treatment";
 import { AppointmentEditFormClient } from "./appointment-edit-form-client";
-import { ReportTreatmentFormClient } from "./report-treatment-form-client";
 import { EditSeriesRecurrenceForm } from "./edit-series-recurrence-form";
 
 export const dynamic = "force-dynamic";
 
 const LIST = "/dashboard/private-clinic/appointments";
+const UPCOMING_VISITS = "/dashboard/private-clinic/upcoming-visits";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string; saved?: string; warn?: string }>;
+  searchParams?: Promise<{ error?: string; saved?: string; warn?: string; fromUpcoming?: string }>;
 };
 
 export default async function EditAppointmentPage({ params, searchParams }: PageProps) {
@@ -111,44 +109,14 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
     label: therapyVisitTypeLabel(uiLanguage, v),
   }));
 
-  const redirectOnSuccess = `${LIST}/${id}/edit?saved=appointment`;
+  const fromUpcoming = query.fromUpcoming === "1";
+  const fromUpcomingQuery = fromUpcoming ? "?fromUpcoming=1" : "";
+  const redirectOnSuccess = fromUpcoming
+    ? `${LIST}/${id}/edit?fromUpcoming=1&saved=appointment`
+    : `${LIST}/${id}/edit?saved=appointment`;
   const googleSyncFailed = query.warn === "google-sync";
   const treatmentSaved = query.saved === "1" || query.saved === "treatment";
   const appointmentSaved = query.saved === "appointment";
-  const now = new Date();
-  const clientUpcoming = await getUpcomingAppointmentsForHousehold({
-    householdId,
-    jobWhere: jobScope,
-    clientIds: [apt.client_id],
-  });
-  const hasOtherFutureAppointment = clientUpcoming.some(
-    (row) => row.status === "scheduled" && row.startAt > now && row.id !== apt.id,
-  );
-  const israelParts = (d: Date) => {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Jerusalem",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(d);
-    const get = (type: Intl.DateTimeFormatPartTypes) =>
-      parts.find((p) => p.type === type)?.value ?? "00";
-    return { hour: get("hour"), minute: get("minute") };
-  };
-  const aptTime = israelParts(apt.start_at);
-  const visitsCount =
-    apt.program?.visits_per_period_count ??
-    apt.client.visits_per_period_count ??
-    null;
-  const visitsWeeks =
-    apt.program?.visits_per_period_weeks ?? apt.client.visits_per_period_weeks ?? null;
-  const defaultNextDate =
-    visitsCount && visitsWeeks
-      ? isoDateOnly(nextVisitDueDateAfterLastTreatment(apt.start_at, visitsCount, visitsWeeks))
-      : isoDateOnly(addDays(apt.start_at, 7));
   const defaultDurationMinutes = String(
     apt.duration_minutes ??
       apt.client.default_session_length_minutes ??
@@ -160,8 +128,8 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
   return (
     <div className="space-y-8">
       <div>
-        <Link href={LIST} className="text-sm text-slate-400 hover:text-slate-200">
-          {ap.backToAppointments}
+        <Link href={fromUpcoming ? UPCOMING_VISITS : LIST} className="text-sm text-slate-400 hover:text-slate-200">
+          {fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments}
         </Link>
         <h2 className="mt-2 text-lg font-medium text-slate-200">{ap.editTitle}</h2>
       </div>
@@ -350,11 +318,11 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
         {apt.status === "scheduled" ? (
           <>
             {" — "}
-            <Link href={`${LIST}/${apt.id}/reschedule`} className="text-sky-400 hover:text-sky-300">
+            <Link href={`${LIST}/${apt.id}/reschedule${fromUpcomingQuery}`} className="text-sky-400 hover:text-sky-300">
               {ap.reschedule}
             </Link>
             {" · "}
-            <Link href={`${LIST}/${apt.id}/cancel`} className="text-rose-400 hover:text-rose-300">
+            <Link href={`${LIST}/${apt.id}/cancel${fromUpcomingQuery}`} className="text-rose-400 hover:text-rose-300">
               {ap.cancel}
             </Link>
           </>
@@ -375,7 +343,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
             <p>{ap.reportTreatmentAlreadyLinked}</p>
             {apt.treatment ? (
               <Link
-                href={`/dashboard/private-clinic/treatments?edit=${apt.treatment.id}`}
+                href={`/dashboard/private-clinic/treatments?modal=edit&edit_id=${encodeURIComponent(apt.treatment.id)}`}
                 className="mt-2 inline-flex text-xs text-amber-200 underline-offset-2 hover:underline"
               >
                 {ap.viewLinkedTreatment}
@@ -383,38 +351,16 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
             ) : null}
           </div>
         ) : (
-          <ReportTreatmentFormClient
-            action={reportTreatmentFromAppointment}
-            appointmentId={apt.id}
-            showScheduleNext={!hasOtherFutureAppointment}
-            defaultNextDate={defaultNextDate}
-            defaultNextHour={aptTime.hour}
-            defaultNextMinute={aptTime.minute}
-            defaultDurationMinutes={defaultDurationMinutes}
-            clients={clients.map((cl) => ({ id: cl.id, label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() }))}
-            labels={{
-              amount: c.amount,
-              currency: c.currency,
-              note1: "Note 1",
-              client: c.client,
-              additionalClients: ap.additionalClients,
-              addAdditionalClient: ap.addAdditionalClient,
-              remove: ap.remove,
-              submit: ap.reportTreatmentSubmit,
-              scheduleNextAppointment: ap.scheduleNextAppointment,
-              scheduleNextAppointmentHint: ap.scheduleNextAppointmentHint,
-              startDate: ap.startDate,
-              startTime: ap.startTime,
-              durationMinutes: ap.durationMinutes,
-              travel: {
-                section: tr.treatmentTravelSection,
-                checkbox: tr.treatmentTravelCheckbox,
-                amount: tr.treatmentTravelAmount,
-                kmOptional: tr.treatmentTravelKmOptional,
-                currencyHint: tr.treatmentTravelCurrencyHint,
-              },
-            }}
-          />
+          <Link
+            href={logTreatmentHref({
+              clientId: apt.client_id,
+              appointmentId: apt.id,
+              from: fromUpcoming ? "upcoming" : "appointments",
+            })}
+            className="mt-3 inline-flex rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+          >
+            {ap.logTreatment}
+          </Link>
         )}
       </section>
       ) : apt.status === "completed" && apt.treatment_id ? (
@@ -423,7 +369,7 @@ export default async function EditAppointmentPage({ params, searchParams }: Page
             <p>{ap.reportTreatmentAlreadyLinked}</p>
             {apt.treatment ? (
               <Link
-                href={`/dashboard/private-clinic/treatments?edit=${apt.treatment.id}`}
+                href={`/dashboard/private-clinic/treatments?modal=edit&edit_id=${encodeURIComponent(apt.treatment.id)}`}
                 className="mt-2 inline-flex text-xs text-amber-200 underline-offset-2 hover:underline"
               >
                 {ap.viewLinkedTreatment}

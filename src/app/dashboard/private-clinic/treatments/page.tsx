@@ -10,7 +10,7 @@ import Link from "next/link";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { redirect } from "next/navigation";
 import { createTherapyTreatment, deleteReceiptAllocation, deleteTherapyTreatment, updateTherapyTreatment } from "../actions";
-import { privateClinicCommon, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
+import { privateClinicAppointments, privateClinicCommon, privateClinicReceipts, privateClinicTreatments } from "@/lib/private-clinic-i18n";
 import { therapyLocalizedNoteLabel } from "@/lib/therapy-localized-name";
 import { TherapyTreatmentAttachments } from "@/components/therapy-treatment-attachments";
 import { OpenPrivateClinicTreatmentsImportButton } from "@/components/open-private-clinic-treatments-import";
@@ -21,11 +21,14 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
-import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import { addDays } from "@/lib/private-clinic/reminders-logic";
+import { getUpcomingAppointmentsForHousehold, isoDateOnly } from "@/lib/therapy/series-occurrences";
+import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { therapyVisitTypesOrdered, resolveTreatmentFeePrefill } from "@/lib/therapy/visit-type-defaults";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { defaultOccurredTimeInputValue } from "@/lib/therapy/occurred-at-form";
 import { formatListAmountTotalLine } from "@/lib/private-clinic/list-amount-totals";
-import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { dateToDatetimeLocalValue, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { getJobDocumentStorageConfig } from "@/lib/object-storage";
 import { TreatmentModalForm, type TreatmentModalInitial } from "./treatment-modal-form";
 import { TreatmentsListClient } from "./treatments-list-client";
@@ -62,6 +65,7 @@ type Search = {
   modal?: string;
   edit_id?: string;
   appointment?: string;
+  returnTo?: string;
 };
 
 export default async function TreatmentsPage({
@@ -78,6 +82,7 @@ export default async function TreatmentsPage({
   const obfuscate = await getCurrentObfuscateSensitive();
   const c = privateClinicCommon(uiLanguage);
   const tr = privateClinicTreatments(uiLanguage);
+  const ap = privateClinicAppointments(uiLanguage);
   const rr = privateClinicReceipts(uiLanguage);
   const familyLabel = uiLanguage === "he" ? "משפחה" : "Family";
   const sp = searchParams ? await searchParams : {};
@@ -282,7 +287,15 @@ export default async function TreatmentsPage({
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
   const appointmentId = (sp.appointment ?? "").trim();
+  const returnFrom = sp.returnTo === "upcoming" || sp.returnTo === "appointments" ? sp.returnTo : "";
+  const fromQuery = returnFrom ? `&returnTo=${encodeURIComponent(returnFrom)}` : "";
   const appointmentQuery = appointmentId ? `&appointment=${encodeURIComponent(appointmentId)}` : "";
+  const modalCloseHref =
+    returnFrom === "upcoming"
+      ? "/dashboard/private-clinic/upcoming-visits"
+      : returnFrom === "appointments"
+        ? "/dashboard/private-clinic/appointments"
+        : baseListHref;
   const showExternalReporting =
     filters.reported !== "all" ||
     jobs.some((j) => Boolean(j.external_reporting_system)) ||
@@ -290,9 +303,139 @@ export default async function TreatmentsPage({
   const prefilledClientForNewModal =
     modalMode === "new" && filters.client ? clients.find((cl) => cl.id === filters.client) : null;
   const activeClinicJobs = jobs.filter((j) => j.is_active && j.is_private_clinic);
+  const appointmentForNewModal =
+    modalMode === "new" && appointmentId
+      ? await prisma.therapy_appointments.findFirst({
+          where: {
+            id: appointmentId,
+            household_id: householdId,
+            job: {
+              ...jobWhereInPrivateClinicModule,
+              ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+            },
+          },
+          select: {
+            id: true,
+            client_id: true,
+            job_id: true,
+            program_id: true,
+            visit_type: true,
+            start_at: true,
+            duration_minutes: true,
+            treatment_id: true,
+            treatment: { select: { id: true } },
+            participants: { select: { client_id: true } },
+            client: {
+              select: {
+                first_name: true,
+                last_name: true,
+                agreed_fee_amount: true,
+                agreed_fee_currency: true,
+                default_payment_method: true,
+                visits_per_period_count: true,
+                visits_per_period_weeks: true,
+                default_session_length_minutes: true,
+              },
+            },
+            program: {
+              select: {
+                visits_per_period_count: true,
+                visits_per_period_weeks: true,
+                default_session_length_minutes: true,
+              },
+            },
+            job: { select: { default_session_length_minutes: true } },
+          },
+        })
+      : null;
+  const appointmentFeePrefill = appointmentForNewModal
+    ? resolveTreatmentFeePrefill({
+        agreedFeeAmount: appointmentForNewModal.client.agreed_fee_amount,
+        agreedFeeCurrency: appointmentForNewModal.client.agreed_fee_currency,
+        visitDefaults,
+        jobId: appointmentForNewModal.job_id,
+        programId: appointmentForNewModal.program_id,
+        visitType: appointmentForNewModal.visit_type,
+      })
+    : null;
+  const appointmentLocal = appointmentForNewModal
+    ? dateToDatetimeLocalValue(appointmentForNewModal.start_at)
+    : "";
+  const appointmentAlreadyLinked = Boolean(appointmentForNewModal?.treatment_id);
+  const appointmentUsable = Boolean(appointmentForNewModal && !appointmentAlreadyLinked);
+  const israelParts = (d: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jerusalem",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((p) => p.type === type)?.value ?? "00";
+    return { hour: get("hour"), minute: get("minute") };
+  };
+  const appointmentTime = appointmentForNewModal ? israelParts(appointmentForNewModal.start_at) : null;
+  const clientUpcoming =
+    appointmentUsable && appointmentForNewModal
+      ? await getUpcomingAppointmentsForHousehold({
+          householdId,
+          jobWhere: {
+            ...jobWhereInPrivateClinicModule,
+            ...(familyMemberId ? { family_member_id: familyMemberId } : {}),
+          },
+          clientIds: [appointmentForNewModal.client_id],
+        })
+      : [];
+  const now = new Date();
+  const showScheduleNext =
+    appointmentUsable &&
+    appointmentForNewModal != null &&
+    !clientUpcoming.some(
+      (row) =>
+        row.status === "scheduled" && row.startAt > now && row.id !== appointmentForNewModal.id,
+    );
+  const visitsCount =
+    appointmentForNewModal?.program?.visits_per_period_count ??
+    appointmentForNewModal?.client.visits_per_period_count ??
+    null;
+  const visitsWeeks =
+    appointmentForNewModal?.program?.visits_per_period_weeks ??
+    appointmentForNewModal?.client.visits_per_period_weeks ??
+    null;
+  const defaultNextDate =
+    appointmentForNewModal && visitsCount && visitsWeeks
+      ? isoDateOnly(
+          nextVisitDueDateAfterLastTreatment(appointmentForNewModal.start_at, visitsCount, visitsWeeks),
+        )
+      : appointmentForNewModal
+        ? isoDateOnly(addDays(appointmentForNewModal.start_at, 7))
+        : "";
+  const defaultDurationMinutes = String(
+    appointmentForNewModal?.duration_minutes ??
+      appointmentForNewModal?.client.default_session_length_minutes ??
+      appointmentForNewModal?.program?.default_session_length_minutes ??
+      appointmentForNewModal?.job.default_session_length_minutes ??
+      50,
+  );
   const newTreatmentInitial: TreatmentModalInitial | undefined =
     modalMode === "new"
-      ? prefilledClientForNewModal
+      ? appointmentUsable && appointmentForNewModal
+        ? {
+            client_id: appointmentForNewModal.client_id,
+            client_label: `${appointmentForNewModal.client.first_name} ${appointmentForNewModal.client.last_name ?? ""}`.trim(),
+            job_id: appointmentForNewModal.job_id,
+            program_id: appointmentForNewModal.program_id ?? "",
+            visit_type: appointmentForNewModal.visit_type,
+            occurred_date: appointmentLocal.slice(0, 10),
+            occurred_time: defaultOccurredTimeInputValue(appointmentForNewModal.start_at),
+            amount: appointmentFeePrefill?.amount || undefined,
+            currency: appointmentFeePrefill?.currency,
+            payment_method: appointmentForNewModal.client.default_payment_method ?? undefined,
+          }
+      : prefilledClientForNewModal
         ? {
             client_id: prefilledClientForNewModal.id,
             client_label: `${prefilledClientForNewModal.first_name} ${prefilledClientForNewModal.last_name ?? ""}`.trim(),
@@ -357,7 +500,13 @@ export default async function TreatmentsPage({
             ? tr.treatmentTravelAmountError
             : sp.error === "receipt-linked"
               ? tr.cannotDeleteReceiptLinkedTreatment
-              : sp.error}
+              : sp.error === "linked"
+                ? ap.reportTreatmentBlocked
+                : sp.error === "next_appt"
+                  ? uiLanguage === "he"
+                    ? "לא ניתן לקבוע תור הבא — בדקו תאריך, שעה ומשך."
+                    : "Could not schedule next appointment — check date, time, and duration."
+                  : sp.error}
         </p>
       )}
       {(sp.created || sp.updated) && (
@@ -525,13 +674,51 @@ export default async function TreatmentsPage({
         <TreatmentModalForm
           action={createTherapyTreatment}
           mode="create"
-          title={tr.addTreatmentBtn}
-          closeHref={baseListHref}
-          redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`}
-          redirectOnError={`${baseListHref}&modal=new${appointmentQuery}`}
+          title={appointmentForNewModal ? tr.logTreatment : tr.addTreatmentBtn}
+          closeHref={modalCloseHref}
+          redirectOnSuccess={
+            returnFrom
+              ? modalCloseHref
+              : `${baseListHref}${baseListHref.includes("?") ? "&" : "?"}created=1`
+          }
+          redirectOnError={`${baseListHref}&modal=new${appointmentQuery}${fromQuery}`}
           householdId={householdId}
           uiLanguage={uiLanguage}
-          appointmentId={appointmentId || undefined}
+          appointmentId={appointmentUsable ? appointmentId : undefined}
+          appointmentAlreadyLinked={appointmentAlreadyLinked}
+          appointmentAlreadyLinkedLabel={ap.reportTreatmentAlreadyLinked}
+          viewLinkedTreatmentLabel={ap.viewLinkedTreatment}
+          appointmentLinkedTreatmentHref={
+            appointmentForNewModal?.treatment?.id
+              ? `/dashboard/private-clinic/treatments?modal=edit&edit_id=${encodeURIComponent(appointmentForNewModal.treatment.id)}`
+              : undefined
+          }
+          lockClient={appointmentUsable}
+          appointmentContext={
+            appointmentUsable && appointmentForNewModal && appointmentTime
+              ? {
+                  additionalParticipantIds: appointmentForNewModal.participants
+                    .map((p) => p.client_id)
+                    .filter((id) => id !== appointmentForNewModal.client_id),
+                  showScheduleNext,
+                  defaultNextDate,
+                  defaultNextHour: appointmentTime.hour,
+                  defaultNextMinute: appointmentTime.minute,
+                  defaultDurationMinutes,
+                  labels: {
+                    client: c.client,
+                    additionalClients: ap.additionalClients,
+                    addAdditionalClient: ap.addAdditionalClient,
+                    remove: ap.remove,
+                    scheduleNextAppointment: ap.scheduleNextAppointment,
+                    scheduleNextAppointmentHint: ap.scheduleNextAppointmentHint,
+                    startDate: ap.startDate,
+                    startTime: ap.startTime,
+                    durationMinutes: ap.durationMinutes,
+                  },
+                }
+              : undefined
+          }
           initial={newTreatmentInitial}
           clients={activeClients.map((cl) => ({
             id: cl.id,

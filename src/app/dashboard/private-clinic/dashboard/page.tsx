@@ -21,7 +21,6 @@ import { formatAmountTotalsByCurrencyForDisplay } from "@/lib/private-clinic/lis
 import { formatClientNameForDisplay, formatMoneyLineForDisplay, OBFUSCATED } from "@/lib/privacy-display";
 import { DashboardFiltersForm } from "./dashboard-filters-form";
 import {
-  ClinicClientServiceChart,
   ClinicCountBarChart,
   ClinicHorizontalBarChart,
   ClinicStackedBarChart,
@@ -249,23 +248,45 @@ export default async function PrivateClinicDashboardPage({
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
-        <h3 className="text-sm font-medium text-slate-200">{d.visitsAndDaysPerClient}</h3>
-        <p className="mt-1 text-xs text-slate-500">{d.perClientHint}</p>
-        <div className="mt-3">
-          <ClinicClientServiceChart
-            rows={data.perClient.map((row) => ({
-              id: row.id,
-              name: formatClientNameForDisplay(obfuscate, row.firstName, row.lastName),
-              visits: row.visits,
-              daysInService: row.daysInService,
-            }))}
-            visitsLabel={d.visits}
-            daysLabel={d.daysInService}
-            emptyLabel={d.noData}
-          />
-        </div>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
+          <h3 className="text-sm font-medium text-slate-200">{d.visitsPerClient}</h3>
+          <div className="mt-3">
+            <ClinicCountBarChart
+              points={data.perClient.map((row) => ({
+                key: row.id,
+                label: formatClientNameForDisplay(obfuscate, row.firstName, row.lastName),
+                count: row.visits,
+              }))}
+              emptyLabel={d.noData}
+              rotateLabels
+            />
+          </div>
+        </section>
+        <section className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
+          <h3 className="text-sm font-medium text-slate-200">{d.daysInServicePerClient}</h3>
+          <p className="mt-1 text-xs text-slate-500">{d.perClientHint}</p>
+          <div className="mt-3">
+            <ClinicCountBarChart
+              points={[...data.perClient]
+                .sort((a, b) => {
+                  if (b.daysInService !== a.daysInService) return b.daysInService - a.daysInService;
+                  const nameA = `${a.firstName} ${a.lastName ?? ""}`.trim();
+                  const nameB = `${b.firstName} ${b.lastName ?? ""}`.trim();
+                  return nameA.localeCompare(nameB);
+                })
+                .map((row) => ({
+                  key: row.id,
+                  label: formatClientNameForDisplay(obfuscate, row.firstName, row.lastName),
+                  count: row.daysInService,
+                }))}
+              emptyLabel={d.noData}
+              fill="#34d399"
+              rotateLabels
+            />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

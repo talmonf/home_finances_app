@@ -2,55 +2,43 @@
 
 import { useMemo, useState } from "react";
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
-import { TreatmentTravelSessionFields } from "../../../treatments/treatment-travel-session-fields";
 
 type ClientOption = { id: string; label: string };
 
-type Props = {
-  action: (formData: FormData) => void | Promise<void>;
-  appointmentId: string;
-  clients: ClientOption[];
-  showScheduleNext: boolean;
-  defaultNextDate: string;
-  defaultNextHour: string;
-  defaultNextMinute: string;
-  defaultDurationMinutes: string;
-  labels: {
-    amount: string;
-    currency: string;
-    note1: string;
-    client: string;
-    additionalClients: string;
-    addAdditionalClient: string;
-    remove: string;
-    submit: string;
-    scheduleNextAppointment: string;
-    scheduleNextAppointmentHint: string;
-    startDate: string;
-    startTime: string;
-    durationMinutes: string;
-    travel: {
-      section: string;
-      checkbox: string;
-      amount: string;
-      kmOptional: string;
-      currencyHint: string;
-    };
-  };
+type Labels = {
+  client: string;
+  additionalClients: string;
+  addAdditionalClient: string;
+  remove: string;
+  scheduleNextAppointment: string;
+  scheduleNextAppointmentHint: string;
+  startDate: string;
+  startTime: string;
+  durationMinutes: string;
 };
 
-export function ReportTreatmentFormClient({
-  action,
-  appointmentId,
+export function TreatmentAppointmentContextFields({
   clients,
+  initialAdditionalParticipantIds,
   showScheduleNext,
   defaultNextDate,
   defaultNextHour,
   defaultNextMinute,
   defaultDurationMinutes,
   labels,
-}: Props) {
-  const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>([]);
+}: {
+  clients: ClientOption[];
+  initialAdditionalParticipantIds: string[];
+  showScheduleNext: boolean;
+  defaultNextDate: string;
+  defaultNextHour: string;
+  defaultNextMinute: string;
+  defaultDurationMinutes: string;
+  labels: Labels;
+}) {
+  const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>(
+    initialAdditionalParticipantIds.filter(Boolean),
+  );
   const [scheduleNext, setScheduleNext] = useState(showScheduleNext);
   const [nextDate, setNextDate] = useState(defaultNextDate);
   const [nextHour, setNextHour] = useState(defaultNextHour);
@@ -61,7 +49,6 @@ export function ReportTreatmentFormClient({
     () => new Set(additionalParticipantIds.filter(Boolean)),
     [additionalParticipantIds],
   );
-
   const hourOptions = useMemo(
     () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
     [],
@@ -76,25 +63,7 @@ export function ReportTreatmentFormClient({
   }, [nextDate, nextHour, nextMinute]);
 
   return (
-    <form action={action} className="mt-3 grid gap-3 md:grid-cols-2">
-      <input type="hidden" name="appointment_id" value={appointmentId} />
-      <input
-        name="amount"
-        placeholder={labels.amount}
-        required
-        className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-      />
-      <input
-        name="currency"
-        defaultValue="ILS"
-        placeholder={labels.currency}
-        className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-      />
-      <textarea
-        name="note_1"
-        placeholder={labels.note1}
-        className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 md:col-span-2"
-      />
+    <>
       <div className="space-y-2 md:col-span-2">
         {additionalParticipantIds.length > 0 ? (
           <span className="block text-sm text-slate-300">{labels.additionalClients}</span>
@@ -143,7 +112,6 @@ export function ReportTreatmentFormClient({
           {labels.addAdditionalClient}
         </button>
       </div>
-      <TreatmentTravelSessionFields labels={labels.travel} />
 
       {showScheduleNext ? (
         <div className="space-y-3 rounded-lg border border-slate-600 bg-slate-800/40 p-3 md:col-span-2">
@@ -222,13 +190,6 @@ export function ReportTreatmentFormClient({
           ) : null}
         </div>
       ) : null}
-
-      <button
-        type="submit"
-        className="w-fit rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-      >
-        {labels.submit}
-      </button>
-    </form>
+    </>
   );
 }

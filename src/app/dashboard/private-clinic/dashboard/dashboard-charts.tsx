@@ -171,16 +171,20 @@ export function ClinicHorizontalBarChart({
 export function ClinicCountBarChart({
   points,
   emptyLabel,
+  fill = "#38bdf8",
+  rotateLabels = false,
 }: {
   points: Array<{ key: string; label: string; count: number }>;
   emptyLabel: string;
+  fill?: string;
+  rotateLabels?: boolean;
 }) {
   const width = 720;
-  const height = 240;
+  const height = rotateLabels ? 280 : 240;
   const padL = 36;
   const padR = 12;
   const padT = 16;
-  const padB = 44;
+  const padB = rotateLabels ? 80 : 44;
   const plotW = width - padL - padR;
   const plotH = height - padT - padB;
   const max = Math.max(0, ...points.map((p) => p.count));
@@ -189,6 +193,7 @@ export function ClinicCountBarChart({
   const n = Math.max(points.length, 1);
   const slot = plotW / n;
   const barW = Math.min(36, Math.max(8, slot * 0.62));
+  const labelSize = points.length > 10 || rotateLabels ? 9 : 10;
 
   if (max <= 0) {
     return <p className="px-1 py-8 text-center text-sm text-slate-500">{emptyLabel}</p>;
@@ -211,17 +216,20 @@ export function ClinicCountBarChart({
         const x = padL + i * slot + (slot - barW) / 2;
         const h = (point.count / yMax) * plotH;
         const y = padT + plotH - h;
+        const labelX = x + barW / 2;
+        const labelAnchorY = rotateLabels ? padT + plotH + 8 : height - 14;
         return (
           <g key={point.key}>
-            <rect x={x} y={y} width={barW} height={h} fill="#38bdf8" rx="2">
+            <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2">
               <title>{`${point.label}: ${point.count}`}</title>
             </rect>
             <text
-              x={x + barW / 2}
-              y={height - 14}
-              textAnchor="middle"
+              x={labelX}
+              y={labelAnchorY}
+              textAnchor={rotateLabels ? "end" : "middle"}
               fill="#94a3b8"
-              fontSize={points.length > 10 ? "9" : "10"}
+              fontSize={labelSize}
+              transform={rotateLabels ? `rotate(-40 ${labelX} ${labelAnchorY})` : undefined}
             >
               {point.label}
             </text>
@@ -229,64 +237,5 @@ export function ClinicCountBarChart({
         );
       })}
     </svg>
-  );
-}
-
-export function ClinicClientServiceChart({
-  rows,
-  visitsLabel,
-  daysLabel,
-  emptyLabel,
-}: {
-  rows: Array<{ id: string; name: string; visits: number; daysInService: number }>;
-  visitsLabel: string;
-  daysLabel: string;
-  emptyLabel: string;
-}) {
-  if (rows.length === 0) {
-    return <p className="px-1 py-8 text-center text-sm text-slate-500">{emptyLabel}</p>;
-  }
-
-  const maxVisits = Math.max(1, ...rows.map((r) => r.visits));
-  const maxDays = Math.max(1, ...rows.map((r) => r.daysInService));
-
-  return (
-    <ul className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
-      {rows.map((row) => {
-        const visitPct = Math.max(2, (row.visits / maxVisits) * 100);
-        const daysPct = Math.max(2, (row.daysInService / maxDays) * 100);
-        return (
-          <li key={row.id}>
-            <p className="mb-1 truncate text-xs font-medium text-slate-200">{row.name}</p>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="w-32 shrink-0 text-[11px] text-slate-400">{visitsLabel}</span>
-                <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-sky-400"
-                    style={{ width: `${visitPct}%` }}
-                  />
-                </div>
-                <span className="w-12 shrink-0 text-end tabular-nums text-[11px] text-slate-400">
-                  {row.visits}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-32 shrink-0 text-[11px] text-slate-400">{daysLabel}</span>
-                <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-emerald-400"
-                    style={{ width: `${daysPct}%` }}
-                  />
-                </div>
-                <span className="w-12 shrink-0 text-end tabular-nums text-[11px] text-slate-400">
-                  {row.daysInService}
-                </span>
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }

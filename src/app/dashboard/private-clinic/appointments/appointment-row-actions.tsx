@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logTreatmentHref } from "@/lib/therapy/log-treatment";
 import { openSeriesOccurrence } from "../actions";
 
 type AppointmentActionStatus = "scheduled" | "completed" | "cancelled";
@@ -21,6 +22,7 @@ type Props = {
     seriesId: string | null;
     occurrenceDate: string | null;
     treatmentId: string | null;
+    clientId: string;
     status: AppointmentActionStatus;
   };
 };
@@ -87,7 +89,11 @@ export function AppointmentRowActions({ listBase, labels, row }: Props) {
             </span>
           ) : (
             <Link
-              href={`${listBase}/${row.id}/edit#report-treatment`}
+              href={logTreatmentHref({
+                clientId: row.clientId,
+                appointmentId: row.id,
+                from: "appointments",
+              })}
               className="inline-flex items-center text-xs leading-none text-emerald-400 hover:text-emerald-300"
             >
               {labels.logTreatment}

@@ -1300,9 +1300,8 @@ export function privateClinicDashboard(lang: UiLanguage) {
       p(`Care period overlapping ${monthLabel}`, `תקופת טיפול החופפת ל־${monthLabel}`),
     visitsByMonth: p("Visits by month", "ביקורים לפי חודש"),
     stackedByVisitType: p("Stacked by visit type", "מוערם לפי סוג ביקור"),
-    visitsAndDaysPerClient: p("Visits and days in service per client", "ביקורים וימי שירות לפי לקוח"),
-    visits: p("Visits", "ביקורים"),
-    daysInService: p("Days in service", "ימי שירות"),
+    visitsPerClient: p("Visits per client", "ביקורים לפי לקוח"),
+    daysInServicePerClient: p("Days in service per client", "ימי שירות לפי לקוח"),
     perClientHint: p(
       "Days in service are inclusive days from each client’s first treatment to last treatment in this range.",
       "ימי שירות הם ימים כוללניים מהטיפול הראשון ועד האחרון של כל לקוח בטווח זה.",
