@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdId,
   getCurrentUiLanguage,
   getCurrentObfuscateSensitive,
+  getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { redirect, notFound } from "next/navigation";
@@ -15,6 +16,7 @@ import {
 } from "../../load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "../../form-error-message";
 import { TherapyClientRelationshipsSection } from "../../therapy-client-relationships-section";
+import { TherapyClientHoldPeriodsSection } from "../../therapy-client-hold-periods-section";
 import { DeleteClientForm } from "../../delete-client-form";
 import { deleteTherapyClient } from "../../../actions";
 
@@ -35,6 +37,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
   const { id } = await params;
   const uiLanguage = await getCurrentUiLanguage();
   const obfuscate = await getCurrentObfuscateSensitive();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const c = privateClinicCommon(uiLanguage);
   const cl = privateClinicClients(uiLanguage);
 
@@ -59,6 +62,7 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         },
         orderBy: { created_at: "asc" },
       },
+      hold_periods: { orderBy: { started_on: "desc" } },
     },
   });
   if (!client) notFound();
@@ -121,6 +125,15 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
           to_client: r.to_client,
         }))}
         otherClients={otherClients}
+      />
+
+      <TherapyClientHoldPeriodsSection
+        cl={cl}
+        obfuscate={obfuscate}
+        clientId={id}
+        redirectOnError={editRedirectPath}
+        dateDisplayFormat={dateDisplayFormat}
+        periods={client.hold_periods}
       />
       {canDeleteClient ? (
         <DeleteClientForm

@@ -66,6 +66,7 @@ import type {
   TherapyAppointmentStatus,
   TherapyBillingBasis,
   TherapyBillingTiming,
+  TherapyClientHoldReason,
   TherapyClientRelationshipType,
   TherapyFamilyMemberPosition,
   TherapyReceiptKind,
@@ -74,10 +75,17 @@ import type {
   TherapyTreatmentPaymentMethod,
   TherapyVisitType,
 } from "@/generated/prisma/enums";
+import type { Prisma } from "@/generated/prisma/client";
 import { TherapyAppointmentAuditAction } from "@/generated/prisma/enums";
 import { logPrivateClinicAction } from "@/lib/usage-audit/log";
 import type { PrivateClinicNavKey } from "@/lib/private-clinic-nav";
 import { endOfUtcDayForReceipt, loadReceiptPeriodPreview } from "@/lib/private-clinic/receipt-period-preview";
+import {
+  clinicCalendarTodayUtc,
+  dayIsCoveredByHold,
+  holdPeriodRangesOverlap,
+  parseDashboardYmd,
+} from "@/lib/private-clinic/clinic-dashboard-range";
 
 const BASE = "/dashboard/private-clinic";
 
@@ -1654,7 +1662,6 @@ export async function updateTherapyClient(formData: FormData) {
           disability_status,
           rehab_basket_status,
           is_active: formData.has("is_active"),
-          on_hold: formData.has("is_active") && formData.has("on_hold"),
           agreed_fee_amount: personalBilling.agreed_fee_amount,
           agreed_fee_currency: personalBilling.agreed_fee_currency,
           default_payment_method: personalBilling.default_payment_method,
@@ -1702,6 +1709,7 @@ export async function updateTherapyClient(formData: FormData) {
   revalidatePath(`${BASE}/clients/${id}/edit`);
   revalidatePath(`${BASE}/upcoming-visits`);
   revalidatePath(`${BASE}/reminders`);
+  revalidatePath(`${BASE}/dashboard`);
   redirect(`${BASE}/clients?updated=1`);
 }
 
@@ -1799,6 +1807,239 @@ export async function removeTherapyClientRelationship(formData: FormData) {
   revalidatePath(`${BASE}/clients`);
   revalidatePath(`${BASE}/clients/${from_client_id}/edit`);
   redirect(`${BASE}/clients/${from_client_id}/edit?updated=1`);
+}
+
+function parseHoldReasonField(raw: string): TherapyClientHoldReason | null | "invalid" {
+  const s = raw.trim();
+  if (!s) return null;
+  if (s === "hospital" || s === "other") return s;
+  return "invalid";
+}
+
+function holdConflict(
+  periods: { started_on: Date; ended_on: Date | null }[],
+): "overlap" | "open" | null {
+  if (periods.filter((p) => p.ended_on == null).length > 1) return "open";
+  for (let i = 0; i < periods.length; i++) {
+    for (let j = i + 1; j < periods.length; j++) {
+      if (holdPeriodRangesOverlap(periods[i]!, periods[j]!)) return "overlap";
+    }
+  }
+  return null;
+}
+
+function revalidateTherapyClientHoldPaths(clientId: string) {
+  revalidatePath(`${BASE}/clients`);
+  revalidatePath(`${BASE}/clients/${clientId}/edit`);
+  revalidatePath(`${BASE}/upcoming-visits`);
+  revalidatePath(`${BASE}/dashboard`);
+  revalidatePath(`${BASE}/reminders`);
+}
+
+async function syncTherapyClientOnHoldFlag(
+  tx: Prisma.TransactionClient,
+  householdId: string,
+  clientId: string,
+) {
+  const periods = await tx.therapy_client_hold_periods.findMany({
+    where: { household_id: householdId, client_id: clientId },
+    select: { started_on: true, ended_on: true },
+  });
+  const on_hold = dayIsCoveredByHold(clinicCalendarTodayUtc(), periods);
+  await tx.therapy_clients.update({
+    where: { id: clientId },
+    data: { on_hold },
+  });
+}
+
+export async function placeTherapyClientOnHold(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const client_id = (formData.get("client_id") as string)?.trim() || "";
+  const fallbackEdit = client_id ? `${BASE}/clients/${client_id}/edit` : `${BASE}/clients`;
+  if (!client_id) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "notfound");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+  const started_on = parseDashboardYmd((formData.get("started_on") as string) || "");
+  if (!started_on) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-start");
+  }
+  const reason = parseHoldReasonField((formData.get("reason") as string) || "");
+  if (reason === "invalid") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-reason");
+  }
+  const notes = (formData.get("notes") as string)?.trim() || null;
+
+  const existing = await prisma.therapy_client_hold_periods.findMany({
+    where: { household_id: householdId, client_id },
+    select: { started_on: true, ended_on: true },
+  });
+  const conflict = holdConflict([...existing, { started_on, ended_on: null }]);
+  if (conflict === "open") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-open");
+  }
+  if (conflict === "overlap") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-overlap");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_client_hold_periods.create({
+      data: {
+        id: crypto.randomUUID(),
+        household_id: householdId,
+        client_id,
+        started_on,
+        ended_on: null,
+        reason,
+        notes,
+      },
+    });
+    await syncTherapyClientOnHoldFlag(tx, householdId, client_id);
+  });
+
+  await logClinicUsage("clients", "hold-place", { resourceType: "client", resourceId: client_id });
+  revalidateTherapyClientHoldPaths(client_id);
+  redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
+}
+
+export async function resumeTherapyClientHold(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const client_id = (formData.get("client_id") as string)?.trim() || "";
+  const fallbackEdit = client_id ? `${BASE}/clients/${client_id}/edit` : `${BASE}/clients`;
+  if (!client_id) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "notfound");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+  const ended_on =
+    parseDashboardYmd((formData.get("ended_on") as string) || "") ?? clinicCalendarTodayUtc();
+
+  const open = await prisma.therapy_client_hold_periods.findFirst({
+    where: { household_id: householdId, client_id, ended_on: null },
+  });
+  if (!open) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-no-open");
+  }
+  if (ended_on < open.started_on) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-dates");
+  }
+  const others = await prisma.therapy_client_hold_periods.findMany({
+    where: { household_id: householdId, client_id, NOT: { id: open.id } },
+    select: { started_on: true, ended_on: true },
+  });
+  if (holdConflict([...others, { started_on: open.started_on, ended_on }]) === "overlap") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-overlap");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_client_hold_periods.update({
+      where: { id: open.id },
+      data: { ended_on },
+    });
+    await syncTherapyClientOnHoldFlag(tx, householdId, client_id);
+  });
+
+  await logClinicUsage("clients", "hold-resume", { resourceType: "client", resourceId: client_id });
+  revalidateTherapyClientHoldPaths(client_id);
+  redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
+}
+
+export async function updateTherapyClientHoldPeriod(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const client_id = (formData.get("client_id") as string)?.trim() || "";
+  const id = (formData.get("id") as string)?.trim() || "";
+  const fallbackEdit = client_id ? `${BASE}/clients/${client_id}/edit` : `${BASE}/clients`;
+  if (!client_id || !id) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-notfound");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+  const started_on = parseDashboardYmd((formData.get("started_on") as string) || "");
+  if (!started_on) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-start");
+  }
+  const endedRaw = (formData.get("ended_on") as string)?.trim() || "";
+  const ended_on = endedRaw ? parseDashboardYmd(endedRaw) : null;
+  if (endedRaw && !ended_on) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-dates");
+  }
+  if (ended_on && ended_on < started_on) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-dates");
+  }
+  const reason = parseHoldReasonField((formData.get("reason") as string) || "");
+  if (reason === "invalid") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-reason");
+  }
+  const notes = (formData.get("notes") as string)?.trim() || null;
+
+  const row = await prisma.therapy_client_hold_periods.findFirst({
+    where: { id, household_id: householdId, client_id },
+    select: { id: true },
+  });
+  if (!row) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-notfound");
+  }
+  const others = await prisma.therapy_client_hold_periods.findMany({
+    where: { household_id: householdId, client_id, NOT: { id } },
+    select: { started_on: true, ended_on: true },
+  });
+  const conflict = holdConflict([...others, { started_on, ended_on }]);
+  if (conflict === "open") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-open");
+  }
+  if (conflict === "overlap") {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-overlap");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_client_hold_periods.update({
+      where: { id },
+      data: { started_on, ended_on, reason, notes },
+    });
+    await syncTherapyClientOnHoldFlag(tx, householdId, client_id);
+  });
+
+  await logClinicUsage("clients", "hold-update", { resourceType: "client", resourceId: client_id });
+  revalidateTherapyClientHoldPaths(client_id);
+  redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
+}
+
+export async function deleteTherapyClientHoldPeriod(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const client_id = (formData.get("client_id") as string)?.trim() || "";
+  const id = (formData.get("id") as string)?.trim() || "";
+  const fallbackEdit = client_id ? `${BASE}/clients/${client_id}/edit` : `${BASE}/clients`;
+  if (!client_id || !id) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-notfound");
+  }
+  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, client_id))) {
+    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
+  }
+
+  const row = await prisma.therapy_client_hold_periods.findFirst({
+    where: { id, household_id: householdId, client_id },
+    select: { id: true },
+  });
+  if (!row) {
+    redirectTherapyClientFormError(formData, fallbackEdit, "hold-notfound");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_client_hold_periods.delete({ where: { id } });
+    await syncTherapyClientOnHoldFlag(tx, householdId, client_id);
+  });
+
+  await logClinicUsage("clients", "hold-delete", { resourceType: "client", resourceId: client_id });
+  revalidateTherapyClientHoldPaths(client_id);
+  redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
 }
 
 // --- Families ---

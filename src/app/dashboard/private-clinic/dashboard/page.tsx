@@ -229,6 +229,7 @@ export default async function PrivateClinicDashboardPage({
 
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
         <h3 className="text-sm font-medium text-slate-200">{d.activeClientsByMonth}</h3>
+        <p className="mt-1 text-xs text-slate-500">{d.activeClientsByMonthHint}</p>
         <div className="mt-3">
           <ClinicCountBarChart points={data.activeClientsByMonth} emptyLabel={d.noData} />
         </div>

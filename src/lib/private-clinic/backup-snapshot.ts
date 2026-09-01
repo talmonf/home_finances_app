@@ -27,6 +27,7 @@ export async function buildPrivateClinicSnapshot(householdId: string): Promise<{
     therapy_families: await prisma.therapy_families.findMany({ where: { household_id: householdId } }),
     therapy_family_members: await prisma.therapy_family_members.findMany({ where: { household_id: householdId } }),
     therapy_client_relationships: await prisma.therapy_client_relationships.findMany({ where: { household_id: householdId } }),
+    therapy_client_hold_periods: await prisma.therapy_client_hold_periods.findMany({ where: { household_id: householdId } }),
     therapy_clients_jobs: await prisma.therapy_clients_jobs.findMany({ where: { household_id: householdId } }),
     therapy_treatments: await prisma.therapy_treatments.findMany({ where: { household_id: householdId } }),
     therapy_treatment_participants: await prisma.therapy_treatment_participants.findMany({ where: { household_id: householdId } }),
@@ -81,6 +82,7 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     await tx.therapy_appointment_participants.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_family_members.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_client_relationships.deleteMany({ where: { household_id: householdId } });
+    await tx.therapy_client_hold_periods.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_treatment_attachments.deleteMany({ where: { household_id: householdId } });
     await tx.private_clinic_reminders.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_import_audits.deleteMany({ where: { household_id: householdId } });
@@ -124,6 +126,12 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     }
     if (Array.isArray(d.therapy_client_relationships) && d.therapy_client_relationships.length) {
       await tx.therapy_client_relationships.createMany({ data: d.therapy_client_relationships as never[], skipDuplicates: true });
+    }
+    if (Array.isArray(d.therapy_client_hold_periods) && d.therapy_client_hold_periods.length) {
+      await tx.therapy_client_hold_periods.createMany({
+        data: d.therapy_client_hold_periods as never[],
+        skipDuplicates: true,
+      });
     }
     if (Array.isArray(d.therapy_clients_jobs) && d.therapy_clients_jobs.length) {
       await tx.therapy_clients_jobs.createMany({ data: d.therapy_clients_jobs as never[], skipDuplicates: true });

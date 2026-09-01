@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 142_therapy_client_hold_periods.sql
 - [x] 141_therapy_clients_team_members.sql (2026-08-25)
 - [x] 140_therapy_appointments_note.sql (2026-08-16)
 - [x] 139_therapy_clients_on_hold.sql (2026-07-28)
@@ -162,6 +163,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 142 | `142_therapy_client_hold_periods.sql` | CREATE | Enum `therapy_client_hold_reason`; table `therapy_client_hold_periods` (dated on-hold intervals, optional resume date); backfill open periods for clients currently `on_hold`. |
 | 141 | `141_therapy_clients_team_members.sql` (2026-08-25) | ALTER | `therapy_clients`: optional `team_members` free-text field (other staff on the patient’s care team). |
 | 140 | `140_therapy_appointments_note.sql` (2026-08-16) | ALTER | `therapy_appointments` and `therapy_appointment_series`: optional `note` shown on upcoming visits and the clinic digest email. |
 | 139 | `139_therapy_clients_on_hold.sql` (2026-07-28) | ALTER | `therapy_clients`: `on_hold` — active client with no cadence next visit (Upcoming visits: blank due, not overdue, sorted last). |

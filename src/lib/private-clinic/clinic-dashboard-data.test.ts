@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  clientHasNonHoldServiceDayInMonth,
   clientOverlapsMonth,
   defaultLast12MonthRange,
+  holdPeriodRangesOverlap,
   parseDashboardYmd,
   pickChartCurrency,
   resolveDashboardDateRange,
@@ -90,4 +92,64 @@ test("inclusiveUtcDaySpan is inclusive of first and last UTC dates", () => {
     inclusiveUtcDaySpan(new Date("2026-03-10T12:00:00.000Z"), new Date("2026-03-01T12:00:00.000Z")),
     10,
   );
+});
+
+test("partial-month hold still counts as active", () => {
+  const start = parseDashboardYmd("2026-03-01");
+  const end = parseDashboardYmd("2026-03-31");
+  const holds = [{ started_on: parseDashboardYmd("2026-03-10")!, ended_on: parseDashboardYmd("2026-03-20") }];
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, end, holds, "2026-03"), true);
+});
+
+test("full-month hold is omitted from that month", () => {
+  const start = parseDashboardYmd("2026-01-01");
+  const end = parseDashboardYmd("2026-12-31");
+  const holds = [{ started_on: parseDashboardYmd("2026-03-01")!, ended_on: parseDashboardYmd("2026-04-01") }];
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, end, holds, "2026-03"), false);
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, end, holds, "2026-04"), true);
+});
+
+test("open hold covers from start through later months", () => {
+  const start = parseDashboardYmd("2026-01-01");
+  const holds = [{ started_on: parseDashboardYmd("2026-02-15")!, ended_on: null }];
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, null, holds, "2026-02"), true);
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, null, holds, "2026-03"), false);
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, null, holds, "2026-01"), true);
+});
+
+test("multiple disjoint holds still count a month with a gap", () => {
+  const start = parseDashboardYmd("2026-03-01");
+  const end = parseDashboardYmd("2026-03-31");
+  const holds = [
+    { started_on: parseDashboardYmd("2026-03-01")!, ended_on: parseDashboardYmd("2026-03-10") },
+    { started_on: parseDashboardYmd("2026-03-20")!, ended_on: parseDashboardYmd("2026-03-31") },
+  ];
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, end, holds, "2026-03"), true);
+});
+
+test("adjacent holds (return day then next start) do not overlap", () => {
+  const a = { started_on: parseDashboardYmd("2026-03-01")!, ended_on: parseDashboardYmd("2026-03-10") };
+  const b = { started_on: parseDashboardYmd("2026-03-10")!, ended_on: parseDashboardYmd("2026-03-20") };
+  assert.equal(holdPeriodRangesOverlap(a, b), false);
+  const touchingLater = {
+    started_on: parseDashboardYmd("2026-03-11")!,
+    ended_on: parseDashboardYmd("2026-03-20"),
+  };
+  assert.equal(holdPeriodRangesOverlap(a, touchingLater), false);
+});
+
+test("overlapping holds including two open periods are detected", () => {
+  const a = { started_on: parseDashboardYmd("2026-03-01")!, ended_on: parseDashboardYmd("2026-03-15") };
+  const b = { started_on: parseDashboardYmd("2026-03-10")!, ended_on: parseDashboardYmd("2026-03-20") };
+  assert.equal(holdPeriodRangesOverlap(a, b), true);
+  const openA = { started_on: parseDashboardYmd("2026-03-01")!, ended_on: null };
+  const openB = { started_on: parseDashboardYmd("2026-06-01")!, ended_on: null };
+  assert.equal(holdPeriodRangesOverlap(openA, openB), true);
+});
+
+test("active-day math does not depend on a cached on_hold flag", () => {
+  const start = parseDashboardYmd("2026-03-01");
+  const holds = [{ started_on: parseDashboardYmd("2026-03-01")!, ended_on: parseDashboardYmd("2026-04-01") }];
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, null, holds, "2026-03"), false);
+  assert.equal(clientHasNonHoldServiceDayInMonth(start, null, [], "2026-03"), true);
 });

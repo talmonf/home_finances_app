@@ -18,7 +18,7 @@ import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { TherapyVisitType } from "@/generated/prisma/enums";
 import {
-  clientOverlapsMonth,
+  clientHasNonHoldServiceDayInMonth,
   formatDashboardMonthLabel,
   inclusiveUtcDaySpan,
   pickChartCurrency,
@@ -229,7 +229,12 @@ export async function loadClinicDashboardData(params: {
     }),
     prisma.therapy_clients.findMany({
       where: clientWhere,
-      select: { id: true, start_date: true, end_date: true },
+      select: {
+        id: true,
+        start_date: true,
+        end_date: true,
+        hold_periods: { select: { started_on: true, ended_on: true } },
+      },
     }),
   ]);
 
@@ -375,7 +380,9 @@ export async function loadClinicDashboardData(params: {
   const activeClientsByMonth = monthKeys.map((key) => ({
     key,
     label: formatDashboardMonthLabel(key, uiLanguage),
-    count: clients.filter((c) => clientOverlapsMonth(c.start_date, c.end_date, key)).length,
+    count: clients.filter((c) =>
+      clientHasNonHoldServiceDayInMonth(c.start_date, c.end_date, c.hold_periods, key),
+    ).length,
   }));
 
   const latestMonthKey = monthKeys.length ? monthKeys[monthKeys.length - 1]! : null;

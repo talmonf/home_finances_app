@@ -128,6 +128,75 @@ export function clientOverlapsMonth(
   return true;
 }
 
+const UTC_DAY_MS = 24 * 60 * 60 * 1000;
+
+export type HoldPeriodRange = {
+  started_on: Date;
+  ended_on: Date | null;
+};
+
+export function utcDateOnly(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+/** Israel calendar date as UTC midnight (matches clinic DATE fields). */
+export function clinicCalendarTodayUtc(now: Date = new Date()): Date {
+  const ymd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return parseDashboardYmd(ymd) ?? utcDateOnly(now);
+}
+
+function holdHalfOpenInterval(period: HoldPeriodRange): { start: number; end: number } {
+  const start = utcDateOnly(period.started_on).getTime();
+  const end =
+    period.ended_on == null ? Number.POSITIVE_INFINITY : utcDateOnly(period.ended_on).getTime();
+  return { start, end };
+}
+
+/**
+ * Hold covers [started_on, ended_on): `ended_on` is the return-to-service day (in care that day).
+ * A null `ended_on` means still on hold.
+ */
+export function dayIsCoveredByHold(day: Date, holds: HoldPeriodRange[]): boolean {
+  const t = utcDateOnly(day).getTime();
+  return holds.some((h) => {
+    const { start, end } = holdHalfOpenInterval(h);
+    return t >= start && t < end;
+  });
+}
+
+export function holdPeriodRangesOverlap(a: HoldPeriodRange, b: HoldPeriodRange): boolean {
+  const A = holdHalfOpenInterval(a);
+  const B = holdHalfOpenInterval(b);
+  return A.start < B.end && B.start < A.end;
+}
+
+/** True if any calendar day in the month is in the care span and not covered by a hold. */
+export function clientHasNonHoldServiceDayInMonth(
+  startDate: Date | null,
+  endDate: Date | null,
+  holds: HoldPeriodRange[],
+  monthKey: string,
+): boolean {
+  if (!clientOverlapsMonth(startDate, endDate, monthKey)) return false;
+  const monthStart = utcMonthStart(monthKey);
+  const monthEnd = utcMonthEndInclusive(monthKey);
+  const careStartMs = startDate
+    ? Math.max(utcDateOnly(startDate).getTime(), monthStart.getTime())
+    : monthStart.getTime();
+  const careEndMs = endDate
+    ? Math.min(utcDateOnly(endDate).getTime(), monthEnd.getTime())
+    : monthEnd.getTime();
+  for (let t = careStartMs; t <= careEndMs; t += UTC_DAY_MS) {
+    if (!dayIsCoveredByHold(new Date(t), holds)) return true;
+  }
+  return false;
+}
+
 export function pickChartCurrency(totals: AmountTotalsByCurrency): string | null {
   const nonzero = totals.filter((t) => t.total !== 0);
   const pool = nonzero.length > 0 ? nonzero : totals;
