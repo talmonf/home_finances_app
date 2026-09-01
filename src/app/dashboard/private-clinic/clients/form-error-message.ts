@@ -26,7 +26,6 @@ export function therapyClientFormErrorMessage(error: string | undefined, cl: ClS
     "hold-overlap": cl.errHoldOverlap,
     "hold-open": cl.errHoldOpen,
     "hold-notfound": cl.errHoldNotfound,
-    "hold-no-open": cl.errHoldNoOpen,
     "hold-reason": cl.errHoldReason,
   };
   return map[key] ?? decodeURIComponent(key.replace(/\+/g, " "));

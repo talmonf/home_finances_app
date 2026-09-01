@@ -1905,50 +1905,6 @@ export async function placeTherapyClientOnHold(formData: FormData) {
   redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
 }
 
-export async function resumeTherapyClientHold(formData: FormData) {
-  const householdId = await householdIdOrRedirect();
-  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
-  const client_id = (formData.get("client_id") as string)?.trim() || "";
-  const fallbackEdit = client_id ? `${BASE}/clients/${client_id}/edit` : `${BASE}/clients`;
-  if (!client_id) {
-    redirectTherapyClientFormError(formData, fallbackEdit, "notfound");
-  }
-  if (!(await assertClientForCurrentUserScope(householdId, userFamilyMemberId, client_id))) {
-    redirectTherapyClientFormError(formData, `${BASE}/clients`, "notfound");
-  }
-  const ended_on =
-    parseDashboardYmd((formData.get("ended_on") as string) || "") ?? clinicCalendarTodayUtc();
-
-  const open = await prisma.therapy_client_hold_periods.findFirst({
-    where: { household_id: householdId, client_id, ended_on: null },
-  });
-  if (!open) {
-    redirectTherapyClientFormError(formData, fallbackEdit, "hold-no-open");
-  }
-  if (ended_on < open.started_on) {
-    redirectTherapyClientFormError(formData, fallbackEdit, "hold-dates");
-  }
-  const others = await prisma.therapy_client_hold_periods.findMany({
-    where: { household_id: householdId, client_id, NOT: { id: open.id } },
-    select: { started_on: true, ended_on: true },
-  });
-  if (holdConflict([...others, { started_on: open.started_on, ended_on }]) === "overlap") {
-    redirectTherapyClientFormError(formData, fallbackEdit, "hold-overlap");
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.therapy_client_hold_periods.update({
-      where: { id: open.id },
-      data: { ended_on },
-    });
-    await syncTherapyClientOnHoldFlag(tx, householdId, client_id);
-  });
-
-  await logClinicUsage("clients", "hold-resume", { resourceType: "client", resourceId: client_id });
-  revalidateTherapyClientHoldPaths(client_id);
-  redirect(`${BASE}/clients/${client_id}/edit?updated=1`);
-}
-
 export async function updateTherapyClientHoldPeriod(formData: FormData) {
   const householdId = await householdIdOrRedirect();
   const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);

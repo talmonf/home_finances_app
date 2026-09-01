@@ -8,6 +8,8 @@ type PendingSubmitButtonWithSpinnerProps = {
   pendingLabel?: string;
   disabled?: boolean;
   className?: string;
+  form?: string;
+  formAction?: (formData: FormData) => void | Promise<void>;
 };
 
 export function PendingSubmitButtonWithSpinner({
@@ -15,6 +17,8 @@ export function PendingSubmitButtonWithSpinner({
   pendingLabel,
   disabled = false,
   className,
+  form,
+  formAction,
 }: PendingSubmitButtonWithSpinnerProps) {
   const { pending } = useFormStatus();
   const effectiveDisabled = disabled || pending;
@@ -22,6 +26,8 @@ export function PendingSubmitButtonWithSpinner({
   return (
     <button
       type="submit"
+      form={form}
+      formAction={formAction}
       disabled={effectiveDisabled}
       aria-busy={pending}
       data-skip-global-text-replace=""

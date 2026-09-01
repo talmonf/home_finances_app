@@ -1,17 +1,18 @@
 import { HouseholdDateField } from "@/components/household-date-field";
+import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import type { TherapyClientHoldReason } from "@/generated/prisma/enums";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { clinicCalendarTodayUtc, formatUtcYmd } from "@/lib/private-clinic/clinic-dashboard-range";
-import { privateClinicClients } from "@/lib/private-clinic-i18n";
+import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import {
   deleteTherapyClientHoldPeriod,
   placeTherapyClientOnHold,
-  resumeTherapyClientHold,
   updateTherapyClientHoldPeriod,
 } from "../actions";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
+type CommonStrings = ReturnType<typeof privateClinicCommon>;
 
 const HOLD_REASONS: TherapyClientHoldReason[] = ["hospital", "other"];
 
@@ -29,19 +30,31 @@ export type TherapyClientHoldPeriodRow = {
   notes: string | null;
 };
 
+const fieldClass = "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
+const saveBtnClass =
+  "inline-flex w-fit items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50";
+const deleteBtnClass =
+  "inline-flex items-center rounded-lg border border-rose-700 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/50 disabled:cursor-not-allowed disabled:opacity-60";
+const addBtnClass =
+  "inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50";
+
 export function TherapyClientHoldPeriodsSection({
   cl,
+  c,
   obfuscate,
   clientId,
   redirectOnError,
   dateDisplayFormat,
+  pendingLabel,
   periods,
 }: {
   cl: ClStrings;
+  c: CommonStrings;
   obfuscate: boolean;
   clientId: string;
   redirectOnError: string;
   dateDisplayFormat: HouseholdDateDisplayFormat;
+  pendingLabel: string;
   periods: TherapyClientHoldPeriodRow[];
 }) {
   const todayYmd = formatUtcYmd(clinicCalendarTodayUtc());
@@ -50,11 +63,6 @@ export function TherapyClientHoldPeriodsSection({
   const statusLabel = open
     ? cl.holdOnHoldSince(formatHouseholdDate(open.started_on, dateDisplayFormat))
     : cl.holdStatusInService;
-
-  const fieldClass = "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
-  const secondaryBtn =
-    "rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800";
-  const primaryBtn = "rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600";
 
   return (
     <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
@@ -103,6 +111,9 @@ export function TherapyClientHoldPeriodsSection({
                     className={fieldClass}
                     aria-label={row.ended_on ? cl.holdColReturned : cl.holdStillOnHold}
                   />
+                  {!row.ended_on ? (
+                    <p className="text-xs text-slate-500">{cl.holdReturnedHint}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-1">
                   <label htmlFor={`hold_reason_${row.id}`} className="block text-xs text-slate-400">
@@ -136,53 +147,26 @@ export function TherapyClientHoldPeriodsSection({
                 </div>
                 {!obfuscate ? (
                   <div className="flex flex-wrap items-center gap-2 md:col-span-2">
-                    <button type="submit" className={secondaryBtn}>
-                      {cl.holdSave}
-                    </button>
+                    <PendingSubmitButtonWithSpinner
+                      label={c.save}
+                      pendingLabel={pendingLabel}
+                      className={saveBtnClass}
+                    />
+                    <PendingSubmitButtonWithSpinner
+                      label={c.delete}
+                      pendingLabel={pendingLabel}
+                      formAction={deleteTherapyClientHoldPeriod}
+                      className={deleteBtnClass}
+                    />
                   </div>
                 ) : null}
               </form>
-              {!obfuscate ? (
-                <form action={deleteTherapyClientHoldPeriod} className="mt-2">
-                  <input type="hidden" name="id" value={row.id} />
-                  <input type="hidden" name="client_id" value={clientId} />
-                  <input type="hidden" name="redirect_on_error" value={redirectOnError} />
-                  <button type="submit" className={secondaryBtn}>
-                    {cl.holdDelete}
-                  </button>
-                </form>
-              ) : null}
             </li>
           ))}
         </ul>
       ) : (
         <p className="text-sm text-slate-500">{cl.holdEmptyList}</p>
       )}
-
-      {!obfuscate && open ? (
-        <form
-          action={resumeTherapyClientHold}
-          className="flex flex-wrap items-end gap-2 border-t border-slate-800 pt-3"
-        >
-          <input type="hidden" name="client_id" value={clientId} />
-          <input type="hidden" name="redirect_on_error" value={redirectOnError} />
-          <div className="min-w-[12rem] space-y-1">
-            <label htmlFor={`hold_resume_${clientId}`} className="block text-xs text-slate-400">
-              {cl.holdColReturned}
-            </label>
-            <HouseholdDateField
-              id={`hold_resume_${clientId}`}
-              name="ended_on"
-              required
-              defaultIsoYmd={todayYmd}
-              className={fieldClass}
-            />
-          </div>
-          <button type="submit" className={primaryBtn}>
-            {cl.holdResume}
-          </button>
-        </form>
-      ) : null}
 
       {!obfuscate && !open ? (
         <form
@@ -232,9 +216,11 @@ export function TherapyClientHoldPeriodsSection({
               className={fieldClass}
             />
           </div>
-          <button type="submit" className={`w-fit ${primaryBtn}`}>
-            {cl.holdPlaceOnHold}
-          </button>
+          <PendingSubmitButtonWithSpinner
+            label={cl.holdPlaceOnHold}
+            pendingLabel={pendingLabel}
+            className={addBtnClass}
+          />
         </form>
       ) : null}
     </section>

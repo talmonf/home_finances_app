@@ -129,10 +129,12 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
 
       <TherapyClientHoldPeriodsSection
         cl={cl}
+        c={c}
         obfuscate={obfuscate}
         clientId={id}
         redirectOnError={editRedirectPath}
         dateDisplayFormat={dateDisplayFormat}
+        pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
         periods={client.hold_periods}
       />
       {canDeleteClient ? (
