@@ -431,6 +431,8 @@ export function privateClinicClients(lang: UiLanguage) {
     filterStatusLabel: p("Status", "סטטוס"),
     filterStatusAll: p("All clients", "כל הלקוחות"),
     filterStatusActiveOnly: p("Active only", "פעילים בלבד"),
+    filterStatusActiveExcludingHold: p("Active (excluding On Hold)", "פעילים (ללא מושהים)"),
+    filterStatusOnHoldOnly: p("On hold only", "מושהים בלבד"),
     filterStatusInactiveOnly: p("Inactive only", "לא פעילים בלבד"),
     filterJobLabel: p("Job (default or linked)", "משרה (ברירת מחדל או מקושרת)"),
     filterJobAny: p("Any job", "כל משרה"),

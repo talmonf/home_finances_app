@@ -23,15 +23,44 @@ import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
+type ClientStatusFilter = "all" | "active" | "active_excluding_hold" | "on_hold" | "inactive";
+
 type ListFilterQs = {
   q: string;
-  status: string;
+  status: ClientStatusFilter;
   job: string;
   program: string;
   family: string;
   from: string;
   to: string;
 };
+
+function parseClientStatusFilter(s: string | undefined): ClientStatusFilter {
+  if (
+    s === "all" ||
+    s === "inactive" ||
+    s === "on_hold" ||
+    s === "active_excluding_hold"
+  ) {
+    return s;
+  }
+  return "active";
+}
+
+function whereForClientStatus(status: ClientStatusFilter): Prisma.therapy_clientsWhereInput {
+  switch (status) {
+    case "active":
+      return { is_active: true };
+    case "active_excluding_hold":
+      return { is_active: true, on_hold: false };
+    case "on_hold":
+      return { is_active: true, on_hold: true };
+    case "inactive":
+      return { is_active: false };
+    default:
+      return {};
+  }
+}
 
 /** Parse yyyy-mm-dd to UTC midnight for stable @db.Date comparisons. */
 function parseFilterYmd(s: string | undefined): Date | null {
@@ -152,7 +181,7 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
 
 function clientsListHref(p: {
   q?: string;
-  status?: string;
+  status?: ClientStatusFilter;
   job?: string;
   program?: string;
   family?: string;
@@ -239,7 +268,7 @@ export default async function ClientsPage({
   const resolved = searchParams ? await searchParams : undefined;
   const listErrorMsg = therapyClientFormErrorMessage(resolved?.error, cl);
   const q = (resolved?.q ?? "").trim();
-  const status = resolved?.status === "all" || resolved?.status === "inactive" ? resolved.status : "active";
+  const status = parseClientStatusFilter(resolved?.status);
   const fromRaw = (resolved?.from ?? "").trim();
   const toRaw = (resolved?.to ?? "").trim();
   const sort = parseSortKey(resolved?.sort);
@@ -304,7 +333,7 @@ export default async function ClientsPage({
   const where: Prisma.therapy_clientsWhereInput = {
     household_id: householdId,
     ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
-    ...(status === "active" ? { is_active: true } : status === "inactive" ? { is_active: false } : {}),
+    ...whereForClientStatus(status),
     ...(q
       ? {
           OR: [
@@ -585,6 +614,8 @@ export default async function ClientsPage({
               >
                 <option value="all">{cl.filterStatusAll}</option>
                 <option value="active">{cl.filterStatusActiveOnly}</option>
+                <option value="active_excluding_hold">{cl.filterStatusActiveExcludingHold}</option>
+                <option value="on_hold">{cl.filterStatusOnHoldOnly}</option>
                 <option value="inactive">{cl.filterStatusInactiveOnly}</option>
               </select>
             </div>
