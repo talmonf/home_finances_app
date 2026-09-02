@@ -404,6 +404,23 @@ export default async function ClientsPage({
     lastTreatmentByClientId.map((row) => [row.client_id, row._max.occurred_at]),
   );
 
+  const onHoldClientIds = clients.filter((c) => c.on_hold).map((c) => c.id);
+  const holdStartsRaw =
+    onHoldClientIds.length > 0
+      ? await prisma.therapy_client_hold_periods.groupBy({
+          by: ["client_id"],
+          where: {
+            household_id: householdId,
+            client_id: { in: onHoldClientIds },
+          },
+          _max: { started_on: true },
+        })
+      : [];
+  const latestHoldStartByClientId = new Map<string, Date>();
+  for (const row of holdStartsRaw) {
+    if (row._max.started_on) latestHoldStartByClientId.set(row.client_id, row._max.started_on);
+  }
+
   const today = startOfTodayLocal();
   const activeClientIds = clients.filter((c) => c.is_active).map((c) => c.id);
   const { getUpcomingAppointmentsForHousehold } = await import("@/lib/therapy/series-occurrences");
@@ -792,7 +809,10 @@ export default async function ClientsPage({
                   nextVisitDisp = "—";
                   nextVisitTitle = undefined;
                 } else if (row.on_hold) {
-                  nextVisitDisp = cl.onHoldBadge;
+                  const holdSince = latestHoldStartByClientId.get(row.id);
+                  nextVisitDisp = holdSince
+                    ? cl.holdOnHoldSince(formatHouseholdDate(holdSince, dateDisplayFormat))
+                    : cl.onHoldBadge;
                   nextVisitTitle = cl.onHoldHelp;
                 } else if (nextScheduledAppointment) {
                   const apptText = formatHouseholdDateUtcWithTime(nextScheduledAppointment, dateDisplayFormat);
