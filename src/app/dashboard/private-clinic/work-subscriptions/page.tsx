@@ -9,6 +9,7 @@ import {
 import { OBFUSCATED } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicWorkSubscriptions } from "@/lib/private-clinic-i18n";
 import Link from "next/link";
@@ -153,35 +154,17 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                 className="min-h-[7.5rem] w-full resize-y rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
-            <div>
-              <label htmlFor="billing_interval" className="mb-1 block text-xs font-medium text-slate-400">
-                {t.billing} <span className="text-rose-400">*</span>
-              </label>
-              <select
-                id="billing_interval"
-                name="billing_interval"
-                required
-                defaultValue="annual"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="annual">{t.annual}</option>
-                <option value="monthly">{t.monthly}</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="monthly_day_of_month" className="mb-1 block text-xs font-medium text-slate-400">
-                {t.monthlyDay}
-              </label>
-              <input
-                id="monthly_day_of_month"
-                name="monthly_day_of_month"
-                type="number"
-                min={1}
-                max={31}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="1–31"
-              />
-            </div>
+            <SubscriptionBillingIntervalFields
+              defaultInterval="annual"
+              intervalLabel={t.billing}
+              monthlyDayLabel={t.monthlyDay}
+              monthlyOptionLabel={t.monthly}
+              annualOptionLabel={t.annual}
+              monthlyDayPlaceholder="1–31"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              intervalOptionsOrder="annual-first"
+              showIntervalRequiredMark
+            />
             <div>
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {t.renewalDate}

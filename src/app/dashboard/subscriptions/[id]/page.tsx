@@ -1,3 +1,4 @@
+import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { HouseholdDateField } from "@/components/household-date-field";
 import {
@@ -173,21 +174,16 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 className={inputClass}
               />
             </div>
-            <div>
-              <label htmlFor="monthly_day_of_month" className="mb-1 block text-xs font-medium text-slate-400">
-                Monthly renewal day (1-31)
-              </label>
-              <input
-                id="monthly_day_of_month"
-                name="monthly_day_of_month"
-                type="number"
-                min="1"
-                max="31"
-                defaultValue={subscription.monthly_day_of_month ?? ""}
-                className={inputClass}
-                placeholder="Required for monthly interval"
-              />
-            </div>
+            <SubscriptionBillingIntervalFields
+              defaultInterval={subscription.billing_interval}
+              defaultMonthlyDay={subscription.monthly_day_of_month}
+              intervalLabel="Billing interval"
+              monthlyDayLabel="Monthly renewal day (1-31)"
+              monthlyOptionLabel="Monthly"
+              annualOptionLabel="Annual"
+              monthlyDayPlaceholder="Required for monthly interval"
+              className={inputClass}
+            />
             <div>
               <label htmlFor="fee_amount" className="mb-1 block text-xs font-medium text-slate-400">
                 Fee amount
@@ -213,21 +209,6 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 defaultValue={subscription.currency}
                 className={inputClass}
               />
-            </div>
-            <div>
-              <label htmlFor="billing_interval" className="mb-1 block text-xs font-medium text-slate-400">
-                Billing interval
-              </label>
-              <select
-                id="billing_interval"
-                name="billing_interval"
-                required
-                defaultValue={subscription.billing_interval}
-                className={inputClass}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="annual">Annual</option>
-              </select>
             </div>
             <div>
               <label htmlFor="status" className="mb-1 block text-xs font-medium text-slate-400">

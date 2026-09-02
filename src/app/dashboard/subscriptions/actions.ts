@@ -88,7 +88,7 @@ export async function createSubscription(formData: FormData) {
       redirect(
         formCtx === "private_clinic_work"
           ? "/dashboard/private-clinic/work-subscriptions?error=Monthly+day+is+required"
-          : "/dashboard/subscriptions?error=Monthly+day+is+required",
+          : "/dashboard/subscriptions?modal=new&error=Monthly+day+is+required",
       );
     }
     const parsedDay = Number.parseInt(monthly_day_of_month_raw, 10);

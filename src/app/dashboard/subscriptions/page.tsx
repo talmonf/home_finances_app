@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
@@ -543,23 +544,15 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
-            <div>
-              <label
-                htmlFor="monthly_day_of_month"
-                className="mb-1 block text-xs font-medium text-slate-400"
-              >
-                Monthly renewal day (1-31)
-              </label>
-              <input
-                id="monthly_day_of_month"
-                name="monthly_day_of_month"
-                type="number"
-                min="1"
-                max="31"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="Required for monthly interval"
-              />
-            </div>
+            <SubscriptionBillingIntervalFields
+              defaultInterval="monthly"
+              intervalLabel="Billing interval"
+              monthlyDayLabel="Monthly renewal day (1-31)"
+              monthlyOptionLabel="Monthly"
+              annualOptionLabel="Annual"
+              monthlyDayPlaceholder="Required for monthly interval"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
             <div>
               <label
                 htmlFor="fee_amount"
@@ -592,23 +585,6 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="e.g. ILS, USD"
               />
-            </div>
-            <div>
-              <label
-                htmlFor="billing_interval"
-                className="mb-1 block text-xs font-medium text-slate-400"
-              >
-                Billing interval
-              </label>
-              <select
-                id="billing_interval"
-                name="billing_interval"
-                required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="monthly">Monthly</option>
-                <option value="annual">Annual</option>
-              </select>
             </div>
             <div>
               <label
