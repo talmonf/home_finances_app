@@ -9,6 +9,7 @@ import { TherapyClientCareEndFields } from "./therapy-client-care-end-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import { PersonalClientBillingFields } from "./personal-client-billing-fields";
+import { TherapyClientPersonalDetailsFields } from "./therapy-client-personal-details-fields";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 type CommonStrings = ReturnType<typeof privateClinicCommon>;
@@ -54,6 +55,18 @@ function splitPhones(value: string | null | undefined): { mobile: string; home: 
     .map((s) => s.trim())
     .filter(Boolean);
   return { mobile: parts[0] ?? "", home: parts[1] ?? "" };
+}
+
+function FormSectionHeading({ children, first }: { children: string; first?: boolean }) {
+  return (
+    <h2
+      className={`md:col-span-2 text-sm font-semibold text-slate-200 ${
+        first ? "" : "mt-2 border-t border-slate-800 pt-3"
+      }`}
+    >
+      {children}
+    </h2>
+  );
 }
 
 export function TherapyClientForm({
@@ -113,6 +126,14 @@ export function TherapyClientForm({
 
   const rowId = client?.id ?? "new";
   const idPrefix = mode === "edit" ? rowId : "new";
+  const hasPersonalDetails = Boolean(
+    client?.last_name?.trim() ||
+      client?.id_number?.trim() ||
+      client?.email?.trim() ||
+      phones.mobile ||
+      phones.home ||
+      client?.address?.trim(),
+  );
 
   return (
     <form
@@ -121,6 +142,8 @@ export function TherapyClientForm({
     >
       <input type="hidden" name="redirect_on_error" value={redirectOnError} />
       {mode === "edit" && client ? <input type="hidden" name="id" value={client.id} /> : null}
+
+      <FormSectionHeading first>{cl.formSectionIdentity}</FormSectionHeading>
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_first_name`} className="block text-xs text-slate-400">
@@ -147,165 +170,87 @@ export function TherapyClientForm({
         )}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_last_name`} className="block text-xs text-slate-400">
-          {cl.lastNameOptional}
-        </label>
-        {obfuscateEdit(obfuscate, mode) && client ? <input type="hidden" name="last_name" value={client.last_name ?? ""} /> : null}
-        {obfuscateEdit(obfuscate, mode) ? (
-          <input
-            id={`${idPrefix}_last_name`}
-            readOnly
-            value={OBFUSCATED}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        ) : (
-          <input
-            id={`${idPrefix}_last_name`}
-            name="last_name"
-            defaultValue={client?.last_name ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
-      </div>
+      <TherapyClientPersonalDetailsFields
+        idPrefix={idPrefix}
+        obfuscate={obfuscateEdit(obfuscate, mode)}
+        lastName={client?.last_name ?? ""}
+        idNumber={client?.id_number ?? ""}
+        email={client?.email ?? ""}
+        mobilePhone={phones.mobile}
+        homePhone={phones.home}
+        address={client?.address ?? ""}
+        hasDetailsOnFile={hasPersonalDetails}
+        labels={{
+          personalDetailsBtn: cl.personalDetailsBtn,
+          personalDetailsTitle: cl.personalDetailsTitle,
+          personalDetailsOnFile: cl.personalDetailsOnFile,
+          personalDetailsDone: cl.personalDetailsDone,
+          lastNameOptional: cl.lastNameOptional,
+          idOptional: cl.idOptional,
+          email: cl.email,
+          composeEmail: cl.composeEmail,
+          callNumber: cl.callNumber,
+          mobilePhone: cl.mobilePhone,
+          homePhone: cl.homePhone,
+          address: cl.address,
+        }}
+      />
 
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_id_number`} className="block text-xs text-slate-400">
-          {cl.idOptional}
-        </label>
-        {obfuscateEdit(obfuscate, mode) && client ? (
-          <input type="hidden" name="id_number" value={client.id_number ?? ""} />
-        ) : null}
-        {obfuscateEdit(obfuscate, mode) ? (
-          <input
-            id={`${idPrefix}_id_number`}
-            readOnly
-            value={client?.id_number ? OBFUSCATED : ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        ) : (
-          <input
-            id={`${idPrefix}_id_number`}
-            name="id_number"
-            defaultValue={client?.id_number ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
-      </div>
+      <FormSectionHeading>{cl.formSectionAssignment}</FormSectionHeading>
 
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <label htmlFor={`${idPrefix}_email`} className="block text-xs text-slate-400">
-            {cl.email}
-          </label>
-          {client?.email && !obfuscate ? (
-            <a href={`mailto:${client.email}`} className="shrink-0 text-xs text-sky-400 hover:text-sky-300">
-              {cl.composeEmail}
-            </a>
-          ) : null}
-        </div>
-        {obfuscateEdit(obfuscate, mode) && client ? <input type="hidden" name="email" value={client.email ?? ""} /> : null}
-        {obfuscateEdit(obfuscate, mode) && client ? (
-          <input
-            id={`${idPrefix}_email`}
-            readOnly
-            value={client.email ? OBFUSCATED : ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        ) : (
-          <input
-            id={`${idPrefix}_email`}
-            name="email"
-            type="email"
-            defaultValue={client?.email ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
-      </div>
-
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <label htmlFor={`${idPrefix}_mobile_phone`} className="block text-xs text-slate-400">
-            {cl.mobilePhone}
-          </label>
-          {phones.mobile && !obfuscate ? (
-            <a href={`tel:${phones.mobile}`} className="shrink-0 text-xs text-sky-400 hover:text-sky-300">
-              {cl.callNumber}
-            </a>
-          ) : null}
-        </div>
-        {obfuscateEdit(obfuscate, mode) ? (
-          <>
-            <input type="hidden" name="mobile_phone" value={phones.mobile} />
-            <input
-              id={`${idPrefix}_mobile_phone`}
-              readOnly
-              value={phones.mobile ? OBFUSCATED : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </>
-        ) : (
-          <input
-            id={`${idPrefix}_mobile_phone`}
-            name="mobile_phone"
-            defaultValue={phones.mobile}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
-      </div>
-
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <label htmlFor={`${idPrefix}_home_phone`} className="block text-xs text-slate-400">
-            {cl.homePhone}
-          </label>
-          {phones.home && !obfuscate ? (
-            <a href={`tel:${phones.home}`} className="shrink-0 text-xs text-sky-400 hover:text-sky-300">
-              {cl.callNumber}
-            </a>
-          ) : null}
-        </div>
-        {obfuscateEdit(obfuscate, mode) ? (
-          <>
-            <input type="hidden" name="home_phone" value={phones.home} />
-            <input
-              id={`${idPrefix}_home_phone`}
-              readOnly
-              value={phones.home ? OBFUSCATED : ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </>
-        ) : (
-          <input
-            id={`${idPrefix}_home_phone`}
-            name="home_phone"
-            defaultValue={phones.home}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
-      </div>
+      <ClientJobProgramFields
+        jobs={jobs}
+        programs={programs}
+        defaultJobId={client?.default_job_id}
+        defaultProgramId={client?.default_program_id}
+        defaultVisitType={client?.default_visit_type}
+        defaultSessionLengthMinutes={client?.default_session_length_minutes}
+        defaultKupatHolim={client?.kupat_holim}
+        defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
+        labels={jobFieldLabels}
+        inheritProgramVisitFrequency={mode === "create"}
+        visitFrequencyCountInputId={`${idPrefix}_visits_per_period_count`}
+        visitFrequencyWeeksInputId={`${idPrefix}_visits_per_period_weeks`}
+      />
 
       <div className="space-y-1 md:col-span-2">
-        <label htmlFor={`${idPrefix}_address`} className="block text-xs text-slate-400">
-          {cl.address}
-        </label>
-        {obfuscateEdit(obfuscate, mode) && client ? <input type="hidden" name="address" value={client.address ?? ""} /> : null}
-        {obfuscateEdit(obfuscate, mode) ? (
+        <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
+        {mode === "create" ? (
+          <p className="text-xs text-slate-500">{cl.visitFrequencyClientHint}</p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_count`}>
+            {cl.visitsPer}
+          </label>
           <input
-            id={`${idPrefix}_address`}
-            readOnly
-            value={client?.address ? OBFUSCATED : ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            id={`${idPrefix}_visits_per_period_count`}
+            name="visits_per_period_count"
+            type="number"
+            min={1}
+            max={14}
+            step={1}
+            defaultValue={client?.visits_per_period_count ?? ""}
+            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
-        ) : (
+          <span className="text-xs text-slate-400">{cl.visitsPer}</span>
+          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_weeks`}>
+            {cl.weeks}
+          </label>
           <input
-            id={`${idPrefix}_address`}
-            name="address"
-            defaultValue={client?.address ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            id={`${idPrefix}_visits_per_period_weeks`}
+            name="visits_per_period_weeks"
+            type="number"
+            min={1}
+            max={12}
+            step={1}
+            defaultValue={client?.visits_per_period_weeks ?? ""}
+            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
-        )}
+          <span className="text-xs text-slate-400">{cl.weeks}</span>
+        </div>
       </div>
+
+      <FormSectionHeading>{cl.formSectionDates}</FormSectionHeading>
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
@@ -331,6 +276,8 @@ export function TherapyClientForm({
         uiLanguage={uiLanguage}
         dateFieldClassName="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
       />
+
+      <FormSectionHeading>{cl.formSectionClinical}</FormSectionHeading>
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_disability_status`} className="block text-xs text-slate-400">
@@ -402,6 +349,8 @@ export function TherapyClientForm({
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
+
+      <FormSectionHeading>{cl.formSectionBilling}</FormSectionHeading>
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_billing_basis`} className="block text-xs text-slate-400">
@@ -475,68 +424,14 @@ export function TherapyClientForm({
         }}
       />
 
-      <ClientJobProgramFields
-        jobs={jobs}
-        programs={programs}
-        defaultJobId={client?.default_job_id}
-        defaultProgramId={client?.default_program_id}
-        defaultVisitType={client?.default_visit_type}
-        defaultSessionLengthMinutes={client?.default_session_length_minutes}
-        defaultKupatHolim={client?.kupat_holim}
-        defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
-        labels={jobFieldLabels}
-        inheritProgramVisitFrequency={mode === "create"}
-        visitFrequencyCountInputId={`${idPrefix}_visits_per_period_count`}
-        visitFrequencyWeeksInputId={`${idPrefix}_visits_per_period_weeks`}
-      />
-
-      <div className="space-y-1 md:col-span-2">
-        <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
-        {mode === "create" ? (
-          <p className="text-xs text-slate-500">{cl.visitFrequencyClientHint}</p>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_count`}>
-            {cl.visitsPer}
-          </label>
-          <input
-            id={`${idPrefix}_visits_per_period_count`}
-            name="visits_per_period_count"
-            type="number"
-            min={1}
-            max={14}
-            step={1}
-            defaultValue={client?.visits_per_period_count ?? ""}
-            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <span className="text-xs text-slate-400">{cl.visitsPer}</span>
-          <label className="sr-only" htmlFor={`${idPrefix}_visits_per_period_weeks`}>
-            {cl.weeks}
-          </label>
-          <input
-            id={`${idPrefix}_visits_per_period_weeks`}
-            name="visits_per_period_weeks"
-            type="number"
-            min={1}
-            max={12}
-            step={1}
-            defaultValue={client?.visits_per_period_weeks ?? ""}
-            className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-          <span className="text-xs text-slate-400">{cl.weeks}</span>
-        </div>
-      </div>
-
       {mode === "edit" && client ? (
-        <>
-          <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
-            <span className="flex items-center gap-2">
-              <input type="checkbox" name="is_active" defaultChecked={client.is_active} />
-              {cl.statusLabel}
-            </span>
-            <span className="text-xs font-normal text-slate-500">{cl.statusHelp}</span>
-          </label>
-        </>
+        <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2">
+          <span className="flex items-center gap-2">
+            <input type="checkbox" name="is_active" defaultChecked={client.is_active} />
+            {cl.statusLabel}
+          </span>
+          <span className="text-xs font-normal text-slate-500">{cl.statusHelp}</span>
+        </label>
       ) : null}
 
       <PendingSubmitButtonWithSpinner

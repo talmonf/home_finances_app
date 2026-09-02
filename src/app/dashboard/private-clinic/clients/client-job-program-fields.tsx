@@ -233,11 +233,11 @@ export function ClientJobProgramFields({
         </select>
       </div>
 
-      <div className="md:col-span-2 space-y-2">
-        <p className="text-xs text-slate-400">{labels.alsoSeenUnder}</p>
+      <div className="md:col-span-2 space-y-2 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+        <p className="text-xs text-slate-500">{labels.alsoSeenUnder}</p>
         <div className="flex flex-wrap gap-3">
           {jobs.map((j) => (
-            <label key={j.id} className="flex items-center gap-2 text-sm text-slate-300">
+            <label key={j.id} className="flex items-center gap-2 text-sm text-slate-400">
               <input
                 type="checkbox"
                 name="job_ids"

@@ -7,6 +7,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
+import { OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicClients, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { redirect, notFound } from "next/navigation";
 import { TherapyClientForm } from "../../therapy-client-form";
@@ -15,8 +16,13 @@ import {
   loadTherapyClientRelationshipPickerClients,
 } from "../../load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "../../form-error-message";
-import { TherapyClientRelationshipsSection } from "../../therapy-client-relationships-section";
+import {
+  displayRelatedClientName,
+  TherapyClientRelationshipsSection,
+  therapyClientRelationshipLabel,
+} from "../../therapy-client-relationships-section";
 import { TherapyClientHoldPeriodsSection } from "../../therapy-client-hold-periods-section";
+import { TherapyClientSectionModal } from "../../therapy-client-section-modal";
 import { DeleteClientForm } from "../../delete-client-form";
 import { deleteTherapyClient } from "../../../actions";
 
@@ -78,6 +84,15 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
     }),
   ]);
   const canDeleteClient = primaryTreatmentsCount === 0 && participantTreatmentsCount === 0;
+  const errorKey = resolved.error?.trim() ?? "";
+  const openRelatedModal = errorKey.startsWith("rel-");
+  const openHoldModal = errorKey.startsWith("hold-");
+  const currentlyOnHold = client.hold_periods.some((p) => p.ended_on == null);
+  const relatedRows = client.relationships_from.map((r) => ({
+    id: r.id,
+    relationship: r.relationship,
+    to_client: r.to_client,
+  }));
 
   const editPath = `${LIST_PATH}/${id}/edit`;
   const backHref = fromUpcoming ? "/dashboard/private-clinic/upcoming-visits" : LIST_PATH;
@@ -114,29 +129,73 @@ export default async function PrivateClinicEditClientPage({ params, searchParams
         pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
       />
 
-      <TherapyClientRelationshipsSection
-        cl={cl}
-        obfuscate={obfuscate}
-        fromClientId={id}
-        redirectOnError={editRedirectPath}
-        relationships={client.relationships_from.map((r) => ({
-          id: r.id,
-          relationship: r.relationship,
-          to_client: r.to_client,
-        }))}
-        otherClients={otherClients}
-      />
+      <div
+        className={
+          relatedRows.length > 0 || currentlyOnHold ? "space-y-6" : "flex flex-wrap items-center gap-3"
+        }
+      >
+      <TherapyClientSectionModal
+        title={cl.clientRelationshipsTitle}
+        openLabel={relatedRows.length > 0 ? cl.relManage : cl.clientRelationshipsTitle}
+        closeLabel={cl.overlayClose}
+        defaultOpen={openRelatedModal}
+        summary={
+          relatedRows.length > 0 ? (
+            <ul className="space-y-1 text-sm text-slate-300">
+              {relatedRows.map((row) => (
+                <li key={row.id}>
+                  {obfuscate ? OBFUSCATED : displayRelatedClientName(row.to_client)}
+                  <span className="text-slate-500">
+                    {" · "}
+                    {therapyClientRelationshipLabel(cl, row.relationship)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
+      >
+        <TherapyClientRelationshipsSection
+          cl={cl}
+          obfuscate={obfuscate}
+          fromClientId={id}
+          redirectOnError={editRedirectPath}
+          relationships={relatedRows}
+          otherClients={otherClients}
+        />
+      </TherapyClientSectionModal>
 
-      <TherapyClientHoldPeriodsSection
-        cl={cl}
-        c={c}
-        obfuscate={obfuscate}
-        clientId={id}
-        redirectOnError={editRedirectPath}
-        dateDisplayFormat={dateDisplayFormat}
-        pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
-        periods={client.hold_periods}
-      />
+      {currentlyOnHold ? (
+        <TherapyClientHoldPeriodsSection
+          cl={cl}
+          c={c}
+          obfuscate={obfuscate}
+          clientId={id}
+          redirectOnError={editRedirectPath}
+          dateDisplayFormat={dateDisplayFormat}
+          pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
+          periods={client.hold_periods}
+        />
+      ) : (
+        <TherapyClientSectionModal
+          title={cl.holdPeriodsTitle}
+          openLabel={cl.holdPlaceOnHold}
+          closeLabel={cl.overlayClose}
+          defaultOpen={openHoldModal}
+        >
+          <TherapyClientHoldPeriodsSection
+            cl={cl}
+            c={c}
+            obfuscate={obfuscate}
+            clientId={id}
+            redirectOnError={editRedirectPath}
+            dateDisplayFormat={dateDisplayFormat}
+            pendingLabel={uiLanguage === "he" ? "טוען…" : "Loading…"}
+            periods={client.hold_periods}
+          />
+        </TherapyClientSectionModal>
+      )}
+      </div>
       {canDeleteClient ? (
         <DeleteClientForm
           action={deleteTherapyClient}

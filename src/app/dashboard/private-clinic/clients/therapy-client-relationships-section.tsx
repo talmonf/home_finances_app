@@ -7,7 +7,7 @@ import type { TherapyClientRelationshipPickerOption } from "./load-therapy-clien
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 
-function relationshipLabel(cl: ClStrings, r: TherapyClientRelationshipType): string {
+export function therapyClientRelationshipLabel(cl: ClStrings, r: TherapyClientRelationshipType): string {
   switch (r) {
     case "mother":
       return cl.relMother;
@@ -24,7 +24,7 @@ function relationshipLabel(cl: ClStrings, r: TherapyClientRelationshipType): str
   }
 }
 
-function displayClientName(c: { first_name: string; last_name: string | null }): string {
+export function displayRelatedClientName(c: { first_name: string; last_name: string | null }): string {
   return [c.first_name, c.last_name].filter(Boolean).join(" ");
 }
 
@@ -77,11 +77,11 @@ export function TherapyClientRelationshipsSection({
                         href={`/dashboard/private-clinic/clients/${row.to_client.id}/edit`}
                         className="text-sky-400 hover:text-sky-300"
                       >
-                        {displayClientName(row.to_client)}
+                        {displayRelatedClientName(row.to_client)}
                       </Link>
                     )}
                   </td>
-                  <td className="py-2 pr-3">{relationshipLabel(cl, row.relationship)}</td>
+                  <td className="py-2 pr-3">{therapyClientRelationshipLabel(cl, row.relationship)}</td>
                   <td className="py-2">
                     {obfuscate ? (
                       <span className="text-xs text-slate-600">—</span>
@@ -149,7 +149,7 @@ export function TherapyClientRelationshipsSection({
               </option>
               {REL_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {relationshipLabel(cl, t)}
+                  {therapyClientRelationshipLabel(cl, t)}
                 </option>
               ))}
             </select>
