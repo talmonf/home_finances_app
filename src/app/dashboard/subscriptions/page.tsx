@@ -8,7 +8,7 @@ import {
 import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { HouseholdDateField } from "@/components/household-date-field";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import type { Prisma } from "@/generated/prisma/client";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
@@ -42,6 +42,7 @@ type PageProps = {
     job_id?: string;
     status?: string;
     pay?: string;
+    cloneFrom?: string;
   }>;
 };
 
@@ -167,6 +168,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const jobIdRaw = resolvedSearchParams?.job_id?.trim() ?? "";
   const statusFilter = parseListStatusFilter(resolvedSearchParams?.status);
   const payRaw = resolvedSearchParams?.pay?.trim() ?? "";
+  const cloneFromId = (resolvedSearchParams?.cloneFrom ?? "").trim();
   const familyMemberId =
     familyMemberIdRaw && isUuid(familyMemberIdRaw) ? familyMemberIdRaw : null;
   const jobId = jobIdRaw && isUuid(jobIdRaw) ? jobIdRaw : null;
@@ -182,7 +184,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     pay: payFilter,
   });
 
-  const [subscriptions, subscriptionTotalCount, creditCards, digitalPaymentMethods, familyMembers, jobs] =
+  const [subscriptions, subscriptionTotalCount, creditCards, digitalPaymentMethods, familyMembers, jobs, cloneSource] =
     await Promise.all([
     prisma.subscriptions.findMany({
       where: listWhere,
@@ -210,6 +212,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
       where: { household_id: householdId, is_active: true },
       orderBy: [{ job_title: "asc" }, { employer_name: "asc" }],
     }),
+    modalMode === "new" && cloneFromId && isUuid(cloneFromId)
+      ? prisma.subscriptions.findFirst({
+          where: { id: cloneFromId, household_id: householdId },
+        })
+      : Promise.resolve(null),
   ]);
 
   const jobsForFilter = (() => {
@@ -484,7 +491,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
             <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-medium text-slate-100">{isHebrew ? "הוספה חדשה" : "Add new"}</h2>
+                <h2 className="text-lg font-medium text-slate-100">
+                  {cloneSource
+                    ? isHebrew ? `שכפול: ${cloneSource.name}` : `Clone: ${cloneSource.name}`
+                    : isHebrew ? "הוספה חדשה" : "Add new"}
+                </h2>
                 <Link
                   href={`/dashboard/subscriptions${subscriptionsListQueryString({
                     family_member_id: familyMemberId ?? undefined,
@@ -512,6 +523,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="name"
                 name="name"
                 required
+                defaultValue={cloneSource?.name ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
                 placeholder="e.g. Netflix"
               />
@@ -526,7 +538,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <HouseholdDateField
                 id="start_date"
                 name="start_date"
-                defaultIsoYmd=""
+                defaultIsoYmd={utcDateToHtmlDateInputValue(cloneSource?.start_date ?? null)}
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
@@ -540,12 +552,13 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                defaultIsoYmd=""
+                defaultIsoYmd={utcDateToHtmlDateInputValue(cloneSource?.renewal_date ?? null)}
                 className="w-full rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100 shadow-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
             <SubscriptionBillingIntervalFields
-              defaultInterval="monthly"
+              defaultInterval={cloneSource?.billing_interval ?? "monthly"}
+              defaultMonthlyDay={cloneSource?.monthly_day_of_month ?? undefined}
               intervalLabel="Billing interval"
               monthlyDayLabel="Monthly renewal day (1-31)"
               monthlyOptionLabel="Monthly"
@@ -567,6 +580,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 step="0.01"
                 min="0"
                 required
+                defaultValue={cloneSource ? cloneSource.fee_amount.toString() : ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="0.00"
               />
@@ -581,7 +595,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <input
                 id="currency"
                 name="currency"
-                defaultValue="ILS"
+                defaultValue={cloneSource?.currency ?? "ILS"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="e.g. ILS, USD"
               />
@@ -621,6 +635,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             <SubscriptionFamilyJobSelects
               members={familyMembers}
               jobs={jobs}
+              defaultFamilyMemberId={cloneSource?.family_member_id ?? ""}
+              defaultJobId={cloneSource?.job_id ?? ""}
               memberLabel="Family member (optional)"
               jobLabel={isHebrew ? "עבודה (אופציונלי)" : "Job (optional)"}
               selectClassName={subscriptionSelectClass}
@@ -636,7 +652,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="digital_payment_method_id"
                 name="digital_payment_method_id"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                defaultValue=""
+                defaultValue={cloneSource?.digital_payment_method_id ?? ""}
               >
                 <option value="">None</option>
                 {digitalPaymentMethods.map((d) => (
@@ -657,6 +673,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="credit_card_id"
                 name="credit_card_id"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                defaultValue={cloneSource?.credit_card_id ?? ""}
               >
                 <option value="">None</option>
                 {creditCards.map((c) => (
@@ -676,6 +693,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
               <input
                 id="website_url"
                 name="website_url"
+                defaultValue={cloneSource?.website_url ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional (e.g. netflix.com)"
               />
@@ -691,6 +709,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 id="description"
                 name="description"
                 rows={5}
+                defaultValue={cloneSource?.description ?? ""}
                 className="min-h-[7.5rem] w-full resize-y rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="Optional notes"
               />
@@ -700,7 +719,9 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     type="submit"
                     className="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400 sm:w-fit"
                   >
-                    {isHebrew ? "הוספת מנוי" : "Add subscription"}
+                    {cloneSource
+                      ? isHebrew ? "שכפול מנוי" : "Clone subscription"
+                      : isHebrew ? "הוספת מנוי" : "Add subscription"}
                   </button>
                   <Link
                     href={`/dashboard/subscriptions${subscriptionsListQueryString({

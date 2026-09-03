@@ -311,13 +311,19 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 className={`${inputClass} min-h-[7.5rem] resize-y`}
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex flex-wrap items-end gap-3">
               <button
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
                 {isHebrew ? "שמירת שינויים" : "Save changes"}
               </button>
+              <Link
+                href={`/dashboard/subscriptions?modal=new&cloneFrom=${encodeURIComponent(subscription.id)}`}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-slate-700"
+              >
+                {isHebrew ? "שכפול מנוי" : "Clone subscription"}
+              </Link>
             </div>
           </form>
         </section>
