@@ -8,8 +8,8 @@ import { ClientJobProgramFields } from "./client-job-program-fields";
 import { TherapyClientCareEndFields } from "./therapy-client-care-end-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption, TherapyClientFormProgramOption } from "./load-therapy-client-form-options";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
-import { PersonalClientBillingFields } from "./personal-client-billing-fields";
 import { TherapyClientPersonalDetailsFields } from "./therapy-client-personal-details-fields";
+import { TherapyClientBillingSection } from "./therapy-client-billing-section";
 
 type ClStrings = ReturnType<typeof privateClinicClients>;
 type CommonStrings = ReturnType<typeof privateClinicCommon>;
@@ -138,65 +138,65 @@ export function TherapyClientForm({
   return (
     <form
       action={action}
-      className="grid items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
+      className="grid items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-2"
     >
       <input type="hidden" name="redirect_on_error" value={redirectOnError} />
       {mode === "edit" && client ? <input type="hidden" name="id" value={client.id} /> : null}
 
-      <FormSectionHeading first>{cl.formSectionIdentity}</FormSectionHeading>
+      <div className="flex flex-wrap items-end gap-3 md:col-span-2">
+        <div className="min-w-[12rem] flex-1 space-y-1">
+          <label htmlFor={`${idPrefix}_first_name`} className="block text-xs text-slate-400">
+            {cl.firstName}
+          </label>
+          {obfuscateEdit(obfuscate, mode) && client ? (
+            <input type="hidden" name="first_name" value={client.first_name} />
+          ) : null}
+          {obfuscateEdit(obfuscate, mode) ? (
+            <input
+              id={`${idPrefix}_first_name`}
+              readOnly
+              value={OBFUSCATED}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          ) : (
+            <input
+              id={`${idPrefix}_first_name`}
+              name="first_name"
+              required
+              defaultValue={client?.first_name ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          )}
+        </div>
 
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_first_name`} className="block text-xs text-slate-400">
-          {cl.firstName}
-        </label>
-        {obfuscateEdit(obfuscate, mode) && client ? (
-          <input type="hidden" name="first_name" value={client.first_name} />
-        ) : null}
-        {obfuscateEdit(obfuscate, mode) ? (
-          <input
-            id={`${idPrefix}_first_name`}
-            readOnly
-            value={OBFUSCATED}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        ) : (
-          <input
-            id={`${idPrefix}_first_name`}
-            name="first_name"
-            required
-            defaultValue={client?.first_name ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        )}
+        <TherapyClientPersonalDetailsFields
+          idPrefix={idPrefix}
+          obfuscate={obfuscateEdit(obfuscate, mode)}
+          lastName={client?.last_name ?? ""}
+          idNumber={client?.id_number ?? ""}
+          email={client?.email ?? ""}
+          mobilePhone={phones.mobile}
+          homePhone={phones.home}
+          address={client?.address ?? ""}
+          hasDetailsOnFile={hasPersonalDetails}
+          labels={{
+            personalDetailsBtn: cl.personalDetailsBtn,
+            personalDetailsTitle: cl.personalDetailsTitle,
+            personalDetailsOnFile: cl.personalDetailsOnFile,
+            personalDetailsDone: cl.personalDetailsDone,
+            lastNameOptional: cl.lastNameOptional,
+            idOptional: cl.idOptional,
+            email: cl.email,
+            composeEmail: cl.composeEmail,
+            callNumber: cl.callNumber,
+            mobilePhone: cl.mobilePhone,
+            homePhone: cl.homePhone,
+            address: cl.address,
+          }}
+        />
       </div>
 
-      <TherapyClientPersonalDetailsFields
-        idPrefix={idPrefix}
-        obfuscate={obfuscateEdit(obfuscate, mode)}
-        lastName={client?.last_name ?? ""}
-        idNumber={client?.id_number ?? ""}
-        email={client?.email ?? ""}
-        mobilePhone={phones.mobile}
-        homePhone={phones.home}
-        address={client?.address ?? ""}
-        hasDetailsOnFile={hasPersonalDetails}
-        labels={{
-          personalDetailsBtn: cl.personalDetailsBtn,
-          personalDetailsTitle: cl.personalDetailsTitle,
-          personalDetailsOnFile: cl.personalDetailsOnFile,
-          personalDetailsDone: cl.personalDetailsDone,
-          lastNameOptional: cl.lastNameOptional,
-          idOptional: cl.idOptional,
-          email: cl.email,
-          composeEmail: cl.composeEmail,
-          callNumber: cl.callNumber,
-          mobilePhone: cl.mobilePhone,
-          homePhone: cl.homePhone,
-          address: cl.address,
-        }}
-      />
-
-      <FormSectionHeading>{cl.formSectionAssignment}</FormSectionHeading>
+      <FormSectionHeading first>{cl.formSectionAssignment}</FormSectionHeading>
 
       <ClientJobProgramFields
         jobs={jobs}
@@ -250,8 +250,6 @@ export function TherapyClientForm({
         </div>
       </div>
 
-      <FormSectionHeading>{cl.formSectionDates}</FormSectionHeading>
-
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_start_date`} className="block text-xs text-slate-400">
           {c.startDate}
@@ -276,8 +274,6 @@ export function TherapyClientForm({
         uiLanguage={uiLanguage}
         dateFieldClassName="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
       />
-
-      <FormSectionHeading>{cl.formSectionClinical}</FormSectionHeading>
 
       <div className="space-y-1">
         <label htmlFor={`${idPrefix}_disability_status`} className="block text-xs text-slate-400">
@@ -325,14 +321,14 @@ export function TherapyClientForm({
             id={`${idPrefix}_notes`}
             readOnly
             value={client?.notes ? OBFUSCATED : ""}
-            className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[3rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         ) : (
           <textarea
             id={`${idPrefix}_notes`}
             name="notes"
             defaultValue={client?.notes ?? ""}
-            className="min-h-[4.5rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[3rem] w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         )}
       </div>
@@ -350,69 +346,22 @@ export function TherapyClientForm({
         />
       </div>
 
-      <FormSectionHeading>{cl.formSectionBilling}</FormSectionHeading>
-
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_billing_basis`} className="block text-xs text-slate-400">
-          Billing basis
-        </label>
-        <select
-          id={`${idPrefix}_billing_basis`}
-          name="billing_basis"
-          defaultValue={client?.billing_basis ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="">{families.length > 0 ? "Use family setting" : c.none}</option>
-          <option value="per_treatment">Per treatment</option>
-          <option value="per_month">Per month</option>
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label htmlFor={`${idPrefix}_billing_timing`} className="block text-xs text-slate-400">
-          Billing timing
-        </label>
-        <select
-          id={`${idPrefix}_billing_timing`}
-          name="billing_timing"
-          defaultValue={client?.billing_timing ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        >
-          <option value="">{families.length > 0 ? "Use family setting" : c.none}</option>
-          <option value="in_advance">In advance</option>
-          <option value="in_arrears">In arrears</option>
-        </select>
-      </div>
-      {families.length > 0 ? (
-        <div className="space-y-1 md:col-span-2">
-          <label htmlFor={`${idPrefix}_family_id`} className="block text-xs text-slate-400">
-            Family
-          </label>
-          <select
-            id={`${idPrefix}_family_id`}
-            name="family_id"
-            defaultValue={client?.family_id ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">No family</option>
-            {families.map((family) => (
-              <option key={family.id} value={family.id}>
-                {family.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
-
-      <PersonalClientBillingFields
-        familiesEnabled={families.length > 0}
-        familySelectId={families.length > 0 ? `${idPrefix}_family_id` : undefined}
+      <TherapyClientBillingSection
+        jobs={jobs}
+        families={families}
+        defaultJobId={client?.default_job_id}
+        familySelectId={`${idPrefix}_family_id`}
         initialFamilyId={client?.family_id}
+        initialBillingBasis={client?.billing_basis}
+        initialBillingTiming={client?.billing_timing}
         initialAgreedFeeAmount={
           client?.agreed_fee_amount != null ? String(client.agreed_fee_amount) : null
         }
         initialAgreedFeeCurrency={client?.agreed_fee_currency ?? "ILS"}
         initialDefaultPaymentMethod={client?.default_payment_method ?? null}
         labels={{
+          sectionTitle: cl.formSectionBilling,
+          none: c.none,
           agreedFeeOptional: cl.agreedFeeOptional,
           agreedFeeCurrency: cl.agreedFeeCurrency,
           defaultPaymentMethodOptional: cl.defaultPaymentMethodOptional,

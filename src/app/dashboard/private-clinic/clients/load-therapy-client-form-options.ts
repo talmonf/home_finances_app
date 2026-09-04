@@ -6,7 +6,11 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 
-export type TherapyClientFormJobOption = { id: string; label: string };
+export type TherapyClientFormJobOption = {
+  id: string;
+  label: string;
+  employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company";
+};
 export type TherapyClientRelationshipPickerOption = { id: string; label: string };
 export type TherapyClientFormProgramOption = {
   id: string;
@@ -86,6 +90,7 @@ export async function loadTherapyClientFormOptions(params: {
     jobs: jobs.map((j) => ({
       id: j.id,
       label: formatJobDisplayLabel(j),
+      employmentType: j.employment_type,
     })),
     programs: programs.map((p) => ({
       id: p.id,

@@ -72,7 +72,7 @@ export function TherapyClientPersonalDetailsFields({
   }, [open, close]);
 
   return (
-    <div className="flex flex-col justify-end gap-1">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -80,7 +80,7 @@ export function TherapyClientPersonalDetailsFields({
       >
         {labels.personalDetailsBtn}
       </button>
-      {hintVisible ? <p className="text-xs text-slate-500">{labels.personalDetailsOnFile}</p> : null}
+      {hintVisible ? <span className="text-xs text-slate-500">{labels.personalDetailsOnFile}</span> : null}
 
       <div
         className={`fixed inset-0 z-[60] flex items-start justify-center overflow-auto bg-slate-950/80 px-4 py-8 ${open ? "" : "hidden"}`}
