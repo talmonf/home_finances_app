@@ -10,6 +10,7 @@ export type TherapyClientFormJobOption = {
   id: string;
   label: string;
   employmentType: "freelancer" | "employee" | "self_employed" | "contractor_via_company";
+  hasEmployer: boolean;
 };
 export type TherapyClientRelationshipPickerOption = { id: string; label: string };
 export type TherapyClientFormProgramOption = {
@@ -91,6 +92,7 @@ export async function loadTherapyClientFormOptions(params: {
       id: j.id,
       label: formatJobDisplayLabel(j),
       employmentType: j.employment_type,
+      hasEmployer: Boolean(j.employer_name?.trim()),
     })),
     programs: programs.map((p) => ({
       id: p.id,

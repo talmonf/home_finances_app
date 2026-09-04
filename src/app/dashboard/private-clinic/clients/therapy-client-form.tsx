@@ -204,7 +204,6 @@ export function TherapyClientForm({
         defaultJobId={client?.default_job_id}
         defaultProgramId={client?.default_program_id}
         defaultVisitType={client?.default_visit_type}
-        defaultSessionLengthMinutes={client?.default_session_length_minutes}
         defaultKupatHolim={client?.kupat_holim}
         defaultCheckedJobIds={client?.client_jobs.map((x) => x.job_id)}
         labels={jobFieldLabels}
@@ -213,7 +212,23 @@ export function TherapyClientForm({
         visitFrequencyWeeksInputId={`${idPrefix}_visits_per_period_weeks`}
       />
 
-      <div className="space-y-1 md:col-span-2">
+      <div className="space-y-1">
+        <label htmlFor={`${idPrefix}_default_session_length`} className="block text-xs text-slate-400">
+          {c.defaultSessionLengthMinutes}
+        </label>
+        <input
+          id={`${idPrefix}_default_session_length`}
+          name="default_session_length_minutes"
+          type="number"
+          min={1}
+          max={999}
+          step={1}
+          defaultValue={client?.default_session_length_minutes ?? ""}
+          className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+      </div>
+
+      <div className="space-y-1">
         <p className="text-xs text-slate-400">{cl.visitFrequency}</p>
         {mode === "create" ? (
           <p className="text-xs text-slate-500">{cl.visitFrequencyClientHint}</p>

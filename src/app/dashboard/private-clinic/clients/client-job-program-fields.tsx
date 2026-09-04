@@ -56,7 +56,6 @@ export function ClientJobProgramFields({
   defaultJobId,
   defaultProgramId,
   defaultVisitType,
-  defaultSessionLengthMinutes,
   defaultKupatHolim,
   defaultCheckedJobIds,
   requiredProgram,
@@ -70,7 +69,6 @@ export function ClientJobProgramFields({
   defaultJobId?: string | null;
   defaultProgramId?: string | null;
   defaultVisitType?: "clinic" | "home" | "phone" | "video" | null;
-  defaultSessionLengthMinutes?: number | null;
   defaultKupatHolim?: "clalit" | "maccabi" | "meuhedet" | "leumit" | null;
   defaultCheckedJobIds?: string[];
   requiredProgram?: boolean;
@@ -220,43 +218,9 @@ export function ClientJobProgramFields({
         </select>
       </div>
 
-      <div className="space-y-1">
-        <label className="block text-xs text-slate-400">{labels.defaultSessionLengthOptional}</label>
-        <input
-          name="default_session_length_minutes"
-          type="number"
-          min={1}
-          max={999}
-          step={1}
-          defaultValue={defaultSessionLengthMinutes ?? ""}
-          className="w-full max-w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-        />
-      </div>
-
-      <div className="md:col-span-2 space-y-2 rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2">
-        <p className="text-xs text-slate-500">{labels.alsoSeenUnder}</p>
-        <div className="flex flex-wrap gap-3">
-          {jobs.map((j) => (
-            <label key={j.id} className="flex items-center gap-2 text-sm text-slate-400">
-              <input
-                type="checkbox"
-                name="job_ids"
-                value={j.id}
-                checked={checkedJobs.has(j.id)}
-                onChange={(e) =>
-                  setCheckedJobs((prev) => {
-                    const next = new Set(prev);
-                    if (e.target.checked) next.add(j.id);
-                    else next.delete(j.id);
-                    return next;
-                  })
-                }
-              />
-              {j.label}
-            </label>
-          ))}
-        </div>
-      </div>
+      {Array.from(checkedJobs).map((id) => (
+        <input key={id} type="hidden" name="job_ids" value={id} />
+      ))}
     </>
   );
 }

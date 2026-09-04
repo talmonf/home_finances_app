@@ -5,10 +5,10 @@ import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { PersonalClientBillingFields } from "./personal-client-billing-fields";
 import type { TherapyClientFamilyOption, TherapyClientFormJobOption } from "./load-therapy-client-form-options";
 
-function jobBillsTheClient(
-  employmentType: TherapyClientFormJobOption["employmentType"] | undefined,
-): boolean {
-  return employmentType === "freelancer" || employmentType === "self_employed";
+function jobIsCompanyPaid(job: TherapyClientFormJobOption | undefined): boolean {
+  if (!job) return false;
+  if (job.employmentType === "employee" || job.employmentType === "contractor_via_company") return true;
+  return job.hasEmployer;
 }
 
 type BillingLabels = {
@@ -52,19 +52,19 @@ export function TherapyClientBillingSection({
   const initialJobId = defaultClinicJobId(jobs, defaultJobId);
   const [billsClient, setBillsClient] = useState(() => {
     const job = jobs.find((j) => j.id === initialJobId);
-    return jobBillsTheClient(job?.employmentType);
+    return !jobIsCompanyPaid(job);
   });
 
   useEffect(() => {
     const select = document.querySelector('select[name="default_job_id"]') as HTMLSelectElement | null;
     if (!select) {
       const job = jobs.find((j) => j.id === initialJobId);
-      setBillsClient(jobBillsTheClient(job?.employmentType));
+      setBillsClient(!jobIsCompanyPaid(job));
       return;
     }
     const sync = () => {
       const job = jobs.find((j) => j.id === select.value);
-      setBillsClient(jobBillsTheClient(job?.employmentType));
+      setBillsClient(!jobIsCompanyPaid(job));
     };
     sync();
     select.addEventListener("change", sync);
