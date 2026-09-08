@@ -695,15 +695,6 @@ export default async function ClientsPage({
                   sortHintDesc={cl.sortHintDesc}
                 />
                 <SortHeader
-                  column="last_name"
-                  label={cl.colLastName}
-                  sort={sort}
-                  dir={dir}
-                  filters={listFilters}
-                  sortHintAsc={cl.sortHintAsc}
-                  sortHintDesc={cl.sortHintDesc}
-                />
-                <SortHeader
                   column="address"
                   label={cl.colAddress}
                   sort={sort}
@@ -850,7 +841,6 @@ export default async function ClientsPage({
                 const treatmentsHref = `/dashboard/private-clinic/treatments?client=${encodeURIComponent(row.id)}`;
                 const clientDetailsHref = `${CLIENTS_BASE}/${encodeURIComponent(row.id)}/edit`;
                 const clientName = obfuscate ? OBFUSCATED : row.first_name;
-                const clientLastName = obfuscate ? OBFUSCATED : row.last_name ?? "";
                 return (
                   <tr key={row.id} className="hover:bg-slate-800/50">
                     <td className="whitespace-nowrap px-3 py-2 text-slate-200">
@@ -860,16 +850,6 @@ export default async function ClientsPage({
                       >
                         {clientName}
                       </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                      {clientLastName ? (
-                        <Link
-                          href={clientDetailsHref}
-                          className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
-                        >
-                          {clientLastName}
-                        </Link>
-                      ) : null}
                     </td>
                     <td className="max-w-[16rem] truncate px-3 py-2 text-slate-300" title={row.address ?? undefined}>
                       {obfuscate ? (row.address ? OBFUSCATED : "") : row.address?.trim() ? row.address : "—"}

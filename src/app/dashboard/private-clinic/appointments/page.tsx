@@ -271,9 +271,20 @@ export default async function AppointmentsPage({
                       ) : null}
                     </td>
                     <td className="px-3 py-2 text-slate-100">
-                      {a.client
-                        ? formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)
-                        : "—"}
+                      {a.client ? (
+                        obfuscate ? (
+                          <span>{OBFUSCATED}</span>
+                        ) : (
+                          <Link
+                            href={`/dashboard/private-clinic/clients/${encodeURIComponent(a.clientId)}/edit`}
+                            className="font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {formatClientNameForDisplay(false, a.client.first_name, a.client.last_name)}
+                          </Link>
+                        )
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="max-w-[16rem] truncate px-3 py-2 text-slate-400" title={a.client?.address ?? undefined}>
                       {a.client
