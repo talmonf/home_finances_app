@@ -131,8 +131,7 @@ export function TherapyClientForm({
       client?.id_number?.trim() ||
       client?.email?.trim() ||
       phones.mobile ||
-      phones.home ||
-      client?.address?.trim(),
+      phones.home,
   );
 
   return (
@@ -169,6 +168,30 @@ export function TherapyClientForm({
           )}
         </div>
 
+        <div className="min-w-[12rem] flex-1 space-y-1">
+          <label htmlFor={`${idPrefix}_address`} className="block text-xs text-slate-400">
+            {cl.address}
+          </label>
+          {obfuscateEdit(obfuscate, mode) && client ? (
+            <input type="hidden" name="address" value={client.address ?? ""} />
+          ) : null}
+          {obfuscateEdit(obfuscate, mode) ? (
+            <input
+              id={`${idPrefix}_address`}
+              readOnly
+              value={client?.address ? OBFUSCATED : ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          ) : (
+            <input
+              id={`${idPrefix}_address`}
+              name="address"
+              defaultValue={client?.address ?? ""}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          )}
+        </div>
+
         <TherapyClientPersonalDetailsFields
           idPrefix={idPrefix}
           obfuscate={obfuscateEdit(obfuscate, mode)}
@@ -177,7 +200,6 @@ export function TherapyClientForm({
           email={client?.email ?? ""}
           mobilePhone={phones.mobile}
           homePhone={phones.home}
-          address={client?.address ?? ""}
           hasDetailsOnFile={hasPersonalDetails}
           labels={{
             personalDetailsBtn: cl.personalDetailsBtn,
@@ -191,7 +213,6 @@ export function TherapyClientForm({
             callNumber: cl.callNumber,
             mobilePhone: cl.mobilePhone,
             homePhone: cl.homePhone,
-            address: cl.address,
           }}
         />
       </div>

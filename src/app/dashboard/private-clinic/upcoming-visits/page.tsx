@@ -34,6 +34,7 @@ type NextAppointmentRef = {
 
 type SortKey =
   | "client"
+  | "address"
   | "next_due"
   | "scheduled"
   | "overdue"
@@ -49,6 +50,7 @@ type SortDir = "asc" | "desc";
 function parseSortKey(raw: string | undefined): SortKey {
   const allowed: SortKey[] = [
     "client",
+    "address",
     "next_due",
     "scheduled",
     "overdue",
@@ -253,6 +255,7 @@ export default async function UpcomingVisitsPage({
   type ScheduledRow = {
     clientId: string;
     name: string;
+    address: string;
     jobLabel: string;
     programId: string | null;
     programLabel: string;
@@ -279,6 +282,7 @@ export default async function UpcomingVisitsPage({
     return {
       clientId: row.id,
       name,
+      address: row.address?.trim() || "",
       jobLabel: formatJobDisplayLabel(row.default_job),
       programId: row.default_program_id,
       programLabel: row.default_program?.name ?? c.none,
@@ -369,6 +373,9 @@ export default async function UpcomingVisitsPage({
     switch (sort) {
       case "client":
         cmp = compareText(a.name, b.name) * direction;
+        break;
+      case "address":
+        cmp = compareText(a.address, b.address) * direction;
         break;
       case "scheduled":
         cmp = compareNullableDate(
@@ -502,6 +509,15 @@ export default async function UpcomingVisitsPage({
                         sortHintAsc={cl.sortHintAsc}
                         sortHintDesc={cl.sortHintDesc}
                         sticky
+                      />
+                      <SortHeader
+                        column="address"
+                        label={uv.colAddress}
+                        sort={sort}
+                        dir={dir}
+                        family={familyFilter}
+                        sortHintAsc={cl.sortHintAsc}
+                        sortHintDesc={cl.sortHintDesc}
                       />
                       <SortHeader
                         column="team_members"
@@ -639,6 +655,9 @@ export default async function UpcomingVisitsPage({
                             ) : null}
                           </div>
                         </td>
+                        <td className="max-w-[16rem] truncate px-3 py-2 text-slate-300" title={r.address || undefined}>
+                          {obfuscate ? (r.address ? OBFUSCATED : "") : r.address || "—"}
+                        </td>
                         <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={r.teamMembers || undefined}>
                           {r.teamMembers || "—"}
                         </td>
@@ -742,6 +761,12 @@ export default async function UpcomingVisitsPage({
                   return (
                     <li key={row.id}>
                       <span>{obfuscate ? OBFUSCATED : name}</span>
+                      {row.address?.trim() ? (
+                        <span className="text-slate-400">
+                          {" "}
+                          ({obfuscate ? OBFUSCATED : row.address.trim()})
+                        </span>
+                      ) : null}
                       {teamMembers ? (
                         <span className="text-slate-400">
                           {" "}

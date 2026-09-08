@@ -17,7 +17,6 @@ type Labels = {
   callNumber: string;
   mobilePhone: string;
   homePhone: string;
-  address: string;
 };
 
 export function TherapyClientPersonalDetailsFields({
@@ -28,7 +27,6 @@ export function TherapyClientPersonalDetailsFields({
   email,
   mobilePhone,
   homePhone,
-  address,
   hasDetailsOnFile,
   labels,
 }: {
@@ -39,7 +37,6 @@ export function TherapyClientPersonalDetailsFields({
   email: string;
   mobilePhone: string;
   homePhone: string;
-  address: string;
   hasDetailsOnFile: boolean;
   labels: Labels;
 }) {
@@ -55,7 +52,6 @@ export function TherapyClientPersonalDetailsFields({
         document.getElementById(`${idPrefix}_email`) as HTMLInputElement | null,
         document.getElementById(`${idPrefix}_mobile_phone`) as HTMLInputElement | null,
         document.getElementById(`${idPrefix}_home_phone`) as HTMLInputElement | null,
-        document.getElementById(`${idPrefix}_address`) as HTMLInputElement | null,
       ].some((el) => Boolean(el?.value.trim()));
       setHintVisible(filled);
     }
@@ -207,18 +203,6 @@ export function TherapyClientPersonalDetailsFields({
                 </>
               ) : (
                 <input id={`${idPrefix}_home_phone`} name="home_phone" defaultValue={homePhone} className={inputClass} />
-              )}
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label htmlFor={`${idPrefix}_address`} className="block text-xs text-slate-400">
-                {labels.address}
-              </label>
-              {obfuscate ? <input type="hidden" name="address" value={address} /> : null}
-              {obfuscate ? (
-                <input id={`${idPrefix}_address`} readOnly value={address ? OBFUSCATED : ""} className={inputClass} />
-              ) : (
-                <input id={`${idPrefix}_address`} name="address" defaultValue={address} className={inputClass} />
               )}
             </div>
           </div>

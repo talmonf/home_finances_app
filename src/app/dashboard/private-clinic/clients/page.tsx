@@ -83,6 +83,7 @@ const CLIENTS_BASE = "/dashboard/private-clinic/clients";
 type SortKey =
   | "first_name"
   | "last_name"
+  | "address"
   | "start_date"
   | "end_date"
   | "treatments_count"
@@ -98,6 +99,7 @@ function parseSortKey(s: string | undefined): SortKey {
   const allowed: SortKey[] = [
     "first_name",
     "last_name",
+    "address",
     "start_date",
     "end_date",
     "treatments_count",
@@ -151,6 +153,8 @@ function orderByForSort(sort: SortKey, dir: Prisma.SortOrder): Prisma.therapy_cl
       return [{ first_name: dir }, { last_name: dir }, { id: dir }];
     case "last_name":
       return [{ last_name: dir }, { first_name: dir }, { id: dir }];
+    case "address":
+      return [{ address: dir }, { first_name: dir }, { id: dir }];
     case "start_date":
       return [{ start_date: dir }, { id: dir }];
     case "end_date":
@@ -700,6 +704,15 @@ export default async function ClientsPage({
                   sortHintDesc={cl.sortHintDesc}
                 />
                 <SortHeader
+                  column="address"
+                  label={cl.colAddress}
+                  sort={sort}
+                  dir={dir}
+                  filters={listFilters}
+                  sortHintAsc={cl.sortHintAsc}
+                  sortHintDesc={cl.sortHintDesc}
+                />
+                <SortHeader
                   column="team_members"
                   label={cl.colTeamMembers}
                   sort={sort}
@@ -857,6 +870,9 @@ export default async function ClientsPage({
                           {clientLastName}
                         </Link>
                       ) : null}
+                    </td>
+                    <td className="max-w-[16rem] truncate px-3 py-2 text-slate-300" title={row.address ?? undefined}>
+                      {obfuscate ? (row.address ? OBFUSCATED : "") : row.address?.trim() ? row.address : "—"}
                     </td>
                     <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={row.team_members ?? undefined}>
                       {row.team_members?.trim() ? row.team_members : "—"}

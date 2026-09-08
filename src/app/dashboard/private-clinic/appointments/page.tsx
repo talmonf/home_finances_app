@@ -9,7 +9,7 @@ import {
   getCurrentUiLanguage,
   prisma,
 } from "@/lib/auth";
-import { formatClientNameForDisplay } from "@/lib/privacy-display";
+import { formatClientNameForDisplay, OBFUSCATED } from "@/lib/privacy-display";
 import { privateClinicAppointments, privateClinicCommon } from "@/lib/private-clinic-i18n";
 import { formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { redirect } from "next/navigation";
@@ -231,6 +231,7 @@ export default async function AppointmentsPage({
               <tr className="border-b border-slate-700 bg-slate-800/80">
                 <th className="px-3 py-2 text-slate-300">{ap.startCol}</th>
                 <th className="px-3 py-2 text-slate-300">{c.client}</th>
+                <th className="px-3 py-2 text-slate-300">{ap.colAddress}</th>
                 <th className="px-3 py-2 text-slate-300">{c.job}</th>
                 <th className="px-3 py-2 text-slate-300">{ap.visitTypeCol}</th>
                 {showStatusColumn ? (
@@ -272,6 +273,15 @@ export default async function AppointmentsPage({
                     <td className="px-3 py-2 text-slate-100">
                       {a.client
                         ? formatClientNameForDisplay(obfuscate, a.client.first_name, a.client.last_name)
+                        : "—"}
+                    </td>
+                    <td className="max-w-[16rem] truncate px-3 py-2 text-slate-400" title={a.client?.address ?? undefined}>
+                      {a.client
+                        ? obfuscate
+                          ? a.client.address
+                            ? OBFUSCATED
+                            : ""
+                          : a.client.address?.trim() || "—"
                         : "—"}
                     </td>
                     <td className="px-3 py-2 text-slate-400">

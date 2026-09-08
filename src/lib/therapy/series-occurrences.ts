@@ -56,7 +56,7 @@ export type UpcomingAppointmentRow = {
   status: "scheduled" | "completed" | "cancelled";
   treatmentId: string | null;
   note: string | null;
-  client?: { first_name: string; last_name: string | null };
+  client?: { first_name: string; last_name: string | null; address: string | null };
   job?: { job_title: string; id: string };
 };
 
@@ -501,7 +501,7 @@ export async function listAppointmentsForHousehold(params: {
   const virtualRows: VirtualSeriesOccurrence[] = [];
   const virtualMeta = new Map<
     string,
-    { client: { first_name: string; last_name: string | null }; job: { job_title: string; id: string } }
+    { client: { first_name: string; last_name: string | null; address: string | null }; job: { job_title: string; id: string } }
   >();
   for (const series of activeSeries) {
     const skips = skipBySeries.get(series.id) ?? new Set<string>();
@@ -637,7 +637,7 @@ export async function getUpcomingAppointmentsForHousehold(params: {
   }
 
   const virtualRows: VirtualSeriesOccurrence[] = [];
-  const virtualMeta = new Map<string, { client: { first_name: string; last_name: string | null }; job: { job_title: string; id: string } }>();
+  const virtualMeta = new Map<string, { client: { first_name: string; last_name: string | null; address: string | null }; job: { job_title: string; id: string } }>();
   for (const series of activeSeries) {
     const skips = skipBySeries.get(series.id) ?? new Set<string>();
     const expanded = expandSeriesOccurrences(
