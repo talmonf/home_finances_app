@@ -51,6 +51,18 @@ function websiteTableLabel(raw: string | null | undefined): string | null {
   return normalized.length < 30 ? normalized : null;
 }
 
+function formatUtilityPaymentMethod(utility: {
+  bank_account: { bank_name: string; account_number: string | null } | null;
+  credit_card: { card_last_four: string } | null;
+}): string {
+  if (utility.credit_card) return `****${utility.credit_card.card_last_four}`;
+  if (utility.bank_account) {
+    const parts = [utility.bank_account.bank_name, utility.bank_account.account_number].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : "—";
+  }
+  return "—";
+}
+
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ error?: string; updated?: string; created?: string; modal?: string }>;
@@ -70,12 +82,16 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   const utilityModalMode = resolvedSearchParams?.modal === "utility-new" ? "utility-new" : null;
   const propertyDetailBase = `/dashboard/properties/${id}`;
 
-  const [property, payees] = await Promise.all([
+  const [property, payees, bankAccounts, creditCards] = await Promise.all([
     prisma.properties.findFirst({
       where: { id, household_id: householdId },
       include: {
         utilities: {
-          include: { payee: true },
+          include: {
+            payee: true,
+            bank_account: { select: { bank_name: true, account_number: true } },
+            credit_card: { select: { card_last_four: true } },
+          },
           orderBy: { provider_name: "asc" },
         },
         rentals: {
@@ -91,6 +107,16 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
     prisma.payees.findMany({
       where: { household_id: householdId },
       orderBy: { name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+      select: { id: true, account_name: true, bank_name: true, account_number: true },
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+      select: { id: true, card_name: true, card_last_four: true },
     }),
   ]);
 
@@ -259,8 +285,10 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "ספק" : "Provider"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אתר" : "Website"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "טלפון" : "Phone"}</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Account #</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Meter #</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "מספר לקוח" : "Client #"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "מספר חשבון" : "Account #"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "מספר מונה" : "Meter #"}</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "אמצעי תשלום" : "Payment method"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Renewal</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "הערות" : "Notes"}</th>
                     <th className="px-4 py-3 font-medium text-slate-300">{isHebrew ? "פעולות" : "Actions"}</th>
@@ -299,8 +327,10 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                             "—"
                           )}
                         </td>
+                        <td className="px-4 py-3 text-slate-300">{u.client_number || "—"}</td>
                         <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
                         <td className="px-4 py-3 text-slate-300">{u.meter_number || "—"}</td>
+                        <td className="px-4 py-3 text-slate-300">{formatUtilityPaymentMethod(u)}</td>
                         <td className="px-4 py-3 text-slate-300">
                           {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
                         </td>
@@ -333,6 +363,8 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
               action={createUtility}
               propertyId={property.id}
               payees={payees.map((p) => ({ id: p.id, name: p.name }))}
+              bankAccounts={bankAccounts}
+              creditCards={creditCards}
               utilityTypeLabels={utilityLabels}
               closeHref={propertyDetailBase}
               redirectOnSuccess={`${propertyDetailBase}?created=utility`}

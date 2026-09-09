@@ -6,6 +6,7 @@ type PropertyUtilityDefault = {
   id: string;
   utility_type: string;
   provider_name: string;
+  client_number: string | null;
   account_number: string | null;
   meter_number: string | null;
   notes: string | null;
@@ -21,6 +22,7 @@ type AddUtilityFields = {
   propertyUtilityId: string;
   utilityType: string;
   utilityCompany: string;
+  clientNumber: string;
   accountNumber: string;
   meterNumber: string;
   lastMeterReading: string;
@@ -31,6 +33,7 @@ const EMPTY_FIELDS: AddUtilityFields = {
   propertyUtilityId: "",
   utilityType: "",
   utilityCompany: "",
+  clientNumber: "",
   accountNumber: "",
   meterNumber: "",
   lastMeterReading: "",
@@ -42,6 +45,7 @@ function fieldsFromPropertyUtility(utility: PropertyUtilityDefault | undefined):
     propertyUtilityId: utility?.id ?? "",
     utilityType: utility?.utility_type ?? "",
     utilityCompany: utility?.provider_name ?? "",
+    clientNumber: utility?.client_number ?? "",
     accountNumber: utility?.account_number ?? "",
     meterNumber: utility?.meter_number ?? "",
     lastMeterReading: "",
@@ -103,6 +107,17 @@ export function RentalUtilityAddRow({
           placeholder="Company"
           aria-label="New utility company"
           className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+        />
+      </td>
+      <td className="px-3 py-2">
+        <input
+          form={formId}
+          name="client_number"
+          value={fields.clientNumber}
+          onChange={(event) => setFields((current) => ({ ...current, clientNumber: event.target.value }))}
+          placeholder="Optional"
+          aria-label="New client number"
+          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>
       <td className="px-3 py-2">

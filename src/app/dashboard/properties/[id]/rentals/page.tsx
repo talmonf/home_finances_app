@@ -77,6 +77,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             id: true,
             utility_type: true,
             provider_name: true,
+            client_number: true,
             account_number: true,
             meter_number: true,
             notes: true,

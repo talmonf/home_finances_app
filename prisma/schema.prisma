@@ -769,6 +769,7 @@ model rental_utilities {
   rental_id          String
   utility_type       PropertyUtilityType
   utility_company    String
+  client_number      String?
   account_number     String?
   meter_number       String?
   last_meter_reading String?
@@ -853,6 +854,7 @@ model property_utilities {
   payee_id       String?
   bank_account_id String?
   credit_card_id  String?
+  client_number  String?
   account_number String?
   meter_number   String?
   renewal_date   DateTime?

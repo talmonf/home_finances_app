@@ -135,6 +135,37 @@ function parseOptionalUtilityDate(raw: string | null): { value: Date | null; inv
   return { value: d, invalid: false };
 }
 
+async function parseUtilityPaymentLinks(
+  formData: FormData,
+  householdId: string,
+  onInvalid: (message: string) => never,
+): Promise<{ bank_account_id: string | null; credit_card_id: string | null }> {
+  const payment_method = (formData.get("payment_method") as string | null)?.trim() || "";
+  let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+
+  if (payment_method !== "bank_account") bank_account_id = null;
+  if (payment_method !== "credit_card") credit_card_id = null;
+
+  if (bank_account_id) {
+    const account = await prisma.bank_accounts.findFirst({
+      where: { id: bank_account_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!account) onInvalid("Invalid bank account");
+  }
+
+  if (credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) onInvalid("Invalid credit card");
+  }
+
+  return { bank_account_id, credit_card_id };
+}
+
 export async function createUtility(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -167,6 +198,7 @@ export async function createUtility(formData: FormData) {
   if (!provider_name) redirectWithError(redirectOnError, "Provider name is required");
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
+  const client_number = (formData.get("client_number") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
   const meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
@@ -192,6 +224,10 @@ export async function createUtility(formData: FormData) {
   const startParsed = parseOptionalUtilityDate(start_date_raw);
   if (startParsed.invalid) redirectWithError(redirectOnError, "Invalid start date");
 
+  const paymentLinks = await parseUtilityPaymentLinks(formData, householdId, (message) =>
+    redirectWithError(redirectOnError, message),
+  );
+
   await prisma.property_utilities.create({
     data: {
       id: crypto.randomUUID(),
@@ -200,6 +236,9 @@ export async function createUtility(formData: FormData) {
       utility_type,
       provider_name,
       payee_id: payee_id || null,
+      bank_account_id: paymentLinks.bank_account_id,
+      credit_card_id: paymentLinks.credit_card_id,
+      client_number,
       account_number,
       meter_number,
       renewal_date,
@@ -237,6 +276,7 @@ export async function updateUtility(formData: FormData) {
   if (!provider_name) redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Provider+name+is+required`);
 
   const payee_id = (formData.get("payee_id") as string | null)?.trim() || null;
+  const client_number = (formData.get("client_number") as string | null)?.trim() || null;
   const account_number = (formData.get("account_number") as string | null)?.trim() || null;
   const meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
@@ -266,12 +306,19 @@ export async function updateUtility(formData: FormData) {
     redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=Invalid+start+date`);
   }
 
+  const paymentLinks = await parseUtilityPaymentLinks(formData, householdId, (message) =>
+    redirect(`/dashboard/properties/${property_id}/utilities/${id}/edit?error=${encodeURIComponent(message)}`),
+  );
+
   await prisma.property_utilities.updateMany({
     where: { id, household_id: householdId },
     data: {
       utility_type,
       provider_name,
       payee_id: finalPayeeId,
+      bank_account_id: paymentLinks.bank_account_id,
+      credit_card_id: paymentLinks.credit_card_id,
+      client_number,
       account_number,
       meter_number,
       renewal_date,
@@ -600,6 +647,7 @@ export async function createRentalUtility(formData: FormData) {
   const utilityTypeRaw = (formData.get("utility_type") as string | null)?.trim() || null;
   const property_utility_id = (formData.get("property_utility_id") as string | null)?.trim() || null;
   let utility_company = (formData.get("utility_company") as string | null)?.trim() || "";
+  let client_number = (formData.get("client_number") as string | null)?.trim() || null;
   let account_number = (formData.get("account_number") as string | null)?.trim() || null;
   let meter_number = (formData.get("meter_number") as string | null)?.trim() || null;
   let notes = (formData.get("notes") as string | null)?.trim() || null;
@@ -619,10 +667,11 @@ export async function createRentalUtility(formData: FormData) {
         property_id: rental.property_id,
         utility_type: utilityTypeRaw,
       },
-      select: { provider_name: true, account_number: true, meter_number: true, notes: true },
+      select: { provider_name: true, client_number: true, account_number: true, meter_number: true, notes: true },
     });
     if (propertyUtility) {
       utility_company ||= propertyUtility.provider_name;
+      client_number ||= propertyUtility.client_number;
       account_number ||= propertyUtility.account_number;
       meter_number ||= propertyUtility.meter_number;
       notes ||= propertyUtility.notes;
@@ -638,6 +687,7 @@ export async function createRentalUtility(formData: FormData) {
       rental_id,
       utility_type: utilityTypeRaw,
       utility_company,
+      client_number,
       account_number,
       meter_number,
       last_meter_reading: (formData.get("last_meter_reading") as string | null)?.trim() || null,
@@ -671,6 +721,7 @@ export async function updateRentalUtility(formData: FormData) {
     data: {
       utility_type: utilityTypeRaw,
       utility_company,
+      client_number: (formData.get("client_number") as string | null)?.trim() || null,
       account_number: (formData.get("account_number") as string | null)?.trim() || null,
       meter_number: (formData.get("meter_number") as string | null)?.trim() || null,
       last_meter_reading: (formData.get("last_meter_reading") as string | null)?.trim() || null,

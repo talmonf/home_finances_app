@@ -1,5 +1,10 @@
 import { HouseholdDateField } from "@/components/household-date-field";
 import { createUtility } from "./actions";
+import {
+  UtilityPaymentFields,
+  type UtilityBankAccountOption,
+  type UtilityCreditCardOption,
+} from "./utility-payment-fields";
 
 type PayeeOption = { id: string; name: string };
 
@@ -7,6 +12,8 @@ type UtilityModalFormProps = {
   action: typeof createUtility;
   propertyId: string;
   payees: PayeeOption[];
+  bankAccounts: UtilityBankAccountOption[];
+  creditCards: UtilityCreditCardOption[];
   utilityTypeLabels: Record<string, string>;
   closeHref: string;
   redirectOnSuccess: string;
@@ -18,6 +25,8 @@ export function UtilityModalForm({
   action,
   propertyId,
   payees,
+  bankAccounts,
+  creditCards,
   utilityTypeLabels,
   closeHref,
   redirectOnSuccess,
@@ -92,28 +101,48 @@ export function UtilityModalForm({
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="modal_account_number" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "מספר חשבון" : "Account number"}
-            </label>
-            <input
-              id="modal_account_number"
-              name="account_number"
-              placeholder={isHebrew ? "אופציונלי" : "Optional"}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+          <div className="grid gap-3 sm:col-span-2 lg:col-span-4 sm:grid-cols-3">
+            <div>
+              <label htmlFor="modal_client_number" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "מספר לקוח" : "Client number"}
+              </label>
+              <input
+                id="modal_client_number"
+                name="client_number"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="modal_account_number" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "מספר חשבון" : "Account number"}
+              </label>
+              <input
+                id="modal_account_number"
+                name="account_number"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="modal_meter_number" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "מספר מונה" : "Meter number"}
+              </label>
+              <input
+                id="modal_meter_number"
+                name="meter_number"
+                placeholder={isHebrew ? "אופציונלי" : "Optional"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="modal_meter_number" className="mb-1 block text-xs font-medium text-slate-400">
-              {isHebrew ? "מספר מונה" : "Meter number"}
-            </label>
-            <input
-              id="modal_meter_number"
-              name="meter_number"
-              placeholder={isHebrew ? "אופציונלי" : "Optional"}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
+          <UtilityPaymentFields
+            idPrefix="modal_"
+            bankAccounts={bankAccounts}
+            creditCards={creditCards}
+            isHebrew={isHebrew}
+            className="grid gap-3 sm:col-span-2 lg:col-span-4 sm:grid-cols-3"
+          />
           <div>
             <label htmlFor="modal_start_date" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "תאריך התחלה (אופציונלי)" : "Start date (optional)"}

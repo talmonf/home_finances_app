@@ -32,6 +32,7 @@ type RentalUtility = {
   id: string;
   utility_type: string;
   utility_company: string;
+  client_number: string | null;
   account_number: string | null;
   meter_number: string | null;
   last_meter_reading: string | null;
@@ -42,6 +43,7 @@ type PropertyUtilityDefault = {
   id: string;
   utility_type: string;
   provider_name: string;
+  client_number: string | null;
   account_number: string | null;
   meter_number: string | null;
   notes: string | null;
@@ -359,7 +361,7 @@ export function RentalDetailPanel({
         <div>
           <h3 className="text-sm font-medium text-slate-200">Utilities</h3>
           <p className="mt-1 text-xs text-slate-500">
-            Utility details for this rental, including company, account, meter, and latest reading.
+            Utility details for this rental, including company, client, account, meter, and latest reading.
           </p>
         </div>
         <form id={`add_rental_utility_${rental.id}`} action={createRentalUtility}>
@@ -379,6 +381,7 @@ export function RentalDetailPanel({
               <tr>
                 <th className="px-3 py-2 font-medium">Type</th>
                 <th className="px-3 py-2 font-medium">Utility company</th>
+                <th className="px-3 py-2 font-medium">Client #</th>
                 <th className="px-3 py-2 font-medium">Account #</th>
                 <th className="px-3 py-2 font-medium">Meter #</th>
                 <th className="px-3 py-2 font-medium">Last meter reading</th>
@@ -414,6 +417,15 @@ export function RentalDetailPanel({
                         defaultValue={utility.utility_company}
                         aria-label="Utility company"
                         className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        form={formId}
+                        name="client_number"
+                        defaultValue={utility.client_number ?? ""}
+                        aria-label="Client number"
+                        className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
                     </td>
                     <td className="px-3 py-2">

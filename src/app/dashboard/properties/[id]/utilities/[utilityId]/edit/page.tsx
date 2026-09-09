@@ -4,6 +4,7 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/aut
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { updateUtility } from "../../../../actions";
+import { UtilityPaymentFields } from "../../../../utility-payment-fields";
 
 const UTILITY_TYPE_LABELS: Record<string, string> = {
   electricity: "Electricity",
@@ -30,7 +31,7 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
   const { id, utilityId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  const [property, utility, payees] = await Promise.all([
+  const [property, utility, payees, bankAccounts, creditCards] = await Promise.all([
     prisma.properties.findFirst({
       where: { id, household_id: householdId },
       select: { id: true, name: true },
@@ -41,6 +42,16 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
     prisma.payees.findMany({
       where: { household_id: householdId },
       orderBy: { name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+      select: { id: true, account_name: true, bank_name: true, account_number: true },
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+      select: { id: true, card_name: true, card_last_four: true },
     }),
   ]);
 
@@ -96,25 +107,47 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
             />
           </div>
 
-          <div>
-            <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
-            <input
-              id="account_number"
-              name="account_number"
-              defaultValue={utility.account_number ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
+            <div>
+              <label htmlFor="client_number" className="mb-1 block text-xs font-medium text-slate-400">Client number</label>
+              <input
+                id="client_number"
+                name="client_number"
+                defaultValue={utility.client_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
+              <input
+                id="account_number"
+                name="account_number"
+                defaultValue={utility.account_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="meter_number" className="mb-1 block text-xs font-medium text-slate-400">Meter number</label>
+              <input
+                id="meter_number"
+                name="meter_number"
+                defaultValue={utility.meter_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="meter_number" className="mb-1 block text-xs font-medium text-slate-400">Meter number</label>
-            <input
-              id="meter_number"
-              name="meter_number"
-              defaultValue={utility.meter_number ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
+          <UtilityPaymentFields
+            defaultPaymentMethod={
+              utility.credit_card_id ? "credit_card" : utility.bank_account_id ? "bank_account" : ""
+            }
+            defaultBankAccountId={utility.bank_account_id ?? ""}
+            defaultCreditCardId={utility.credit_card_id ?? ""}
+            bankAccounts={bankAccounts}
+            creditCards={creditCards}
+          />
 
           <div>
             <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
