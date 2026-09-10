@@ -5,7 +5,8 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
@@ -19,10 +20,6 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ error?: string }>;
 };
-
-function dateInputValue(d: Date | null | undefined) {
-  return d ? d.toISOString().slice(0, 10) : "";
-}
 
 function formatInsurancePremium(paid: { toString(): string }, currency: string) {
   const n = Number(paid.toString());
@@ -131,7 +128,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תאריך רכישה" : "Purchase date"}</label>
-              <input name="purchase_date" type="date" defaultValue={dateInputValue(car.purchase_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="purchase_date" defaultIsoYmd={utcDateToHtmlDateInputValue(car.purchase_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "סכום רכישה" : "Purchase amount"}</label>
@@ -180,7 +177,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             <textarea name="purchase_notes" defaultValue={car.purchase_notes ?? ""} placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sale date</label>
-              <input name="sold_at" type="date" defaultValue={dateInputValue(car.sold_at)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="sold_at" defaultIsoYmd={utcDateToHtmlDateInputValue(car.sold_at)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sale amount</label>
@@ -266,15 +263,14 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
           <form action={createCarService} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="car_id" value={car.id} />
             <input name="provider_name" required placeholder="Service location/provider" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="serviced_at" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <HouseholdDateField name="serviced_at" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400" htmlFor="new-service-next-at">
                 {isHebrew ? "תאריך טיפול הבא (אופציונלי)" : "Next service date (optional)"}
               </label>
-              <input
+              <HouseholdDateField
                 id="new-service-next-at"
                 name="next_service_at"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -315,8 +311,8 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                       carId={car.id}
                       service={{
                         id: s.id,
-                        servicedAt: dateInputValue(s.serviced_at),
-                        nextServiceAt: s.next_service_at ? dateInputValue(s.next_service_at) : "",
+                        servicedAt: utcDateToHtmlDateInputValue(s.serviced_at),
+                        nextServiceAt: s.next_service_at ? utcDateToHtmlDateInputValue(s.next_service_at) : "",
                         providerName: s.provider_name,
                         costAmount: s.cost_amount?.toString() ?? "",
                         odometerKm: s.odometer_km,
@@ -372,8 +368,8 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                       carId={car.id}
                       license={{
                         id: l.id,
-                        renewedAt: dateInputValue(l.renewed_at),
-                        expiresAt: dateInputValue(l.expires_at),
+                        renewedAt: utcDateToHtmlDateInputValue(l.renewed_at),
+                        expiresAt: utcDateToHtmlDateInputValue(l.expires_at),
                         costAmount: l.cost_amount?.toString() ?? "",
                         creditCardId: l.credit_card_id ?? "",
                         bankAccountId: l.bank_account_id ?? "",

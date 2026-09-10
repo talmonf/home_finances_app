@@ -309,12 +309,14 @@ export function HouseholdDateField({
 
 /** Controlled date segment (ISO `yyyy-mm-dd`) for embedded forms like split date/time. */
 export function HouseholdDateIsoControl({
+  id,
   valueIso,
   onIsoChange,
   required = false,
   className,
   "aria-label": ariaLabel,
 }: {
+  id?: string;
   valueIso: string;
   onIsoChange: (iso: string) => void;
   required?: boolean;
@@ -348,6 +350,7 @@ export function HouseholdDateIsoControl({
   return (
     <div className="flex w-full min-w-0 items-stretch gap-1.5">
       <input
+        id={id}
         type="text"
         inputMode="text"
         autoComplete="off"

@@ -1,6 +1,9 @@
+import { HouseholdDateField } from "@/components/household-date-field";
+import { HouseholdPreferencesProvider } from "@/components/household-preferences-context";
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { getAuthSession, prisma, requireSuperAdmin } from "@/lib/auth";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
+import { normalizeHouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { passwordPolicyHint, validatePassword } from "@/lib/password-policy";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -342,11 +345,15 @@ export default async function HouseholdUsersPage({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-300">Date of birth (optional)</label>
-                  <input
-                    name="date_of_birth"
-                    type="date"
-                    className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
-                  />
+                  <HouseholdPreferencesProvider
+                    dateDisplayFormat={normalizeHouseholdDateDisplayFormat(household.date_display_format)}
+                    uiLanguage="en"
+                  >
+                    <HouseholdDateField
+                      name="date_of_birth"
+                      className="block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+                    />
+                  </HouseholdPreferencesProvider>
                 </div>
                 <div className="flex items-end">
                   <button

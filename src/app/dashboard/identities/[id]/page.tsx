@@ -1,4 +1,6 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateIdentity } from "../actions";
@@ -32,10 +34,6 @@ const IDENTITY_TYPE_LABELS: Record<string, string> = {
   car_license: "Car license",
   other: "Other",
 };
-
-function formatDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function EditIdentityPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -199,12 +197,11 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
             <label htmlFor="expiry_date" className="mb-1 block text-xs font-medium text-slate-400">
               Expiry date
             </label>
-            <input
+            <HouseholdDateField
               id="expiry_date"
               name="expiry_date"
-              type="date"
-              defaultValue={formatDateInput(identity.expiry_date)}
               required
+              defaultIsoYmd={utcDateToHtmlDateInputValue(identity.expiry_date)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

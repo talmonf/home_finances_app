@@ -1,4 +1,12 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentHouseholdDateDisplayFormat,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
   MedicalReimbursementSource as ReimbursementSourceValues,
@@ -14,10 +22,6 @@ export const dynamic = "force-dynamic";
 function startOfToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
 }
 
 type PageProps = {
@@ -46,6 +50,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -122,7 +127,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת תור" : "Edit appointment"}</h1>
           <p className="text-sm text-slate-400">
-            {appointment.provider_name} · {isoDate(appointment.appointment_date)}
+            {appointment.provider_name} · {formatHouseholdDate(appointment.appointment_date, dateDisplayFormat)}
           </p>
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
@@ -145,12 +150,11 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="appointment_date" className="mb-1 block text-xs font-medium text-slate-400">
                     Appointment date
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="appointment_date"
                     name="appointment_date"
-                    type="date"
                     required
-                    defaultValue={isoDate(appointment.appointment_date)}
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(appointment.appointment_date)}
                     className={inputClass}
                   />
                 </div>
@@ -325,15 +329,10 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   >
                     Request submitted on (optional)
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="kupat_holim_request_submitted_at"
                     name="kupat_holim_request_submitted_at"
-                    type="date"
-                    defaultValue={
-                      appointment.kupat_holim_request_submitted_at
-                        ? isoDate(appointment.kupat_holim_request_submitted_at)
-                        : ""
-                    }
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(appointment.kupat_holim_request_submitted_at)}
                     className={inputClass}
                   />
                 </div>
@@ -361,15 +360,12 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   >
                     Request submitted on (optional)
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="private_insurance_request_submitted_at"
                     name="private_insurance_request_submitted_at"
-                    type="date"
-                    defaultValue={
-                      appointment.private_insurance_request_submitted_at
-                        ? isoDate(appointment.private_insurance_request_submitted_at)
-                        : ""
-                    }
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(
+                      appointment.private_insurance_request_submitted_at,
+                    )}
                     className={inputClass}
                   />
                 </div>
@@ -417,15 +413,10 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   >
                     Date received (optional)
                   </label>
-                  <input
+                  <HouseholdDateField
                     id="reimbursement_received_at"
                     name="reimbursement_received_at"
-                    type="date"
-                    defaultValue={
-                      appointment.reimbursement_received_at
-                        ? isoDate(appointment.reimbursement_received_at)
-                        : ""
-                    }
+                    defaultIsoYmd={utcDateToHtmlDateInputValue(appointment.reimbursement_received_at)}
                     className={inputClass}
                   />
                 </div>

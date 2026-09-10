@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
@@ -316,19 +317,17 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">From date</label>
-              <input
-                type="date"
+              <HouseholdDateField
                 name="from"
-                defaultValue={resolved.from || ""}
+                defaultIsoYmd={resolved.from || ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">To date</label>
-              <input
-                type="date"
+              <HouseholdDateField
                 name="to"
-                defaultValue={resolved.to || ""}
+                defaultIsoYmd={resolved.to || ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

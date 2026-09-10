@@ -1,0 +1,16 @@
+---
+description: Use household date format for all user-facing date fields; never native type=date
+alwaysApply: true
+---
+
+# Household Date Inputs
+
+Never use native `<input type="date">` in this app. Chromium/Windows shows **mm/dd/yyyy** regardless of the user's household date format.
+
+For date entry, use `HouseholdDateField` (or `HouseholdDateIsoControl` when the ISO value must be controlled in React state). It reads `useHouseholdDateFormat()` and still submits `yyyy-mm-dd` via a hidden input.
+
+For date display, use `formatHouseholdDate` / `formatIsoDateStringForHousehold` with `getCurrentHouseholdDateDisplayFormat()`.
+
+Do not assume a screen is done because list dates are formatted. Check add/edit forms, modals, filters, and inline row editors too.
+
+When adding a new date field, copy an existing `HouseholdDateField` usage (e.g. subscriptions or credit cards), not a native date input.

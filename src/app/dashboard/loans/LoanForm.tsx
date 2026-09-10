@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 
 type LoanFormInitialValues = {
   loan_date?: string | null;
@@ -50,12 +51,11 @@ export function LoanForm({
         <label htmlFor="loan_date" className="mb-1 block text-xs font-medium text-slate-400">
           Loan date
         </label>
-        <input
+        <HouseholdDateField
           id="loan_date"
           name="loan_date"
-          type="date"
           required
-          defaultValue={initial?.loan_date ?? ""}
+          defaultIsoYmd={initial?.loan_date ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>
@@ -225,11 +225,10 @@ export function LoanForm({
         <label htmlFor="maturity_date" className="mb-1 block text-xs font-medium text-slate-400">
           Final payoff date (maturity)
         </label>
-        <input
+        <HouseholdDateField
           id="maturity_date"
           name="maturity_date"
-          type="date"
-          defaultValue={initial?.maturity_date ?? ""}
+          defaultIsoYmd={initial?.maturity_date ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
       </div>

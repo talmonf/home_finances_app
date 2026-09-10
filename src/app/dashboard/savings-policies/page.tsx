@@ -9,6 +9,7 @@ import {
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -315,10 +316,9 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
               <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך התחלה" : "Start date"}
               </label>
-              <input
+              <HouseholdDateField
                 id="start_date"
                 name="start_date"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -326,10 +326,9 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
               <label htmlFor="maturity_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך פרעון" : "Maturity date"}
               </label>
-              <input
+              <HouseholdDateField
                 id="maturity_date"
                 name="maturity_date"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -337,10 +336,9 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך חידוש" : "Renewal date"}
               </label>
-              <input
+              <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

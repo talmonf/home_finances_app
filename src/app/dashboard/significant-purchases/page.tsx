@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -152,10 +153,9 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
               <label htmlFor="purchase_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Purchase date
               </label>
-              <input
+              <HouseholdDateField
                 id="purchase_date"
                 name="purchase_date"
-                type="date"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
@@ -165,10 +165,9 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
               <label htmlFor="warranty_expiry_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Warranty expiry date (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="warranty_expiry_date"
                 name="warranty_expiry_date"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

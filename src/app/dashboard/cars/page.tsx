@@ -10,6 +10,7 @@ import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createCar } from "./actions";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 
@@ -200,7 +201,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
               </select>
               <div className="space-y-1">
                 <label className="block text-xs text-slate-400">Purchase date</label>
-                <input name="purchase_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                <HouseholdDateField name="purchase_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               </div>
               <input name="purchase_amount" placeholder="Purchase amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               <input name="purchased_from" placeholder="Purchased from (dealer, private…)" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
@@ -225,7 +226,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
               <textarea name="purchase_notes" placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               <div className="space-y-1">
                 <label className="block text-xs text-slate-400">Sale date</label>
-                <input name="sold_at" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                <HouseholdDateField name="sold_at" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               </div>
               <input name="sold_amount" placeholder="Sold amount" type="number" step="0.01" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               <input name="sold_to" placeholder="Sold to" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />

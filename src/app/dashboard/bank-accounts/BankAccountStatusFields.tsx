@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 
 type Props = {
   initialIsActive: boolean;
@@ -40,13 +41,12 @@ export default function BankAccountStatusFields({ initialIsActive, initialDateCl
           <label htmlFor="date_closed" className="mb-1 block text-xs font-medium text-slate-400">
             Date Closed
           </label>
-          <input
+          <HouseholdDateField
             id="date_closed"
             name="date_closed"
-            type="date"
-            value={dateClosedInputValue}
-            onChange={(e) => setDateClosed(e.target.value)}
             required
+            defaultIsoYmd={dateClosedInputValue}
+            onIsoChange={setDateClosed}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </div>

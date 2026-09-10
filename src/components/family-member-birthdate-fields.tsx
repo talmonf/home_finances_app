@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { gregorianDateToHebrewComponents, HEBREW_MONTH_OPTIONS } from "@/lib/hebrew-calendar";
 
 const fieldClass =
@@ -100,12 +101,11 @@ export function FamilyMemberBirthdateFields({
           <label htmlFor="date_of_birth" className="mb-1 block text-xs text-slate-500">
             {isHebrew ? "לועזי" : "Gregorian"}
           </label>
-          <input
+          <HouseholdDateField
             id="date_of_birth"
             name="date_of_birth"
-            type="date"
-            defaultValue={defaultGregorian}
-            onChange={(e) => onGregorianChange(e.target.value)}
+            defaultIsoYmd={defaultGregorian}
+            onIsoChange={onGregorianChange}
             className={`${fieldClass} w-full`}
           />
         </div>

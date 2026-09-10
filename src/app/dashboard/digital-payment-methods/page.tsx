@@ -10,6 +10,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { createDigitalPaymentMethod } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -324,10 +325,9 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
               <label htmlFor="date_created" className="mb-1 block text-xs font-medium text-slate-400">
                 Date created (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="date_created"
                 name="date_created"
-                type="date"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

@@ -5,7 +5,8 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate, formatHouseholdDateUtcWithTime, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -27,10 +28,6 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ error?: string }>;
 };
-
-function isoDateOnly(d: Date | null | undefined) {
-  return d ? d.toISOString().slice(0, 10) : "";
-}
 
 export default async function JobDetailsPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -128,11 +125,11 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תאריך התחלה" : "Start date"}</label>
-              <input name="start_date" type="date" defaultValue={isoDateOnly(job.start_date)} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="start_date" required defaultIsoYmd={utcDateToHtmlDateInputValue(job.start_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תאריך סיום" : "End date"}</label>
-              <input name="end_date" type="date" defaultValue={isoDateOnly(job.end_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="end_date" defaultIsoYmd={utcDateToHtmlDateInputValue(job.end_date)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_active" defaultChecked={job.is_active} />
@@ -246,9 +243,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
           <h2 className="text-lg font-medium text-slate-200">{isHebrew ? "רשומות שכר" : "Payroll entries"}</h2>
           <form action={createJobPayrollEntry} className="grid gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 md:grid-cols-3">
             <input type="hidden" name="job_id" value={job.id} />
-            <input name="effective_date" type="date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="pay_period_start" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <input name="pay_period_end" type="date" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <HouseholdDateField name="effective_date" required className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <HouseholdDateField name="pay_period_start" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <HouseholdDateField name="pay_period_end" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <select name="period_type" defaultValue="monthly" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
               <option value="monthly">Monthly</option>
               <option value="biweekly">Biweekly</option>

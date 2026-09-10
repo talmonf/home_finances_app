@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { HouseholdDateIsoControl } from "@/components/household-date-field";
 import {
   gregorianDateToHebrewComponents,
   hebrewComponentsToGregorian,
@@ -60,7 +61,6 @@ export function SpecialDateFields({
   formKind = "edit",
   hebrewPersistedInDb = false,
 }: Props) {
-  const gregorianRef = useRef<HTMLInputElement>(null);
   const dayRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLSelectElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
@@ -81,6 +81,7 @@ export function SpecialDateFields({
       (defaultHebrewDay == null || defaultHebrewMonth == null) &&
       initialHebrew != null,
   );
+  const [gregorianIso, setGregorianIso] = useState(defaultGregorian);
   const [gregorianAutoCalculatedPendingSave, setGregorianAutoCalculatedPendingSave] =
     useState(false);
 
@@ -101,6 +102,7 @@ export function SpecialDateFields({
   );
 
   const onGregorianChange = (iso: string) => {
+    setGregorianIso(iso);
     setGregorianAutoCalculatedPendingSave(false);
     if (!iso) {
       setHebrewPreview(null);
@@ -130,8 +132,8 @@ export function SpecialDateFields({
 
     if (day != null && month != null && year != null) {
       const iso = gregorianFromHebrewInput(day, month, year);
-      if (iso && gregorianRef.current) {
-        gregorianRef.current.value = iso;
+      if (iso) {
+        setGregorianIso(iso);
         setGregorianAutoCalculatedPendingSave(true);
       } else {
         setGregorianAutoCalculatedPendingSave(false);
@@ -152,13 +154,11 @@ export function SpecialDateFields({
           <label htmlFor="gregorian_date" className="mb-1 block text-xs text-slate-500">
             {isHebrew ? "לועזי" : "Gregorian"}
           </label>
-          <input
-            ref={gregorianRef}
+          <input type="hidden" name="gregorian_date" value={gregorianIso} />
+          <HouseholdDateIsoControl
             id="gregorian_date"
-            name="gregorian_date"
-            type="date"
-            defaultValue={defaultGregorian}
-            onChange={(e) => onGregorianChange(e.target.value)}
+            valueIso={gregorianIso}
+            onIsoChange={onGregorianChange}
             className={`${fieldClass} w-full`}
           />
         </div>

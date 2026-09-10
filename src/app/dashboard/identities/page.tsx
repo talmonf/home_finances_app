@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -301,10 +302,9 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
               <label htmlFor="expiry_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Expiry date
               </label>
-              <input
+              <HouseholdDateField
                 id="expiry_date"
                 name="expiry_date"
-                type="date"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />

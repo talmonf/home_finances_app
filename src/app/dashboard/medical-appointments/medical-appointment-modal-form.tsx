@@ -1,4 +1,5 @@
 import { DashboardModal } from "@/components/dashboard-modal";
+import { HouseholdDateField } from "@/components/household-date-field";
 import {
   MedicalAppointmentPaymentMethod as PaymentMethodValues,
   MedicalReimbursementSource as ReimbursementSourceValues,
@@ -57,7 +58,7 @@ export function MedicalAppointmentModalForm({
               <label htmlFor="appointment_date" className="mb-1 block text-xs font-medium text-slate-400">
                 Appointment date
               </label>
-              <input id="appointment_date" name="appointment_date" type="date" required className={inputClass} />
+              <HouseholdDateField id="appointment_date" name="appointment_date" required className={inputClass} />
             </div>
             <div>
               <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
@@ -197,10 +198,9 @@ export function MedicalAppointmentModalForm({
               >
                 Request submitted on (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="kupat_holim_request_submitted_at"
                 name="kupat_holim_request_submitted_at"
-                type="date"
                 className={inputClass}
               />
             </div>
@@ -223,10 +223,9 @@ export function MedicalAppointmentModalForm({
               >
                 Request submitted on (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="private_insurance_request_submitted_at"
                 name="private_insurance_request_submitted_at"
-                type="date"
                 className={inputClass}
               />
             </div>
@@ -265,10 +264,9 @@ export function MedicalAppointmentModalForm({
               <label htmlFor="reimbursement_received_at" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך קבלה (אופציונלי)" : "Date received (optional)"}
               </label>
-              <input
+              <HouseholdDateField
                 id="reimbursement_received_at"
                 name="reimbursement_received_at"
-                type="date"
                 className={inputClass}
               />
             </div>

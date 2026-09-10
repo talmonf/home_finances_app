@@ -1,6 +1,7 @@
 import { ConfirmDeleteForm, ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
 import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-links";
-import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import RentalContractUpload from "../RentalContractUpload";
 import {
@@ -189,19 +190,17 @@ export function RentalDetailPanel({
         </div>
         <div>
           <label className="mb-1 block text-xs text-slate-400">Start date</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="start_date"
-            defaultValue={rental.start_date ? rental.start_date.toISOString().slice(0, 10) : ""}
+            defaultIsoYmd={utcDateToHtmlDateInputValue(rental.start_date)}
             className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
           />
         </div>
         <div>
           <label className="mb-1 block text-xs text-slate-400">End date</label>
-          <input
-            type="date"
+          <HouseholdDateField
             name="end_date"
-            defaultValue={rental.end_date ? rental.end_date.toISOString().slice(0, 10) : ""}
+            defaultIsoYmd={utcDateToHtmlDateInputValue(rental.end_date)}
             className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
           />
         </div>

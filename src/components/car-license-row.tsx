@@ -6,6 +6,7 @@ import { CarLicenseReceiptDeleteButton } from "@/components/car-license-receipt-
 import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { useHouseholdDateFormat, useUiLanguage } from "@/components/household-preferences-context";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
@@ -107,11 +108,10 @@ export function CarLicenseRow({
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`renewed-${license.id}`}>
                   {isHebrew ? "תאריך חידוש / תשלום" : "Renewal / payment date"}
                 </label>
-                <input
+                <HouseholdDateField
                   id={`renewed-${license.id}`}
                   name="renewed_at"
-                  type="date"
-                  defaultValue={license.renewedAt}
+                  defaultIsoYmd={license.renewedAt}
                   className={`w-full ${field}`}
                 />
               </div>
@@ -119,12 +119,11 @@ export function CarLicenseRow({
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`expires-${license.id}`}>
                   {isHebrew ? "תאריך תפוגה" : "Expires on"}
                 </label>
-                <input
+                <HouseholdDateField
                   id={`expires-${license.id}`}
                   name="expires_at"
-                  type="date"
                   required
-                  defaultValue={license.expiresAt}
+                  defaultIsoYmd={license.expiresAt}
                   className={`w-full ${field}`}
                 />
               </div>

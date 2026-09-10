@@ -9,6 +9,7 @@ import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { createJob } from "./actions";
 import { JobsListClient } from "./jobs-list-client";
 
@@ -167,11 +168,11 @@ export default async function JobsPage({ searchParams }: PageProps) {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs text-slate-300">Start date</label>
-                <input name="start_date" type="date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                <HouseholdDateField name="start_date" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs text-slate-300">End date</label>
-                <input name="end_date" type="date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                <HouseholdDateField name="end_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs text-slate-300">Employer (optional)</label>

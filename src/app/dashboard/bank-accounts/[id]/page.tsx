@@ -1,4 +1,6 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateBankAccount } from "../actions";
@@ -153,11 +155,10 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="date_opened" className="mb-1 block text-xs font-medium text-slate-400">
                 Opened date (optional)
               </label>
-              <input
+              <HouseholdDateField
                 id="date_opened"
                 name="date_opened"
-                type="date"
-                defaultValue={account.date_opened ? account.date_opened.toISOString().slice(0, 10) : ""}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(account.date_opened)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

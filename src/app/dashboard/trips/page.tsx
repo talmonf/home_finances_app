@@ -5,7 +5,8 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
@@ -87,11 +88,11 @@ export default async function TripsPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">Start date</label>
-              <input type="date" name="start_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="start_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">End date</label>
-              <input type="date" name="end_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <HouseholdDateField name="end_date" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs text-slate-400">Family members on this trip</label>
@@ -147,11 +148,11 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">Start</label>
-                    <input type="date" name="start_date" defaultValue={trip.start_date ? trip.start_date.toISOString().slice(0, 10) : ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <HouseholdDateField name="start_date" defaultIsoYmd={utcDateToHtmlDateInputValue(trip.start_date)} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">End</label>
-                    <input type="date" name="end_date" defaultValue={trip.end_date ? trip.end_date.toISOString().slice(0, 10) : ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <HouseholdDateField name="end_date" defaultIsoYmd={utcDateToHtmlDateInputValue(trip.end_date)} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs text-slate-400">

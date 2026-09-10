@@ -6,6 +6,7 @@ import { CarServiceAttachmentDeleteButton } from "@/components/car-service-attac
 import { CarServiceAttachmentUpload } from "@/components/car-service-attachment-upload";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { useHouseholdDateFormat, useUiLanguage } from "@/components/household-preferences-context";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 
@@ -111,12 +112,11 @@ export function CarServiceRow({
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`svc-at-${service.id}`}>
                   {isHebrew ? "תאריך טיפול" : "Service date"}
                 </label>
-                <input
+                <HouseholdDateField
                   id={`svc-at-${service.id}`}
                   name="serviced_at"
-                  type="date"
                   required
-                  defaultValue={service.servicedAt}
+                  defaultIsoYmd={service.servicedAt}
                   className={`w-full ${field}`}
                 />
               </div>
@@ -124,11 +124,10 @@ export function CarServiceRow({
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`next-svc-${service.id}`}>
                   {isHebrew ? "תאריך טיפול הבא (אופציונלי)" : "Next service date (optional)"}
                 </label>
-                <input
+                <HouseholdDateField
                   id={`next-svc-${service.id}`}
                   name="next_service_at"
-                  type="date"
-                  defaultValue={service.nextServiceAt}
+                  defaultIsoYmd={service.nextServiceAt}
                   className={`w-full ${field}`}
                 />
               </div>

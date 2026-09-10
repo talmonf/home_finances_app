@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FileUploadField } from "@/components/file-upload-field";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { useUiLanguage } from "@/components/household-preferences-context";
 
 type Card = { id: string; label: string };
@@ -74,7 +75,7 @@ export function CarLicenseCreateForm({
         <p className="text-[11px] leading-snug text-slate-500">
           {isHebrew ? "מתי שולם או חודש (אופציונלי)." : "When you paid or renewed (optional)."}
         </p>
-        <input id="license-renewed-at" name="renewed_at" type="date" className={`w-full ${field}`} />
+        <HouseholdDateField id="license-renewed-at" name="renewed_at" className={`w-full ${field}`} />
       </div>
       <div className="space-y-1 md:col-span-1">
         <label className="block text-xs font-medium text-slate-300" htmlFor="license-expires-at">
@@ -83,7 +84,12 @@ export function CarLicenseCreateForm({
         <p className="text-[11px] leading-snug text-slate-500">
           {isHebrew ? "סיום תקופת התוקף של הרישיון (חובה)." : "End of the license validity period (required)."}
         </p>
-        <input id="license-expires-at" name="expires_at" type="date" required className={`w-full ${field}`} />
+        <HouseholdDateField
+          id="license-expires-at"
+          name="expires_at"
+          required
+          className={`w-full ${field}`}
+        />
       </div>
       <div className="space-y-1 md:col-span-1">
         <label className="block text-xs font-medium text-slate-300" htmlFor="license-cost">

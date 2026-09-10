@@ -7,7 +7,8 @@ import {
   getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { HouseholdDateField } from "@/components/household-date-field";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
@@ -36,14 +37,6 @@ type PageProps = {
     urls?: string;
   }>;
 };
-
-function toDateInputValue(d: Date) {
-  const z = new Date(d);
-  const y = z.getFullYear();
-  const m = String(z.getMonth() + 1).padStart(2, "0");
-  const day = String(z.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 export default async function EditInsurancePolicyPage({ params, searchParams }: PageProps) {
   await requireHouseholdMember();
@@ -328,11 +321,10 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך התחלה" : "Policy start"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <HouseholdDateField
                 name="policy_start_date"
-                type="date"
                 required
-                defaultValue={toDateInputValue(policy.policy_start_date)}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(policy.policy_start_date)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -340,11 +332,10 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך חידוש" : "Renewal / expiration"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <HouseholdDateField
                 name="expiration_date"
-                type="date"
                 required
-                defaultValue={toDateInputValue(policy.expiration_date)}
+                defaultIsoYmd={utcDateToHtmlDateInputValue(policy.expiration_date)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

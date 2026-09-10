@@ -2,6 +2,7 @@
 
 import { DonationKind } from "@/generated/prisma/enums";
 import { useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 
@@ -46,7 +47,6 @@ export function DonationForm({
   donationId,
   initial,
   uiLanguage,
-  dateDisplayFormat,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   payees: PayeeOption[];
@@ -67,8 +67,6 @@ export function DonationForm({
   const initialPaymentMethod = initial?.payment_method ?? "cash";
   const [paymentMethod, setPaymentMethod] = useState<string>(initialPaymentMethod);
   const isHebrew = uiLanguage === "he";
-  const dateFormatHint =
-    dateDisplayFormat === "DMY" ? "dd/mm/yyyy" : dateDisplayFormat === "MDY" ? "mm/dd/yyyy" : "yyyy-mm-dd";
 
   return (
     <form
@@ -113,14 +111,13 @@ export function DonationForm({
           </div>
           <div>
             <label htmlFor="donation_date" className="mb-1 block text-xs font-medium text-slate-400">
-              Donation date ({dateFormatHint})
+              Donation date
             </label>
-            <input
+            <HouseholdDateField
               id="donation_date"
               name="donation_date"
-              type="date"
               required
-              defaultValue={initial?.donation_date ?? ""}
+              defaultIsoYmd={initial?.donation_date ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -165,11 +162,10 @@ export function DonationForm({
             >
               Commitment start date (optional)
             </label>
-            <input
+            <HouseholdDateField
               id="commitment_start_date"
               name="commitment_start_date"
-              type="date"
-              defaultValue={initial?.commitment_start_date ?? ""}
+              defaultIsoYmd={initial?.commitment_start_date ?? ""}
               className="w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -452,13 +448,12 @@ export function DonationForm({
       </div>
       <div>
         <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
-          Next renewal / reminder (optional, {dateFormatHint})
+          Next renewal / reminder (optional)
         </label>
-        <input
+        <HouseholdDateField
           id="renewal_date"
           name="renewal_date"
-          type="date"
-          defaultValue={initial?.renewal_date ?? ""}
+          defaultIsoYmd={initial?.renewal_date ?? ""}
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
         <p className="mt-1 text-xs text-slate-500">Shown on Upcoming renewals when set.</p>

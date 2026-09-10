@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
   getInsurancePolicyTypeLabel,
@@ -291,10 +292,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="policy_start_date" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "תאריך התחלה" : "Policy start"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <HouseholdDateField
                 id="policy_start_date"
                 name="policy_start_date"
-                type="date"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
@@ -304,10 +304,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 {isHebrew ? "תאריך תפוגה / חידוש" : "Expiration / renewal date"}{" "}
                 <span className="text-rose-400">*</span>
               </label>
-              <input
+              <HouseholdDateField
                 id="expiration_date"
                 name="expiration_date"
-                type="date"
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
