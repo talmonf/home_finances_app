@@ -99,6 +99,37 @@ export function resolveDashboardDateRange(
   };
 }
 
+/** Drop interior ticks whose bucket gap to a kept neighbor is too small. Keeps first and last. */
+function pruneCloseChartTicks(ticks: number[], minGap: number): number[] {
+  if (ticks.length <= 2 || minGap <= 1) return ticks;
+  const last = ticks[ticks.length - 1]!;
+  const kept: number[] = [ticks[0]!];
+  for (let i = 1; i < ticks.length - 1; i += 1) {
+    const t = ticks[i]!;
+    if (t - kept[kept.length - 1]! < minGap) continue;
+    if (last - t < minGap) continue;
+    kept.push(t);
+  }
+  kept.push(last);
+  return kept;
+}
+
+/**
+ * Indices of x-axis labels that fit without overlapping.
+ * Always keeps the first and last bucket; skips neighbors that would collide.
+ */
+export function visibleChartXAxisIndices(keys: string[], maxLabels: number): number[] {
+  const n = keys.length;
+  if (n <= 0) return [];
+  const cap = Math.max(2, Math.floor(maxLabels));
+  if (n <= cap) return Array.from({ length: n }, (_, i) => i);
+  const minGap = Math.max(2, Math.ceil(n / cap));
+  return pruneCloseChartTicks(
+    Array.from({ length: n }, (_, i) => i),
+    minGap,
+  );
+}
+
 export function utcMonthKeys(rangeStart: Date, rangeEndExclusive: Date): string[] {
   const keys: string[] = [];
   let y = rangeStart.getUTCFullYear();

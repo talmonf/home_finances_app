@@ -1,4 +1,5 @@
 import type { ClinicDashboardBucket, ClinicDashboardSeries } from "@/lib/private-clinic/clinic-dashboard-data";
+import { visibleChartXAxisIndices } from "@/lib/private-clinic/clinic-dashboard-range";
 
 const PALETTE = [
   "#38bdf8",
@@ -33,6 +34,13 @@ function tickValues(max: number): number[] {
   return [0, top / 4, top / 2, (top * 3) / 4, top];
 }
 
+/** ViewBox px needed so short month labels like "Sep 26" do not collide. */
+const X_LABEL_MIN_PX = 48;
+
+function labeledXAxisIndices(keys: string[], plotW: number): Set<number> {
+  return new Set(visibleChartXAxisIndices(keys, Math.max(2, Math.floor(plotW / X_LABEL_MIN_PX))));
+}
+
 export function ClinicStackedBarChart({
   series,
   points,
@@ -64,6 +72,10 @@ export function ClinicStackedBarChart({
   const n = Math.max(points.length, 1);
   const slot = plotW / n;
   const barW = Math.min(36, Math.max(8, slot * 0.62));
+  const labeled = labeledXAxisIndices(
+    points.map((p) => p.key),
+    plotW,
+  );
   const hasData = max > 0 && series.length > 0;
 
   if (!hasData) {
@@ -87,6 +99,8 @@ export function ClinicStackedBarChart({
         {points.map((point, i) => {
           const x = padL + i * slot + (slot - barW) / 2;
           let y = padT + plotH;
+          const showLabel = labeled.has(i);
+          const labelX = x + barW / 2;
           return (
             <g key={point.key}>
               {series.map((ser, si) => {
@@ -100,15 +114,17 @@ export function ClinicStackedBarChart({
                   </rect>
                 );
               })}
-              <text
-                x={x + barW / 2}
-                y={height - 14}
-                textAnchor="middle"
-                fill="#94a3b8"
-                fontSize={points.length > 10 ? "9" : "10"}
-              >
-                {point.label}
-              </text>
+              {showLabel ? (
+                <text
+                  x={labelX}
+                  y={height - 14}
+                  textAnchor="middle"
+                  fill="#94a3b8"
+                  fontSize="10"
+                >
+                  {point.label}
+                </text>
+              ) : null}
             </g>
           );
         })}
@@ -193,7 +209,13 @@ export function ClinicCountBarChart({
   const n = Math.max(points.length, 1);
   const slot = plotW / n;
   const barW = Math.min(36, Math.max(8, slot * 0.62));
-  const labelSize = points.length > 10 || rotateLabels ? 9 : 10;
+  const labeled = rotateLabels
+    ? new Set(points.map((_, i) => i))
+    : labeledXAxisIndices(
+        points.map((p) => p.key),
+        plotW,
+      );
+  const labelSize = rotateLabels ? 9 : 10;
 
   if (max <= 0) {
     return <p className="px-1 py-8 text-center text-sm text-slate-500">{emptyLabel}</p>;
@@ -218,21 +240,25 @@ export function ClinicCountBarChart({
         const y = padT + plotH - h;
         const labelX = x + barW / 2;
         const labelAnchorY = rotateLabels ? padT + plotH + 8 : height - 14;
+        const showLabel = labeled.has(i);
+        const textAnchor = rotateLabels ? "end" : "middle";
         return (
           <g key={point.key}>
             <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2">
               <title>{`${point.label}: ${point.count}`}</title>
             </rect>
-            <text
-              x={labelX}
-              y={labelAnchorY}
-              textAnchor={rotateLabels ? "end" : "middle"}
-              fill="#94a3b8"
-              fontSize={labelSize}
-              transform={rotateLabels ? `rotate(-40 ${labelX} ${labelAnchorY})` : undefined}
-            >
-              {point.label}
-            </text>
+            {showLabel ? (
+              <text
+                x={labelX}
+                y={labelAnchorY}
+                textAnchor={textAnchor}
+                fill="#94a3b8"
+                fontSize={labelSize}
+                transform={rotateLabels ? `rotate(-40 ${labelX} ${labelAnchorY})` : undefined}
+              >
+                {point.label}
+              </text>
+            ) : null}
           </g>
         );
       })}

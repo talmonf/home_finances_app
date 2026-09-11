@@ -10,6 +10,7 @@ import {
   resolveDashboardDateRange,
   utcMonthKey,
   utcMonthKeys,
+  visibleChartXAxisIndices,
   inclusiveUtcDaySpan,
 } from "@/lib/private-clinic/clinic-dashboard-range";
 
@@ -77,6 +78,43 @@ test("pickChartCurrency prefers ILS then largest total", () => {
     ]),
     "USD",
   );
+});
+
+test("visibleChartXAxisIndices shows every month when they fit", () => {
+  const keys = utcMonthKeys(new Date(Date.UTC(2025, 9, 1)), new Date(Date.UTC(2026, 9, 1)));
+  assert.equal(keys.length, 12);
+  assert.deepEqual(
+    visibleChartXAxisIndices(keys, 14),
+    keys.map((_, i) => i),
+  );
+});
+
+test("visibleChartXAxisIndices thins a multi-year span without crowding the ends", () => {
+  const keys = utcMonthKeys(new Date(Date.UTC(2022, 9, 1)), new Date(Date.UTC(2026, 9, 1)));
+  assert.equal(keys[0], "2022-10");
+  assert.equal(keys[keys.length - 1], "2026-09");
+  assert.equal(keys.length, 48);
+  const ticks = visibleChartXAxisIndices(keys, 14);
+  const labeled = ticks.map((i) => keys[i]);
+  assert.equal(labeled[0], "2022-10");
+  assert.equal(labeled[labeled.length - 1], "2026-09");
+  const minGap = Math.ceil(keys.length / 14);
+  for (let i = 1; i < ticks.length; i += 1) {
+    assert.ok(ticks[i]! - ticks[i - 1]! >= minGap);
+  }
+  assert.ok(ticks.length <= 14);
+  assert.ok(ticks.length >= 6);
+  assert.ok(!labeled.includes("2022-11"));
+  assert.ok(!labeled.includes("2022-12"));
+});
+
+test("visibleChartXAxisIndices spaces non-month keys evenly", () => {
+  const keys = Array.from({ length: 40 }, (_, i) => `client-${i}`);
+  const ticks = visibleChartXAxisIndices(keys, 8);
+  assert.equal(ticks[0], 0);
+  assert.equal(ticks[ticks.length - 1], 39);
+  assert.ok(ticks.length <= 8);
+  assert.equal(visibleChartXAxisIndices([], 8).length, 0);
 });
 
 test("inclusiveUtcDaySpan is inclusive of first and last UTC dates", () => {
