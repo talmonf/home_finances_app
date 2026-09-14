@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
 import type { MorningReceiptNumberingMode } from "@/generated/prisma/client";
 import {
@@ -178,6 +178,36 @@ export function ReceiptModalFormClient({
   const [currency, setCurrency] = useState(initial?.currency ?? "ILS");
   const [isDirty, setIsDirty] = useState(mode === "create");
   const canSubmit = mode === "create" || isDirty;
+  const initialIssuedAt = initial?.issued_at ?? "";
+  const initialPaymentDate = initial?.payment_date ?? "";
+  const initialCoveredStart = initial?.covered_period_start ?? "";
+  const initialCoveredEnd = initial?.covered_period_end ?? "";
+  const onIssuedAtIsoChange = useCallback(
+    (iso: string) => {
+      if (iso !== initialIssuedAt) setIsDirty(true);
+    },
+    [initialIssuedAt],
+  );
+  const onPaymentDateIsoChange = useCallback(
+    (iso: string) => {
+      if (iso !== initialPaymentDate) setIsDirty(true);
+    },
+    [initialPaymentDate],
+  );
+  const onCoveredPeriodStartIsoChange = useCallback(
+    (iso: string) => {
+      setCoveredPeriodStart(iso);
+      if (iso !== initialCoveredStart) setIsDirty(true);
+    },
+    [initialCoveredStart],
+  );
+  const onCoveredPeriodEndIsoChange = useCallback(
+    (iso: string) => {
+      setCoveredPeriodEnd(iso);
+      if (iso !== initialCoveredEnd) setIsDirty(true);
+    },
+    [initialCoveredEnd],
+  );
   const hideReceiptNumberInput =
     Boolean(initial?.morning_locked) || (mode === "create" && issueViaMorningOnForm);
 
@@ -423,6 +453,7 @@ export function ReceiptModalFormClient({
                 name="issued_at"
                 required
                 defaultIsoYmd={initial?.issued_at ?? ""}
+                onIsoChange={onIssuedAtIsoChange}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -434,6 +465,7 @@ export function ReceiptModalFormClient({
               <HouseholdDateField
                 name="payment_date"
                 defaultIsoYmd={initial?.payment_date ?? ""}
+                onIsoChange={onPaymentDateIsoChange}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -492,7 +524,7 @@ export function ReceiptModalFormClient({
               <HouseholdDateField
                 name="covered_period_start"
                 defaultIsoYmd={coveredPeriodStart}
-                onIsoChange={setCoveredPeriodStart}
+                onIsoChange={onCoveredPeriodStartIsoChange}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -504,7 +536,7 @@ export function ReceiptModalFormClient({
               <HouseholdDateField
                 name="covered_period_end"
                 defaultIsoYmd={coveredPeriodEnd}
-                onIsoChange={setCoveredPeriodEnd}
+                onIsoChange={onCoveredPeriodEndIsoChange}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

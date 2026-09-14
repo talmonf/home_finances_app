@@ -27,6 +27,15 @@ function localDateToIsoYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function notifyNativeInputValue(el: HTMLInputElement, previousValue: string) {
+  const tracker = (el as HTMLInputElement & {
+    _valueTracker?: { setValue: (value: string) => void };
+  })._valueTracker;
+  tracker?.setValue(previousValue);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 function isoYmdToLocalNoonDate(iso: string): Date | undefined {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
   if (!m) return undefined;
@@ -197,8 +206,15 @@ export function HouseholdDateField({
   textRef.current = text;
 
   const syncHidden = useCallback(
-    (iso: string) => {
-      if (hiddenRef.current) hiddenRef.current.value = iso;
+    (iso: string, notify = false) => {
+      const el = hiddenRef.current;
+      if (el) {
+        const previous = el.value;
+        el.value = iso;
+        if (notify && previous !== iso) {
+          notifyNativeInputValue(el, previous);
+        }
+      }
       onIsoChange?.(iso);
     },
     [onIsoChange],
@@ -240,17 +256,17 @@ export function HouseholdDateField({
   const onBlur = () => {
     const raw = text.trim();
     if (!raw) {
-      syncHidden("");
+      syncHidden("", true);
       setError(null);
       return;
     }
     const iso = parseHouseholdDateInputToIsoYmd(raw, format);
     if (iso) {
-      syncHidden(iso);
+      syncHidden(iso, true);
       setText(isoYmdToHouseholdInputDisplay(iso, format));
       setError(null);
     } else {
-      syncHidden("");
+      syncHidden("", true);
       setError(`Invalid date — use ${placeholder}.`);
     }
   };
@@ -264,11 +280,11 @@ export function HouseholdDateField({
     (iso: string) => {
       setError(null);
       if (!iso) {
-        syncHidden("");
+        syncHidden("", true);
         setText("");
         return;
       }
-      syncHidden(iso);
+      syncHidden(iso, true);
       setText(isoYmdToHouseholdInputDisplay(iso, format));
     },
     [format, syncHidden],
