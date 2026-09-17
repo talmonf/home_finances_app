@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { syncHouseholdFamilyCalendarSafe } from "@/lib/family-calendar-sync/sync";
 import { orderSpouseIds } from "@/lib/hebrew-calendar";
 import {
   gregorianDateToHebrewComponents,
@@ -81,6 +82,7 @@ export async function createFamilyMarriage(formData: FormData) {
     },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/marriages");
   redirect("/dashboard/family-members/marriages?created=1");
 }
@@ -128,6 +130,7 @@ export async function updateFamilyMarriage(formData: FormData) {
     },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/marriages");
   redirect("/dashboard/family-members/marriages?updated=1");
 }
@@ -144,6 +147,7 @@ export async function deleteFamilyMarriage(formData: FormData) {
     where: { id, household_id: householdId },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/marriages");
   redirect("/dashboard/family-members/marriages?deleted=1");
 }

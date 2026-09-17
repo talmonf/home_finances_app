@@ -118,6 +118,7 @@ model households {
   clinic_digest_email_subscriptions  clinic_digest_email_subscriptions[]
   family_marriages                   family_marriages[]
   family_special_dates               family_special_dates[]
+  family_calendar_sync_events        family_calendar_sync_events[]
 }
 
 model loans {
@@ -271,6 +272,45 @@ model family_marriages {
 
   @@unique([household_id, spouse_a_id, spouse_b_id])
   @@index([household_id])
+}
+
+enum FamilyCalendarSourceKind {
+  birthday
+  anniversary
+  special_date
+
+  @@map("family_calendar_source_kind")
+}
+
+enum FamilyCalendarKind {
+  gregorian
+  hebrew
+
+  @@map("family_calendar_kind")
+}
+
+/// Per-user Google Calendar mapping for a family date occurrence (idempotent upsert key).
+model family_calendar_sync_events {
+  id              String                   @id @default(uuid())
+  household_id    String
+  user_id         String
+  source_kind     FamilyCalendarSourceKind
+  source_id       String
+  calendar_kind   FamilyCalendarKind
+  occurrence_key  String
+  google_event_id String?
+  last_synced_at  DateTime?
+  last_error      String?
+  last_error_at   DateTime?
+  created_at      DateTime                 @default(now())
+  updated_at      DateTime                 @updatedAt
+
+  household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, source_kind, source_id, calendar_kind, occurrence_key], map: "family_calendar_sync_events_user_source_key")
+  @@index([household_id])
+  @@index([user_id])
 }
 
 model bank_accounts {
@@ -1630,6 +1670,10 @@ model users {
   google_calendar_token_scope String?
   google_calendar_sync_error String?
   google_calendar_sync_error_at DateTime?
+  google_calendar_sync_family_dates Boolean @default(false)
+  family_calendar_sync_error String?
+  family_calendar_sync_error_at DateTime?
+  family_calendar_sync_failure_notified_at DateTime?
   created_at           DateTime @default(now())
   last_login_at        DateTime?
   must_change_password Boolean  @default(false)
@@ -1651,6 +1695,7 @@ model users {
   user_feature_usage_rollups user_feature_usage_rollups[]
   renewal_email_subscription renewal_email_subscriptions?
   clinic_digest_email_subscription clinic_digest_email_subscriptions?
+  family_calendar_sync_events family_calendar_sync_events[]
 }
 
 model private_clinic_backup_snapshots {

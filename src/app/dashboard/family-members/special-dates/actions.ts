@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { syncHouseholdFamilyCalendarSafe } from "@/lib/family-calendar-sync/sync";
 import { parseFamilySpecialDateEventType } from "@/lib/family-special-dates/event-type-labels";
 import { parseWeddingHebrewFromFormData } from "@/lib/family-members/hebrew-dob-form";
 import { gregorianDateToHebrewComponents, hebrewComponentsToGregorian } from "@/lib/hebrew-calendar";
@@ -146,6 +147,7 @@ export async function createFamilySpecialDate(formData: FormData) {
     },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/special-dates");
   redirect("/dashboard/family-members/special-dates?created=1");
 }
@@ -174,6 +176,7 @@ export async function updateFamilySpecialDate(formData: FormData) {
     data,
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/special-dates");
   redirect("/dashboard/family-members/special-dates?updated=1");
 }
@@ -190,6 +193,7 @@ export async function deleteFamilySpecialDate(formData: FormData) {
     where: { id, household_id: householdId },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members/special-dates");
   redirect("/dashboard/family-members/special-dates?deleted=1");
 }

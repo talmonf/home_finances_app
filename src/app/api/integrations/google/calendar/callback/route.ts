@@ -38,7 +38,13 @@ export async function GET(request: Request) {
       refreshToken: tokens.refresh_token ?? "",
       expiryDateMs: tokens.expiry_date ?? null,
       scope: tokens.scope ?? null,
+      enableClinicSync: returnTo.includes("/dashboard/private-clinic"),
+      enableFamilyDatesSync: returnTo.includes("/dashboard/upcoming-renewals/email-settings"),
     });
+    if (returnTo.includes("/dashboard/upcoming-renewals/email-settings") && session.user.householdId) {
+      const { syncHouseholdFamilyCalendarSafe } = await import("@/lib/family-calendar-sync/sync");
+      void syncHouseholdFamilyCalendarSafe(session.user.householdId);
+    }
     const response = NextResponse.redirect(new URL(`${returnTo}?saved=google-connected`, request.url));
     return clearGoogleOAuthCookies(response);
   } catch (error) {

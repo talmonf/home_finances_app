@@ -22,11 +22,33 @@ function assertGoogleUserReady(user: GoogleCalendarUserConfig): {
   accessToken: string;
   refreshToken: string;
 } {
-  if (!user.google_calendar_enabled) throw new Error("Google Calendar integration is disabled");
   const accessToken = decryptGoogleToken(user.google_calendar_access_token_encrypted);
   const refreshToken = decryptGoogleToken(user.google_calendar_refresh_token_encrypted);
   if (!accessToken || !refreshToken) throw new Error("Google Calendar account is not connected");
   return { accessToken, refreshToken };
+}
+
+function isGoogleNotFound(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 404 || code === 410;
+}
+
+const FAMILY_DATE_REMINDERS = {
+  useDefault: false,
+  overrides: [
+    { method: "popup" as const, minutes: 24 * 60 },
+    { method: "email" as const, minutes: 24 * 60 },
+  ],
+};
+
+function addOneIsoCalendarDay(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const next = new Date(year, (month ?? 1) - 1, (day ?? 1) + 1);
+  const y = next.getFullYear();
+  const m = String(next.getMonth() + 1).padStart(2, "0");
+  const d = String(next.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 async function getCalendarClientForUser(user: GoogleCalendarUserConfig) {
@@ -222,4 +244,87 @@ export async function saveGoogleSeriesSyncFailure(seriesId: string, message: str
       google_calendar_last_error_at: new Date(),
     },
   });
+}
+
+export async function findAllDayGoogleEventByPrivateKey(params: {
+  user: GoogleCalendarUserConfig;
+  privateKey: string;
+}): Promise<string | null> {
+  const calendar = await getCalendarClientForUser(params.user);
+  const listed = await calendar.events.list({
+    calendarId: "primary",
+    privateExtendedProperty: [`app=home_finances`, `key=${params.privateKey}`],
+    maxResults: 2,
+    singleEvents: false,
+  });
+  const match = (listed.data.items ?? []).find((item) => item.id);
+  return match?.id ?? null;
+}
+
+export async function upsertAllDayGoogleCalendarEvent(params: {
+  user: GoogleCalendarUserConfig;
+  existingEventId: string | null;
+  summary: string;
+  description: string;
+  startDate: string;
+  recurringYearly: boolean;
+  privateKey: string;
+}): Promise<string> {
+  const calendar = await getCalendarClientForUser(params.user);
+  const eventBody = {
+    summary: params.summary,
+    description: params.description,
+    start: { date: params.startDate },
+    end: { date: addOneIsoCalendarDay(params.startDate) },
+    reminders: FAMILY_DATE_REMINDERS,
+    extendedProperties: {
+      private: {
+        app: "home_finances",
+        key: params.privateKey,
+      },
+    },
+    ...(params.recurringYearly ? { recurrence: ["RRULE:FREQ=YEARLY"] } : {}),
+  };
+
+  let eventId = params.existingEventId;
+  if (!eventId) {
+    eventId = await findAllDayGoogleEventByPrivateKey({
+      user: params.user,
+      privateKey: params.privateKey,
+    });
+  }
+
+  if (eventId) {
+    try {
+      const updated = await calendar.events.update({
+        calendarId: "primary",
+        eventId,
+        requestBody: eventBody,
+        sendUpdates: "none",
+      });
+      return updated.data.id ?? eventId;
+    } catch (error) {
+      if (!isGoogleNotFound(error)) throw error;
+    }
+  }
+
+  const created = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: eventBody,
+    sendUpdates: "none",
+  });
+  if (!created.data.id) throw new Error("Google Calendar all-day event id missing after create");
+  return created.data.id;
+}
+
+export async function deleteGoogleCalendarEventIfExists(params: {
+  user: GoogleCalendarUserConfig;
+  eventId: string;
+}): Promise<void> {
+  try {
+    await deleteGoogleCalendarEvent(params);
+  } catch (error) {
+    if (isGoogleNotFound(error)) return;
+    throw error;
+  }
 }

@@ -44,11 +44,12 @@ export async function saveGoogleTokensForUser(params: {
   refreshToken: string;
   expiryDateMs?: number | null;
   scope?: string | null;
+  enableClinicSync?: boolean;
+  enableFamilyDatesSync?: boolean;
 }) {
   await prisma.users.update({
     where: { id: params.userId },
     data: {
-      google_calendar_enabled: true,
       google_calendar_access_token_encrypted: encryptSecret(params.accessToken),
       google_calendar_refresh_token_encrypted: encryptSecret(params.refreshToken),
       google_calendar_token_expires_at: params.expiryDateMs
@@ -57,6 +58,8 @@ export async function saveGoogleTokensForUser(params: {
       google_calendar_token_scope: params.scope ?? null,
       google_calendar_sync_error: null,
       google_calendar_sync_error_at: null,
+      ...(params.enableClinicSync ? { google_calendar_enabled: true } : {}),
+      ...(params.enableFamilyDatesSync ? { google_calendar_sync_family_dates: true } : {}),
     },
   });
 }

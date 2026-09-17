@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { syncHouseholdFamilyCalendarSafe } from "@/lib/family-calendar-sync/sync";
 import {
   parseHebrewDobFromFormData,
   resolveHebrewDobForSave,
@@ -114,6 +115,7 @@ export async function createFamilyMember(formData: FormData) {
     }
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members");
   redirect("/dashboard/family-members?created=1");
 }
@@ -130,6 +132,7 @@ export async function toggleFamilyMemberActive(id: string, nextActive: boolean) 
     data: { is_active: nextActive },
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members");
   redirect("/dashboard/family-members?updated=1");
 }
@@ -260,6 +263,7 @@ export async function updateFamilyMember(formData: FormData) {
     await tx.$transaction(updates);
   });
 
+  await syncHouseholdFamilyCalendarSafe(householdId);
   revalidatePath("/dashboard/family-members");
   redirect("/dashboard/family-members?updated=1");
 }
