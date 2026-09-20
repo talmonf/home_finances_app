@@ -6,6 +6,7 @@ import {
   liveFamilyCalendarSourceKeys,
   type FamilyCalendarHouseholdInput,
 } from "@/lib/family-calendar-sync/desired";
+import { isFamilyCalendarSyncEligible } from "@/lib/family-calendar-sync/eligibility";
 import { familyCalendarSyncKey } from "@/lib/family-calendar-sync/keys";
 import {
   renderFamilyCalendarFailureEmail,
@@ -18,10 +19,10 @@ import {
 } from "@/lib/family-calendar-sync/reconcile";
 import {
   deleteGoogleCalendarEventIfExists,
-  isGmailAddress,
   upsertAllDayGoogleCalendarEvent,
   type GoogleCalendarUserConfig,
 } from "@/lib/google-calendar/calendar";
+import { decryptGoogleToken } from "@/lib/google-calendar/oauth";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import type { FamilyCalendarKind, FamilyCalendarSourceKind } from "@/generated/prisma/enums";
 
@@ -89,11 +90,16 @@ async function loadHouseholdInput(householdId: string): Promise<FamilyCalendarHo
 }
 
 async function loadFamilyCalendarUsers(householdId: string): Promise<FamilyCalendarUserRow[]> {
-  return prisma.users.findMany({
+  const users = await prisma.users.findMany({
     where: {
       household_id: householdId,
       is_active: true,
-      google_calendar_sync_family_dates: true,
+      google_calendar_refresh_token_encrypted: { not: null },
+      OR: [
+        { google_calendar_sync_family_dates: true },
+        { google_calendar_enabled: true },
+        { renewal_email_subscription: { is: { is_active: true } } },
+      ],
     },
     select: {
       id: true,
@@ -107,16 +113,25 @@ async function loadFamilyCalendarUsers(householdId: string): Promise<FamilyCalen
       google_calendar_token_expires_at: true,
       google_calendar_sync_family_dates: true,
       family_calendar_sync_failure_notified_at: true,
+      renewal_email_subscription: { select: { is_active: true } },
     },
   });
+  return users.filter((user) =>
+    isFamilyCalendarSyncEligible({
+      hasRefreshToken: Boolean(user.google_calendar_refresh_token_encrypted),
+      google_calendar_sync_family_dates: user.google_calendar_sync_family_dates,
+      google_calendar_enabled: user.google_calendar_enabled,
+      hasActiveRenewalDigest: Boolean(user.renewal_email_subscription?.is_active),
+    }),
+  );
 }
 
 function userReadyForGoogle(user: FamilyCalendarUserRow): boolean {
-  return Boolean(
-    user.google_calendar_refresh_token_encrypted &&
-      user.google_gmail_address &&
-      isGmailAddress(user.google_gmail_address),
-  );
+  try {
+    return Boolean(decryptGoogleToken(user.google_calendar_refresh_token_encrypted));
+  } catch {
+    return false;
+  }
 }
 
 async function notifyFamilyCalendarFailures(params: {
@@ -318,6 +333,24 @@ async function syncFamilyCalendarForUser(params: {
   return { failures: failures.length };
 }
 
+export async function enableFamilyCalendarSyncIfGoogleConnected(userId: string): Promise<boolean> {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      google_calendar_refresh_token_encrypted: true,
+      google_calendar_sync_family_dates: true,
+    },
+  });
+  if (!user?.google_calendar_refresh_token_encrypted) return false;
+  if (!user.google_calendar_sync_family_dates) {
+    await prisma.users.update({
+      where: { id: userId },
+      data: { google_calendar_sync_family_dates: true },
+    });
+  }
+  return true;
+}
+
 export async function syncHouseholdFamilyCalendar(
   householdId: string,
   now: Date = new Date(),
@@ -345,7 +378,15 @@ export async function syncAllFamilyCalendars(
   now: Date = new Date(),
 ): Promise<{ households: number; users: number; failures: number; errors: string[] }> {
   const enabled = await prisma.users.findMany({
-    where: { is_active: true, google_calendar_sync_family_dates: true },
+    where: {
+      is_active: true,
+      google_calendar_refresh_token_encrypted: { not: null },
+      OR: [
+        { google_calendar_sync_family_dates: true },
+        { google_calendar_enabled: true },
+        { renewal_email_subscription: { is: { is_active: true } } },
+      ],
+    },
     select: { household_id: true },
   });
   const householdIds = [...new Set(enabled.map((row) => row.household_id))];

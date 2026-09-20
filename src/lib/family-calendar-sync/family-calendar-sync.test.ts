@@ -9,6 +9,7 @@ import {
   YEARLY_OCCURRENCE_KEY,
 } from "@/lib/family-calendar-sync/keys";
 import { shouldSendFamilyCalendarFailureEmail, renderFamilyCalendarFailureEmail } from "@/lib/family-calendar-sync/notify";
+import { isFamilyCalendarSyncEligible } from "@/lib/family-calendar-sync/eligibility";
 import { planFamilyCalendarReconcile } from "@/lib/family-calendar-sync/reconcile";
 import { nextGregorianOccurrenceForHebrewMonthDay } from "@/lib/hebrew-calendar";
 
@@ -322,6 +323,45 @@ test("failure email cooldown is 24 hours and resets when there are no failures",
       now,
     }),
     true,
+  );
+});
+
+test("digest recipients with a Google connection are eligible even if the family-dates toggle is off", () => {
+  assert.equal(
+    isFamilyCalendarSyncEligible({
+      hasRefreshToken: true,
+      google_calendar_sync_family_dates: false,
+      google_calendar_enabled: false,
+      hasActiveRenewalDigest: true,
+    }),
+    true,
+  );
+  assert.equal(
+    isFamilyCalendarSyncEligible({
+      hasRefreshToken: true,
+      google_calendar_sync_family_dates: false,
+      google_calendar_enabled: true,
+      hasActiveRenewalDigest: false,
+    }),
+    true,
+  );
+  assert.equal(
+    isFamilyCalendarSyncEligible({
+      hasRefreshToken: false,
+      google_calendar_sync_family_dates: true,
+      google_calendar_enabled: true,
+      hasActiveRenewalDigest: true,
+    }),
+    false,
+  );
+  assert.equal(
+    isFamilyCalendarSyncEligible({
+      hasRefreshToken: true,
+      google_calendar_sync_family_dates: false,
+      google_calendar_enabled: false,
+      hasActiveRenewalDigest: false,
+    }),
+    false,
   );
 });
 

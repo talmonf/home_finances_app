@@ -126,3 +126,30 @@ export async function updateMyFamilyCalendarSettings(formData: FormData) {
   revalidatePath("/dashboard/upcoming-renewals/email-settings");
   redirect("/dashboard/upcoming-renewals/email-settings?saved=family-calendar");
 }
+
+export async function syncMyFamilyCalendarNow() {
+  await requireHouseholdMember();
+  const session = await getAuthSession();
+  if (!session?.user?.id || !session.user.householdId || session.user.isSuperAdmin) return;
+
+  const { enableFamilyCalendarSyncIfGoogleConnected, syncHouseholdFamilyCalendar } = await import(
+    "@/lib/family-calendar-sync/sync"
+  );
+  const connected = await enableFamilyCalendarSyncIfGoogleConnected(session.user.id);
+  if (!connected) {
+    redirect("/dashboard/upcoming-renewals/email-settings?error=google-not-connected");
+  }
+
+  const result = await syncHouseholdFamilyCalendar(session.user.householdId);
+  const user = await prisma.users.findUnique({
+    where: { id: session.user.id },
+    select: { family_calendar_sync_error: true },
+  });
+  if (result.failures > 0 || user?.family_calendar_sync_error) {
+    const reason = encodeURIComponent((user?.family_calendar_sync_error ?? "sync failed").slice(0, 300));
+    redirect(`/dashboard/upcoming-renewals/email-settings?error=sync-failed&reason=${reason}`);
+  }
+
+  revalidatePath("/dashboard/upcoming-renewals/email-settings");
+  redirect("/dashboard/upcoming-renewals/email-settings?saved=family-calendar-synced");
+}

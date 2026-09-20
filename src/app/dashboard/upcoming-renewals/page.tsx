@@ -149,7 +149,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
             href="/dashboard/upcoming-renewals/email-settings"
             className="text-sm font-medium text-sky-400 hover:text-sky-300"
           >
-            {isHebrew ? "הגדרות אימייל" : "Email digest settings"}
+            {isHebrew ? "הגדרות אימייל ויומן" : "Email & calendar settings"}
           </Link>
         </div>
 

@@ -64,6 +64,35 @@ export async function saveGoogleTokensForUser(params: {
   });
 }
 
+export async function persistRefreshedGoogleTokens(
+  userId: string,
+  tokens: {
+    access_token?: string | null;
+    refresh_token?: string | null;
+    expiry_date?: number | null;
+  },
+) {
+  const data: {
+    google_calendar_access_token_encrypted?: string;
+    google_calendar_refresh_token_encrypted?: string;
+    google_calendar_token_expires_at?: Date;
+  } = {};
+  if (tokens.access_token) {
+    data.google_calendar_access_token_encrypted = encryptSecret(tokens.access_token);
+  }
+  if (tokens.refresh_token) {
+    data.google_calendar_refresh_token_encrypted = encryptSecret(tokens.refresh_token);
+  }
+  if (tokens.expiry_date) {
+    data.google_calendar_token_expires_at = new Date(tokens.expiry_date);
+  }
+  if (Object.keys(data).length === 0) return;
+  await prisma.users.update({
+    where: { id: userId },
+    data,
+  });
+}
+
 export function decryptGoogleToken(value: string | null): string | null {
   if (!value) return null;
   return decryptSecret(value);

@@ -9,7 +9,7 @@ import {
 } from "./actions";
 import { RenewalEmailScheduleFields } from "./renewal-email-schedule-fields";
 import { GoogleCalendarConnectionControls } from "@/app/dashboard/private-clinic/settings/google-calendar-connection-controls";
-import { updateMyFamilyCalendarSettings } from "@/app/dashboard/user-preferences-actions";
+import { syncMyFamilyCalendarNow, updateMyFamilyCalendarSettings } from "@/app/dashboard/user-preferences-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -101,15 +101,21 @@ export default async function RenewalEmailSettingsPage({
             {isHebrew ? "ההגדרות נשמרו." : "Settings saved."}
           </p>
         ) : null}
-        {qp?.saved === "family-calendar" || qp?.saved === "google-connected" ? (
+        {qp?.saved === "family-calendar" ||
+        qp?.saved === "google-connected" ||
+        qp?.saved === "family-calendar-synced" ? (
           <p className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
             {qp.saved === "google-connected"
               ? isHebrew
                 ? "חשבון Google Calendar חובר. מועדים משפחתיים יסונכרנו ליומן."
                 : "Google Calendar connected. Family dates will sync to your calendar."
-              : isHebrew
-                ? "הגדרות יומן המועדים המשפחתיים נשמרו."
-                : "Family calendar settings saved."}
+              : qp.saved === "family-calendar-synced"
+                ? isHebrew
+                  ? "המועדים המשפחתיים סונכרנו ליומן Google."
+                  : "Family dates were synced to Google Calendar."
+                : isHebrew
+                  ? "הגדרות יומן המועדים המשפחתיים נשמרו."
+                  : "Family calendar settings saved."}
           </p>
         ) : null}
         {qp?.error ? (
@@ -122,6 +128,12 @@ export default async function RenewalEmailSettingsPage({
                 ? isHebrew
                   ? "חברו את חשבון Google Calendar לפני הפעלת הסנכרון."
                   : "Connect Google Calendar before enabling sync."
+              : qp.error === "sync-failed"
+                ? qp.reason
+                  ? `${isHebrew ? "הסנכרון נכשל" : "Sync failed"}: ${qp.reason}`
+                  : isHebrew
+                    ? "הסנכרון ליומן Google נכשל."
+                    : "Google Calendar sync failed."
                 : qp.error === "google-oauth-host"
                   ? isHebrew
                     ? "כתובת האתר אינה תואמת להגדרת Google OAuth."
@@ -246,8 +258,8 @@ export default async function RenewalEmailSettingsPage({
           </h2>
           <p className="text-sm text-slate-400">
             {isHebrew
-              ? "הוסיפו ימי הולדת, ימי נישואין ומועדים מיוחדים ליומן Google כאירועים לכל היום. תאריכים לועזיים חוזרים מדי שנה; תאריכים עבריים מתווספים למופע הקרוב בלבד."
-              : "Add birthdays, anniversaries, and special dates to Google Calendar as all-day events. Gregorian dates repeat yearly; Hebrew dates are added for the next occurrence only."}
+              ? "אם Google Calendar כבר מחובר (גם ממרפאה), ימי הולדת, ימי נישואין ומועדים מיוחדים יתווספו ליומן כשהאימייל היומי/שבועי נשלח. אפשר גם לסנכרן עכשיו."
+              : "If Google Calendar is already connected (including from private clinic), birthdays, anniversaries, and special dates are added to the calendar when the digest email is sent. You can also sync now."}
           </p>
           {!googleConnected ? (
             <p className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
@@ -287,12 +299,22 @@ export default async function RenewalEmailSettingsPage({
               {isHebrew ? "שגיאת סנכרון אחרונה:" : "Last sync error:"} {user.family_calendar_sync_error}
             </p>
           ) : null}
-          <button
-            type="submit"
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-          >
-            {isHebrew ? "שמור הגדרות יומן" : "Save calendar settings"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+            >
+              {isHebrew ? "שמור הגדרות יומן" : "Save calendar settings"}
+            </button>
+            <button
+              type="submit"
+              formAction={syncMyFamilyCalendarNow}
+              disabled={!googleConnected}
+              className="rounded-lg border border-sky-700 bg-sky-950/40 px-4 py-2 text-sm font-medium text-sky-100 hover:bg-sky-950/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isHebrew ? "סנכרן מועדים ליומן עכשיו" : "Sync family dates to calendar now"}
+            </button>
+          </div>
         </form>
 
         <div className="flex flex-wrap gap-2 rounded-xl border border-slate-700 bg-slate-900/40 p-4">

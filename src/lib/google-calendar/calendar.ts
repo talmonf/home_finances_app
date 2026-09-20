@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/auth";
-import { decryptGoogleToken, getGoogleOAuthClient } from "@/lib/google-calendar/oauth";
+import {
+  decryptGoogleToken,
+  getGoogleOAuthClient,
+  persistRefreshedGoogleTokens,
+} from "@/lib/google-calendar/oauth";
 import { google } from "googleapis";
 
 const APPOINTMENT_TIME_ZONE = "Asia/Jerusalem";
@@ -59,6 +63,13 @@ async function getCalendarClientForUser(user: GoogleCalendarUserConfig) {
     refresh_token: refreshToken,
     expiry_date: user.google_calendar_token_expires_at?.getTime() ?? undefined,
   });
+  auth.on("tokens", (tokens) => {
+    void persistRefreshedGoogleTokens(user.id, tokens);
+  });
+  const expiresAt = user.google_calendar_token_expires_at?.getTime() ?? 0;
+  if (expiresAt < Date.now() + 60_000) {
+    await auth.getAccessToken();
+  }
   return google.calendar({ version: "v3", auth });
 }
 
@@ -288,10 +299,14 @@ export async function upsertAllDayGoogleCalendarEvent(params: {
 
   let eventId = params.existingEventId;
   if (!eventId) {
-    eventId = await findAllDayGoogleEventByPrivateKey({
-      user: params.user,
-      privateKey: params.privateKey,
-    });
+    try {
+      eventId = await findAllDayGoogleEventByPrivateKey({
+        user: params.user,
+        privateKey: params.privateKey,
+      });
+    } catch {
+      eventId = null;
+    }
   }
 
   if (eventId) {

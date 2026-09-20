@@ -3,6 +3,7 @@ import { sendClinicDigestForSubscription } from "@/lib/clinic-digest-email/send-
 import { isAuthorizedCronRequest } from "@/lib/digest-email/cron-auth";
 import { cronUtcSlotsQualification, debugScheduleEvaluation } from "@/lib/digest-email/schedule";
 import { sendRenewalDigestForSubscription } from "@/lib/renewal-email/send-digest";
+import { syncAllFamilyCalendars } from "@/lib/family-calendar-sync/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,7 @@ export async function GET(req: Request) {
 
   const now = new Date();
   const [renewals, clinic] = await Promise.all([runRenewalDigests(now), runClinicDigests(now)]);
+  const familyCalendar = await syncAllFamilyCalendars(now);
 
   const renewalFirst = await prisma.renewal_email_subscriptions.findFirst({
     where: { is_active: true },
@@ -131,7 +133,8 @@ export async function GET(req: Request) {
     nowUtc: now.toISOString(),
     renewals,
     clinic,
+    familyCalendar,
     cronSlotPreview,
-    note: "Processes renewal and clinic digest subscriptions in one invocation. UTC crons: 05, 11, 17, 23.",
+    note: "Processes renewal and clinic digest subscriptions, then family-date Google Calendar sync. UTC crons: 05, 11, 17, 23.",
   });
 }
