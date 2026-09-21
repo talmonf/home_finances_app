@@ -295,8 +295,13 @@ export default async function RenewalEmailSettingsPage({
             }}
           />
           {user.family_calendar_sync_error ? (
-            <p className="text-xs text-rose-300/90">
-              {isHebrew ? "שגיאת סנכרון אחרונה:" : "Last sync error:"} {user.family_calendar_sync_error}
+            <p className="rounded-md border border-rose-800/50 bg-rose-950/30 px-3 py-2 text-sm text-rose-100">
+              {user.family_calendar_sync_error.toLowerCase().includes("expired") ||
+              user.family_calendar_sync_error.toLowerCase().includes("invalid_grant")
+                ? isHebrew
+                  ? "הגישה ליומן Google פגה. לחצו על «חבר מחדש», ואז על «סנכרן מועדים ליומן עכשיו»."
+                  : "Google Calendar access expired. Click Reconnect, then Sync family dates to calendar now."
+                : `${isHebrew ? "שגיאת סנכרון אחרונה:" : "Last sync error:"} ${user.family_calendar_sync_error}`}
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">

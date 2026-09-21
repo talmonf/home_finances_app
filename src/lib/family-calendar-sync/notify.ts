@@ -21,6 +21,7 @@ export function renderFamilyCalendarFailureEmail(params: {
   language: "en" | "he";
   items: FamilyCalendarFailureItem[];
   settingsUrl: string;
+  reason?: "invalid_grant" | "items";
 }): { subject: string; html: string; text: string } {
   const he = params.language === "he";
   const dir = he ? "rtl" : "ltr";
@@ -28,13 +29,21 @@ export function renderFamilyCalendarFailureEmail(params: {
   const subject = he
     ? "לא הצלחנו להוסיף מועדים משפחתיים ליומן Google"
     : "Could not add family dates to Google Calendar";
-  const intro = he
-    ? "המערכת ניסתה להוסיף ימי הולדת, ימי נישואין או מועדים מיוחדים ליומן Google שלך, והשליחה נכשלה. לא נשלח מייל נוסף על אותן שגיאות במשך 24 שעות."
-    : "The app tried to add birthdays, anniversaries, or special dates to your Google Calendar, and the sync failed. You will not get another email about the same failures for 24 hours.";
+  const reconnectRequired = params.reason === "invalid_grant";
+  const intro = reconnectRequired
+    ? he
+      ? "הגישה ליומן Google פגה או בוטלה. זה לא תקלה בכל יום הולדת בנפרד — צריך לחבר מחדש את החשבון פעם אחת, ואז המועדים יתווספו."
+      : "Google Calendar access expired or was revoked. This is not a problem with each birthday — reconnect the account once, then the dates will be added."
+    : he
+      ? "המערכת ניסתה להוסיף ימי הולדת, ימי נישואין או מועדים מיוחדים ליומן Google שלך, והשליחה נכשלה. לא נשלח מייל נוסף על אותן שגיאות במשך 24 שעות."
+      : "The app tried to add birthdays, anniversaries, or special dates to your Google Calendar, and the sync failed. You will not get another email about the same failures for 24 hours.";
   const reconnect = he ? "חברו מחדש את Google Calendar" : "Reconnect Google Calendar";
-  const itemLines = params.items.map((item) => `• ${item.summary}: ${item.error}`);
+  const itemsToShow = reconnectRequired
+    ? [{ summary: he ? "חיבור Google Calendar" : "Google Calendar connection", error: params.items[0]?.error ?? "invalid_grant" }]
+    : params.items;
+  const itemLines = itemsToShow.map((item) => `• ${item.summary}: ${item.error}`);
 
-  const htmlItems = params.items
+  const htmlItems = itemsToShow
     .map(
       (item) =>
         `<li><strong>${escapeHtml(item.summary)}</strong>: ${escapeHtml(item.error)}</li>`,

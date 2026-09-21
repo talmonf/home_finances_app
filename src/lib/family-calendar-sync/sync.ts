@@ -19,10 +19,12 @@ import {
 } from "@/lib/family-calendar-sync/reconcile";
 import {
   deleteGoogleCalendarEventIfExists,
+  pingGoogleCalendarAccess,
   upsertAllDayGoogleCalendarEvent,
   type GoogleCalendarUserConfig,
 } from "@/lib/google-calendar/calendar";
-import { decryptGoogleToken } from "@/lib/google-calendar/oauth";
+import { GOOGLE_INVALID_GRANT_USER_MESSAGE, isGoogleInvalidGrant } from "@/lib/google-calendar/errors";
+import { clearInvalidGoogleGrantForUser, decryptGoogleToken } from "@/lib/google-calendar/oauth";
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import type { FamilyCalendarKind, FamilyCalendarSourceKind } from "@/generated/prisma/enums";
 
@@ -139,6 +141,7 @@ async function notifyFamilyCalendarFailures(params: {
   items: FamilyCalendarFailureItem[];
   now: Date;
   language: "en" | "he";
+  reason?: "invalid_grant" | "items";
 }) {
   if (
     !shouldSendFamilyCalendarFailureEmail({
@@ -156,6 +159,7 @@ async function notifyFamilyCalendarFailures(params: {
       language: params.language,
       items: params.items,
       settingsUrl: `${getAppBaseUrl()}${FAMILY_CALENDAR_SETTINGS_PATH}`,
+      reason: params.reason,
     });
     await provider.send({
       to: params.user.email,
@@ -170,6 +174,32 @@ async function notifyFamilyCalendarFailures(params: {
     if (isMissingEmailConfigError(error)) return;
     console.error("[family-calendar-sync] failure email", params.user.id, error);
   }
+}
+
+async function handleInvalidGoogleGrant(params: {
+  user: FamilyCalendarUserRow;
+  now: Date;
+  language: "en" | "he";
+}): Promise<{ failures: number }> {
+  await clearInvalidGoogleGrantForUser({
+    userId: params.user.id,
+    message: GOOGLE_INVALID_GRANT_USER_MESSAGE,
+    now: params.now,
+  });
+  const failures: FamilyCalendarFailureItem[] = [
+    {
+      summary: params.language === "he" ? "חיבור Google Calendar" : "Google Calendar connection",
+      error: GOOGLE_INVALID_GRANT_USER_MESSAGE,
+    },
+  ];
+  await notifyFamilyCalendarFailures({
+    user: params.user,
+    items: failures,
+    now: params.now,
+    language: params.language,
+    reason: "invalid_grant",
+  });
+  return { failures: 1 };
 }
 
 async function syncFamilyCalendarForUser(params: {
@@ -217,6 +247,33 @@ async function syncFamilyCalendarForUser(params: {
     return { failures: failures.length };
   }
 
+  try {
+    await pingGoogleCalendarAccess(params.user);
+  } catch (error) {
+    if (isGoogleInvalidGrant(error)) {
+      return handleInvalidGoogleGrant({ user: params.user, now: params.now, language });
+    }
+    const message = errorMessage(error);
+    await prisma.users.update({
+      where: { id: params.user.id },
+      data: {
+        family_calendar_sync_error: message,
+        family_calendar_sync_error_at: params.now,
+      },
+    });
+    failures.push({
+      summary: language === "he" ? "חיבור Google Calendar" : "Google Calendar connection",
+      error: message,
+    });
+    await notifyFamilyCalendarFailures({
+      user: params.user,
+      items: failures,
+      now: params.now,
+      language,
+    });
+    return { failures: failures.length };
+  }
+
   for (const row of plan.deletes) {
     try {
       if (row.googleEventId) {
@@ -224,6 +281,9 @@ async function syncFamilyCalendarForUser(params: {
       }
       await prisma.family_calendar_sync_events.delete({ where: { id: row.id } });
     } catch (error) {
+      if (isGoogleInvalidGrant(error)) {
+        return handleInvalidGoogleGrant({ user: params.user, now: params.now, language });
+      }
       const message = errorMessage(error);
       failures.push({ summary: familyCalendarSyncKey(row), error: message });
       await prisma.family_calendar_sync_events.update({
@@ -274,6 +334,9 @@ async function syncFamilyCalendarForUser(params: {
         },
       });
     } catch (error) {
+      if (isGoogleInvalidGrant(error)) {
+        return handleInvalidGoogleGrant({ user: params.user, now: params.now, language });
+      }
       const message = errorMessage(error);
       failures.push({ summary: event.summary, error: message });
       await prisma.family_calendar_sync_events.upsert({

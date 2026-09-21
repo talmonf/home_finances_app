@@ -10,6 +10,7 @@ import {
 } from "@/lib/family-calendar-sync/keys";
 import { shouldSendFamilyCalendarFailureEmail, renderFamilyCalendarFailureEmail } from "@/lib/family-calendar-sync/notify";
 import { isFamilyCalendarSyncEligible } from "@/lib/family-calendar-sync/eligibility";
+import { isGoogleInvalidGrant } from "@/lib/google-calendar/errors";
 import { planFamilyCalendarReconcile } from "@/lib/family-calendar-sync/reconcile";
 import { nextGregorianOccurrenceForHebrewMonthDay } from "@/lib/hebrew-calendar";
 
@@ -375,4 +376,27 @@ test("failure email lists failed items and a reconnect link", () => {
   assert.match(rendered.text, /Birthday: Dana/);
   assert.match(rendered.text, /Reconnect Google Calendar: https:\/\/example.test\/dashboard\/upcoming-renewals\/email-settings/);
   assert.match(rendered.html, /Birthday: Dana/);
+});
+
+test("invalid_grant is treated as a single reconnect problem, not per-date failures", () => {
+  assert.equal(isGoogleInvalidGrant(new Error("invalid_grant")), true);
+  assert.equal(
+    isGoogleInvalidGrant({ response: { data: { error: "invalid_grant", error_description: "Token has been expired or revoked." } } }),
+    true,
+  );
+  assert.equal(isGoogleInvalidGrant(new Error("quota exceeded")), false);
+
+  const rendered = renderFamilyCalendarFailureEmail({
+    language: "en",
+    reason: "invalid_grant",
+    settingsUrl: "https://example.test/dashboard/upcoming-renewals/email-settings",
+    items: [
+      { summary: "Birthday: Dana", error: "invalid_grant" },
+      { summary: "Birthday: Talmon Friedlander", error: "invalid_grant" },
+    ],
+  });
+  assert.match(rendered.text, /expired or was revoked/);
+  assert.match(rendered.text, /Reconnect Google Calendar/);
+  assert.equal(rendered.text.includes("Birthday: Dana"), false);
+  assert.equal(rendered.text.includes("Talmon"), false);
 });

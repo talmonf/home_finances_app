@@ -58,6 +58,9 @@ export async function saveGoogleTokensForUser(params: {
       google_calendar_token_scope: params.scope ?? null,
       google_calendar_sync_error: null,
       google_calendar_sync_error_at: null,
+      family_calendar_sync_error: null,
+      family_calendar_sync_error_at: null,
+      family_calendar_sync_failure_notified_at: null,
       ...(params.enableClinicSync ? { google_calendar_enabled: true } : {}),
       ...(params.enableFamilyDatesSync ? { google_calendar_sync_family_dates: true } : {}),
     },
@@ -90,6 +93,28 @@ export async function persistRefreshedGoogleTokens(
   await prisma.users.update({
     where: { id: userId },
     data,
+  });
+}
+
+/** Drop unusable tokens so the UI shows disconnected and the user can reconnect. */
+export async function clearInvalidGoogleGrantForUser(params: {
+  userId: string;
+  message: string;
+  now?: Date;
+}) {
+  const now = params.now ?? new Date();
+  await prisma.users.update({
+    where: { id: params.userId },
+    data: {
+      google_calendar_access_token_encrypted: null,
+      google_calendar_refresh_token_encrypted: null,
+      google_calendar_token_expires_at: null,
+      google_calendar_token_scope: null,
+      google_calendar_sync_error: params.message.slice(0, 1000),
+      google_calendar_sync_error_at: now,
+      family_calendar_sync_error: params.message.slice(0, 1000),
+      family_calendar_sync_error_at: now,
+    },
   });
 }
 

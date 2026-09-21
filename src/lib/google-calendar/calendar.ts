@@ -73,6 +73,10 @@ async function getCalendarClientForUser(user: GoogleCalendarUserConfig) {
   return google.calendar({ version: "v3", auth });
 }
 
+export async function pingGoogleCalendarAccess(user: GoogleCalendarUserConfig): Promise<void> {
+  await getCalendarClientForUser(user);
+}
+
 export async function upsertGoogleCalendarEvent(params: {
   user: GoogleCalendarUserConfig;
   existingEventId: string | null;
