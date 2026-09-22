@@ -4,9 +4,12 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarLicenseCreateForm } from "@/components/car-license-create-form";
@@ -34,6 +37,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -81,7 +85,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             {isHebrew ? "חזרה לרכבים →" : "← Back to cars"}
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">
-            {car.custom_name ? `${car.custom_name} — ` : ""}
+            {car.custom_name ? `${maskSensitiveText(obfuscate, car.custom_name)} — ` : ""}
             {car.maker} {car.model} {car.model_year ? `(${car.model_year})` : ""}
           </h1>
           {resolved?.error && (
@@ -97,7 +101,13 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             <input type="hidden" name="id" value={car.id} />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "שם רכב" : "Car name"}</label>
-              <input name="custom_name" defaultValue={car.custom_name ?? ""} placeholder={isHebrew ? "לדוגמה: Kona (Talmon)" : "e.g. Kona (Talmon)"} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="custom_name"
+                value={car.custom_name ?? ""}
+                placeholder={isHebrew ? "לדוגמה: Kona (Talmon)" : "e.g. Kona (Talmon)"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "יצרן" : "Maker"}</label>
@@ -113,18 +123,32 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "מספר רישוי" : "Plate number"}</label>
-              <input name="plate_number" defaultValue={car.plate_number ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="plate_number"
+                value={car.plate_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "נהג ראשי" : "Main driver"}</label>
               <select name="main_driver_family_member_id" defaultValue={car.main_driver_family_member_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
-                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {maskSensitiveText(obfuscate, m.full_name)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">{isHebrew ? "הערות כלליות" : "General notes"}</label>
-              <textarea name="notes" defaultValue={car.notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextarea
+                obfuscate={obfuscate}
+                name="notes"
+                value={car.notes ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תאריך רכישה" : "Purchase date"}</label>
@@ -132,11 +156,24 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "סכום רכישה" : "Purchase amount"}</label>
-              <input name="purchase_amount" type="number" step="0.01" defaultValue={car.purchase_amount?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="purchase_amount"
+                type="number"
+                step="0.01"
+                value={car.purchase_amount?.toString() ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "נרכש מ-" : "Purchased from"}</label>
-              <input name="purchased_from" defaultValue={car.purchased_from ?? ""} placeholder={isHebrew ? "סוכנות, מוכר פרטי..." : "Dealer, private seller…"} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="purchased_from"
+                value={car.purchased_from ?? ""}
+                placeholder={isHebrew ? "סוכנות, מוכר פרטי..." : "Dealer, private seller…"}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Km at purchase</label>
@@ -144,11 +181,24 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Extra purchase costs</label>
-              <input name="extra_purchase_costs" type="number" step="0.01" min="0" defaultValue={car.extra_purchase_costs?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="extra_purchase_costs"
+                type="number"
+                step="0.01"
+                min="0"
+                value={car.extra_purchase_costs?.toString() ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">Extra purchase costs notes</label>
-              <textarea name="extra_purchase_costs_notes" defaultValue={car.extra_purchase_costs_notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextarea
+                obfuscate={obfuscate}
+                name="extra_purchase_costs_notes"
+                value={car.extra_purchase_costs_notes ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "אופן תשלום ברכישה" : "Purchase payment method"}</label>
@@ -164,30 +214,62 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
               <label className="block text-xs text-slate-400">{isHebrew ? "כרטיס אשראי לרכישה" : "Purchase credit card"}</label>
               <select name="purchase_credit_card_id" defaultValue={car.purchase_credit_card_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
-                {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
+                {creditCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {maskSensitiveText(obfuscate, c.card_name)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "חשבון בנק לרכישה" : "Purchase bank account"}</label>
               <select name="purchase_bank_account_id" defaultValue={car.purchase_bank_account_id ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
-                {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                {bankAccounts.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {maskSensitiveText(obfuscate, b.account_name)}
+                  </option>
+                ))}
               </select>
             </div>
-            <textarea name="purchase_notes" defaultValue={car.purchase_notes ?? ""} placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <SensitiveTextarea
+              obfuscate={obfuscate}
+              name="purchase_notes"
+              value={car.purchase_notes ?? ""}
+              placeholder="Purchase notes"
+              className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sale date</label>
               <HouseholdDateField name="sold_at" defaultIsoYmd={utcDateToHtmlDateInputValue(car.sold_at)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sale amount</label>
-              <input name="sold_amount" type="number" step="0.01" defaultValue={car.sold_amount?.toString() ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="sold_amount"
+                type="number"
+                step="0.01"
+                value={car.sold_amount?.toString() ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">Sold to</label>
-              <input name="sold_to" defaultValue={car.sold_to ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="sold_to"
+                value={car.sold_to ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
-            <textarea name="sale_notes" defaultValue={car.sale_notes ?? ""} placeholder="Sale notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+            <SensitiveTextarea
+              obfuscate={obfuscate}
+              name="sale_notes"
+              value={car.sale_notes ?? ""}
+              placeholder="Sale notes"
+              className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
             <button type="submit" className="w-fit rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
               {isHebrew ? "שמירת רכב" : "Save car"}
             </button>
@@ -222,13 +304,20 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                 <tbody>
                   {insurancePolicies.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-100">{p.provider_name}</td>
-                      <td className="px-3 py-2 text-slate-300">{p.policy_name}</td>
+                      <td className="px-3 py-2 text-slate-100">
+                        {maskSensitiveText(obfuscate, p.provider_name)}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, p.policy_name)}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">
                         {p.policy_start_date ? formatHouseholdDate(p.policy_start_date, dateDisplayFormat) : "—"}
                       </td>
                       <td className="px-3 py-2 text-slate-300 tabular-nums">
-                        {formatInsurancePremium(p.premium_paid, p.premium_currency)}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          formatInsurancePremium(p.premium_paid, p.premium_currency),
+                        )}
                       </td>
                       <td className="px-3 py-2 text-slate-300">
                         {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
@@ -276,8 +365,8 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="odometer_km" type="number" placeholder="Odometer km" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}</select>
-            <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}</select>
+            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{maskSensitiveText(obfuscate, c.card_name)}</option>)}</select>
+            <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{maskSensitiveText(obfuscate, b.account_name)}</option>)}</select>
             <input name="notes" placeholder="Service notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <p className="md:col-span-3 text-xs text-slate-500">
               {isHebrew
@@ -322,8 +411,14 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                         hasAttachment: Boolean(s.receipt_storage_key),
                         paymentLabel: s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—",
                       }}
-                      creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
-                      bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+                      creditCards={creditCards.map((c) => ({
+                        id: c.id,
+                        label: maskSensitiveText(obfuscate, c.card_name),
+                      }))}
+                      bankAccounts={bankAccounts.map((b) => ({
+                        id: b.id,
+                        label: maskSensitiveText(obfuscate, b.account_name),
+                      }))}
                     />
                   ))}
                 </tbody>
@@ -343,8 +438,14 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <CarLicenseCreateForm
               carId={car.id}
-              creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
-              bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+              creditCards={creditCards.map((c) => ({
+                id: c.id,
+                label: maskSensitiveText(obfuscate, c.card_name),
+              }))}
+              bankAccounts={bankAccounts.map((b) => ({
+                id: b.id,
+                label: maskSensitiveText(obfuscate, b.account_name),
+              }))}
             />
           </div>
           {licenses.length > 0 && (
@@ -377,8 +478,14 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                         hasReceipt: Boolean(l.receipt_storage_key),
                         paymentLabel: l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—",
                       }}
-                      creditCards={creditCards.map((c) => ({ id: c.id, label: c.card_name }))}
-                      bankAccounts={bankAccounts.map((b) => ({ id: b.id, label: b.account_name }))}
+                      creditCards={creditCards.map((c) => ({
+                        id: c.id,
+                        label: maskSensitiveText(obfuscate, c.card_name),
+                      }))}
+                      bankAccounts={bankAccounts.map((b) => ({
+                        id: b.id,
+                        label: maskSensitiveText(obfuscate, b.account_name),
+                      }))}
                     />
                   ))}
                 </tbody>

@@ -1,5 +1,12 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -22,6 +29,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -42,6 +50,8 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
   if (!account) redirect("/dashboard/bank-accounts?error=Not+found");
 
   const linkedMemberIds = account.bank_account_members.map((m) => m.family_member_id);
+  const inputClass =
+    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -77,12 +87,13 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="account_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Account name
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="account_name"
                 name="account_name"
                 required
-                defaultValue={account.account_name}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.account_name}
+                className={inputClass}
               />
             </div>
 
@@ -90,12 +101,13 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="bank_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Bank name
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="bank_name"
                 name="bank_name"
                 required
-                defaultValue={account.bank_name}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.bank_name}
+                className={inputClass}
               />
             </div>
 
@@ -103,11 +115,12 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="branch_number" className="mb-1 block text-xs font-medium text-slate-400">
                 Branch number
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="branch_number"
                 name="branch_number"
-                defaultValue={account.branch_number ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.branch_number ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>
@@ -116,11 +129,12 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="branch_name" className="mb-1 block text-xs font-medium text-slate-400">
                 Branch name
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="branch_name"
                 name="branch_name"
-                defaultValue={account.branch_name ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.branch_name ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>
@@ -129,24 +143,36 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="sort_code" className="mb-1 block text-xs font-medium text-slate-400">
                 Sort code (12-34-56)
               </label>
-              <SortCodeInput
-                id="sort_code"
-                name="sort_code"
-                defaultValue={account.sort_code}
-                placeholder="Optional (e.g. 12-34-56)"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
+              {obfuscate && (account.sort_code ?? "").trim() !== "" ? (
+                <SensitiveTextInput
+                  obfuscate={obfuscate}
+                  id="sort_code"
+                  name="sort_code"
+                  value={account.sort_code}
+                  className={inputClass}
+                  placeholder="Optional (e.g. 12-34-56)"
+                />
+              ) : (
+                <SortCodeInput
+                  id="sort_code"
+                  name="sort_code"
+                  defaultValue={account.sort_code}
+                  placeholder="Optional (e.g. 12-34-56)"
+                  className={inputClass}
+                />
+              )}
             </div>
 
             <div>
               <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">
                 Account number
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="account_number"
                 name="account_number"
-                defaultValue={account.account_number ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.account_number ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>
@@ -159,7 +185,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
                 id="date_opened"
                 name="date_opened"
                 defaultIsoYmd={utcDateToHtmlDateInputValue(account.date_opened)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               />
             </div>
 
@@ -171,7 +197,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
                 id="currency"
                 name="currency"
                 defaultValue={account.currency}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               />
             </div>
 
@@ -183,7 +209,7 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
                 id="country"
                 name="country"
                 defaultValue={account.country}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               />
             </div>
 
@@ -200,11 +226,12 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
                 Website / URL
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="website_url"
                 name="website_url"
-                defaultValue={account.website_url ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.website_url ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>
@@ -213,12 +240,13 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 id="notes"
                 name="notes"
                 rows={3}
-                defaultValue={account.notes ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={account.notes ?? ""}
+                className={inputClass}
               />
             </div>
 
@@ -236,4 +264,3 @@ export default async function BankAccountDetailPage({ params, searchParams }: Pa
     </div>
   );
 }
-

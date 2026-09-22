@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { OBFUSCATED } from "@/lib/privacy-display";
 
 function formatCostPerLitrePreview(amountPaid: string, litres: string): string | null {
   const a = Number(amountPaid.replace(",", ".").trim());
@@ -35,6 +37,8 @@ type Props = {
 
 export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defaults, labels }: Props) {
   const L = { ...defaultFormLabels, ...labels };
+  const obfuscate = useObfuscateSensitive();
+  const maskStoredAmount = Boolean(obfuscate && fillupId && defaults.amount_paid.trim() !== "");
   const [amount, setAmount] = useState(defaults.amount_paid);
   const [litres, setLitres] = useState(defaults.litres);
 
@@ -49,20 +53,33 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
         <label className={labelClass} htmlFor="amount_paid">
           {L.amountPaid}
         </label>
-        <input
-          id="amount_paid"
-          name="amount_paid"
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min="0"
-          required
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className={inputClass}
-          autoComplete="transaction-amount"
-        />
+        {maskStoredAmount ? (
+          <>
+            <input type="hidden" name="amount_paid" value={defaults.amount_paid} />
+            <input
+              id="amount_paid"
+              type="text"
+              value={OBFUSCATED}
+              readOnly
+              className={inputClass}
+            />
+          </>
+        ) : (
+          <input
+            id="amount_paid"
+            name="amount_paid"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            required
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={inputClass}
+            autoComplete="transaction-amount"
+          />
+        )}
       </div>
       <div className="space-y-2">
         <label className={labelClass} htmlFor="litres">
@@ -85,7 +102,11 @@ export function PetrolFillupFormFields({ carId, fillupId, currency = "ILS", defa
       <div className="rounded-xl border border-slate-600/80 bg-slate-800/50 px-4 py-3 text-sm md:col-span-2">
         <span className="text-slate-400">{L.costPerLitrePreview}</span>
         <p className="mt-1 text-lg font-medium tabular-nums text-slate-100">
-          {costPreview != null ? `${costPreview}` : "—"}
+          {maskStoredAmount
+            ? OBFUSCATED
+            : costPreview != null
+              ? `${costPreview}`
+              : "—"}
         </p>
       </div>
       <div className="space-y-2 md:col-span-2">

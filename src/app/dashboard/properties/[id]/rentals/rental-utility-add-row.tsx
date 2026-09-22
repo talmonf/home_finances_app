@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { OBFUSCATED } from "@/lib/privacy-display";
 
 type PropertyUtilityDefault = {
   id: string;
@@ -53,11 +55,62 @@ function fieldsFromPropertyUtility(utility: PropertyUtilityDefault | undefined):
   };
 }
 
+function PrefillAwareInput({
+  obfuscate,
+  formId,
+  name,
+  value,
+  onChange,
+  className,
+  placeholder,
+  ariaLabel,
+  required,
+}: {
+  obfuscate: boolean;
+  formId: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  className: string;
+  placeholder: string;
+  ariaLabel: string;
+  required?: boolean;
+}) {
+  if (obfuscate && value.trim() !== "") {
+    return (
+      <>
+        <input type="hidden" form={formId} name={name} value={value} />
+        <input
+          form={formId}
+          value={OBFUSCATED}
+          readOnly
+          required={required}
+          aria-label={ariaLabel}
+          className={className}
+        />
+      </>
+    );
+  }
+  return (
+    <input
+      form={formId}
+      name={name}
+      required={required}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={className}
+    />
+  );
+}
+
 export function RentalUtilityAddRow({
   formId,
   utilityTypeLabels,
   propertyUtilities,
 }: RentalUtilityAddRowProps) {
+  const obfuscate = useObfuscateSensitive();
   const utilityDefaultsByType = useMemo(() => {
     const defaults = new Map<string, PropertyUtilityDefault>();
     for (const utility of propertyUtilities) {
@@ -98,47 +151,51 @@ export function RentalUtilityAddRow({
         </select>
       </td>
       <td className="px-3 py-2">
-        <input
-          form={formId}
+        <PrefillAwareInput
+          obfuscate={obfuscate}
+          formId={formId}
           name="utility_company"
           required
           value={fields.utilityCompany}
-          onChange={(event) => setFields((current) => ({ ...current, utilityCompany: event.target.value }))}
+          onChange={(utilityCompany) => setFields((current) => ({ ...current, utilityCompany }))}
           placeholder="Company"
-          aria-label="New utility company"
+          ariaLabel="New utility company"
           className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          form={formId}
+        <PrefillAwareInput
+          obfuscate={obfuscate}
+          formId={formId}
           name="client_number"
           value={fields.clientNumber}
-          onChange={(event) => setFields((current) => ({ ...current, clientNumber: event.target.value }))}
+          onChange={(clientNumber) => setFields((current) => ({ ...current, clientNumber }))}
           placeholder="Optional"
-          aria-label="New client number"
+          ariaLabel="New client number"
           className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          form={formId}
+        <PrefillAwareInput
+          obfuscate={obfuscate}
+          formId={formId}
           name="account_number"
           value={fields.accountNumber}
-          onChange={(event) => setFields((current) => ({ ...current, accountNumber: event.target.value }))}
+          onChange={(accountNumber) => setFields((current) => ({ ...current, accountNumber }))}
           placeholder="Optional"
-          aria-label="New account number"
+          ariaLabel="New account number"
           className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          form={formId}
+        <PrefillAwareInput
+          obfuscate={obfuscate}
+          formId={formId}
           name="meter_number"
           value={fields.meterNumber}
-          onChange={(event) => setFields((current) => ({ ...current, meterNumber: event.target.value }))}
+          onChange={(meterNumber) => setFields((current) => ({ ...current, meterNumber }))}
           placeholder="Optional"
-          aria-label="New meter number"
+          ariaLabel="New meter number"
           className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>
@@ -154,13 +211,14 @@ export function RentalUtilityAddRow({
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          form={formId}
+        <PrefillAwareInput
+          obfuscate={obfuscate}
+          formId={formId}
           name="notes"
           value={fields.notes}
-          onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))}
+          onChange={(notes) => setFields((current) => ({ ...current, notes }))}
           placeholder="Optional"
-          aria-label="New utility notes"
+          ariaLabel="New utility notes"
           className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
         />
       </td>

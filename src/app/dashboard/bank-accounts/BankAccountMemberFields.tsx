@@ -1,3 +1,8 @@
+"use client";
+
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { maskSensitiveText } from "@/lib/privacy-display";
+
 type Member = { id: string; full_name: string };
 
 type Props = {
@@ -7,6 +12,7 @@ type Props = {
 };
 
 export default function BankAccountMemberFields({ familyMembers, selectedIds = [] }: Props) {
+  const obfuscate = useObfuscateSensitive();
   const selected = new Set(selectedIds);
 
   if (familyMembers.length === 0) {
@@ -37,7 +43,7 @@ export default function BankAccountMemberFields({ familyMembers, selectedIds = [
               defaultChecked={selected.has(fm.id)}
               className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500"
             />
-            {fm.full_name}
+            {maskSensitiveText(obfuscate, fm.full_name)}
           </label>
         ))}
       </div>

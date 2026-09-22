@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FileUploadField } from "@/components/file-upload-field";
 import { HouseholdDateField } from "@/components/household-date-field";
-import { useUiLanguage } from "@/components/household-preferences-context";
+import { useObfuscateSensitive, useUiLanguage } from "@/components/household-preferences-context";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 type Card = { id: string; label: string };
 type Account = { id: string; label: string };
@@ -23,6 +24,7 @@ export function CarLicenseCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const isHebrew = useUiLanguage() === "he";
+  const obfuscate = useObfuscateSensitive();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -109,7 +111,7 @@ export function CarLicenseCreateForm({
         <option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>
         {creditCards.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.label}
+            {maskSensitiveText(obfuscate, c.label)}
           </option>
         ))}
       </select>
@@ -117,7 +119,7 @@ export function CarLicenseCreateForm({
         <option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>
         {bankAccounts.map((b) => (
           <option key={b.id} value={b.id}>
-            {b.label}
+            {maskSensitiveText(obfuscate, b.label)}
           </option>
         ))}
       </select>

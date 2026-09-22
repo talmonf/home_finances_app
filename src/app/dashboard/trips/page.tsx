@@ -4,9 +4,12 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteFormActionButton } from "@/components/confirm-delete";
@@ -24,6 +27,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolved = searchParams ? await searchParams : undefined;
 
@@ -104,7 +108,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
               >
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -132,19 +136,40 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   <input type="hidden" name="id" value={trip.id} />
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">Name</label>
-                    <input name="name" defaultValue={trip.name} required className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <SensitiveTextInput
+                      obfuscate={obfuscate}
+                      name="name"
+                      value={trip.name}
+                      required
+                      className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">{isHebrew ? "סוג" : "Type"}</label>
-                    <input name="trip_type" defaultValue={trip.trip_type ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <SensitiveTextInput
+                      obfuscate={obfuscate}
+                      name="trip_type"
+                      value={trip.trip_type ?? ""}
+                      className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">City</label>
-                    <input name="city" defaultValue={trip.city ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <SensitiveTextInput
+                      obfuscate={obfuscate}
+                      name="city"
+                      value={trip.city ?? ""}
+                      className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">Country</label>
-                    <input name="country" defaultValue={trip.country ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <SensitiveTextInput
+                      obfuscate={obfuscate}
+                      name="country"
+                      value={trip.country ?? ""}
+                      className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-slate-400">Start</label>
@@ -169,14 +194,20 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     >
                       {members.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.full_name}
+                          {maskSensitiveText(obfuscate, m.full_name)}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs text-slate-400">Notes</label>
-                    <textarea name="notes" rows={2} defaultValue={trip.notes ?? ""} className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100" />
+                    <SensitiveTextarea
+                      obfuscate={obfuscate}
+                      name="notes"
+                      rows={2}
+                      value={trip.notes ?? ""}
+                      className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
+                    />
                   </div>
                   <div className="flex items-end gap-3">
                     <button type="submit" className="rounded bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500">{isHebrew ? "שמירה" : "Save"}</button>

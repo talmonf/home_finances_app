@@ -1,4 +1,5 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentObfuscateSensitive } from "@/lib/auth";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { AssistChat } from "./AssistChat";
@@ -13,6 +14,7 @@ export default async function ImportAssistPage({ params }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { documentId } = await params;
 
@@ -50,8 +52,10 @@ export default async function ImportAssistPage({ params }: PageProps) {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Assisted import</h1>
           <p className="mt-1 text-sm text-slate-400">
-            {doc.file_name}
-            {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
+            {maskSensitiveText(obfuscate, doc.file_name)}
+            {doc.bank_account
+              ? ` · ${maskSensitiveText(obfuscate, doc.bank_account.account_name)}`
+              : ""}
           </p>
           <p className="mt-2 text-sm text-slate-300">
             The system will process the {transactions.length} transaction(s) and ask you questions to fill categories,

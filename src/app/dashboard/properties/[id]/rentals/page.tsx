@@ -3,11 +3,13 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { RentalDetailPanel } from "./rental-detail-panel";
 import { RentalModalForm } from "./rental-modal-form";
 import { RentalsTableClient, type RentalTableRow } from "./rentals-table-client";
@@ -64,6 +66,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -136,18 +139,21 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
   const tableRows: RentalTableRow[] = rentalsSortedDesc.map((rental) => ({
     id: rental.id,
     rentalTypeLabel: formatRentalTypeLabel(rental.rental_type),
-    tenantNames:
-      rental.tenants
-        .map((t) => t.full_name)
-        .filter(Boolean)
-        .join(", ") || "—",
+    tenantNames: (() => {
+      const names =
+        rental.tenants
+          .map((t) => t.full_name)
+          .filter(Boolean)
+          .join(", ") || "";
+      return names ? maskSensitiveText(obfuscate, names) : "—";
+    })(),
     startDateLabel: rental.start_date
       ? formatHouseholdDate(rental.start_date, dateDisplayFormat)
       : "—",
     endDateLabel: rental.end_date
       ? formatHouseholdDate(rental.end_date, dateDisplayFormat)
       : "—",
-    paymentLabel: formatPaymentLabel(rental),
+    paymentLabel: maskSensitiveAmount(obfuscate, formatPaymentLabel(rental)),
     paymentMethodLabel: rental.payment_method
       ? (RENTAL_PAYMENT_METHODS[rental.payment_method] ?? rental.payment_method)
       : "—",
@@ -164,7 +170,9 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
           >
             ← Back to property details
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">{property.name} rentals</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            {maskSensitiveText(obfuscate, property.name)} rentals
+          </h1>
           <p className="text-sm text-slate-400">
             Select a rental in the table to view and edit its details. Newest rentals appear first.
           </p>
@@ -197,18 +205,33 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             rental={selectedRental}
             propertyId={property.id}
             propertyUtilities={property.utilities}
-            bankAccounts={bankAccounts}
-            creditCards={creditCards}
+            bankAccounts={bankAccounts.map((a) => ({
+              id: a.id,
+              account_name: maskSensitiveText(obfuscate, a.account_name),
+            }))}
+            creditCards={creditCards.map((c) => ({
+              id: c.id,
+              card_name: maskSensitiveText(obfuscate, c.card_name),
+              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+            }))}
             transactions={transactions}
             dateDisplayFormat={dateDisplayFormat}
+            obfuscate={obfuscate}
           />
         ) : null}
 
         {modalMode === "new" ? (
           <RentalModalForm
             propertyId={property.id}
-            bankAccounts={bankAccounts}
-            creditCards={creditCards}
+            bankAccounts={bankAccounts.map((a) => ({
+              id: a.id,
+              account_name: maskSensitiveText(obfuscate, a.account_name),
+            }))}
+            creditCards={creditCards.map((c) => ({
+              id: c.id,
+              card_name: maskSensitiveText(obfuscate, c.card_name),
+              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+            }))}
             closeHref={modalCloseHref}
             redirectOnError={modalRedirectOnError}
           />

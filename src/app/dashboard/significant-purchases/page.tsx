@@ -4,9 +4,11 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSignificantPurchase, toggleSignificantPurchaseActive } from "./actions";
@@ -71,6 +73,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const today = startOfToday();
 
@@ -220,7 +223,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 <option value="">— Household —</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -239,7 +242,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 <option value="">— None —</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {buildCreditCardLabel(c)}
+                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
                   </option>
                 ))}
               </select>
@@ -290,7 +293,9 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 <tbody>
                   {purchases.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{p.item_name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, p.item_name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(p.purchase_date, dateDisplayFormat)}
                       </td>

@@ -1,6 +1,13 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createProperty } from "./actions";
@@ -25,6 +32,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -114,12 +122,17 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
                 <tbody>
                   {properties.map((p) => (
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{p.name}</td>
+                      <td className="px-4 py-3 text-slate-100">{maskSensitiveText(obfuscate, p.name)}</td>
                       <td className="px-4 py-3 text-slate-400">{p.property_type ?? "—"}</td>
-                      <td className="max-w-[200px] truncate px-4 py-3 text-slate-400" title={p.address ?? ""}>
-                        {p.address ?? "—"}
+                      <td
+                        className="max-w-[200px] truncate px-4 py-3 text-slate-400"
+                        title={obfuscate ? "" : (p.address ?? "")}
+                      >
+                        {maskSensitiveText(obfuscate, p.address) || "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{p.landlord_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, p.landlord_name) || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={p.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {p.is_active ? "Active" : "Inactive"}

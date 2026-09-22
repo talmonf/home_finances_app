@@ -313,7 +313,7 @@ export async function getCurrentUiLanguage(): Promise<UiLanguage> {
   return normalizeUiLanguage(row?.ui_language);
 }
 
-/** When true, Private clinic views mask client names and monetary amounts (session cookie; demo / screen sharing). */
+/** When true, views mask personal and financial details (session cookie; demo / screen sharing). */
 export async function getCurrentObfuscateSensitive(): Promise<boolean> {
   const session = await getAuthSession();
   if (!session?.user?.householdId || session.user.isSuperAdmin) {

@@ -3,9 +3,12 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
   getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
@@ -45,6 +48,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
@@ -112,7 +116,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               {isHebrew ? "עריכת פוליסת ביטוח" : "Edit insurance policy"}
             </h1>
             <p className="text-sm text-slate-400">
-              {policy.provider_name} — {policy.policy_name}
+              {maskSensitiveText(obfuscate, policy.provider_name)} — {maskSensitiveText(obfuscate, policy.policy_name)}
             </p>
             <p className="text-xs text-slate-500">
               {isHebrew ? "תפוגה" : "Expires"}:{" "}
@@ -205,8 +209,10 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
                   <option value="">{isHebrew ? "ללא" : "None"}</option>
                   {cars.map((car) => (
                     <option key={car.id} value={car.id}>
-                      {car.maker} {car.model}
-                      {car.plate_number ? ` (${car.plate_number})` : ""}
+                      {maskSensitiveText(
+                        obfuscate,
+                        `${car.maker} ${car.model}${car.plate_number ? ` (${car.plate_number})` : ""}`,
+                      )}
                     </option>
                   ))}
                 </select>
@@ -224,7 +230,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -233,10 +239,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "ספק" : "Provider"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="provider_name"
                 required
-                defaultValue={policy.provider_name}
+                value={policy.provider_name}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -244,10 +251,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "חברת ביטוח" : "Insurance company"}
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="insurance_company"
                 maxLength={200}
-                defaultValue={policy.insurance_company ?? ""}
+                value={policy.insurance_company ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -255,10 +263,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "שם הפוליסה" : "Policy name"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="policy_name"
                 required
-                defaultValue={policy.policy_name}
+                value={policy.policy_name}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -266,9 +275,10 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "מספר פוליסה" : "Policy number"}
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="policy_number"
-                defaultValue={policy.policy_number ?? ""}
+                value={policy.policy_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -276,10 +286,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "טלפון" : "Contact phone"}
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="contact_phone"
                 type="tel"
-                defaultValue={policy.contact_phone ?? ""}
+                value={policy.contact_phone ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -287,10 +298,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "אימייל" : "Contact email"}
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="contact_email"
                 type="email"
-                defaultValue={policy.contact_email ?? ""}
+                value={policy.contact_email ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -298,10 +310,11 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "אתר" : "Website"}
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="website_url"
                 type="url"
-                defaultValue={policy.website_url ?? ""}
+                value={policy.website_url ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -309,11 +322,12 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "הערות" : "Notes"}
               </label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 name="notes"
                 rows={4}
                 maxLength={16000}
-                defaultValue={policy.notes ?? ""}
+                value={policy.notes ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -343,13 +357,14 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
               <label className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "פרמיה" : "Premium"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="premium_paid"
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                defaultValue={policy.premium_paid.toString()}
+                value={policy.premium_paid.toString()}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>

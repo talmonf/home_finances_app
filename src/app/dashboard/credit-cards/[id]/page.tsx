@@ -1,6 +1,14 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateCreditCard } from "../actions";
@@ -27,6 +35,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -82,12 +91,13 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="card_name" className="mb-1 block text-xs font-medium text-slate-400">
               Card
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="card_name"
               name="card_name"
               required
-              defaultValue={card.card_name}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.card_name}
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -99,7 +109,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               name="scheme"
               required
               defaultValue={card.scheme}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             >
               <option value="visa">Visa</option>
               <option value="mastercard">Mastercard</option>
@@ -113,49 +123,53 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="issuer_name" className="mb-1 block text-xs font-medium text-slate-400">
               Issuer
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="issuer_name"
               name="issuer_name"
               required
-              defaultValue={card.issuer_name}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.issuer_name}
+              className={dateInputClass}
             />
           </div>
           <div>
             <label htmlFor="co_brand" className="mb-1 block text-xs font-medium text-slate-400">
               Co-brand (optional)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="co_brand"
               name="co_brand"
-              defaultValue={card.co_brand ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.co_brand ?? ""}
+              className={dateInputClass}
             />
           </div>
           <div>
             <label htmlFor="product_name" className="mb-1 block text-xs font-medium text-slate-400">
               Product name (optional)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="product_name"
               name="product_name"
-              defaultValue={card.product_name ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.product_name ?? ""}
+              className={dateInputClass}
             />
           </div>
           <div>
             <label htmlFor="card_last_four" className="mb-1 block text-xs font-medium text-slate-400">
               Last 4 digits
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="card_last_four"
               name="card_last_four"
               required
               inputMode="numeric"
               pattern="\d{4}"
               maxLength={4}
-              defaultValue={card.card_last_four}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.card_last_four}
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -165,11 +179,12 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             >
               Digital Wallet identifier (optional)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="digital_wallet_identifier"
               name="digital_wallet_identifier"
-              defaultValue={card.digital_wallet_identifier ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.digital_wallet_identifier ?? ""}
+              className={dateInputClass}
               placeholder="e.g. GooglePay 9952"
             />
           </div>
@@ -185,7 +200,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               max="31"
               step="1"
               defaultValue={card.charge_day_of_month ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
               placeholder="e.g. 2"
             />
           </div>
@@ -193,14 +208,15 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="monthly_cost" className="mb-1 block text-xs font-medium text-slate-400">
               Monthly cost
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="monthly_cost"
               name="monthly_cost"
               type="number"
               min="0"
               step="0.01"
-              defaultValue={card.monthly_cost == null ? "" : Number(card.monthly_cost)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.monthly_cost == null ? "" : Number(card.monthly_cost)}
+              className={dateInputClass}
               placeholder="Leave blank if unknown"
             />
           </div>
@@ -212,7 +228,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               id="currency"
               name="currency"
               defaultValue={card.currency}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -236,7 +252,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               required
               placeholder="MM/YY"
               defaultValue={formatExpiryMonthYear(card.expiry_date)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             />
           </div>
           <div>
@@ -259,11 +275,11 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               name="family_member_id"
               required
               defaultValue={card.family_member_id ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             >
               {familyMembers.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>
@@ -276,12 +292,12 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               id="settlement_bank_account_id"
               name="settlement_bank_account_id"
               defaultValue={card.settlement_bank_account_id ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             >
               <option value="">None</option>
               {bankAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.account_name} ({a.bank_name})
+                  {maskSensitiveText(obfuscate, `${a.account_name} (${a.bank_name})`)}
                 </option>
               ))}
             </select>
@@ -295,7 +311,7 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
               id="status"
               name="status"
               defaultValue={card.cancelled_at ? "cancelled" : "active"}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={dateInputClass}
             >
               <option value="active">Active</option>
               <option value="cancelled">Cancelled</option>
@@ -316,11 +332,12 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
               Website / URL
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="website_url"
               name="website_url"
-              defaultValue={card.website_url ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.website_url ?? ""}
+              className={dateInputClass}
               placeholder="Optional"
             />
           </div>
@@ -328,12 +345,13 @@ export default async function EditCreditCardPage({ params, searchParams }: PageP
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
               Notes
             </label>
-            <textarea
+            <SensitiveTextarea
+              obfuscate={obfuscate}
               id="notes"
               name="notes"
               rows={3}
-              defaultValue={card.notes ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={card.notes ?? ""}
+              className={dateInputClass}
               placeholder="Required when status is Cancelled"
             />
           </div>

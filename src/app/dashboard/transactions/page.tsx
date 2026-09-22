@@ -3,11 +3,13 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -49,6 +51,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   }
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : {};
   const accountId = resolved.accountId || "";
   const categoryId = resolved.categoryId || "";
@@ -189,7 +192,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.account_name}
+                    {maskSensitiveText(obfuscate, a.account_name)}
                   </option>
                 ))}
               </select>
@@ -219,7 +222,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {payees.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {maskSensitiveText(obfuscate, p.name)}
                   </option>
                 ))}
               </select>
@@ -234,7 +237,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -249,7 +252,10 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {rentals.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.property.name} · {formatRentalTypeLabel(r.rental_type)}
+                    {maskSensitiveText(
+                      obfuscate,
+                      `${r.property.name} · ${formatRentalTypeLabel(r.rental_type)}`,
+                    )}
                   </option>
                 ))}
               </select>
@@ -264,7 +270,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {trips.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {maskSensitiveText(obfuscate, t.name)}
                   </option>
                 ))}
               </select>
@@ -279,8 +285,10 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {cars.map((car) => (
                   <option key={car.id} value={car.id}>
-                    {car.maker} {car.model}
-                    {car.plate_number ? ` · ${car.plate_number}` : ""}
+                    {maskSensitiveText(
+                      obfuscate,
+                      `${car.maker} ${car.model}${car.plate_number ? ` · ${car.plate_number}` : ""}`,
+                    )}
                   </option>
                 ))}
               </select>
@@ -295,7 +303,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {jobs.map((j) => (
                   <option key={j.id} value={j.id}>
-                    {formatJobDisplayLabel(j)}
+                    {maskSensitiveText(obfuscate, formatJobDisplayLabel(j))}
                   </option>
                 ))}
               </select>
@@ -310,7 +318,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {subscriptions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {maskSensitiveText(obfuscate, s.name)}
                   </option>
                 ))}
               </select>
@@ -379,16 +387,23 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((tx) => (
+                  {transactions.map((tx) => {
+                    const carLabel = tx.car
+                      ? `${tx.car.maker} ${tx.car.model}${tx.car.plate_number ? ` · ${tx.car.plate_number}` : ""}`
+                      : "";
+                    const rentalLabel = tx.rental
+                      ? `${tx.rental.property.name} · ${formatRentalTypeLabel(tx.rental.rental_type)}`
+                      : "";
+                    return (
                     <tr key={tx.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="whitespace-nowrap px-3 py-2 text-slate-200">
                         {formatHouseholdDate(tx.transaction_date, dateDisplayFormat)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.bank_account?.account_name ?? "—"}
+                        {maskSensitiveText(obfuscate, tx.bank_account?.account_name) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-200">
-                        {formatMoney(tx.amount)}
+                        {maskSensitiveAmount(obfuscate, formatMoney(tx.amount))}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-400">
                         {tx.transaction_direction}
@@ -397,19 +412,19 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                         {tx.category?.name ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.payee?.name ?? "—"}
+                        {maskSensitiveText(obfuscate, tx.payee?.name) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.family_member?.full_name ?? "—"}
+                        {maskSensitiveText(obfuscate, tx.family_member?.full_name) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.rental ? `${tx.rental.property.name} · ${formatRentalTypeLabel(tx.rental.rental_type)}` : "—"}
+                        {maskSensitiveText(obfuscate, rentalLabel) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.trip?.name ?? "—"}
+                        {maskSensitiveText(obfuscate, tx.trip?.name) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                        {tx.car ? `${tx.car.maker} ${tx.car.model}${tx.car.plate_number ? ` · ${tx.car.plate_number}` : ""}` : "—"}
+                        {maskSensitiveText(obfuscate, carLabel) || "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-300">
                         {tx.job ? (
@@ -417,29 +432,30 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
                             href={`/dashboard/jobs/${tx.job.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {formatJobDisplayLabel(tx.job)}
+                            {maskSensitiveText(obfuscate, formatJobDisplayLabel(tx.job))}
                           </Link>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={tx.subscription?.name ?? undefined}>
+                      <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={obfuscate ? undefined : tx.subscription?.name ?? undefined}>
                         {tx.subscription ? (
                           <Link
                             href={`/dashboard/subscriptions/${tx.subscription.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {tx.subscription.name}
+                            {maskSensitiveText(obfuscate, tx.subscription.name)}
                           </Link>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="max-w-[240px] truncate px-3 py-2 text-slate-400" title={tx.description ?? ""}>
-                        {tx.description ?? "—"}
+                      <td className="max-w-[240px] truncate px-3 py-2 text-slate-400" title={obfuscate ? undefined : tx.description ?? ""}>
+                        {maskSensitiveText(obfuscate, tx.description) || "—"}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

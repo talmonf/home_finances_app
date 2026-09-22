@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 const DEFAULT_BASE = "/dashboard/petrol-fillups";
 
@@ -20,6 +22,7 @@ export function PetrolCarPicker({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const obfuscate = useObfuscateSensitive();
 
   return (
     <div className="space-y-2">
@@ -50,7 +53,7 @@ export function PetrolCarPicker({
         <option value="">{selectPlaceholder}</option>
         {options.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.label}
+            {maskSensitiveText(obfuscate, c.label)}
           </option>
         ))}
       </select>

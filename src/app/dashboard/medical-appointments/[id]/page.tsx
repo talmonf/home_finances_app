@@ -5,6 +5,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import {
@@ -13,6 +14,8 @@ import {
   type MedicalAppointmentPaymentMethod,
   type MedicalReimbursementSource,
 } from "@/generated/prisma/enums";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateMedicalAppointment } from "../actions";
@@ -51,6 +54,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -127,7 +131,8 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "עריכת תור" : "Edit appointment"}</h1>
           <p className="text-sm text-slate-400">
-            {appointment.provider_name} · {formatHouseholdDate(appointment.appointment_date, dateDisplayFormat)}
+            {maskSensitiveText(obfuscate, appointment.provider_name)} ·{" "}
+            {formatHouseholdDate(appointment.appointment_date, dateDisplayFormat)}
           </p>
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
@@ -162,11 +167,12 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
                     Provider / clinic
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="provider_name"
                     name="provider_name"
                     required
-                    defaultValue={appointment.provider_name}
+                    value={appointment.provider_name}
                     className={inputClass}
                   />
                 </div>
@@ -183,7 +189,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="">—</option>
                     {familyMembers.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name}
+                        {maskSensitiveText(obfuscate, m.full_name)}
                       </option>
                     ))}
                   </select>
@@ -192,10 +198,11 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="visit_description" className="mb-1 block text-xs font-medium text-slate-400">
                     Visit type / specialty (optional)
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="visit_description"
                     name="visit_description"
-                    defaultValue={appointment.visit_description ?? ""}
+                    value={appointment.visit_description ?? ""}
                     className={inputClass}
                   />
                 </div>
@@ -203,11 +210,12 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="visit_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Visit notes (optional)
                   </label>
-                  <textarea
+                  <SensitiveTextarea
+                    obfuscate={obfuscate}
                     id="visit_notes"
                     name="visit_notes"
                     rows={3}
-                    defaultValue={appointment.notes ?? ""}
+                    value={appointment.notes ?? ""}
                     className={inputClass}
                     placeholder="Anything to remember about this visit"
                   />
@@ -222,13 +230,14 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="amount_out_of_pocket" className="mb-1 block text-xs font-medium text-slate-400">
                     Amount out of pocket (optional)
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="amount_out_of_pocket"
                     name="amount_out_of_pocket"
                     type="number"
                     min={0}
                     step="0.01"
-                    defaultValue={amountOop}
+                    value={amountOop}
                     className={inputClass}
                   />
                 </div>
@@ -269,7 +278,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="">—</option>
                     {creditCards.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.card_name} · ****{c.card_last_four}
+                        {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
                         {c.cancelled_at ? " (cancelled)" : ""}
                       </option>
                     ))}
@@ -288,7 +297,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="">—</option>
                     {bankAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.account_name} · {a.bank_name}
+                        {maskSensitiveText(obfuscate, `${a.account_name} · ${a.bank_name}`)}
                         {!a.is_active ? " (inactive)" : ""}
                       </option>
                     ))}
@@ -310,7 +319,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="">—</option>
                     {digitalMethods.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.name}
+                        {maskSensitiveText(obfuscate, d.name)}
                         {!d.is_active ? " (inactive)" : ""}
                       </option>
                     ))}
@@ -340,10 +349,11 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="kupat_holim_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes (reference #, status, etc.)
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="kupat_holim_notes"
                     name="kupat_holim_notes"
-                    defaultValue={appointment.kupat_holim_notes ?? ""}
+                    value={appointment.kupat_holim_notes ?? ""}
                     className={inputClass}
                   />
                 </div>
@@ -373,10 +383,11 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   <label htmlFor="private_insurance_notes" className="mb-1 block text-xs font-medium text-slate-400">
                     Notes
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="private_insurance_notes"
                     name="private_insurance_notes"
-                    defaultValue={appointment.private_insurance_notes ?? ""}
+                    value={appointment.private_insurance_notes ?? ""}
                     className={inputClass}
                   />
                 </div>
@@ -396,13 +407,14 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                   >
                     Amount received (optional)
                   </label>
-                  <input
+                  <SensitiveTextInput
+                    obfuscate={obfuscate}
                     id="reimbursement_amount_received"
                     name="reimbursement_amount_received"
                     type="number"
                     min={0}
                     step="0.01"
-                    defaultValue={reimbursementAmount}
+                    value={reimbursementAmount}
                     className={inputClass}
                   />
                 </div>

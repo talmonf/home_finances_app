@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import {
   FAMILY_SPECIAL_DATE_EVENT_TYPE_VALUES,
   getFamilySpecialDateEventTypeLabel,
@@ -26,6 +29,7 @@ export function SpecialDatePersonTypeFields({
   defaultEventType,
   defaultEventTypeOther = "",
 }: Props) {
+  const obfuscate = useObfuscateSensitive();
   const [familyMemberId, setFamilyMemberId] = useState(defaultFamilyMemberId ?? "");
   const [eventType, setEventType] = useState<FamilySpecialDateEventType | "">(defaultEventType ?? "");
 
@@ -47,7 +51,7 @@ export function SpecialDatePersonTypeFields({
           <option value="">{isHebrew ? "ללא קישור לבן משפחה" : "Not linked to a family member"}</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.full_name}
+              {maskSensitiveText(obfuscate, m.full_name)}
             </option>
           ))}
         </select>
@@ -58,12 +62,13 @@ export function SpecialDatePersonTypeFields({
           <label htmlFor="display_name" className="mb-1 block text-xs font-medium text-slate-400">
             {isHebrew ? "שם לתצוגה" : "Display name"}
           </label>
-          <input
+          <SensitiveTextInput
+            obfuscate={obfuscate}
             id="display_name"
             name="display_name"
             type="text"
             required
-            defaultValue={defaultDisplayName ?? ""}
+            value={defaultDisplayName ?? ""}
             placeholder={isHebrew ? "לדוגמה: סבא משה" : "e.g. Grandfather Moshe"}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
@@ -101,12 +106,13 @@ export function SpecialDatePersonTypeFields({
           <label htmlFor="event_type_other" className="mb-1 block text-xs font-medium text-slate-400">
             {isHebrew ? "תיאור סוג המועד" : "Event type description"}
           </label>
-          <input
+          <SensitiveTextInput
+            obfuscate={obfuscate}
             id="event_type_other"
             name="event_type_other"
             type="text"
             required
-            defaultValue={defaultEventTypeOther ?? ""}
+            value={defaultEventTypeOther ?? ""}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </div>

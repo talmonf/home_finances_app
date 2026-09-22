@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
@@ -10,10 +11,12 @@ import {
   formatCostPerLitre,
   petrolMetricsByFillupId,
 } from "@/lib/petrol-fillups-metrics";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { PetrolCarPicker } from "@/components/petrol-car-picker";
 import { PetrolFillupDateTankerFields } from "@/components/petrol-fillup-date-tanker-fields";
 import { PetrolFillupFormFields } from "@/components/petrol-fillup-form-fields";
+import { SensitiveTextarea } from "@/components/sensitive-fields";
 import { TherapyTransactionLinkSelect } from "@/components/therapy-transaction-link-select";
 import {
   createCarPetrolFillup,
@@ -65,6 +68,7 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : {};
   const requestedCarId = resolved.carId?.trim() || null;
   const requestedMode = resolved.mode?.trim() || null;
@@ -252,10 +256,12 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                             <td className="whitespace-nowrap px-3 py-2 text-slate-200">
                               {formatHouseholdDate(p.filled_at, dateDisplayFormat)}
                             </td>
-                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-300" title={p.tanked_up_by_family_member?.full_name ?? undefined}>
-                              {p.tanked_up_by_family_member?.full_name ?? "—"}
+                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-300" title={obfuscate ? undefined : p.tanked_up_by_family_member?.full_name ?? undefined}>
+                              {maskSensitiveText(obfuscate, p.tanked_up_by_family_member?.full_name) || "—"}
                             </td>
-                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">{formatMoney(p.amount_paid)}</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-200">
+                              {maskSensitiveAmount(obfuscate, formatMoney(p.amount_paid))}
+                            </td>
                             <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
                               {Number(p.litres.toString()).toLocaleString("en", {
                                 minimumFractionDigits: 3,
@@ -269,20 +275,22 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                               {m?.deltaKm != null ? m.deltaKm.toLocaleString("en") : "—"}
                             </td>
                             <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
-                              {formatCostPerLitre(m?.costPerLitre ?? null)}
+                              {maskSensitiveAmount(obfuscate, formatCostPerLitre(m?.costPerLitre ?? null))}
                             </td>
                             <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-200">
                               {m?.kmPerLitre != null ? m.kmPerLitre.toFixed(2) : "—"}
                             </td>
                             <td className="whitespace-nowrap px-3 py-2 text-slate-400" title={
                                 tx
-                                  ? `${formatHouseholdDate(tx.transaction_date, dateDisplayFormat)} ${tx.amount.toString()}`
+                                  ? obfuscate
+                                    ? formatHouseholdDate(tx.transaction_date, dateDisplayFormat)
+                                    : `${formatHouseholdDate(tx.transaction_date, dateDisplayFormat)} ${tx.amount.toString()}`
                                   : undefined
                               }>
                               {tx ? "✓" : "—"}
                             </td>
-                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={p.notes ?? undefined}>
-                              {p.notes || "—"}
+                            <td className="max-w-[10rem] truncate px-3 py-2 text-slate-400" title={obfuscate ? undefined : p.notes ?? undefined}>
+                              {maskSensitiveText(obfuscate, p.notes?.trim() ? p.notes : null) || "—"}
                             </td>
                             <td className="whitespace-nowrap px-3 py-2 text-right">
                               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -384,11 +392,12 @@ export default async function PetrolFillupsPage({ searchParams }: PageProps) {
                 <label className={labelClass} htmlFor="notes">
                   Notes (optional)
                 </label>
-                <textarea
+                <SensitiveTextarea
+                  obfuscate={obfuscate}
                   id="notes"
                   name="notes"
                   rows={2}
-                  defaultValue={editingFillup?.notes ?? ""}
+                  value={editingFillup?.notes ?? ""}
                   className={`${inputClass} min-h-[88px] resize-y py-3`}
                 />
               </div>

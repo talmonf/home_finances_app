@@ -3,9 +3,11 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
   getHouseholdShowEntityUrlPanels,
 } from "@/lib/auth";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { EntityUrlsPanel } from "@/components/entity-urls-panel";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
@@ -46,6 +48,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const showEntityUrlPanels = await getHouseholdShowEntityUrlPanels();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -179,7 +182,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                   : `Total balance in ${primaryCurrency} (active)`}
               </div>
               <div className="mt-1 text-lg font-semibold text-emerald-400 tabular-nums">
-                {formatMoney(totalBalance || null, primaryCurrency)}
+                {maskSensitiveAmount(obfuscate, formatMoney(totalBalance || null, primaryCurrency))}
               </div>
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
@@ -189,7 +192,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                   : `Total monthly contribution in ${primaryCurrency} (active)`}
               </div>
               <div className="mt-1 text-lg font-semibold text-sky-300 tabular-nums">
-                {formatMoney(totalMonthly || null, primaryCurrency)}
+                {maskSensitiveAmount(obfuscate, formatMoney(totalMonthly || null, primaryCurrency))}
               </div>
             </div>
           </div>
@@ -251,7 +254,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -354,7 +357,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                 <option value="">{isHebrew ? "ללא" : "None"}</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.account_name}
+                    {maskSensitiveText(obfuscate, b.account_name)}
                   </option>
                 ))}
               </select>
@@ -371,7 +374,7 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                 <option value="">{isHebrew ? "ללא" : "None"}</option>
                 {digitalMethods.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name}
+                    {maskSensitiveText(obfuscate, d.name)}
                   </option>
                 ))}
               </select>
@@ -447,20 +450,24 @@ export default async function SavingsPoliciesPage({ searchParams }: PageProps) {
                     <Fragment key={p.id}>
                       <tr className="border-b border-slate-700/80 hover:bg-slate-800/40">
                         <td className="px-4 py-3 text-slate-100">
-                          <div className="font-medium">{p.provider_name}</div>
-                          <div className="text-slate-400">{p.policy_name}</div>
+                          <div className="font-medium">{maskSensitiveText(obfuscate, p.provider_name)}</div>
+                          <div className="text-slate-400">{maskSensitiveText(obfuscate, p.policy_name)}</div>
                           {p.policy_number ? (
-                            <div className="text-xs text-slate-500">#{p.policy_number}</div>
+                            <div className="text-xs text-slate-500">#{maskSensitiveText(obfuscate, p.policy_number)}</div>
                           ) : null}
                         </td>
                         <td className="px-4 py-3 text-slate-300">
-                          {p.owner?.full_name ?? (isHebrew ? "משק הבית" : "Household")}
+                          {p.owner
+                            ? maskSensitiveText(obfuscate, p.owner.full_name)
+                            : isHebrew
+                              ? "משק הבית"
+                              : "Household"}
                         </td>
                         <td className="px-4 py-3 text-slate-300 tabular-nums">
-                          {formatMoney(p.current_balance, p.currency)}
+                          {maskSensitiveAmount(obfuscate, formatMoney(p.current_balance, p.currency))}
                         </td>
                         <td className="px-4 py-3 text-slate-300 tabular-nums">
-                          {formatMoney(p.monthly_contribution, p.currency)}
+                          {maskSensitiveAmount(obfuscate, formatMoney(p.monthly_contribution, p.currency))}
                         </td>
                         <td className="px-4 py-3 text-slate-400">
                           {p.maturity_date

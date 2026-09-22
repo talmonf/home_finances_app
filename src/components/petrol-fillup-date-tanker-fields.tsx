@@ -1,7 +1,8 @@
 "use client";
 
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
-import { useHouseholdDateFormat } from "@/components/household-preferences-context";
+import { useHouseholdDateFormat, useObfuscateSensitive } from "@/components/household-preferences-context";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { formatFilledAtForForm, parseFilledAtFromForm } from "@/lib/petrol-fillup-filled-at";
 import { useMemo, useState } from "react";
@@ -46,6 +47,7 @@ function asDate(d: Date | string | null): Date | null {
 export function PetrolFillupDateTankerFields({ members, defaultFilledAt, defaultTankerId, labels }: Props) {
   const L = { ...defaultDateTankerLabels, ...labels };
   const dateFormat = useHouseholdDateFormat();
+  const obfuscate = useObfuscateSensitive();
   const formatHint = HOUSEHOLD_DATE_FORMAT_LABELS[dateFormat];
 
   const initialIso = defaultFilledAt.trim();
@@ -150,7 +152,7 @@ export function PetrolFillupDateTankerFields({ members, defaultFilledAt, default
             <option value="">{L.select}</option>
             {eligibleTankers.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.full_name}
+                {maskSensitiveText(obfuscate, m.full_name)}
               </option>
             ))}
           </select>

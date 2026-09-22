@@ -1,8 +1,9 @@
-import { prisma, requireHouseholdAdmin, getAuthSession } from "@/lib/auth";
+import { prisma, requireHouseholdAdmin, getAuthSession, getCurrentObfuscateSensitive } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { UI_LANGUAGE_LABELS, UI_LANGUAGES } from "@/lib/ui-language";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { updateHouseholdDateDisplayFormat } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default async function HouseholdSettingsPage() {
   const session = await getAuthSession();
   const householdId = session?.user?.householdId;
   if (!householdId || session.user.isSuperAdmin) redirect("/");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const household = await prisma.households.findUnique({
     where: { id: householdId },
@@ -28,7 +30,7 @@ export default async function HouseholdSettingsPage() {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Household settings</h1>
           <p className="text-sm text-slate-400">
-            {household.name} — preferences for everyone in this household.
+            {maskSensitiveText(obfuscate, household.name)} — preferences for everyone in this household.
           </p>
         </header>
 

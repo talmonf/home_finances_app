@@ -4,10 +4,13 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import {
@@ -51,6 +54,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const { documentId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -155,8 +159,10 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">{isHebrew ? "סקירת תנועות" : "Review transactions"}</h1>
           <p className="mt-1 text-sm text-slate-400">
-            {doc.file_name}
-            {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
+            {maskSensitiveText(obfuscate, doc.file_name)}
+            {doc.bank_account
+              ? ` · ${maskSensitiveText(obfuscate, doc.bank_account.account_name)}`
+              : ""}
           </p>
           {(resolvedSearchParams?.confirmed || resolvedSearchParams?.error) && (
             <div
@@ -233,10 +239,13 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                     {formatHouseholdDate(tx.transaction_date, dateDisplayFormat)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 text-slate-300">
-                    {formatMoney(tx.amount)} {tx.transaction_direction}
+                    {maskSensitiveAmount(obfuscate, formatMoney(tx.amount))} {tx.transaction_direction}
                   </td>
-                  <td className="max-w-[180px] truncate px-2 py-2 text-slate-400" title={tx.description ?? ""}>
-                    {tx.description ?? "—"}
+                  <td
+                    className="max-w-[180px] truncate px-2 py-2 text-slate-400"
+                    title={obfuscate ? "" : (tx.description ?? "")}
+                  >
+                    {maskSensitiveText(obfuscate, tx.description) || "—"}
                   </td>
                   <td colSpan={6} className="px-2 py-2">
                     <form action={updateTransactionRow} className="flex flex-wrap items-center gap-2">
@@ -261,14 +270,15 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">—</option>
                         {payees.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name}
+                            {maskSensitiveText(obfuscate, p.name)}
                           </option>
                         ))}
                       </select>
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         type="text"
                         name="notes"
-                        defaultValue={tx.notes ?? ""}
+                        value={tx.notes ?? ""}
                         placeholder="Notes"
                         className="min-w-[80px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100"
                       />
@@ -280,7 +290,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">—</option>
                         {familyMembers.map((m) => (
                           <option key={m.id} value={m.id}>
-                            {m.full_name}
+                            {maskSensitiveText(obfuscate, m.full_name)}
                           </option>
                         ))}
                       </select>
@@ -292,7 +302,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">—</option>
                         {studies.map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.name}
+                            {maskSensitiveText(obfuscate, s.name)}
                           </option>
                         ))}
                       </select>
@@ -326,7 +336,7 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">— None —</option>
                         {significantPurchases.map((sp) => (
                           <option key={sp.id} value={sp.id}>
-                            {sp.item_name}
+                            {maskSensitiveText(obfuscate, sp.item_name)}
                             {sp.warranty_expiry_date
                             ? ` (${formatHouseholdDate(sp.warranty_expiry_date, dateDisplayFormat)})`
                             : ""}
@@ -341,7 +351,8 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">— Rental —</option>
                         {rentals.map((r) => (
                           <option key={r.id} value={r.id}>
-                            {r.property.name} · {formatRentalTypeLabel(r.rental_type)}
+                            {maskSensitiveText(obfuscate, r.property.name)} ·{" "}
+                            {formatRentalTypeLabel(r.rental_type)}
                           </option>
                         ))}
                       </select>
@@ -353,8 +364,10 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">— Trip —</option>
                         {trips.map((trip) => (
                           <option key={trip.id} value={trip.id}>
-                            {trip.name}
-                            {trip.city ? ` · ${trip.city}` : ""}
+                            {maskSensitiveText(
+                              obfuscate,
+                              trip.city ? `${trip.name} · ${trip.city}` : trip.name,
+                            )}
                           </option>
                         ))}
                       </select>
@@ -366,8 +379,10 @@ export default async function ImportReviewPage({ params, searchParams }: PagePro
                         <option value="">— Car —</option>
                         {cars.map((car) => (
                           <option key={car.id} value={car.id}>
-                            {car.maker} {car.model}
-                            {car.plate_number ? ` · ${car.plate_number}` : ""}
+                            {maskSensitiveText(
+                              obfuscate,
+                              `${car.maker} ${car.model}${car.plate_number ? ` · ${car.plate_number}` : ""}`,
+                            )}
                           </option>
                         ))}
                       </select>

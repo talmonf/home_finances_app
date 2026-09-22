@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { SensitiveTextarea, SensitiveTextInput } from "@/components/sensitive-fields";
 
 type LoanFormInitialValues = {
   loan_date?: string | null;
@@ -34,6 +36,8 @@ export function LoanForm({
   uiLanguage?: "en" | "he";
 }) {
   const isHebrew = uiLanguage === "he";
+  const obfuscate = useObfuscateSensitive();
+  const fieldClass = "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
   const initialStatus = initial?.is_active === false ? "historic" : "active";
   const [status, setStatus] = useState<"active" | "historic">(initialStatus);
   const [interestRateMode, setInterestRateMode] = useState<"none" | "fixed" | "indexed">(
@@ -64,13 +68,14 @@ export function LoanForm({
         <label htmlFor="institution_name" className="mb-1 block text-xs font-medium text-slate-400">
           Loan institution
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="institution_name"
           name="institution_name"
           type="text"
           required
-          defaultValue={initial?.institution_name ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.institution_name ?? ""}
+          className={fieldClass}
         />
       </div>
 
@@ -78,12 +83,13 @@ export function LoanForm({
         <label htmlFor="loan_number" className="mb-1 block text-xs font-medium text-slate-400">
           Loan #
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="loan_number"
           name="loan_number"
           type="text"
-          defaultValue={initial?.loan_number ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.loan_number ?? ""}
+          className={fieldClass}
         />
       </div>
 
@@ -109,14 +115,15 @@ export function LoanForm({
           <label htmlFor="interest_rate_percent" className="mb-1 block text-xs font-medium text-slate-400">
             Interest rate (%)
           </label>
-          <input
+          <SensitiveTextInput
+            obfuscate={obfuscate}
             id="interest_rate_percent"
             name="interest_rate_percent"
             type="text"
             inputMode="decimal"
             required
-            defaultValue={initial?.interest_rate_percent ?? ""}
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            value={initial?.interest_rate_percent ?? ""}
+            className={fieldClass}
             placeholder="4.50"
           />
         </div>
@@ -128,13 +135,14 @@ export function LoanForm({
             <label htmlFor="interest_rate_linked_index" className="mb-1 block text-xs font-medium text-slate-400">
               Linked index
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="interest_rate_linked_index"
               name="interest_rate_linked_index"
               type="text"
               required
-              defaultValue={initial?.interest_rate_linked_index ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.interest_rate_linked_index ?? ""}
+              className={fieldClass}
               placeholder="Prime"
             />
           </div>
@@ -145,14 +153,15 @@ export function LoanForm({
             >
               Delta (%)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="interest_rate_index_delta_percent"
               name="interest_rate_index_delta_percent"
               type="text"
               inputMode="decimal"
               required
-              defaultValue={initial?.interest_rate_index_delta_percent ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.interest_rate_index_delta_percent ?? ""}
+              className={fieldClass}
               placeholder="-1.00"
             />
           </div>
@@ -179,14 +188,15 @@ export function LoanForm({
         <label htmlFor="loan_amount" className="mb-1 block text-xs font-medium text-slate-400">
           Loan amount
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="loan_amount"
           name="loan_amount"
           type="text"
           inputMode="decimal"
           required
-          defaultValue={initial?.loan_amount ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.loan_amount ?? ""}
+          className={fieldClass}
           placeholder="0.00"
         />
       </div>
@@ -195,13 +205,14 @@ export function LoanForm({
         <label htmlFor="monthly_repayment_amount" className="mb-1 block text-xs font-medium text-slate-400">
           Monthly repayment amount
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="monthly_repayment_amount"
           name="monthly_repayment_amount"
           type="text"
           inputMode="decimal"
-          defaultValue={initial?.monthly_repayment_amount ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.monthly_repayment_amount ?? ""}
+          className={fieldClass}
           placeholder="0.00"
         />
       </div>
@@ -237,13 +248,14 @@ export function LoanForm({
         <label htmlFor="total_repayment_amount" className="mb-1 block text-xs font-medium text-slate-400">
           Total repayment amount
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="total_repayment_amount"
           name="total_repayment_amount"
           type="text"
           inputMode="decimal"
-          defaultValue={initial?.total_repayment_amount ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.total_repayment_amount ?? ""}
+          className={fieldClass}
           placeholder="0.00"
         />
       </div>
@@ -252,12 +264,13 @@ export function LoanForm({
         <label htmlFor="purpose" className="mb-1 block text-xs font-medium text-slate-400">
           Loan purpose
         </label>
-        <textarea
+        <SensitiveTextarea
+          obfuscate={obfuscate}
           id="purpose"
           name="purpose"
           rows={2}
-          defaultValue={initial?.purpose ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.purpose ?? ""}
+          className={fieldClass}
         />
       </div>
 
@@ -265,12 +278,13 @@ export function LoanForm({
         <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
           Notes
         </label>
-        <textarea
+        <SensitiveTextarea
+          obfuscate={obfuscate}
           id="notes"
           name="notes"
           rows={3}
-          defaultValue={initial?.notes ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.notes ?? ""}
+          className={fieldClass}
         />
       </div>
 

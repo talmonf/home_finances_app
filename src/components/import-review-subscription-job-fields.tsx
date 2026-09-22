@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 const selectClass =
   "min-w-[160px] rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100";
@@ -26,6 +28,7 @@ export function ImportReviewSubscriptionJobFields({
   subscriptionPlaceholder: string;
   jobPlaceholder: string;
 }) {
+  const obfuscate = useObfuscateSensitive();
   const [subscriptionId, setSubscriptionId] = useState(initialSubscriptionId);
   const [jobId, setJobId] = useState(initialJobId);
 
@@ -47,7 +50,7 @@ export function ImportReviewSubscriptionJobFields({
         <option value="">{subscriptionPlaceholder}</option>
         {subscriptions.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.name}
+            {maskSensitiveText(obfuscate, s.name)}
           </option>
         ))}
       </select>
@@ -60,7 +63,7 @@ export function ImportReviewSubscriptionJobFields({
         <option value="">{jobPlaceholder}</option>
         {jobs.map((j) => (
           <option key={j.id} value={j.id}>
-            {j.label}
+            {maskSensitiveText(obfuscate, j.label)}
           </option>
         ))}
       </select>

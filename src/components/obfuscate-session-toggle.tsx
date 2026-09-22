@@ -30,9 +30,7 @@ export function ObfuscateSessionToggle({
         className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-sky-500 disabled:opacity-50"
       />
       <span>
-        {isHebrew
-          ? "הסתרת שמות לקוחות וסכומים"
-          : "Hide client names & amounts"}
+        {isHebrew ? "הסתרת מידע אישי/פיננסי" : "Hide personal/financial info"}
       </span>
     </label>
   );

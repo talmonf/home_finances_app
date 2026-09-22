@@ -4,10 +4,13 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -35,6 +38,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
@@ -79,7 +83,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
           <Link href="/dashboard/jobs" className="inline-block text-sm text-slate-400 hover:text-slate-200">
             {isHebrew ? "חזרה למשרות →" : "← Back to jobs"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">{formatJobDisplayLabel(job)}</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            {maskSensitiveText(obfuscate, formatJobDisplayLabel(job))}
+          </h1>
           {resolved?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
               {decodeURIComponent(resolved.error.replace(/\+/g, " "))}
@@ -94,7 +100,11 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "בן משפחה" : "Family member"}</label>
               <select name="family_member_id" defaultValue={job.family_member_id} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {maskSensitiveText(obfuscate, m.full_name)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">
@@ -121,7 +131,13 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תפקיד" : "Job title"}</label>
-              <input name="job_title" defaultValue={job.job_title} required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="job_title"
+                value={job.job_title}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "תאריך התחלה" : "Start date"}</label>
@@ -148,19 +164,39 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
             </label>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "מעסיק (אופציונלי)" : "Employer (optional)"}</label>
-              <input name="employer_name" defaultValue={job.employer_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="employer_name"
+                value={job.employer_name ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "מספר מס מעסיק (אופציונלי)" : "Employer tax number (optional)"}</label>
-              <input name="employer_tax_number" defaultValue={job.employer_tax_number ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="employer_tax_number"
+                value={job.employer_tax_number ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-slate-400">{isHebrew ? "כתובת מעסיק (אופציונלי)" : "Employer address (optional)"}</label>
-              <input name="employer_address" defaultValue={job.employer_address ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                name="employer_address"
+                value={job.employer_address ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">{isHebrew ? "הערות" : "Notes"}</label>
-              <textarea name="notes" defaultValue={job.notes ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextarea
+                obfuscate={obfuscate}
+                name="notes"
+                value={job.notes ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="space-y-1 md:col-span-3">
               <label className="block text-xs text-slate-400">
@@ -174,8 +210,10 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                 <option value="">{isHebrew ? "ללא" : "None"}</option>
                 {bankAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.bank_name} — {a.account_name}
-                    {a.account_number ? ` (${a.account_number})` : ""}
+                    {maskSensitiveText(
+                      obfuscate,
+                      `${a.bank_name} — ${a.account_name}${a.account_number ? ` (${a.account_number})` : ""}`,
+                    )}
                   </option>
                 ))}
               </select>
@@ -192,7 +230,10 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                 <option value="">{isHebrew ? "ללא" : "None"}</option>
                 {creditCards.map((card) => (
                   <option key={card.id} value={card.id}>
-                    {card.card_name} — {card.issuer_name} — {card.card_last_four}
+                    {maskSensitiveText(
+                      obfuscate,
+                      `${card.card_name} — ${card.issuer_name} — ${card.card_last_four}`,
+                    )}
                   </option>
                 ))}
               </select>
@@ -224,12 +265,24 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                 <tbody>
                   {benefits.map((b) => (
                     <tr key={b.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-100">{b.benefit_type}</td>
-                      <td className="px-3 py-2 text-slate-300">{b.transfer_destination ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{b.provider_name ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{b.policy_number ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{b.terms ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{b.notes ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-100">
+                        {maskSensitiveText(obfuscate, b.benefit_type)}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, b.transfer_destination) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, b.provider_name) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, b.policy_number) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, b.terms) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, b.notes) || "—"}
+                      </td>
                       <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobBenefit.bind(null, b.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">{isHebrew ? "מחיקה" : "Delete"}</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
@@ -281,10 +334,16 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                           ? ` (${formatHouseholdDate(p.pay_period_start, dateDisplayFormat)} - ${p.pay_period_end ? formatHouseholdDate(p.pay_period_end, dateDisplayFormat) : "?"})`
                           : ""}
                       </td>
-                      <td className="px-3 py-2 text-slate-300">{p.gross_amount?.toString() ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{p.net_amount?.toString() ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveAmount(obfuscate, p.gross_amount?.toString() ?? "—")}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveAmount(obfuscate, p.net_amount?.toString() ?? "—")}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">{p.currency}</td>
-                      <td className="px-3 py-2 text-slate-300">{p.notes ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, p.notes) || "—"}
+                      </td>
                       <td className="px-3 py-2"><ConfirmDeleteForm action={deleteJobPayrollEntry.bind(null, p.id, job.id)}><button type="submit" className="text-xs text-rose-400 hover:text-rose-300">{isHebrew ? "מחיקה" : "Delete"}</button></ConfirmDeleteForm></td>
                     </tr>
                   ))}
@@ -306,7 +365,9 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                 <tbody>
                   {documents.map((d) => (
                     <tr key={d.id} className="border-b border-slate-700/80">
-                      <td className="px-3 py-2 text-slate-100">{d.file_name}</td>
+                      <td className="px-3 py-2 text-slate-100">
+                        {maskSensitiveText(obfuscate, d.file_name)}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">
                         {formatHouseholdDateUtcWithTime(d.uploaded_at, dateDisplayFormat)}
                       </td>

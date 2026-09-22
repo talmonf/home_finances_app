@@ -3,6 +3,9 @@
 import { DonationKind } from "@/generated/prisma/enums";
 import { useState } from "react";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import type { UiLanguage } from "@/lib/ui-language";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 
@@ -67,6 +70,9 @@ export function DonationForm({
   const initialPaymentMethod = initial?.payment_method ?? "cash";
   const [paymentMethod, setPaymentMethod] = useState<string>(initialPaymentMethod);
   const isHebrew = uiLanguage === "he";
+  const obfuscate = useObfuscateSensitive();
+  const inputClass =
+    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
 
   return (
     <form
@@ -98,14 +104,15 @@ export function DonationForm({
             <label htmlFor="one_time_amount" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "סכום" : "Amount"}
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="one_time_amount"
               name="one_time_amount"
               type="text"
               inputMode="decimal"
               required
-              defaultValue={initial?.one_time_amount ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.one_time_amount ?? ""}
+              className={inputClass}
               placeholder="0.00"
             />
           </div>
@@ -118,7 +125,7 @@ export function DonationForm({
               name="donation_date"
               required
               defaultIsoYmd={initial?.donation_date ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={inputClass}
             />
           </div>
         </>
@@ -128,14 +135,15 @@ export function DonationForm({
             <label htmlFor="monthly_amount" className="mb-1 block text-xs font-medium text-slate-400">
               Monthly amount
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="monthly_amount"
               name="monthly_amount"
               type="text"
               inputMode="decimal"
               required
-              defaultValue={initial?.monthly_amount ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.monthly_amount ?? ""}
+              className={inputClass}
               placeholder="0.00"
             />
           </div>
@@ -151,7 +159,7 @@ export function DonationForm({
               step={1}
               required
               defaultValue={initial?.commitment_months ?? undefined}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={inputClass}
               placeholder="12"
             />
           </div>
@@ -179,13 +187,14 @@ export function DonationForm({
             <label htmlFor="organization_name" className="mb-1 block text-xs font-medium text-slate-400">
               Name
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="organization_name"
               name="organization_name"
               type="text"
               required
-              defaultValue={initial?.organization_name ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.organization_name ?? ""}
+              className={inputClass}
             />
           </div>
           <div>
@@ -195,26 +204,28 @@ export function DonationForm({
             >
               Tax registration no. (ח.פ. / עמותה)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="organization_tax_number"
               name="organization_tax_number"
               type="text"
-              defaultValue={initial?.organization_tax_number ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.organization_tax_number ?? ""}
+              className={inputClass}
             />
           </div>
           <div>
             <label htmlFor="organization_website_url" className="mb-1 block text-xs font-medium text-slate-400">
               Organization website URL
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="organization_website_url"
               name="organization_website_url"
               type="text"
               inputMode="url"
-              defaultValue={initial?.organization_website_url ?? ""}
+              value={initial?.organization_website_url ?? ""}
               placeholder="https://example.org"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={inputClass}
             />
           </div>
           <div className="flex items-end pb-2">
@@ -243,24 +254,26 @@ export function DonationForm({
             <label htmlFor="organization_phone" className="mb-1 block text-xs font-medium text-slate-400">
               Telephone
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="organization_phone"
               name="organization_phone"
               type="tel"
-              defaultValue={initial?.organization_phone ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.organization_phone ?? ""}
+              className={inputClass}
             />
           </div>
           <div>
             <label htmlFor="organization_email" className="mb-1 block text-xs font-medium text-slate-400">
               Email
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="organization_email"
               name="organization_email"
               type="email"
-              defaultValue={initial?.organization_email ?? ""}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              value={initial?.organization_email ?? ""}
+              className={inputClass}
             />
           </div>
         </div>
@@ -274,7 +287,7 @@ export function DonationForm({
           id="currency"
           name="currency"
           defaultValue={initial?.currency ?? "ILS"}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         >
           <option value="ILS">ILS</option>
           <option value="USD">USD</option>
@@ -291,12 +304,12 @@ export function DonationForm({
           name="family_member_id"
           defaultValue={initial?.family_member_id ?? ""}
           required
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         >
           <option value="">Select family member…</option>
           {familyMembers.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.full_name}
+              {maskSensitiveText(obfuscate, m.full_name)}
             </option>
           ))}
         </select>
@@ -315,7 +328,7 @@ export function DonationForm({
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
               required
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={inputClass}
             >
               <option value="cash">{isHebrew ? "מזומן" : "Cash"}</option>
               <option value="credit_card">{isHebrew ? "כרטיס אשראי" : "Credit card"}</option>
@@ -335,12 +348,12 @@ export function DonationForm({
                 name="credit_card_id"
                 defaultValue={initial?.credit_card_id ?? ""}
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               >
                 <option value="">Select card…</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.label}
+                    {maskSensitiveText(obfuscate, c.label)}
                   </option>
                 ))}
               </select>
@@ -357,12 +370,12 @@ export function DonationForm({
                 name="bank_account_id"
                 defaultValue={initial?.bank_account_id ?? ""}
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               >
                 <option value="">Select account…</option>
                 {bankAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.label}
+                    {maskSensitiveText(obfuscate, a.label)}
                   </option>
                 ))}
               </select>
@@ -382,12 +395,12 @@ export function DonationForm({
                 name="digital_payment_method_id"
                 defaultValue={initial?.digital_payment_method_id ?? ""}
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               >
                 <option value="">Select wallet…</option>
                 {digitalPaymentMethods.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.label}
+                    {maskSensitiveText(obfuscate, d.label)}
                   </option>
                 ))}
               </select>
@@ -404,12 +417,12 @@ export function DonationForm({
           id="payee_id"
           name="payee_id"
           defaultValue={initial?.payee_id ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         >
           <option value="">—</option>
           {payees.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {maskSensitiveText(obfuscate, p.name)}
             </option>
           ))}
         </select>
@@ -423,7 +436,7 @@ export function DonationForm({
           name="category"
           defaultValue={initial?.category ?? "Other"}
           required
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         >
           <option value="Yeshiva">{isHebrew ? "ישיבה" : "Yeshiva"}</option>
           <option value="Cancer patients">{isHebrew ? "חולי סרטן" : "Cancer patients"}</option>
@@ -440,7 +453,7 @@ export function DonationForm({
           name="status"
           value={status}
           onChange={(e) => setStatus(e.target.value as "active" | "historic")}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         >
           <option value="active">{isHebrew ? "פעיל" : "Active"}</option>
           <option value="historic">{isHebrew ? "היסטורי" : "Historic"}</option>
@@ -454,7 +467,7 @@ export function DonationForm({
           id="renewal_date"
           name="renewal_date"
           defaultIsoYmd={initial?.renewal_date ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          className={inputClass}
         />
         <p className="mt-1 text-xs text-slate-500">Shown on Upcoming renewals when set.</p>
       </div>
@@ -462,11 +475,12 @@ export function DonationForm({
         <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
           Notes (optional)
         </label>
-        <input
+        <SensitiveTextInput
+          obfuscate={obfuscate}
           id="notes"
           name="notes"
-          defaultValue={initial?.notes ?? ""}
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          value={initial?.notes ?? ""}
+          className={inputClass}
         />
       </div>
       <div className="flex items-end lg:col-span-2">

@@ -3,9 +3,11 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { DonationKind } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -43,16 +45,35 @@ function formatPaymentDetail(
   digital_payment_method?: { name: string } | null;
 },
   language: "en" | "he",
+  obfuscate: boolean,
 ) {
   switch (d.payment_method) {
     case "cash":
       return language === "he" ? "מזומן" : "Cash";
     case "credit_card":
-      return d.credit_card ? `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}` : language === "he" ? "כרטיס אשראי" : "Credit card";
+      return d.credit_card
+        ? maskSensitiveText(
+            obfuscate,
+            `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}`,
+          )
+        : language === "he"
+          ? "כרטיס אשראי"
+          : "Credit card";
     case "bank_account":
-      return d.bank_account ? `${d.bank_account.account_name} · ${d.bank_account.bank_name}` : language === "he" ? "חשבון בנק" : "Bank account";
+      return d.bank_account
+        ? maskSensitiveText(
+            obfuscate,
+            `${d.bank_account.account_name} · ${d.bank_account.bank_name}`,
+          )
+        : language === "he"
+          ? "חשבון בנק"
+          : "Bank account";
     case "digital_wallet":
-      return d.digital_payment_method ? d.digital_payment_method.name : language === "he" ? "ארנק דיגיטלי" : "Digital wallet";
+      return d.digital_payment_method
+        ? maskSensitiveText(obfuscate, d.digital_payment_method.name)
+        : language === "he"
+          ? "ארנק דיגיטלי"
+          : "Digital wallet";
     case "other":
       return language === "he" ? "אחר" : "Other";
     default:
@@ -67,6 +88,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -189,8 +211,8 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                   {rows.map((d) => {
                     const amountSummary =
                       d.kind === DonationKind.one_time
-                        ? `${formatMoney(d.one_time_amount)} ${d.currency} on ${formatHouseholdDate(d.donation_date, dateDisplayFormat)}`
-                        : `${formatMoney(d.monthly_amount)} ${d.currency}/mo × ${d.commitment_months ?? "—"} mo${
+                        ? `${maskSensitiveAmount(obfuscate, `${formatMoney(d.one_time_amount)} ${d.currency}`)} on ${formatHouseholdDate(d.donation_date, dateDisplayFormat)}`
+                        : `${maskSensitiveAmount(obfuscate, `${formatMoney(d.monthly_amount)} ${d.currency}`)}/mo × ${d.commitment_months ?? "—"} mo${
                             d.commitment_start_date
                               ? ` (from ${formatHouseholdDate(d.commitment_start_date, dateDisplayFormat)})`
                               : ""
@@ -201,15 +223,17 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                           {d.kind === DonationKind.one_time ? (isHebrew ? "חד פעמי" : "One-time") : isHebrew ? "התחייבות חודשית" : "Monthly commitment"}
                         </td>
                         <td className="px-4 py-3 text-slate-100">
-                          {d.organization_name}
+                          {maskSensitiveText(obfuscate, d.organization_name)}
                           {d.payee ? (
-                            <span className="block text-xs text-slate-500">Payee: {d.payee.name}</span>
+                            <span className="block text-xs text-slate-500">
+                              Payee: {maskSensitiveText(obfuscate, d.payee.name)}
+                            </span>
                           ) : null}
                         </td>
                         <td className="px-4 py-3 text-slate-400">{d.category}</td>
                         <td className="px-4 py-3 text-slate-400">{amountSummary}</td>
                         <td className="px-4 py-3 text-slate-400">
-                          <div>{d.organization_tax_number ?? "—"}</div>
+                          <div>{maskSensitiveText(obfuscate, d.organization_tax_number) || "—"}</div>
                           <div className="text-xs text-slate-500">
                             {d.provides_seif_46_receipts ? "Seif 46 receipts" : "No Seif 46"}
                           </div>
@@ -218,18 +242,24 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-slate-400">
-                          <div>{d.organization_phone ?? "—"}</div>
-                          <div className="text-xs">{d.organization_email ?? "—"}</div>
+                          <div>{maskSensitiveText(obfuscate, d.organization_phone) || "—"}</div>
+                          <div className="text-xs">
+                            {maskSensitiveText(obfuscate, d.organization_email) || "—"}
+                          </div>
                           <div className="text-xs">
                             {d.organization_website_url ? (
-                              <a
-                                href={d.organization_website_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-sky-400 hover:text-sky-300"
-                              >
-                                Website
-                              </a>
+                              obfuscate ? (
+                                maskSensitiveText(obfuscate, d.organization_website_url)
+                              ) : (
+                                <a
+                                  href={d.organization_website_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sky-400 hover:text-sky-300"
+                                >
+                                  Website
+                                </a>
+                              )
                             ) : (
                               "—"
                             )}
@@ -238,8 +268,8 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                         <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(d.renewal_date, dateDisplayFormat)}
                       </td>
-                        <td className="max-w-[12rem] truncate px-4 py-3 text-slate-500" title={d.notes ?? undefined}>
-                          {d.notes ?? "—"}
+                        <td className="max-w-[12rem] truncate px-4 py-3 text-slate-500" title={obfuscate ? undefined : d.notes ?? undefined}>
+                          {maskSensitiveText(obfuscate, d.notes) || "—"}
                         </td>
                         <td className="px-4 py-3">
                           <span className={d.is_active ? "text-emerald-400" : "text-slate-500"}>
@@ -247,8 +277,12 @@ export default async function DonationsPage({ searchParams }: PageProps) {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-400">
-                          <div>{d.family_member?.full_name ?? "—"}</div>
-                          <div className="text-xs text-slate-500">{formatPaymentDetail(d, uiLanguage)}</div>
+                          <div>
+                            {maskSensitiveText(obfuscate, d.family_member?.full_name) || "—"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {formatPaymentDetail(d, uiLanguage, obfuscate)}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <Link

@@ -1,6 +1,13 @@
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { updateUtility } from "../../../../actions";
@@ -27,6 +34,7 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/dashboard/properties?error=No+household");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { id, utilityId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -69,7 +77,7 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
           </Link>
           <h1 className="text-2xl font-semibold text-slate-50">Edit utility</h1>
           <p className="text-sm text-slate-400">
-            {property.name}
+            {maskSensitiveText(obfuscate, property.name)}
           </p>
           {resolvedSearchParams?.error && (
             <div className="rounded-lg border border-rose-600 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
@@ -98,11 +106,12 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
 
           <div>
             <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">Provider name</label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="provider_name"
               name="provider_name"
               required
-              defaultValue={utility.provider_name}
+              value={utility.provider_name}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -110,30 +119,33 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
           <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
             <div>
               <label htmlFor="client_number" className="mb-1 block text-xs font-medium text-slate-400">Client number</label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="client_number"
                 name="client_number"
-                defaultValue={utility.client_number ?? ""}
+                value={utility.client_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
 
             <div>
               <label htmlFor="account_number" className="mb-1 block text-xs font-medium text-slate-400">Account number</label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="account_number"
                 name="account_number"
-                defaultValue={utility.account_number ?? ""}
+                value={utility.account_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
 
             <div>
               <label htmlFor="meter_number" className="mb-1 block text-xs font-medium text-slate-400">Meter number</label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="meter_number"
                 name="meter_number"
-                defaultValue={utility.meter_number ?? ""}
+                value={utility.meter_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -145,8 +157,16 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
             }
             defaultBankAccountId={utility.bank_account_id ?? ""}
             defaultCreditCardId={utility.credit_card_id ?? ""}
-            bankAccounts={bankAccounts}
-            creditCards={creditCards}
+            bankAccounts={bankAccounts.map((a) => ({
+              ...a,
+              account_name: maskSensitiveText(obfuscate, a.account_name),
+              bank_name: maskSensitiveText(obfuscate, a.bank_name),
+            }))}
+            creditCards={creditCards.map((c) => ({
+              ...c,
+              card_name: maskSensitiveText(obfuscate, c.card_name),
+              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+            }))}
           />
 
           <div>
@@ -188,22 +208,24 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
 
           <div>
             <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">Phone (optional)</label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="contact_phone"
               name="contact_phone"
               type="tel"
-              defaultValue={utility.contact_phone ?? ""}
+              value={utility.contact_phone ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
 
           <div>
             <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">Email (optional)</label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="contact_email"
               name="contact_email"
               type="email"
-              defaultValue={utility.contact_email ?? ""}
+              value={utility.contact_email ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -231,18 +253,21 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
             >
               <option value="">— None —</option>
               {payees.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {maskSensitiveText(obfuscate, p.name)}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="sm:col-span-2">
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">Notes</label>
-            <textarea
+            <SensitiveTextarea
+              obfuscate={obfuscate}
               id="notes"
               name="notes"
               rows={2}
-              defaultValue={utility.notes ?? ""}
+              value={utility.notes ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

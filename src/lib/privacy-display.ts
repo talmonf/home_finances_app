@@ -3,6 +3,24 @@ import type { UiLanguage } from "@/lib/ui-language";
 /** Masked placeholder when the user enables demo / privacy display mode. */
 export const OBFUSCATED = "••••";
 
+/** Mask a personal or free-text value. Empty values stay empty. */
+export function maskSensitiveText(
+  obfuscate: boolean,
+  value: string | null | undefined,
+): string {
+  if (value == null) return "";
+  if (!obfuscate) return value;
+  if (value.trim() === "") return value;
+  return OBFUSCATED;
+}
+
+/** Mask a formatted money amount. Callers pass the already-formatted string. */
+export function maskSensitiveAmount(obfuscate: boolean, formatted: string): string {
+  if (!obfuscate) return formatted;
+  if (formatted.trim() === "" || formatted.trim() === "—") return formatted;
+  return OBFUSCATED;
+}
+
 export function formatClientNameForDisplay(
   obfuscate: boolean,
   firstName: string,

@@ -1,58 +1,7 @@
-import Link from "next/link";
-import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage } from "@/lib/auth";
-import { ObfuscateSessionToggle } from "@/components/obfuscate-session-toggle";
-import { UiLanguageToggle } from "@/components/ui-language-toggle";
-import { privateClinicNavLabel } from "@/lib/private-clinic-i18n";
-
-export async function DashboardUserToolbar({
-  showObfuscate,
-  contextTitle,
-}: {
-  showObfuscate: boolean;
-  contextTitle?: string;
-}) {
-  const session = await getAuthSession();
-  if (!session?.user?.householdId || session.user.isSuperAdmin) {
-    return null;
-  }
-
-  const uiLanguage = await getCurrentUiLanguage();
-  const obfuscate = showObfuscate ? await getCurrentObfuscateSensitive() : false;
-  const isHebrew = uiLanguage === "he";
-
+export function DashboardUserToolbar({ contextTitle }: { contextTitle: string }) {
   return (
-    <div
-      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs text-slate-300"
-      role="toolbar"
-      aria-label={isHebrew ? "העדפות תצוגה" : "Display preferences"}
-    >
-      <div className="flex items-center gap-3">
-        {contextTitle ? (
-          <h1 className="text-base font-semibold tracking-tight text-slate-100 sm:text-lg">
-            {contextTitle}
-          </h1>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {showObfuscate ? (
-          <>
-            <Link
-              href="/dashboard/private-clinic/getting-started"
-              className="rounded-md px-2 py-1 font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-            >
-              {privateClinicNavLabel("gettingStarted", uiLanguage)}
-            </Link>
-            <div className="h-4 w-px bg-slate-700" aria-hidden />
-          </>
-        ) : null}
-        <UiLanguageToggle uiLanguage={uiLanguage} />
-        {showObfuscate ? (
-          <>
-            <div className="h-4 w-px bg-slate-700" aria-hidden />
-            <ObfuscateSessionToggle initialOn={obfuscate} isHebrew={isHebrew} />
-          </>
-        ) : null}
-      </div>
+    <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2">
+      <h1 className="text-base font-semibold tracking-tight text-slate-100 sm:text-lg">{contextTitle}</h1>
     </div>
   );
 }

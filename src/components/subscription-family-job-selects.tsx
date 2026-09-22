@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 export type SubscriptionFamilyJobSelectMember = {
   id: string;
@@ -52,6 +54,7 @@ export function SubscriptionFamilyJobSelects({
   showInactiveJobSuffix = false,
   noneLabel = "None",
 }: Props) {
+  const obfuscate = useObfuscateSensitive();
   const [internalMemberId, setInternalMemberId] = useState(defaultFamilyMemberId);
   const [internalJobId, setInternalJobId] = useState(defaultJobId);
   const controlled = onFamilyMemberIdChange != null;
@@ -112,7 +115,7 @@ export function SubscriptionFamilyJobSelects({
           <option value="">{noneLabel}</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.full_name}
+              {maskSensitiveText(obfuscate, m.full_name)}
               {showInactiveMemberSuffix && m.is_active === false ? " (inactive)" : ""}
             </option>
           ))}
@@ -132,7 +135,7 @@ export function SubscriptionFamilyJobSelects({
           <option value="">{noneLabel}</option>
           {visibleJobs.map((j) => (
             <option key={j.id} value={j.id}>
-              {formatJobDisplayLabel(j)}
+              {maskSensitiveText(obfuscate, formatJobDisplayLabel(j))}
               {showInactiveJobSuffix && j.is_active === false ? " (inactive)" : ""}
             </option>
           ))}

@@ -3,6 +3,8 @@ import { DirectFileOpenDownloadLinks } from "@/components/file-open-download-lin
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
+import { SensitiveTextarea, SensitiveTextInput } from "@/components/sensitive-fields";
 import RentalContractUpload from "../RentalContractUpload";
 import {
   updateRental,
@@ -98,6 +100,7 @@ type RentalDetailPanelProps = {
   creditCards: CreditCardOption[];
   transactions: UnlinkedTransaction[];
   dateDisplayFormat: HouseholdDateDisplayFormat;
+  obfuscate: boolean;
 };
 
 const UTILITY_TYPE_LABELS: Record<string, string> = {
@@ -131,6 +134,7 @@ export function RentalDetailPanel({
   creditCards,
   transactions,
   dateDisplayFormat,
+  obfuscate,
 }: RentalDetailPanelProps) {
   return (
     <section className="space-y-6 rounded-xl border border-slate-700 bg-slate-900/60 p-6">
@@ -160,23 +164,25 @@ export function RentalDetailPanel({
         </div>
         <div>
           <label className="mb-1 block text-xs text-slate-400">Monthly payment</label>
-          <input
+          <SensitiveTextInput
+            obfuscate={obfuscate}
             type="number"
             name="monthly_payment"
             step="0.01"
             min="0"
-            defaultValue={rental.monthly_payment?.toString() ?? ""}
+            value={rental.monthly_payment?.toString() ?? ""}
             className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
           />
         </div>
         <div>
           <label className="mb-1 block text-xs text-slate-400">Total for stay</label>
-          <input
+          <SensitiveTextInput
+            obfuscate={obfuscate}
             type="number"
             name="period_total_payment"
             step="0.01"
             min="0"
-            defaultValue={rental.period_total_payment?.toString() ?? ""}
+            value={rental.period_total_payment?.toString() ?? ""}
             className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
           />
         </div>
@@ -229,7 +235,7 @@ export function RentalDetailPanel({
             <option value="">— None —</option>
             {bankAccounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.account_name}
+                {maskSensitiveText(obfuscate, a.account_name)}
               </option>
             ))}
           </select>
@@ -244,17 +250,18 @@ export function RentalDetailPanel({
             <option value="">— None —</option>
             {creditCards.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.card_name} · ****{c.card_last_four}
+                {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
               </option>
             ))}
           </select>
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs text-slate-400">Notes</label>
-          <textarea
+          <SensitiveTextarea
+            obfuscate={obfuscate}
             name="notes"
             rows={2}
-            defaultValue={rental.notes ?? ""}
+            value={rental.notes ?? ""}
             className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100"
           />
         </div>
@@ -319,25 +326,29 @@ export function RentalDetailPanel({
           {rental.tenants.map((tenant) => (
             <form key={tenant.id} action={updateRentalTenant} className="grid gap-2 sm:grid-cols-5">
               <input type="hidden" name="id" value={tenant.id} />
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="full_name"
-                defaultValue={tenant.full_name}
+                value={tenant.full_name}
                 required
                 className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
               />
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="email"
-                defaultValue={tenant.email ?? ""}
+                value={tenant.email ?? ""}
                 className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
               />
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="phone"
-                defaultValue={tenant.phone ?? ""}
+                value={tenant.phone ?? ""}
                 className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
               />
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="notes"
-                defaultValue={tenant.notes ?? ""}
+                value={tenant.notes ?? ""}
                 className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
               />
               <div className="flex items-center gap-2">
@@ -409,38 +420,42 @@ export function RentalDetailPanel({
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         form={formId}
                         name="utility_company"
                         required
-                        defaultValue={utility.utility_company}
+                        value={utility.utility_company}
                         aria-label="Utility company"
                         className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         form={formId}
                         name="client_number"
-                        defaultValue={utility.client_number ?? ""}
+                        value={utility.client_number ?? ""}
                         aria-label="Client number"
                         className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         form={formId}
                         name="account_number"
-                        defaultValue={utility.account_number ?? ""}
+                        value={utility.account_number ?? ""}
                         aria-label="Account number"
                         className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         form={formId}
                         name="meter_number"
-                        defaultValue={utility.meter_number ?? ""}
+                        value={utility.meter_number ?? ""}
                         aria-label="Meter number"
                         className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
@@ -455,10 +470,11 @@ export function RentalDetailPanel({
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <SensitiveTextInput
+                        obfuscate={obfuscate}
                         form={formId}
                         name="notes"
-                        defaultValue={utility.notes ?? ""}
+                        value={utility.notes ?? ""}
                         aria-label="Utility notes"
                         className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                       />
@@ -503,7 +519,9 @@ export function RentalDetailPanel({
               key={contract.id}
               className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300"
             >
-              <span className="min-w-0 truncate text-slate-200">{contract.file_name}</span>
+              <span className="min-w-0 truncate text-slate-200">
+                {maskSensitiveText(obfuscate, contract.file_name)}
+              </span>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 {contract.storage_url ? (
                   <DirectFileOpenDownloadLinks href={contract.storage_url} fileName={contract.file_name} />
@@ -525,8 +543,9 @@ export function RentalDetailPanel({
           <ul className="space-y-1 text-xs text-slate-300">
             {rental.transactions.map((tx) => (
               <li key={tx.id}>
-                {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} ·{" "}
-                {tx.description ?? "—"}
+                {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} ·{" "}
+                {maskSensitiveAmount(obfuscate, tx.amount.toString())} ·{" "}
+                {maskSensitiveText(obfuscate, tx.description) || "—"}
               </li>
             ))}
           </ul>
@@ -544,8 +563,9 @@ export function RentalDetailPanel({
               .slice(0, 20)
               .map((tx) => (
                 <option key={tx.id} value={tx.id}>
-                  {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} · {tx.amount.toString()} ·{" "}
-                  {tx.description ?? "—"}
+                  {formatHouseholdDate(new Date(tx.transaction_date), dateDisplayFormat)} ·{" "}
+                  {maskSensitiveAmount(obfuscate, tx.amount.toString())} ·{" "}
+                  {maskSensitiveText(obfuscate, tx.description) || "—"}
                 </option>
               ))}
           </select>

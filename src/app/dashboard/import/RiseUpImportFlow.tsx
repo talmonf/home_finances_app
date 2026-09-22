@@ -28,6 +28,8 @@ import {
 import { RiseUpImportUserGuide } from "@/components/riseup-import-user-guide";
 import { FileUploadField } from "@/components/file-upload-field";
 import { riseUpImportGuideContent } from "@/lib/riseup-import-guide-content";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 type Props = {
   uiLanguage: "en" | "he";
@@ -100,30 +102,43 @@ function proposalWorkExpenseDraft(
 function subscriptionProposalDetailLines(
   proposal: RiseUpImportProposal,
   isHe: boolean,
+  obfuscate: boolean,
 ): string[] {
   if (proposal.entity_kind !== "subscription") return [];
   const p = proposal.payload_json;
   const lines: string[] = [];
   const interval = p.billingInterval === "annual" ? (isHe ? "שנתי" : "annual") : isHe ? "חודשי" : "monthly";
   if (p.perPaymentAmount != null) {
+    const amt = maskSensitiveAmount(
+      obfuscate,
+      `₪${Number(p.perPaymentAmount).toFixed(2)}`,
+    );
     lines.push(
       isHe
-        ? `תשלום: ₪${Number(p.perPaymentAmount).toFixed(2)} (${interval})`
-        : `Payment: ₪${Number(p.perPaymentAmount).toFixed(2)} (${interval})`,
+        ? `תשלום: ${amt} (${interval})`
+        : `Payment: ${amt} (${interval})`,
     );
   }
   if (p.yearlyTotalAmount != null) {
+    const amt = maskSensitiveAmount(
+      obfuscate,
+      `₪${Number(p.yearlyTotalAmount).toFixed(2)}`,
+    );
     lines.push(
       isHe
-        ? `סה״כ שנתי משוער: ₪${Number(p.yearlyTotalAmount).toFixed(2)}`
-        : `Est. yearly total: ₪${Number(p.yearlyTotalAmount).toFixed(2)}`,
+        ? `סה״כ שנתי משוער: ${amt}`
+        : `Est. yearly total: ${amt}`,
     );
   }
   if (p.totalPaidInExport != null) {
+    const amt = maskSensitiveAmount(
+      obfuscate,
+      `₪${Number(p.totalPaidInExport).toFixed(2)}`,
+    );
     lines.push(
       isHe
-        ? `שולם בייצוא: ₪${Number(p.totalPaidInExport).toFixed(2)} (${p.paymentCount ?? "?"} תשלומים)`
-        : `Paid in export: ₪${Number(p.totalPaidInExport).toFixed(2)} (${p.paymentCount ?? "?"} payments)`,
+        ? `שולם בייצוא: ${amt} (${p.paymentCount ?? "?"} תשלומים)`
+        : `Paid in export: ${amt} (${p.paymentCount ?? "?"} payments)`,
     );
   }
   if (p.isActive === true) {
@@ -233,6 +248,7 @@ export function RiseUpImportFlow({
 }: Props) {
   const router = useRouter();
   const isHe = uiLanguage === "he";
+  const obfuscate = useObfuscateSensitive();
   const guide = useMemo(() => riseUpImportGuideContent(isHe), [isHe]);
   const [guideOpen, setGuideOpen] = useState(false);
   const [showPatternsPanel, setShowPatternsPanel] = useState(false);
@@ -1183,11 +1199,13 @@ export function RiseUpImportFlow({
                 <div className="grid gap-1 sm:grid-cols-2">
                   {analyzeSummary.patterns.highlights.slice(0, 8).map((pattern) => (
                     <div key={pattern.key} className="rounded bg-slate-900 px-2 py-1">
-                      <span className="font-medium text-slate-100">{pattern.title}</span>
+                      <span className="font-medium text-slate-100">
+                        {maskSensitiveText(obfuscate, pattern.title)}
+                      </span>
                       <span className="text-slate-500">
                         {" "}
                         · {patternKindLabel(pattern.kind)} · {pattern.activeMonths} months · avg{" "}
-                        {pattern.averageAmount}
+                        {maskSensitiveAmount(obfuscate, String(pattern.averageAmount))}
                       </span>
                     </div>
                   ))}
@@ -1224,7 +1242,7 @@ export function RiseUpImportFlow({
                           proposal.id ? proposalWorkExpense[proposal.id] : undefined,
                         )
                       : null;
-                    const detailLines = subscriptionProposalDetailLines(proposal, isHe);
+                    const detailLines = subscriptionProposalDetailLines(proposal, isHe, obfuscate);
                     return (
                       <div
                         key={proposal.id ?? proposal.clientKey}
@@ -1232,8 +1250,12 @@ export function RiseUpImportFlow({
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium text-slate-100">{proposal.title}</div>
-                            <div className="mt-1 text-slate-400">{proposal.summary}</div>
+                            <div className="font-medium text-slate-100">
+                              {maskSensitiveText(obfuscate, proposal.title)}
+                            </div>
+                            <div className="mt-1 text-slate-400">
+                              {maskSensitiveText(obfuscate, proposal.summary)}
+                            </div>
                             {detailLines.length > 0 ? (
                               <ul className="mt-2 list-inside list-disc text-slate-400">
                                 {detailLines.map((line) => (
@@ -1511,10 +1533,10 @@ export function RiseUpImportFlow({
                         {r.paymentDate}
                       </td>
                       <td className="border-b border-slate-800 px-2 py-1.5 align-top text-slate-200">
-                        {r.businessName}
+                        {maskSensitiveText(obfuscate, r.businessName)}
                       </td>
                       <td className="border-b border-slate-800 px-2 py-1.5 align-top font-mono text-slate-200">
-                        {r.amount.toFixed(2)}
+                        {maskSensitiveAmount(obfuscate, r.amount.toFixed(2))}
                       </td>
                       <td className="border-b border-slate-800 px-2 py-1.5 align-top">
                         <div className="text-[10px] text-slate-400">{statusLabel}</div>
@@ -1522,7 +1544,8 @@ export function RiseUpImportFlow({
                           <div className="mt-1 max-w-[220px] text-[10px] text-sky-200">
                             {r.changedFields.slice(0, 3).map((d) => (
                               <div key={d.field}>
-                                {d.label}: {d.existing ?? "—"} → {d.incoming ?? "—"}
+                                {d.label}: {maskSensitiveText(obfuscate, d.existing) || "—"} →{" "}
+                                {maskSensitiveText(obfuscate, d.incoming) || "—"}
                               </div>
                             ))}
                           </div>
@@ -1579,14 +1602,14 @@ export function RiseUpImportFlow({
                               <optgroup label={isHe ? "חשבונות בנק" : "Bank accounts"}>
                                 {bankAccounts.map((b) => (
                                   <option key={`b-${b.id}`} value={`bank:${b.id}`}>
-                                    {b.label}
+                                    {maskSensitiveText(obfuscate, b.label)}
                                   </option>
                                 ))}
                               </optgroup>
                               <optgroup label={isHe ? "כרטיסי אשראי" : "Credit cards"}>
                                 {creditCards.map((c) => (
                                   <option key={`c-${c.id}`} value={`card:${c.id}`}>
-                                    {c.label}
+                                    {maskSensitiveText(obfuscate, c.label)}
                                   </option>
                                 ))}
                               </optgroup>
@@ -1602,7 +1625,7 @@ export function RiseUpImportFlow({
                                 }))
                             ).map((c) => (
                               <option key={c.id} value={`bank:${c.id}`}>
-                                {c.label} ({c.confidence})
+                                {maskSensitiveText(obfuscate, c.label)} ({c.confidence})
                               </option>
                             ))
                           ) : (
@@ -1616,7 +1639,7 @@ export function RiseUpImportFlow({
                                 }))
                             ).map((c) => (
                               <option key={c.id} value={`card:${c.id}`}>
-                                {c.label} ({c.confidence})
+                                {maskSensitiveText(obfuscate, c.label)} ({c.confidence})
                               </option>
                             ))
                           )}
@@ -1636,7 +1659,7 @@ export function RiseUpImportFlow({
                           <option value="">{isHe ? "(חדש)" : "(new)"}</option>
                           {r.payee.candidates.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.label}
+                              {maskSensitiveText(obfuscate, c.label)}
                             </option>
                           ))}
                         </select>
@@ -1678,7 +1701,7 @@ export function RiseUpImportFlow({
                           <option value="">—</option>
                           {r.job.candidates.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.label}
+                              {maskSensitiveText(obfuscate, c.label)}
                             </option>
                           ))}
                         </select>
@@ -1694,7 +1717,7 @@ export function RiseUpImportFlow({
                           <option value="">—</option>
                           {r.subscription.candidates.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.label}
+                              {maskSensitiveText(obfuscate, c.label)}
                             </option>
                           ))}
                         </select>
@@ -1710,7 +1733,7 @@ export function RiseUpImportFlow({
                           <option value="">—</option>
                           {r.loan.candidates.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.label}
+                              {maskSensitiveText(obfuscate, c.label)}
                             </option>
                           ))}
                         </select>

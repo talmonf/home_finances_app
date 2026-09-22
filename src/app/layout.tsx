@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Link from "next/link";
+import { headers } from "next/headers";
+import { AppShellHeader } from "@/components/app-shell-header";
 import {
   appBrandingStrings,
-  loginHrefForPortal,
   resolveAppPortal,
 } from "@/lib/app-branding";
-import { getAuthSession, getCurrentHouseholdDateDisplayFormat, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  getAuthSession,
+  getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { getEffectiveModuleAccess } from "@/lib/household-sections";
 import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
 import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
-import { appHeaderStrings, uiLanguageDirection } from "@/lib/ui-language";
-import { SignOutButton } from "@/components/sign-out-button";
-import { UiLanguageToggle } from "@/components/ui-language-toggle";
+import { uiLanguageDirection } from "@/lib/ui-language";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await getAuthSession();
@@ -56,7 +60,13 @@ export default async function RootLayout({
     userId: session?.user?.id,
     uiLanguage,
   });
-  const h = appHeaderStrings(uiLanguage, portal);
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const moduleAccess =
+    householdMember && session?.user?.householdId && session.user.id
+      ? await getEffectiveModuleAccess(session.user.householdId, session.user.id, uiLanguage)
+      : { clinicEnabled: false, householdEnabled: false };
+  const obfuscate = householdMember ? await getCurrentObfuscateSensitive() : false;
 
   /** Native `<input type="date">` follows document `lang`; generic `en` maps to US (mm/dd) in Chromium. */
   let htmlLang: string = uiLanguage;
@@ -73,48 +83,19 @@ export default async function RootLayout({
     <html lang={htmlLang} dir={dir}>
       <body className="antialiased bg-slate-950 text-slate-50">
         <div className="min-h-screen">
-          <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
-            <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4">
-              <Link href="/" className="font-semibold tracking-tight">
-                {h.appTitle}
-              </Link>
-              {session?.user ? (
-                <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-slate-300">
-                  <span>
-                    {h.signedInAs}{" "}
-                    <span className="font-medium text-slate-50">
-                      {session.user.name ?? session.user.email}
-                    </span>
-                    {session.user.isSuperAdmin && (
-                      <span className="ms-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                        {h.superAdmin}
-                      </span>
-                    )}
-                  </span>
-                  {householdMember ? (
-                    <>
-                      <UiLanguageToggle uiLanguage={uiLanguage} />
-                      <div className="h-4 w-px bg-slate-700" aria-hidden />
-                    </>
-                  ) : null}
-                  <Link
-                    href="/change-password"
-                    className="rounded-lg border border-slate-600 px-3 py-1 font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-                  >
-                    {h.changePassword}
-                  </Link>
-                  <SignOutButton label={h.signOut} confirmMessage={h.signOutConfirm} />
-                </div>
-              ) : (
-                <Link
-                  href={loginHrefForPortal(portal)}
-                  className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-                >
-                  {h.signIn}
-                </Link>
-              )}
-            </div>
-          </header>
+          <AppShellHeader
+            uiLanguage={uiLanguage}
+            portal={portal}
+            pathname={pathname}
+            householdMember={Boolean(householdMember)}
+            clinicEnabled={moduleAccess.clinicEnabled}
+            householdEnabled={moduleAccess.householdEnabled}
+            obfuscate={obfuscate}
+            signedInLabel={
+              session?.user ? (session.user.name ?? session.user.email ?? "") : null
+            }
+            isSuperAdmin={Boolean(session?.user?.isSuperAdmin)}
+          />
           <main>{children}</main>
         </div>
       </body>

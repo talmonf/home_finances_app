@@ -1,5 +1,12 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
 import { createEntityUrl } from "@/lib/entity-urls/actions";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -18,6 +25,7 @@ export default async function NewInsurancePolicyLinkPage({ params }: PageProps) 
   if (!householdId) redirect("/");
 
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -47,7 +55,8 @@ export default async function NewInsurancePolicyLinkPage({ params }: PageProps) 
             {isHebrew ? "הוספת קישור לפוליסה" : "Add link to policy"}
           </h1>
           <p className="text-sm text-slate-400">
-            {policy.provider_name} — {policy.policy_name}
+            {maskSensitiveText(obfuscate, policy.provider_name)} —{" "}
+            {maskSensitiveText(obfuscate, policy.policy_name)}
           </p>
         </header>
 

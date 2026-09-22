@@ -3,9 +3,11 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -77,6 +79,7 @@ export default async function LoansPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -151,17 +154,29 @@ export default async function LoansPage({ searchParams }: PageProps) {
                 <tbody>
                   {rows.map((loan) => (
                     <tr key={loan.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{loan.institution_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{loan.loan_number ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, loan.institution_name)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, loan.loan_number) || "—"}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(loan.loan_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatMoney(loan.loan_amount)} {loan.currency}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          `${formatMoney(loan.loan_amount)} ${loan.currency}`,
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{formatLoanInterestRate(loan)}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatMoney(loan.monthly_repayment_amount)} {loan.currency}
+                        {maskSensitiveAmount(obfuscate, formatLoanInterestRate(loan))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          `${formatMoney(loan.monthly_repayment_amount)} ${loan.currency}`,
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         <div>{loan.repayment_day_of_month != null ? `${loan.repayment_day_of_month} (monthly)` : "—"}</div>
@@ -173,10 +188,13 @@ export default async function LoansPage({ searchParams }: PageProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatMoney(loan.total_repayment_amount)} {loan.currency}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          `${formatMoney(loan.total_repayment_amount)} ${loan.currency}`,
+                        )}
                       </td>
-                      <td className="max-w-[10rem] truncate px-4 py-3 text-slate-500" title={loan.purpose ?? undefined}>
-                        {loan.purpose ?? "—"}
+                      <td className="max-w-[10rem] truncate px-4 py-3 text-slate-500" title={obfuscate ? undefined : loan.purpose ?? undefined}>
+                        {maskSensitiveText(obfuscate, loan.purpose) || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <span className={loan.is_active ? "text-emerald-400" : "text-slate-500"}>

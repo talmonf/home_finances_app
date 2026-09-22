@@ -2,10 +2,12 @@ import {
   prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -39,6 +41,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
   }
 
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -147,46 +150,57 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                   </tr>
                 </thead>
                 <tbody>
-                  {methods.map((m) => (
+                  {methods.map((m) => {
+                    const primaryCardLabel = m.primary_credit_card
+                      ? `${m.primary_credit_card.card_name} · ****${m.primary_credit_card.card_last_four}`
+                      : "";
+                    const secondaryCardLabel = m.secondary_credit_card
+                      ? `${m.secondary_credit_card.card_name} · ****${m.secondary_credit_card.card_last_four}`
+                      : "";
+                    const bankLabel = m.linked_bank_account
+                      ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
+                      : "";
+                    return (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{m.name}</td>
+                      <td className="px-4 py-3 text-slate-100">{maskSensitiveText(obfuscate, m.name)}</td>
                       <td className="px-4 py-3 text-slate-300">
                         {METHOD_TYPE_LABELS[m.method_type] ?? m.method_type}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {m.family_member ? m.family_member.full_name : "—"}
+                        {maskSensitiveText(obfuscate, m.family_member?.full_name) || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {m.primary_credit_card
-                          ? `${m.primary_credit_card.card_name} · ****${m.primary_credit_card.card_last_four}`
-                          : "—"}
+                        {maskSensitiveText(obfuscate, primaryCardLabel) || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {m.secondary_credit_card
-                          ? `${m.secondary_credit_card.card_name} · ****${m.secondary_credit_card.card_last_four}`
-                          : "—"}
+                        {maskSensitiveText(obfuscate, secondaryCardLabel) || "—"}
                       </td>
-                      <td className="max-w-[10rem] truncate px-4 py-3 text-slate-400" title={m.linked_bank_account?.account_name}>
-                        {m.linked_bank_account
-                          ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
-                          : "—"}
+                      <td
+                        className="max-w-[10rem] truncate px-4 py-3 text-slate-400"
+                        title={obfuscate ? undefined : m.linked_bank_account?.account_name}
+                      >
+                        {maskSensitiveText(obfuscate, bankLabel) || "—"}
                       </td>
-                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={m.website_url ?? undefined}>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={obfuscate ? undefined : m.website_url ?? undefined}>
                         {m.website_url ? (
-                          <a
-                            href={m.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {m.website_url}
-                          </a>
+                          obfuscate ? (
+                            maskSensitiveText(obfuscate, m.website_url)
+                          ) : (
+                            <a
+                              href={m.website_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300"
+                            >
+                              {m.website_url}
+                            </a>
+                          )
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={m.notes ?? undefined}>
-                        {m.notes?.trim() ? m.notes : "—"}
+                      <td className="max-w-xs truncate px-4 py-3 text-slate-400" title={obfuscate ? undefined : m.notes ?? undefined}>
+                        {maskSensitiveText(obfuscate, m.notes?.trim() ? m.notes : null) || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{m.is_active ? "Active" : "Inactive"}</td>
                       <td className="px-4 py-3">
@@ -200,7 +214,8 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -258,7 +273,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.account_name} ({b.bank_name})
+                    {maskSensitiveText(obfuscate, `${b.account_name} (${b.bank_name})`)}
                     {!b.is_active ? " — inactive" : ""}
                   </option>
                 ))}
@@ -280,7 +295,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -298,7 +313,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} · ****{c.card_last_four}
+                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
                   </option>
                 ))}
               </select>
@@ -316,7 +331,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} · ****{c.card_last_four}
+                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
                   </option>
                 ))}
               </select>

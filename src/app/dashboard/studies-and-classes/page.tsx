@@ -4,9 +4,11 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createStudyOrClass, toggleStudyOrClassActive } from "./actions";
@@ -39,6 +41,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const filterFamilyMemberId = resolvedSearchParams?.family_member_id?.trim() || null;
@@ -145,7 +148,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                 <option value="">Select…</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -244,7 +247,7 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                         : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                     }`}
                   >
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </Link>
                 ))}
               </div>
@@ -274,16 +277,22 @@ export default async function StudiesAndClassesPage({ searchParams }: PageProps)
                 <tbody>
                   {studies.map((s) => (
                     <tr key={s.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{s.name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, s.name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300 capitalize">{s.type}</td>
-                      <td className="px-4 py-3 text-slate-300">{s.family_member.full_name}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {maskSensitiveText(obfuscate, s.family_member.full_name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(s.start_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(s.end_date, dateDisplayFormat)}
                       </td>
-                      <td className="px-4 py-3 text-slate-300">{formatMoney(s.expected_annual_cost)}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {maskSensitiveAmount(obfuscate, formatMoney(s.expected_annual_cost))}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{s.number_of_years ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span

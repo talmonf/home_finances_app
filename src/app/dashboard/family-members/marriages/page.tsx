@@ -4,9 +4,11 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { formatHebrewDateLabel } from "@/lib/hebrew-calendar";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { deleteFamilyMarriage } from "./actions";
@@ -25,6 +27,7 @@ export default async function FamilyMarriagesPage({ searchParams }: PageProps) {
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : undefined;
 
   const marriages = await prisma.family_marriages.findMany({
@@ -95,7 +98,8 @@ export default async function FamilyMarriagesPage({ searchParams }: PageProps) {
                   return (
                     <tr key={m.id} className="border-b border-slate-800">
                       <td className="px-4 py-3 text-slate-100">
-                        {m.spouse_a.full_name} & {m.spouse_b.full_name}
+                        {maskSensitiveText(obfuscate, m.spouse_a.full_name)} &{" "}
+                        {maskSensitiveText(obfuscate, m.spouse_b.full_name)}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
                         {m.wedding_date

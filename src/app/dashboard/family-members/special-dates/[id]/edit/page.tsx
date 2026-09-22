@@ -3,11 +3,13 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SpecialDateFields } from "@/components/special-date-fields";
 import { SpecialDatePersonTypeFields } from "@/components/special-date-person-type-fields";
+import { SensitiveTextarea } from "@/components/sensitive-fields";
 import { updateFamilySpecialDate } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,7 @@ export default async function EditFamilySpecialDatePage({ params, searchParams }
 
   const { id } = await params;
   const isHebrew = (await getCurrentUiLanguage()) === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : undefined;
 
   const [record, members] = await Promise.all([
@@ -80,11 +83,12 @@ export default async function EditFamilySpecialDatePage({ params, searchParams }
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "הערות (אופציונלי)" : "Notes (optional)"}
             </label>
-            <textarea
+            <SensitiveTextarea
+              obfuscate={obfuscate}
               id="notes"
               name="notes"
               rows={3}
-              defaultValue={record.notes ?? ""}
+              value={record.notes ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

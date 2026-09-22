@@ -1,5 +1,13 @@
-import { prisma, requireHouseholdMember, getAuthSession, getCurrentHouseholdDateDisplayFormat } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getAuthSession,
+  getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import { formatInstantInIsraelTime } from "@/lib/household-date-format";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -68,11 +76,13 @@ export default async function RenewalEmailSettingsPage({
     : [];
 
   const isHebrew = user.ui_language === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const formatSentAt = (d: Date) => formatInstantInIsraelTime(d, dateDisplayFormat, { isHebrew });
   const gmailFromLoginEmail = user.email.toLowerCase().endsWith("@gmail.com") ? user.email : "";
   const defaultGoogleGmailAddress = user.google_gmail_address ?? gmailFromLoginEmail;
   const googleConnected = Boolean(user.google_calendar_refresh_token_encrypted);
+  const displayUserEmail = maskSensitiveText(obfuscate, user.email) || user.email;
 
   const lastScheduledDelivery = recentDeliveries.find((d) => d.status === "sent" && !d.is_test);
 
@@ -229,14 +239,15 @@ export default async function RenewalEmailSettingsPage({
             <label className="block text-sm font-medium text-slate-300">
               {isHebrew ? "כתובת נמען (ריק = המייל של המשתמש)" : "Recipient email (blank = your user email)"}
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               type="email"
               name="recipient_email"
-              placeholder={user.email}
-              defaultValue={sub?.recipient_email ?? ""}
+              placeholder={displayUserEmail}
+              value={sub?.recipient_email ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
-            <p className="text-xs text-slate-500">{user.email}</p>
+            <p className="text-xs text-slate-500">{displayUserEmail}</p>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -402,7 +413,8 @@ export default async function RenewalEmailSettingsPage({
                       </div>
                     </div>
                     <p className="text-xs text-slate-500">
-                      {d.recipient_email} · {d.item_count} {isHebrew ? "פריטים" : "items"}
+                      {maskSensitiveText(obfuscate, d.recipient_email)} · {d.item_count}{" "}
+                      {isHebrew ? "פריטים" : "items"}
                     </p>
                     {d.error_message ? (
                       <p className="mt-1 text-xs text-rose-300/90">{d.error_message}</p>

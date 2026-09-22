@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
 import { countOpenMedicalReimbursementRequestsForHousehold } from "@/lib/medical-open-reimbursement-requests";
@@ -54,8 +55,12 @@ export default async function Home({ searchParams }: HomeProps) {
   const uiLanguage = isSuperAdmin ? "en" : await getCurrentUiLanguage();
   const householdId = session.user.householdId ?? null;
   const userId = session.user.id;
-  const displayName = session.user.name ?? (uiLanguage === "he" ? "משתמש" : "user");
-  const firstName = getFirstName(displayName);
+  const obfuscate = !isSuperAdmin && householdId ? await getCurrentObfuscateSensitive() : false;
+  const displayName = maskSensitiveText(
+    obfuscate,
+    session.user.name ?? (uiLanguage === "he" ? "משתמש" : "user"),
+  );
+  const firstName = obfuscate ? displayName : getFirstName(displayName);
 
   const householdFrequentLinksRow =
     !isSuperAdmin && householdId

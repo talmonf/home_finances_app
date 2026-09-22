@@ -5,8 +5,10 @@ import {
   getCurrentHouseholdDateDisplayFormat,
   getAuthSession,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -44,6 +46,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -211,7 +214,9 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                 <tbody>
                   {members.map((m) => (
                     <tr key={m.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{m.full_name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, m.full_name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         <div>{relationshipLabel(m.relationship, isHebrew)}</div>
                         {isGrandchildRelationship(m.relationship) &&
@@ -220,13 +225,13 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                             {m.parent_a?.full_name ? (
                               <div>
                                 {isHebrew ? "אב: " : "Father: "}
-                                {m.parent_a.full_name}
+                                {maskSensitiveText(obfuscate, m.parent_a.full_name)}
                               </div>
                             ) : null}
                             {m.parent_b?.full_name ? (
                               <div>
                                 {isHebrew ? "אם: " : "Mother: "}
-                                {m.parent_b.full_name}
+                                {maskSensitiveText(obfuscate, m.parent_b.full_name)}
                               </div>
                             ) : null}
                           </div>
@@ -247,9 +252,15 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{m.id_number ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{m.email ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, m.id_number) || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, m.phone) || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, m.email) || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={m.is_active ? "text-emerald-400" : "text-slate-500"}>
                           {m.is_active ? "Active" : "Inactive"}
@@ -381,7 +392,7 @@ export default async function FamilyMembersPage({ searchParams }: PageProps) {
                   <option value="">— None —</option>
                   {householdUsers.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.full_name} ({u.email})
+                      {maskSensitiveText(obfuscate, u.full_name)} ({maskSensitiveText(obfuscate, u.email)})
                     </option>
                   ))}
                 </select>

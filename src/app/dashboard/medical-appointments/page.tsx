@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import {
   formatHouseholdDate,
@@ -19,6 +20,7 @@ import { createMedicalAppointment } from "./actions";
 import { MedicalAppointmentModalForm } from "./medical-appointment-modal-form";
 import { getI18n } from "@/lib/i18n";
 import { medicalPaymentLabel, reimbursementSourceLabel } from "@/lib/ui-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +134,7 @@ function formatPaymentDetail(
     bank_account: { account_name: string; bank_name: string } | null;
     digital_payment_method: { name: string } | null;
   },
+  obfuscate: boolean,
 ) {
   if (!method) {
     return language === "he" ? "טרם צוין" : "Not specified yet";
@@ -139,13 +142,19 @@ function formatPaymentDetail(
   const base = medicalPaymentLabel(language, method);
   if (method === "credit_card" && row.credit_card) {
     const c = row.credit_card;
-    return `${base}: ${c.card_name} (${formatScheme(c.scheme)}) · ****${c.card_last_four}`;
+    return `${base}: ${maskSensitiveText(
+      obfuscate,
+      `${c.card_name} (${formatScheme(c.scheme)}) · ****${c.card_last_four}`,
+    )}`;
   }
   if (method === "bank_account" && row.bank_account) {
-    return `${base}: ${row.bank_account.account_name} · ${row.bank_account.bank_name}`;
+    return `${base}: ${maskSensitiveText(
+      obfuscate,
+      `${row.bank_account.account_name} · ${row.bank_account.bank_name}`,
+    )}`;
   }
   if (method === "digital_wallet" && row.digital_payment_method) {
-    return `${base}: ${row.digital_payment_method.name}`;
+    return `${base}: ${maskSensitiveText(obfuscate, row.digital_payment_method.name)}`;
   }
   return base;
 }
@@ -154,6 +163,7 @@ function formatReimbursementBlock(
   submittedAt: Date | null,
   notes: string | null,
   dateDisplayFormat: HouseholdDateDisplayFormat,
+  obfuscate: boolean,
 ) {
   if (!submittedAt && !notes?.trim()) {
     return <span className="text-slate-500">—</span>;
@@ -163,7 +173,7 @@ function formatReimbursementBlock(
     parts.push(`Request filed ${formatHouseholdDate(submittedAt, dateDisplayFormat)}`);
   }
   if (notes?.trim()) {
-    parts.push(notes.trim());
+    parts.push(maskSensitiveText(obfuscate, notes.trim()));
   }
   return (
     <span className="whitespace-pre-wrap text-slate-300">
@@ -179,13 +189,14 @@ function formatReimbursementPaid(
   amount: unknown,
   dateDisplayFormat: HouseholdDateDisplayFormat,
   language: "en" | "he",
+  obfuscate: boolean,
 ) {
   if (receivedAt == null && source == null && amount == null) {
     return <span className="text-slate-500">—</span>;
   }
   const parts: string[] = [];
   if (amount != null) {
-    parts.push(formatMoneyWithCurrency(amount, currency));
+    parts.push(maskSensitiveAmount(obfuscate, formatMoneyWithCurrency(amount, currency)));
   }
   if (receivedAt) {
     parts.push(`received ${formatHouseholdDate(receivedAt, dateDisplayFormat)}`);
@@ -203,6 +214,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const i18n = getI18n(uiLanguage);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -402,30 +414,42 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           </span>
                         </td>
                       <td className="px-4 py-3 text-slate-100">
-                        <div className="font-medium">{row.provider_name}</div>
+                        <div className="font-medium">
+                          {maskSensitiveText(obfuscate, row.provider_name)}
+                        </div>
                         {row.visit_description ? (
-                          <div className="text-xs text-slate-400">{row.visit_description}</div>
+                          <div className="text-xs text-slate-400">
+                            {maskSensitiveText(obfuscate, row.visit_description)}
+                          </div>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{row.family_member?.full_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, row.family_member?.full_name) || "—"}
+                      </td>
                       <td className="max-w-[200px] px-4 py-3 text-xs text-slate-400">
                         {row.notes?.trim() ? (
-                          <span className="whitespace-pre-wrap">{row.notes}</span>
+                          <span className="whitespace-pre-wrap">
+                            {maskSensitiveText(obfuscate, row.notes)}
+                          </span>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
-                        {formatMoneyWithCurrency(row.amount_out_of_pocket, row.currency)}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          formatMoneyWithCurrency(row.amount_out_of_pocket, row.currency),
+                        )}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs text-slate-300">
-                        {formatPaymentDetail(row.payment_method, uiLanguage, row)}
+                        {formatPaymentDetail(row.payment_method, uiLanguage, row, obfuscate)}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
                         {formatReimbursementBlock(
                           row.kupat_holim_request_submitted_at,
                           row.kupat_holim_notes,
                           dateDisplayFormat,
+                          obfuscate,
                         )}
                       </td>
                       <td className="max-w-[220px] px-4 py-3 text-xs">
@@ -433,6 +457,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           row.private_insurance_request_submitted_at,
                           row.private_insurance_notes,
                           dateDisplayFormat,
+                          obfuscate,
                         )}
                       </td>
                       <td className="max-w-[200px] px-4 py-3 text-xs">
@@ -443,6 +468,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
                           row.reimbursement_amount_received,
                           dateDisplayFormat,
                           uiLanguage,
+                          obfuscate,
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -471,10 +497,24 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
             errorMessage={errorMessage}
             isHebrew={isHebrew}
             uiLanguage={uiLanguage}
-            familyMembers={familyMembers}
-            creditCards={creditCards}
-            bankAccounts={bankAccounts}
-            digitalMethods={digitalMethods}
+            familyMembers={familyMembers.map((m) => ({
+              ...m,
+              full_name: maskSensitiveText(obfuscate, m.full_name),
+            }))}
+            creditCards={creditCards.map((c) => ({
+              ...c,
+              card_name: maskSensitiveText(obfuscate, c.card_name),
+              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+            }))}
+            bankAccounts={bankAccounts.map((a) => ({
+              ...a,
+              account_name: maskSensitiveText(obfuscate, a.account_name),
+              bank_name: maskSensitiveText(obfuscate, a.bank_name),
+            }))}
+            digitalMethods={digitalMethods.map((d) => ({
+              ...d,
+              name: maskSensitiveText(obfuscate, d.name),
+            }))}
           />
         ) : null}
       </div>

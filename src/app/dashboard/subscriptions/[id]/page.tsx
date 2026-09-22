@@ -1,13 +1,16 @@
 import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import {
   prisma,
   requireHouseholdMember,
   getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateSubscription } from "../actions";
@@ -53,6 +56,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -150,7 +154,14 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">
                 Name
               </label>
-              <input id="name" name="name" required defaultValue={subscription.name} className={inputClass} />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                id="name"
+                name="name"
+                required
+                value={subscription.name}
+                className={inputClass}
+              />
             </div>
             <div>
               <label htmlFor="start_date" className="mb-1 block text-xs font-medium text-slate-400">
@@ -188,14 +199,15 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="fee_amount" className="mb-1 block text-xs font-medium text-slate-400">
                 Fee amount
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="fee_amount"
                 name="fee_amount"
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                defaultValue={subscription.fee_amount.toString()}
+                value={subscription.fee_amount.toString()}
                 className={inputClass}
               />
             </div>
@@ -264,7 +276,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 <option value="">None</option>
                 {digitalPaymentMethods.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name}
+                    {maskSensitiveText(obfuscate, d.name)}
                     {!d.is_active ? " (inactive)" : ""}
                   </option>
                 ))}
@@ -283,7 +295,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {buildCreditCardLabel(c)}
+                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
                   </option>
                 ))}
               </select>
@@ -292,10 +304,11 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
                 Website / URL
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="website_url"
                 name="website_url"
-                defaultValue={subscription.website_url ?? ""}
+                value={subscription.website_url ?? ""}
                 className={inputClass}
               />
             </div>
@@ -303,11 +316,12 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
               <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
                 Description
               </label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 id="description"
                 name="description"
                 rows={5}
-                defaultValue={subscription.description ?? ""}
+                value={subscription.description ?? ""}
                 className={`${inputClass} min-h-[7.5rem] resize-y`}
               />
             </div>
@@ -331,4 +345,3 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
     </div>
   );
 }
-

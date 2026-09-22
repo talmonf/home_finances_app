@@ -149,12 +149,12 @@ export function getHouseholdModuleFlags(
   return { clinicEnabled, householdEnabled };
 }
 
-/** True when the user’s effective dashboard has only the Private clinic section (same rule as home redirect). */
-export async function householdUserOnlyPrivateClinicSection(
+/** Effective Clinic vs Home Finances access, using the same visible-section rule as the home dashboard. */
+export async function getEffectiveModuleAccess(
   householdId: string,
   userId: string,
   uiLanguage: UiLanguage,
-): Promise<boolean> {
+): Promise<HouseholdModuleFlags> {
   const enabledSections = await getEffectiveEnabledSections({ householdId, userId });
   const enabledBySectionId = new Map(
     enabledSections.map((s) => [s.sectionId, s.enabled] as const),
@@ -162,5 +162,22 @@ export async function householdUserOnlyPrivateClinicSection(
   const visibleSections = getDashboardSections(uiLanguage).filter(
     (s) => enabledBySectionId.get(s.id) ?? true,
   );
-  return visibleSections.length === 1 && visibleSections[0].id === "privateClinic";
+  return {
+    clinicEnabled: visibleSections.some((section) => section.id === "privateClinic"),
+    householdEnabled: visibleSections.some((section) => section.id !== "privateClinic"),
+  };
+}
+
+/** True when the user’s effective dashboard has only the Private clinic section (same rule as home redirect). */
+export async function householdUserOnlyPrivateClinicSection(
+  householdId: string,
+  userId: string,
+  uiLanguage: UiLanguage,
+): Promise<boolean> {
+  const { clinicEnabled, householdEnabled } = await getEffectiveModuleAccess(
+    householdId,
+    userId,
+    uiLanguage,
+  );
+  return clinicEnabled && !householdEnabled;
 }

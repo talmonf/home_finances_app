@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
@@ -11,6 +12,7 @@ import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
 } from "@/lib/insurance-policy-type-labels";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -43,6 +45,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -159,9 +162,10 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 <option value="">{isHebrew ? "ללא / לא רלוונטי" : "None / N/A"}</option>
                 {cars.map((car) => (
                   <option key={car.id} value={car.id}>
-                    {car.maker} {car.model}
-                    {car.plate_number ? ` (${car.plate_number})` : ""}
-                    {car.custom_name ? ` — ${car.custom_name}` : ""}
+                    {maskSensitiveText(
+                      obfuscate,
+                      `${car.maker} ${car.model}${car.plate_number ? ` (${car.plate_number})` : ""}${car.custom_name ? ` — ${car.custom_name}` : ""}`,
+                    )}
                   </option>
                 ))}
               </select>
@@ -187,7 +191,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -410,7 +414,11 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                   </tr>
                 </thead>
                 <tbody>
-                  {policies.map((p) => (
+                  {policies.map((p) => {
+                    const carLabel = p.car
+                      ? `${p.car.maker} ${p.car.model}${p.car.plate_number ? ` (${p.car.plate_number})` : ""}`
+                      : "";
+                    return (
                     <tr key={p.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-300">
                         {getInsurancePolicyTypeLabel(p.policy_type, lang)}
@@ -421,20 +429,25 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                             href={`/dashboard/cars/${p.car_id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {p.car.maker} {p.car.model}
-                            {p.car.plate_number ? ` (${p.car.plate_number})` : ""}
+                            {maskSensitiveText(obfuscate, carLabel)}
                           </Link>
                         ) : p.family_member ? (
-                          <span className="text-slate-300">{p.family_member.full_name}</span>
+                          <span className="text-slate-300">
+                            {maskSensitiveText(obfuscate, p.family_member.full_name)}
+                          </span>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-100">{p.provider_name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, p.provider_name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">
-                        {p.policy_name}
+                        {maskSensitiveText(obfuscate, p.policy_name)}
                         {p.policy_number ? (
-                          <span className="block text-xs text-slate-500">#{p.policy_number}</span>
+                          <span className="block text-xs text-slate-500">
+                            #{maskSensitiveText(obfuscate, p.policy_number)}
+                          </span>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
@@ -451,7 +464,10 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                         {formatHouseholdDate(p.policy_start_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-300 tabular-nums">
-                        {formatPremium(p.premium_paid, p.premium_currency)}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          formatPremium(p.premium_paid, p.premium_currency),
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}
@@ -492,7 +508,8 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -3,6 +3,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/lib/upcoming-renewals/compute";
 import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
 import { formatYearsSinceLabel } from "@/lib/upcoming-renewals/years-since";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -38,6 +40,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const language = isHebrew ? "he" : "en";
   const today = startOfToday();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -116,7 +119,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                 <option value="all">{isHebrew ? "הכל" : "All"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -202,12 +205,14 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
                         ))}
                       </td>
                       <td className="px-4 py-3 text-slate-100">
-                        {row.itemName}
+                        {maskSensitiveText(obfuscate, row.itemName)}
                         {yearsLabel ? (
                           <span className="ms-2 text-slate-400">· {yearsLabel}</span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{row.owner}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, row.owner)}
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={row.href}

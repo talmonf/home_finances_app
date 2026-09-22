@@ -1,6 +1,7 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage, getCurrentObfuscateSensitive } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { ImportUploadForm } from "./ImportUploadForm";
 import { RiseUpImportFlow } from "./RiseUpImportFlow";
 
@@ -16,6 +17,7 @@ export default async function ImportPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const sp = searchParams ? await searchParams : undefined;
   const format = sp?.format === "riseup" ? "riseup" : "bank";
 
@@ -40,11 +42,17 @@ export default async function ImportPage({ searchParams }: PageProps) {
 
   const bankAccountOptions = bankAccounts.map((a) => ({
     id: a.id,
-    label: `${a.bank_name} · ${a.account_name}${a.account_number ? ` (${a.account_number})` : ""}`,
+    label: maskSensitiveText(
+      obfuscate,
+      `${a.bank_name} · ${a.account_name}${a.account_number ? ` (${a.account_number})` : ""}`,
+    ),
   }));
   const creditCardOptions = creditCards.map((c) => ({
     id: c.id,
-    label: `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
+    label: maskSensitiveText(
+      obfuscate,
+      `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
+    ),
   }));
   const familyMemberOptions = familyMembers.map((m) => ({
     id: m.id,
@@ -157,7 +165,13 @@ export default async function ImportPage({ searchParams }: PageProps) {
             jobs={jobOptions}
           />
         ) : (
-          <ImportUploadForm bankAccounts={bankAccounts} uiLanguage={uiLanguage} />
+          <ImportUploadForm
+            bankAccounts={bankAccounts.map((a) => ({
+              id: a.id,
+              account_name: maskSensitiveText(obfuscate, a.account_name),
+            }))}
+            uiLanguage={uiLanguage}
+          />
         )}
 
         {format !== "riseup" ? (
@@ -175,10 +189,14 @@ export default async function ImportPage({ searchParams }: PageProps) {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3"
                   >
                     <div>
-                      <span className="font-medium text-slate-200">{doc.file_name}</span>
+                      <span className="font-medium text-slate-200">
+                        {maskSensitiveText(obfuscate, doc.file_name)}
+                      </span>
                       <span className="ml-2 text-xs text-slate-400">
                         {doc._count.transactions} transactions
-                        {doc.bank_account ? ` · ${doc.bank_account.account_name}` : ""}
+                        {doc.bank_account
+                          ? ` · ${maskSensitiveText(obfuscate, doc.bank_account.account_name)}`
+                          : ""}
                       </span>
                     </div>
                     <div className="flex gap-2">

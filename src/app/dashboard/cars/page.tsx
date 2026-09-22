@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
@@ -13,6 +14,7 @@ import { createCar } from "./actions";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const resolved = searchParams ? await searchParams : undefined;
   const showAddForm = resolved?.add === "1";
@@ -139,20 +142,32 @@ export default async function CarsPage({ searchParams }: PageProps) {
                     <tr key={car.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-3 py-2 text-slate-100">
                         <Link href={`/dashboard/cars/${car.id}`} className="text-sky-400 hover:text-sky-300">
-                          {car.custom_name ? `${car.custom_name} — ` : ""}
+                          {car.custom_name
+                            ? `${maskSensitiveText(obfuscate, car.custom_name)} — `
+                            : ""}
                           {car.maker} {car.model} {car.model_year ? `(${car.model_year})` : ""}
                         </Link>
                       </td>
-                      <td className="px-3 py-2 text-slate-300">{car.plate_number ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{car.main_driver?.full_name ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-300">{formatMoney(car.purchase_amount)}</td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, car.plate_number) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveText(obfuscate, car.main_driver?.full_name) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">
+                        {maskSensitiveAmount(obfuscate, formatMoney(car.purchase_amount))}
+                      </td>
                       <td className="px-3 py-2 text-slate-300">
                         {car.sold_at ? (
                           <div className="space-y-1">
                             <div className="text-amber-300">
                               Sold on {formatDate(car.sold_at, dateDisplayFormat)}
                             </div>
-                            <div>{car.sold_amount ? formatMoney(car.sold_amount) : "Amount not entered"}</div>
+                            <div>
+                              {car.sold_amount
+                                ? maskSensitiveAmount(obfuscate, formatMoney(car.sold_amount))
+                                : "Amount not entered"}
+                            </div>
                           </div>
                         ) : (
                           "—"
@@ -197,7 +212,11 @@ export default async function CarsPage({ searchParams }: PageProps) {
               <input name="plate_number" placeholder="Plate number" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               <select name="main_driver_family_member_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">Main driver (optional)</option>
-                {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                {familyMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {maskSensitiveText(obfuscate, m.full_name)}
+                  </option>
+                ))}
               </select>
               <div className="space-y-1">
                 <label className="block text-xs text-slate-400">Purchase date</label>
@@ -217,11 +236,19 @@ export default async function CarsPage({ searchParams }: PageProps) {
               </select>
               <select name="purchase_credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">Purchase credit card (optional)</option>
-                {creditCards.map((c) => <option key={c.id} value={c.id}>{c.card_name}</option>)}
+                {creditCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {maskSensitiveText(obfuscate, c.card_name)}
+                  </option>
+                ))}
               </select>
               <select name="purchase_bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                 <option value="">Purchase bank account (optional)</option>
-                {bankAccounts.map((b) => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                {bankAccounts.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {maskSensitiveText(obfuscate, b.account_name)}
+                  </option>
+                ))}
               </select>
               <textarea name="purchase_notes" placeholder="Purchase notes" className="md:col-span-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
               <div className="space-y-1">

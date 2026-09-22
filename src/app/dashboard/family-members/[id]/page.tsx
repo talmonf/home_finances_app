@@ -1,8 +1,16 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FamilyMemberBirthdateFields } from "@/components/family-member-birthdate-fields";
 import { FamilyMemberRelationshipFields } from "@/components/family-member-relationship-fields";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { updateFamilyMember } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +25,7 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const { id } = await params;
@@ -74,11 +83,12 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
             <label htmlFor="full_name" className="mb-1 block text-xs font-medium text-slate-400">
               Full name
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="full_name"
               name="full_name"
               required
-              defaultValue={member.full_name}
+              value={member.full_name}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
             />
           </div>
@@ -100,10 +110,11 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               <label htmlFor="id_number" className="mb-1 block text-xs font-medium text-slate-400">
                 ID number
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="id_number"
                 name="id_number"
-                defaultValue={member.id_number ?? ""}
+                value={member.id_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -111,11 +122,12 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               <label htmlFor="phone" className="mb-1 block text-xs font-medium text-slate-400">
                 Phone
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="phone"
                 name="phone"
                 type="tel"
-                defaultValue={member.phone ?? ""}
+                value={member.phone ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -123,11 +135,12 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
               <label htmlFor="email" className="mb-1 block text-xs font-medium text-slate-400">
                 Email
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={member.email ?? ""}
+                value={member.email ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -154,7 +167,7 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
                 <option value="">— None —</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.email})
+                    {maskSensitiveText(obfuscate, u.full_name)} ({maskSensitiveText(obfuscate, u.email)})
                   </option>
                 ))}
               </select>
@@ -164,11 +177,12 @@ export default async function EditFamilyMemberPage({ params, searchParams }: Pag
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
               {isHebrew ? "הערות" : "Notes"}
             </label>
-            <textarea
+            <SensitiveTextarea
+              obfuscate={obfuscate}
               id="notes"
               name="notes"
               rows={3}
-              defaultValue={member.notes ?? ""}
+              value={member.notes ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>

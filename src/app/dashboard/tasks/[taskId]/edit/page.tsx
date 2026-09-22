@@ -1,6 +1,13 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { updateTask } from "../../actions";
@@ -17,6 +24,7 @@ export default async function EditTaskPage({ params }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/dashboard/tasks?error=No+household");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { taskId } = await params;
 
@@ -57,11 +65,12 @@ export default async function EditTaskPage({ params }: PageProps) {
             <label htmlFor="subject" className="mb-1 block text-xs font-medium text-slate-400">
               Subject
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="subject"
               name="subject"
               required
-              defaultValue={task.subject}
+              value={task.subject}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -70,11 +79,12 @@ export default async function EditTaskPage({ params }: PageProps) {
             <label htmlFor="description" className="mb-1 block text-xs font-medium text-slate-400">
               Description
             </label>
-            <textarea
+            <SensitiveTextarea
+              obfuscate={obfuscate}
               id="description"
               name="description"
               rows={3}
-              defaultValue={task.description ?? ""}
+              value={task.description ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -149,7 +159,7 @@ export default async function EditTaskPage({ params }: PageProps) {
               <option value="">Select family member</option>
               {familyMembers.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.full_name}
+                  {maskSensitiveText(obfuscate, member.full_name)}
                 </option>
               ))}
             </select>
@@ -166,7 +176,7 @@ export default async function EditTaskPage({ params }: PageProps) {
               <option value="">Select advisor</option>
               {advisors.map((advisor) => (
                 <option key={advisor.id} value={advisor.id}>
-                  {advisor.full_name}
+                  {maskSensitiveText(obfuscate, advisor.full_name)}
                 </option>
               ))}
             </select>
@@ -176,21 +186,23 @@ export default async function EditTaskPage({ params }: PageProps) {
             <label htmlFor="link_1_title" className="mb-1 block text-xs font-medium text-slate-400">
               Link 1 title
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="link_1_title"
               name="link_1_title"
-              defaultValue={task.link_1_title ?? ""}
+              value={task.link_1_title ?? ""}
               className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="e.g. Vendor portal"
             />
             <label htmlFor="link_1_url" className="mb-1 block text-xs font-medium text-slate-400">
               Link 1 URL
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="link_1_url"
               name="link_1_url"
               type="url"
-              defaultValue={task.link_1_url ?? ""}
+              value={task.link_1_url ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="https://..."
             />
@@ -200,21 +212,23 @@ export default async function EditTaskPage({ params }: PageProps) {
             <label htmlFor="link_2_title" className="mb-1 block text-xs font-medium text-slate-400">
               Link 2 title
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="link_2_title"
               name="link_2_title"
-              defaultValue={task.link_2_title ?? ""}
+              value={task.link_2_title ?? ""}
               className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="e.g. Reference doc"
             />
             <label htmlFor="link_2_url" className="mb-1 block text-xs font-medium text-slate-400">
               Link 2 URL
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="link_2_url"
               name="link_2_url"
               type="url"
-              defaultValue={task.link_2_url ?? ""}
+              value={task.link_2_url ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="https://..."
             />

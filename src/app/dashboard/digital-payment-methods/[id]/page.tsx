@@ -1,6 +1,13 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateDigitalPaymentMethod } from "../actions";
@@ -25,6 +32,7 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -56,6 +64,9 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
 
   if (!method) redirect("/dashboard/digital-payment-methods?error=Not+found");
 
+  const inputClass =
+    "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100";
+
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -86,12 +97,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">
                 Name
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="name"
                 name="name"
                 required
-                defaultValue={method.name}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={method.name}
+                className={inputClass}
               />
             </div>
             <div>
@@ -103,7 +115,7 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
                 name="method_type"
                 required
                 defaultValue={method.method_type}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               >
                 {(["bit", "paybox", "paypal", "other"] as const).map((v) => (
                   <option key={v} value={v}>
@@ -119,13 +131,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <select
                 id="linked_bank_account_id"
                 name="linked_bank_account_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
                 defaultValue={method.linked_bank_account_id ?? ""}
               >
                 <option value="">None</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.account_name} ({b.bank_name})
+                    {maskSensitiveText(obfuscate, `${b.account_name} (${b.bank_name})`)}
                     {!b.is_active ? " — inactive" : ""}
                   </option>
                 ))}
@@ -138,13 +150,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <select
                 id="family_member_id"
                 name="family_member_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
                 defaultValue={method.family_member_id ?? ""}
               >
                 <option value="">None</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -156,13 +168,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <select
                 id="primary_credit_card_id"
                 name="primary_credit_card_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
                 defaultValue={method.primary_credit_card_id ?? ""}
               >
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} · ****{c.card_last_four}
+                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
                   </option>
                 ))}
               </select>
@@ -174,13 +186,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <select
                 id="secondary_credit_card_id"
                 name="secondary_credit_card_id"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
                 defaultValue={method.secondary_credit_card_id ?? ""}
               >
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} · ****{c.card_last_four}
+                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
                   </option>
                 ))}
               </select>
@@ -193,18 +205,19 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
                 id="date_created"
                 name="date_created"
                 defaultIsoYmd={utcDateToHtmlDateInputValue(method.date_created)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className={inputClass}
               />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
                 Website / URL
               </label>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 id="website_url"
                 name="website_url"
-                defaultValue={method.website_url ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={method.website_url ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>
@@ -212,12 +225,13 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 Notes
               </label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 id="notes"
                 name="notes"
                 rows={3}
-                defaultValue={method.notes ?? ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                value={method.notes ?? ""}
+                className={inputClass}
                 placeholder="Optional"
               />
             </div>

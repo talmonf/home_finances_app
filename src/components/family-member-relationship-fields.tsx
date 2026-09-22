@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
 import { FAMILY_RELATIONSHIP_OPTIONS } from "@/lib/family-members/relationship-options";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import {
   isGrandchildRelationship,
   type FamilyMemberParentOption,
@@ -24,6 +26,7 @@ export function FamilyMemberRelationshipFields({
   defaultParentAId = "",
   defaultParentBId = "",
 }: Props) {
+  const obfuscate = useObfuscateSensitive();
   const [relationship, setRelationship] = useState(defaultRelationship);
   const showParents = isGrandchildRelationship(relationship);
   const parentOptions = members.filter((m) => m.id !== excludeMemberId);
@@ -64,7 +67,7 @@ export function FamilyMemberRelationshipFields({
               <option value="">—</option>
               {parentOptions.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>
@@ -82,7 +85,7 @@ export function FamilyMemberRelationshipFields({
               <option value="">—</option>
               {parentOptions.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>

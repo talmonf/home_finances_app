@@ -4,9 +4,12 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { findCurrentRental } from "@/lib/rental-current";
+import { maskSensitiveText } from "@/lib/privacy-display";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
@@ -51,13 +54,23 @@ function websiteTableLabel(raw: string | null | undefined): string | null {
   return normalized.length < 30 ? normalized : null;
 }
 
-function formatUtilityPaymentMethod(utility: {
-  bank_account: { bank_name: string; account_number: string | null } | null;
-  credit_card: { card_last_four: string } | null;
-}): string {
-  if (utility.credit_card) return `****${utility.credit_card.card_last_four}`;
+function formatUtilityPaymentMethod(
+  obfuscate: boolean,
+  utility: {
+    bank_account: { bank_name: string; account_number: string | null } | null;
+    credit_card: { card_last_four: string } | null;
+  },
+): string {
+  if (utility.credit_card) {
+    return maskSensitiveText(obfuscate, `****${utility.credit_card.card_last_four}`);
+  }
   if (utility.bank_account) {
-    const parts = [utility.bank_account.bank_name, utility.bank_account.account_number].filter(Boolean);
+    const parts = [
+      maskSensitiveText(obfuscate, utility.bank_account.bank_name),
+      utility.bank_account.account_number
+        ? maskSensitiveText(obfuscate, utility.bank_account.account_number)
+        : null,
+    ].filter(Boolean);
     return parts.length > 0 ? parts.join(", ") : "—";
   }
   return "—";
@@ -74,6 +87,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   if (!householdId) redirect("/");
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const utilityLabels = isHebrew ? UTILITY_TYPE_LABELS_HE : UTILITY_TYPE_LABELS_EN;
@@ -123,9 +137,13 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
   if (!property) redirect("/dashboard/properties?error=Not+found");
   const currentRental = findCurrentRental(property.rentals);
   const hasRentals = property.rentals.length > 0;
-  const currentTenantNames =
-    currentRental?.tenants.map((tenant) => tenant.full_name).filter(Boolean).join(", ") ||
-    (isHebrew ? "לא צוינו דיירים" : "No tenants listed");
+  const rawTenantNames =
+    currentRental?.tenants.map((tenant) => tenant.full_name).filter(Boolean).join(", ") ?? "";
+  const currentTenantNames = rawTenantNames
+    ? maskSensitiveText(obfuscate, rawTenantNames)
+    : isHebrew
+      ? "לא צוינו דיירים"
+      : "No tenants listed";
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -137,7 +155,9 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
           >
             {isHebrew ? "חזרה לבתים ונכסים →" : "← Back to homes & properties"}
           </Link>
-          <h1 className="text-2xl font-semibold text-slate-50">{property.name}</h1>
+          <h1 className="text-2xl font-semibold text-slate-50">
+            {maskSensitiveText(obfuscate, property.name)}
+          </h1>
           <p className="text-sm text-slate-400">
             {isHebrew
               ? "עדכנו פרטי נכס ונהלו את חברות התשתית שמשרתות את הבית."
@@ -210,7 +230,14 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
             <input type="hidden" name="id" value={property.id} />
             <div>
               <label htmlFor="name" className="mb-1 block text-xs font-medium text-slate-400">Name</label>
-              <input id="name" name="name" required defaultValue={property.name} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                id="name"
+                name="name"
+                required
+                value={property.name}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div>
               <label htmlFor="property_type" className="mb-1 block text-xs font-medium text-slate-400">{isHebrew ? "סוג" : "Type"}</label>
@@ -223,31 +250,46 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
             </div>
             <div>
               <label htmlFor="landlord_name" className="mb-1 block text-xs font-medium text-slate-400">In whose name</label>
-              <input id="landlord_name" name="landlord_name" defaultValue={property.landlord_name ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextInput
+                obfuscate={obfuscate}
+                id="landlord_name"
+                name="landlord_name"
+                value={property.landlord_name ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="address" className="mb-1 block text-xs font-medium text-slate-400">Address</label>
-              <textarea id="address" name="address" rows={2} defaultValue={property.address ?? ""} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+              <SensitiveTextarea
+                obfuscate={obfuscate}
+                id="address"
+                name="address"
+                rows={2}
+                value={property.address ?? ""}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="landlord_contact" className="mb-1 block text-xs font-medium text-slate-400">
                 Contact details (phone / email)
               </label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 id="landlord_contact"
                 name="landlord_contact"
                 rows={2}
-                defaultValue={property.landlord_contact ?? ""}
+                value={property.landlord_contact ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">{isHebrew ? "הערות" : "Notes"}</label>
-              <textarea
+              <SensitiveTextarea
+                obfuscate={obfuscate}
                 id="notes"
                 name="notes"
                 rows={2}
-                defaultValue={property.notes ?? ""}
+                value={property.notes ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -303,7 +345,9 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                         <td className="px-4 py-3 text-slate-300">
                           {utilityLabels[u.utility_type] ?? u.utility_type}
                         </td>
-                        <td className="px-4 py-3 text-slate-100">{u.provider_name}</td>
+                        <td className="px-4 py-3 text-slate-100">
+                          {maskSensitiveText(obfuscate, u.provider_name)}
+                        </td>
                         <td className="px-4 py-3 text-slate-300">
                           {webHref ? (
                             <a
@@ -320,21 +364,38 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                         </td>
                         <td className="px-4 py-3 text-slate-300">
                           {u.contact_phone ? (
-                            <a href={`tel:${u.contact_phone.replace(/\s/g, "")}`} className="text-sky-400 hover:text-sky-300">
-                              {u.contact_phone}
-                            </a>
+                            obfuscate ? (
+                              maskSensitiveText(obfuscate, u.contact_phone)
+                            ) : (
+                              <a
+                                href={`tel:${u.contact_phone.replace(/\s/g, "")}`}
+                                className="text-sky-400 hover:text-sky-300"
+                              >
+                                {u.contact_phone}
+                              </a>
+                            )
                           ) : (
                             "—"
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-300">{u.client_number || "—"}</td>
-                        <td className="px-4 py-3 text-slate-300">{u.account_number || "—"}</td>
-                        <td className="px-4 py-3 text-slate-300">{u.meter_number || "—"}</td>
-                        <td className="px-4 py-3 text-slate-300">{formatUtilityPaymentMethod(u)}</td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {maskSensitiveText(obfuscate, u.client_number) || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {maskSensitiveText(obfuscate, u.account_number) || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {maskSensitiveText(obfuscate, u.meter_number) || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          {formatUtilityPaymentMethod(obfuscate, u)}
+                        </td>
                         <td className="px-4 py-3 text-slate-300">
                           {u.renewal_date ? formatHouseholdDate(u.renewal_date, dateDisplayFormat) : "—"}
                         </td>
-                        <td className="px-4 py-3 text-slate-400">{u.notes || "—"}</td>
+                        <td className="px-4 py-3 text-slate-400">
+                          {maskSensitiveText(obfuscate, u.notes) || "—"}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <Link
@@ -362,9 +423,23 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
             <UtilityModalForm
               action={createUtility}
               propertyId={property.id}
-              payees={payees.map((p) => ({ id: p.id, name: p.name }))}
-              bankAccounts={bankAccounts}
-              creditCards={creditCards}
+              payees={payees.map((p) => ({
+                id: p.id,
+                name: maskSensitiveText(obfuscate, p.name),
+              }))}
+              bankAccounts={bankAccounts.map((a) => ({
+                ...a,
+                account_name: maskSensitiveText(obfuscate, a.account_name),
+                bank_name: maskSensitiveText(obfuscate, a.bank_name),
+                account_number: a.account_number
+                  ? maskSensitiveText(obfuscate, a.account_number)
+                  : null,
+              }))}
+              creditCards={creditCards.map((c) => ({
+                ...c,
+                card_name: maskSensitiveText(obfuscate, c.card_name),
+                card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+              }))}
               utilityTypeLabels={utilityLabels}
               closeHref={propertyDetailBase}
               redirectOnSuccess={`${propertyDetailBase}?created=utility`}

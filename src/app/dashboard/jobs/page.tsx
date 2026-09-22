@@ -4,12 +4,14 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { createJob } from "./actions";
 import { JobsListClient } from "./jobs-list-client";
 
@@ -34,6 +36,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolved = searchParams ? await searchParams : undefined;
   const selectedFamilyMemberId = resolved?.family_member_id?.trim() || "";
@@ -112,15 +115,18 @@ export default async function JobsPage({ searchParams }: PageProps) {
           rows={jobs.map((job) => ({
             id: job.id,
             family_member_id: job.family_member_id,
-            family_member_name: job.family_member.full_name,
+            family_member_name: maskSensitiveText(obfuscate, job.family_member.full_name),
             employment_type: job.employment_type,
-            job_title: job.job_title,
-            employer_name: job.employer_name,
+            job_title: maskSensitiveText(obfuscate, job.job_title),
+            employer_name: maskSensitiveText(obfuscate, job.employer_name),
             start_date_iso: job.start_date ? job.start_date.toISOString() : null,
             end_date_iso: job.end_date ? job.end_date.toISOString() : null,
             is_private_clinic: job.is_private_clinic,
           }))}
-          familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
+          familyMembers={familyMembers.map((m) => ({
+            id: m.id,
+            full_name: maskSensitiveText(obfuscate, m.full_name),
+          }))}
           dateDisplayFormat={dateDisplayFormat}
           isHebrew={isHebrew}
           initialFamilyMemberId={selectedFamilyMemberId}
@@ -140,7 +146,11 @@ export default async function JobsPage({ searchParams }: PageProps) {
                 <label className="block text-xs text-slate-300">Family member</label>
                 <select name="family_member_id" required className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                   <option value="">Select family member</option>
-                  {familyMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                  {familyMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {maskSensitiveText(obfuscate, m.full_name)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
@@ -213,8 +223,10 @@ export default async function JobsPage({ searchParams }: PageProps) {
                   <option value="">{isHebrew ? "ללא" : "None"}</option>
                   {bankAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.bank_name} — {a.account_name}
-                      {a.account_number ? ` (${a.account_number})` : ""}
+                      {maskSensitiveText(
+                        obfuscate,
+                        `${a.bank_name} — ${a.account_name}${a.account_number ? ` (${a.account_number})` : ""}`,
+                      )}
                     </option>
                   ))}
                 </select>
@@ -231,7 +243,10 @@ export default async function JobsPage({ searchParams }: PageProps) {
                   <option value="">{isHebrew ? "ללא" : "None"}</option>
                   {creditCards.map((card) => (
                     <option key={card.id} value={card.id}>
-                      {card.card_name} — {card.issuer_name} — {card.card_last_four}
+                      {maskSensitiveText(
+                        obfuscate,
+                        `${card.card_name} — ${card.issuer_name} — ${card.card_last_four}`,
+                      )}
                     </option>
                   ))}
                 </select>

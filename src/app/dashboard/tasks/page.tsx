@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/household-date-format";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +58,17 @@ function formatDateInput(
   return formatHouseholdDate(new Date(d), dateDisplayFormat);
 }
 
-function assigneeLabel(task: {
-  family_member: { full_name: string } | null;
-  assigned_user: { full_name: string } | null;
-}) {
-  if (task.family_member) return task.family_member.full_name;
-  if (task.assigned_user) return `${task.assigned_user.full_name} (Advisor)`;
+function assigneeLabel(
+  task: {
+    family_member: { full_name: string } | null;
+    assigned_user: { full_name: string } | null;
+  },
+  obfuscate: boolean,
+) {
+  if (task.family_member) return maskSensitiveText(obfuscate, task.family_member.full_name);
+  if (task.assigned_user) {
+    return `${maskSensitiveText(obfuscate, task.assigned_user.full_name)} (Advisor)`;
+  }
   return "—";
 }
 
@@ -122,7 +129,7 @@ function compareTasks(
       return a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
     }
     case "assignee":
-      return mult * assigneeLabel(a).localeCompare(assigneeLabel(b), undefined, { sensitivity: "base" });
+      return mult * assigneeLabel(a, false).localeCompare(assigneeLabel(b, false), undefined, { sensitivity: "base" });
     case "links":
       return mult * linksSortKey(a).localeCompare(linksSortKey(b), undefined, { sensitivity: "base" });
     case "created":
@@ -173,6 +180,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -366,10 +374,12 @@ export default async function TasksPage({ searchParams }: PageProps) {
                   {tasks.map((task) => (
                     <tr key={task.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3">
-                        <span className="font-medium text-slate-100">{task.subject}</span>
+                        <span className="font-medium text-slate-100">
+                          {maskSensitiveText(obfuscate, task.subject)}
+                        </span>
                         {task.description && (
                           <p className="mt-0.5 truncate max-w-[200px] text-xs text-slate-400" title={task.description}>
-                            {task.description}
+                            {maskSensitiveText(obfuscate, task.description)}
                           </p>
                         )}
                       </td>
@@ -396,7 +406,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3 text-slate-400">
                         {formatDateInput(task.due_date, dateDisplayFormat)}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{assigneeLabel(task)}</td>
+                      <td className="px-4 py-3 text-slate-400">{assigneeLabel(task, obfuscate)}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           {task.link_1_title && task.link_1_url && (
@@ -406,7 +416,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                               rel="noreferrer"
                               className="text-sky-400 hover:text-sky-300 hover:underline"
                             >
-                              {task.link_1_title}
+                              {maskSensitiveText(obfuscate, task.link_1_title)}
                             </a>
                           )}
                           {task.link_2_title && task.link_2_url && (
@@ -416,7 +426,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                               rel="noreferrer"
                               className="text-sky-400 hover:text-sky-300 hover:underline"
                             >
-                              {task.link_2_title}
+                              {maskSensitiveText(obfuscate, task.link_2_title)}
                             </a>
                           )}
                           {!task.link_1_title && !task.link_2_title && (
@@ -545,7 +555,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                   <option value="">Select family member</option>
                   {familyMembers.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.full_name}
+                      {maskSensitiveText(obfuscate, m.full_name)}
                     </option>
                   ))}
                 </select>
@@ -563,7 +573,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
                   <option value="">Select advisor</option>
                   {advisors.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.full_name}
+                      {maskSensitiveText(obfuscate, u.full_name)}
                     </option>
                   ))}
                 </select>

@@ -3,10 +3,12 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MarriageWeddingDateFields } from "@/components/marriage-wedding-date-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { createFamilyMarriage } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +23,7 @@ export default async function NewFamilyMarriagePage({ searchParams }: PageProps)
   if (!householdId) redirect("/");
 
   const isHebrew = (await getCurrentUiLanguage()) === "he";
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : undefined;
 
   const members = await prisma.family_members.findMany({
@@ -56,7 +59,7 @@ export default async function NewFamilyMarriagePage({ searchParams }: PageProps)
               <option value="">—</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>
@@ -74,7 +77,7 @@ export default async function NewFamilyMarriagePage({ searchParams }: PageProps)
               <option value="">—</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>

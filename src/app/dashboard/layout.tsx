@@ -17,7 +17,6 @@ import {
 } from "@/lib/household-date-format";
 import { sectionIdFromDashboardPathname } from "@/lib/useful-links/pathname-to-section";
 import { uiLanguageDirection } from "@/lib/ui-language";
-import { privateClinicLayoutStrings } from "@/lib/private-clinic-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -38,26 +37,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
-  const showObfuscateToggle = pathname.startsWith("/dashboard/private-clinic");
   const showPetrolTitle = pathname.startsWith("/dashboard/petrol-fillups");
   const showUpcomingRenewalsTitle = pathname.startsWith("/dashboard/upcoming-renewals");
   const showSubscriptionsTitle = pathname.startsWith("/dashboard/subscriptions");
-  const privateClinicCopy = showObfuscateToggle ? privateClinicLayoutStrings(uiLanguage) : null;
-  const toolbarContextTitle = showObfuscateToggle
-    ? privateClinicCopy?.title
-    : showPetrolTitle
+  const toolbarContextTitle = showPetrolTitle
+    ? uiLanguage === "he"
+      ? "תדלוק"
+      : "Petrol fill-up"
+    : showSubscriptionsTitle
       ? uiLanguage === "he"
-        ? "תדלוק"
-        : "Petrol fill-up"
-      : showSubscriptionsTitle
-        ? uiLanguage === "he"
-          ? "מנויים"
-          : "Subscriptions"
+        ? "מנויים"
+        : "Subscriptions"
       : showUpcomingRenewalsTitle
         ? uiLanguage === "he"
           ? "חידושים ותאריכי יעד קרובים"
           : "Upcoming Renewals & Deadlines"
-      : undefined;
+        : undefined;
   const showUsefulLinks =
     session?.user?.householdId && !session.user.isSuperAdmin
       ? await getCurrentShowUsefulLinks()
@@ -76,17 +71,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <GlobalFormSubmitFeedback />
       {/* Block wrapper (not `display: contents`) so `lang` applies to native date inputs; see htmlLangForDateDisplayFormat. */}
       <div lang={lang} dir={dir} className="min-w-0">
-        {session?.user?.householdId && !session.user.isSuperAdmin ? (
+        {session?.user?.householdId && !session.user.isSuperAdmin && (toolbarContextTitle || showUsefulLinks) ? (
           <div
             className={`flex justify-center bg-slate-950 px-4 ${usefulSectionId ? "pt-2 pb-4" : "pt-2"}`}
           >
             <div className="w-full max-w-screen-2xl space-y-2">
-              <Suspense fallback={null}>
-                <DashboardUserToolbar
-                  showObfuscate={showObfuscateToggle}
-                  contextTitle={toolbarContextTitle}
-                />
-              </Suspense>
+              {toolbarContextTitle ? <DashboardUserToolbar contextTitle={toolbarContextTitle} /> : null}
               {showUsefulLinks ? (
                 <>
                   <Suspense fallback={null}>

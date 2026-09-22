@@ -3,9 +3,11 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HOUSEHOLD_DATE_FORMAT_LABELS } from "@/lib/household-date-format";
 import { carDisplayLabel } from "@/lib/petrol-fillups-metrics";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { PetrolFillupsImportForm } from "@/components/petrol-fillups-import-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -60,6 +62,7 @@ export default async function PetrolFillupsImportPage({ searchParams }: PageProp
   }
 
   const dateFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const formatHint = HOUSEHOLD_DATE_FORMAT_LABELS[dateFormat];
   const backHref = `/dashboard/petrol-fillups?carId=${encodeURIComponent(car.id)}`;
   const afterImportHref = backHref;
@@ -69,7 +72,10 @@ export default async function PetrolFillupsImportPage({ searchParams }: PageProp
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-slate-50">Import petrol fill-ups</h1>
         <p className="text-sm text-slate-400">
-          Vehicle: <span className="text-slate-200">{carDisplayLabel(car)}</span>
+          Vehicle:{" "}
+          <span className="text-slate-200">
+            {maskSensitiveText(obfuscate, carDisplayLabel(car))}
+          </span>
         </p>
       </header>
 

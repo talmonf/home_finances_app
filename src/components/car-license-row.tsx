@@ -7,8 +7,14 @@ import { CarLicenseReceiptUpload } from "@/components/car-license-receipt-upload
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { ProxiedFileOpenDownloadLinks } from "@/components/file-open-download-links";
 import { HouseholdDateField } from "@/components/household-date-field";
-import { useHouseholdDateFormat, useUiLanguage } from "@/components/household-preferences-context";
+import {
+  useHouseholdDateFormat,
+  useObfuscateSensitive,
+  useUiLanguage,
+} from "@/components/household-preferences-context";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 type CardOpt = { id: string; label: string };
 
@@ -50,6 +56,7 @@ export function CarLicenseRow({
   const [editing, setEditing] = useState(false);
   const dateFmt = useHouseholdDateFormat();
   const isHebrew = useUiLanguage() === "he";
+  const obfuscate = useObfuscateSensitive();
 
   const field =
     "rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500";
@@ -63,8 +70,12 @@ export function CarLicenseRow({
         <td className="px-3 py-2 text-slate-200">
           {license.expiresAt ? formatIsoDateStringForHousehold(license.expiresAt, dateFmt) : "—"}
         </td>
-        <td className="px-3 py-2 text-slate-300 tabular-nums">{formatLicenseCostDisplay(license.costAmount)}</td>
-        <td className="px-3 py-2 text-slate-300">{license.paymentLabel}</td>
+        <td className="px-3 py-2 text-slate-300 tabular-nums">
+          {maskSensitiveAmount(obfuscate, formatLicenseCostDisplay(license.costAmount))}
+        </td>
+        <td className="px-3 py-2 text-slate-300">
+          {maskSensitiveText(obfuscate, license.paymentLabel)}
+        </td>
         <td className="max-w-[14rem] px-3 py-2 align-top text-slate-300">
           {license.hasReceipt ? (
             <ProxiedFileOpenDownloadLinks
@@ -74,7 +85,9 @@ export function CarLicenseRow({
             <span className="text-xs text-slate-500">—</span>
           )}
         </td>
-        <td className="px-3 py-2 text-slate-400">{license.notes || "—"}</td>
+        <td className="px-3 py-2 text-slate-400">
+          {maskSensitiveText(obfuscate, license.notes) || "—"}
+        </td>
         <td className="px-3 py-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <button
@@ -131,13 +144,14 @@ export function CarLicenseRow({
                 <label className="block text-xs font-medium text-slate-300" htmlFor={`cost-${license.id}`}>
                   {isHebrew ? "עלות" : "Cost"}
                 </label>
-                <input
+                <SensitiveTextInput
+                  obfuscate={obfuscate}
                   id={`cost-${license.id}`}
                   name="cost_amount"
                   type="number"
                   step="0.01"
                   min="0"
-                  defaultValue={formatLicenseCostInputDefault(license.costAmount)}
+                  value={formatLicenseCostInputDefault(license.costAmount)}
                   className={`w-full ${field}`}
                 />
               </div>
@@ -149,7 +163,7 @@ export function CarLicenseRow({
                 <option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.label}
+                    {maskSensitiveText(obfuscate, c.label)}
                   </option>
                 ))}
               </select>
@@ -161,14 +175,15 @@ export function CarLicenseRow({
                 <option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.label}
+                    {maskSensitiveText(obfuscate, b.label)}
                   </option>
                 ))}
               </select>
-              <input
+              <SensitiveTextInput
+                obfuscate={obfuscate}
                 name="notes"
                 placeholder={isHebrew ? "הערות רישיון" : "License notes"}
-                defaultValue={license.notes}
+                value={license.notes}
                 className={`md:col-span-2 ${field}`}
               />
               <div className="space-y-3 md:col-span-3 rounded-lg border border-slate-600/80 bg-slate-900/30 p-3">

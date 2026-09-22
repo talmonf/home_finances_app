@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
@@ -10,6 +11,7 @@ import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/househol
 import { HouseholdDateField } from "@/components/household-date-field";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
@@ -119,6 +121,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -318,7 +321,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   <option value="unassigned">{isHebrew ? "ללא שיוך" : "Unassigned"}</option>
                   {familyMembers.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.full_name}
+                      {maskSensitiveText(obfuscate, m.full_name)}
                     </option>
                   ))}
                 </select>
@@ -429,22 +432,34 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {cardsSorted.map((c) => (
+                  {cardsSorted.map((c) => {
+                    const monthlyCostFormatted =
+                      c.monthly_cost == null
+                        ? "—"
+                        : Number(c.monthly_cost).toLocaleString("en", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          });
+                    return (
                     <tr key={c.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-100">
                         <Link
                           href={`/dashboard/credit-cards/${c.id}`}
                           className="text-sky-400 hover:text-sky-300"
                         >
-                          {c.card_name}
+                          {maskSensitiveText(obfuscate, c.card_name)}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{c.card_last_four}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, c.card_last_four)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatOptionalDate(c.issue_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">{formatExpiryMonthYear(c.expiry_date)}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.family_member?.full_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, c.family_member?.full_name) || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         {(() => {
                           const status = getCreditCardStatus(c);
@@ -467,35 +482,43 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                         })()}
                       </td>
                       <td className="px-4 py-3 text-slate-300">{formatScheme(c.scheme)}</td>
-                      <td className="px-4 py-3 text-slate-300">{c.issuer_name}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.co_brand ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-400">{c.product_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {maskSensitiveText(obfuscate, c.issuer_name)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, c.co_brand) || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, c.product_name) || "—"}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{c.charge_day_of_month ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-400">
-                        {c.monthly_cost == null
-                          ? "—"
-                          : Number(c.monthly_cost).toLocaleString("en", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                        {maskSensitiveAmount(obfuscate, monthlyCostFormatted)}
                       </td>
-                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={c.website_url ?? undefined}>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={obfuscate ? undefined : c.website_url ?? undefined}>
                         {c.website_url ? (
-                          <a
-                            href={c.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {c.website_url}
-                          </a>
+                          obfuscate ? (
+                            maskSensitiveText(obfuscate, c.website_url)
+                          ) : (
+                            <a
+                              href={c.website_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300"
+                            >
+                              {c.website_url}
+                            </a>
+                          )
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{c.bank_account?.account_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, c.bank_account?.account_name) || "—"}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -735,7 +758,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     <option value="">Select…</option>
                     {familyMembers.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name}
+                        {maskSensitiveText(obfuscate, m.full_name)}
                       </option>
                     ))}
                   </select>
@@ -753,7 +776,7 @@ export default async function CreditCardsPage({ searchParams }: PageProps) {
                     <option value="">None</option>
                     {bankAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.account_name} ({a.bank_name})
+                        {maskSensitiveText(obfuscate, `${a.account_name} (${a.bank_name})`)}
                       </option>
                     ))}
                   </select>

@@ -4,6 +4,7 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import {
@@ -11,6 +12,7 @@ import {
   resolveSpecialDateEventTypeLabel,
 } from "@/lib/family-special-dates/event-type-labels";
 import { formatHebrewDateLabel } from "@/lib/hebrew-calendar";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { deleteFamilySpecialDate } from "./actions";
@@ -30,6 +32,7 @@ export default async function FamilySpecialDatesPage({ searchParams }: PageProps
   const isHebrew = uiLanguage === "he";
   const language = isHebrew ? "he" : "en";
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const resolved = searchParams ? await searchParams : undefined;
 
   const specialDates = await prisma.family_special_dates.findMany({
@@ -127,7 +130,9 @@ export default async function FamilySpecialDatesPage({ searchParams }: PageProps
 
                   return (
                     <tr key={record.id} className="border-b border-slate-800">
-                      <td className="px-4 py-3 text-slate-100">{personName}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, personName)}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{eventTypeLabel}</td>
                       <td className="px-4 py-3 text-slate-300">
                         {record.gregorian_date

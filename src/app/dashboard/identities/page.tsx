@@ -4,9 +4,11 @@ import {
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
   getCurrentUiLanguage,
+  getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createIdentity } from "./actions";
@@ -40,6 +42,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
@@ -176,7 +179,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 <option value="all">{isHebrew ? "הכל" : "All"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -237,7 +240,7 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 <option value="">Select…</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -375,19 +378,23 @@ export default async function IdentitiesPage({ searchParams }: PageProps) {
                 <tbody>
                   {sortedIdentities.map((i) => (
                     <tr key={i.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{i.family_member.full_name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, i.family_member.full_name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {i.identity_type === "other"
                           ? "Other"
                           : IDENTITY_TYPE_LABELS[i.identity_type] ?? i.identity_type}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {i.identity_type_other ?? ""}
+                        {maskSensitiveText(obfuscate, i.identity_type_other)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        <div>{i.identifier ?? ""}</div>
+                        <div>{maskSensitiveText(obfuscate, i.identifier)}</div>
                         {i.notes ? (
-                          <div className="mt-1 text-xs text-slate-500">{i.notes}</div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {maskSensitiveText(obfuscate, i.notes)}
+                          </div>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-slate-400">

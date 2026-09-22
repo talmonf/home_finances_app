@@ -3,6 +3,7 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
@@ -10,6 +11,7 @@ import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-j
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import type { Prisma } from "@/generated/prisma/client";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import Link from "next/link";
@@ -159,6 +161,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
@@ -288,7 +291,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">{isHebrew ? "הכל" : "All"}</option>
                 {familyMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -306,7 +309,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">{isHebrew ? "הכל" : "All"}</option>
                 {jobsForFilter.map((j) => (
                   <option key={j.id} value={j.id}>
-                    {formatJobDisplayLabel(j)}
+                    {maskSensitiveText(obfuscate, formatJobDisplayLabel(j))}
                   </option>
                 ))}
               </select>
@@ -336,13 +339,13 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 {creditCards.map((c) => (
                   <option key={`cc-${c.id}`} value={`cc:${c.id}`}>
                     {isHebrew ? "כרטיס: " : "Card: "}
-                    {buildCreditCardLabel(c)}
+                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
                   </option>
                 ))}
                 {digitalPaymentMethods.map((d) => (
                   <option key={`dig-${d.id}`} value={`dig:${d.id}`}>
                     {isHebrew ? "דיגיטלי: " : "Digital: "}
-                    {d.name}
+                    {maskSensitiveText(obfuscate, d.name)}
                   </option>
                 ))}
               </select>
@@ -408,13 +411,18 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                       id={`subscription-${s.id}`}
                       className="border-b border-slate-700/80 hover:bg-slate-800/40"
                     >
-                      <td className="px-4 py-3 text-slate-100">{s.name}</td>
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, s.name)}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(s.start_date, dateDisplayFormat)} /{" "}
                         {formatHouseholdDate(s.renewal_date, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
-                        {formatMoneyWithCurrency(s.fee_amount, s.currency)}
+                        {maskSensitiveAmount(
+                          obfuscate,
+                          formatMoneyWithCurrency(s.fee_amount, s.currency),
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-300 capitalize">
                         {s.billing_interval}
@@ -425,7 +433,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                             href={`/dashboard/family-members/${s.family_member.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {s.family_member.full_name}
+                            {maskSensitiveText(obfuscate, s.family_member.full_name)}
                           </Link>
                         ) : (
                           "—"
@@ -437,25 +445,34 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                             href={`/dashboard/jobs/${s.job.id}`}
                             className="text-sky-400 hover:text-sky-300"
                           >
-                            {formatJobDisplayLabel(s.job)}
+                            {maskSensitiveText(obfuscate, formatJobDisplayLabel(s.job))}
                           </Link>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
-                        {formatSubscriptionPaymentSummary(s)}
+                        {maskSensitiveText(
+                          obfuscate,
+                          formatSubscriptionPaymentSummary(s) === "—"
+                            ? null
+                            : formatSubscriptionPaymentSummary(s),
+                        ) || "—"}
                       </td>
-                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={s.website_url ?? undefined}>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-slate-400" title={obfuscate ? undefined : s.website_url ?? undefined}>
                         {s.website_url ? (
-                          <a
-                            href={s.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {s.website_url}
-                          </a>
+                          obfuscate ? (
+                            maskSensitiveText(obfuscate, s.website_url)
+                          ) : (
+                            <a
+                              href={s.website_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300"
+                            >
+                              {s.website_url}
+                            </a>
+                          )
                         ) : (
                           "—"
                         )}
@@ -657,7 +674,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">None</option>
                 {digitalPaymentMethods.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name}
+                    {maskSensitiveText(obfuscate, d.name)}
                   </option>
                 ))}
               </select>
@@ -678,7 +695,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {buildCreditCardLabel(c)}
+                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
                   </option>
                 ))}
               </select>

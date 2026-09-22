@@ -1,4 +1,11 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+  getCurrentUiLanguage,
+} from "@/lib/auth";
+import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -64,6 +71,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
   if (memberId) where.family_member_id = memberId;
 
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
 
   const [rows, accounts, members, activeInsurance, activeSavings, householdRow] = await Promise.all([
@@ -160,7 +168,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                 : `Total savings balance (${primaryCurrency})`}
             </div>
             <div className="mt-1 text-lg font-semibold text-emerald-400 tabular-nums">
-              {formatMoney(savingsBalanceTotal || null, primaryCurrency)}
+              {maskSensitiveAmount(obfuscate, formatMoney(savingsBalanceTotal || null, primaryCurrency))}
             </div>
           </div>
           <div>
@@ -170,7 +178,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                 : `Monthly savings contributions (${primaryCurrency})`}
             </div>
             <div className="mt-1 text-lg font-semibold text-sky-300 tabular-nums">
-              {formatMoney(savingsMonthlyTotal || null, primaryCurrency)}
+              {maskSensitiveAmount(obfuscate, formatMoney(savingsMonthlyTotal || null, primaryCurrency))}
             </div>
           </div>
           <p className="sm:col-span-2 lg:col-span-4 text-xs text-slate-500">
@@ -226,7 +234,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.account_name}
+                    {maskSensitiveText(obfuscate, a.account_name)}
                   </option>
                 ))}
               </select>
@@ -241,7 +249,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                 <option value="">All</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}
+                    {maskSensitiveText(obfuscate, m.full_name)}
                   </option>
                 ))}
               </select>
@@ -261,11 +269,11 @@ export default async function ReportsPage({ searchParams }: PageProps) {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Income (credits)</div>
-              <div className="mt-1 text-xl font-semibold text-emerald-400">{formatMoney(income)}</div>
+              <div className="mt-1 text-xl font-semibold text-emerald-400">{maskSensitiveAmount(obfuscate, formatMoney(income))}</div>
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Expenses (debits)</div>
-              <div className="mt-1 text-xl font-semibold text-rose-400">{formatMoney(expenses)}</div>
+              <div className="mt-1 text-xl font-semibold text-rose-400">{maskSensitiveAmount(obfuscate, formatMoney(expenses))}</div>
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
               <div className="text-xs text-slate-400">Net</div>
@@ -274,7 +282,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                   net >= 0 ? "text-emerald-400" : "text-rose-400"
                 }`}
               >
-                {formatMoney(net)}
+                {maskSensitiveAmount(obfuscate, formatMoney(net))}
               </div>
             </div>
           </div>
@@ -316,7 +324,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
                         <td className="px-4 py-2 text-slate-400">
                           {r.transaction_direction}
                         </td>
-                        <td className="px-4 py-2 text-slate-200">{formatMoney(amount)}</td>
+                        <td className="px-4 py-2 text-slate-200">{maskSensitiveAmount(obfuscate, formatMoney(amount))}</td>
                       </tr>
                     );
                   })

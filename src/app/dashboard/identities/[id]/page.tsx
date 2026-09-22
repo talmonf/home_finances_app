@@ -1,6 +1,13 @@
-import { prisma, requireHouseholdMember, getCurrentHouseholdId } from "@/lib/auth";
+import {
+  prisma,
+  requireHouseholdMember,
+  getCurrentHouseholdId,
+  getCurrentObfuscateSensitive,
+} from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { SensitiveTextInput } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { updateIdentity } from "../actions";
@@ -39,6 +46,7 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
+  const obfuscate = await getCurrentObfuscateSensitive();
 
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -125,7 +133,7 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
             >
               {familyMembers.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name}
+                  {maskSensitiveText(obfuscate, m.full_name)}
                 </option>
               ))}
             </select>
@@ -159,10 +167,11 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
             >
               Other type (specify)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="identity_type_other"
               name="identity_type_other"
-              defaultValue={identity.identity_type_other ?? ""}
+              value={identity.identity_type_other ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="Only required when Type is Other"
             />
@@ -172,10 +181,11 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
             <label htmlFor="identifier" className="mb-1 block text-xs font-medium text-slate-400">
               Identifier (optional)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="identifier"
               name="identifier"
-              defaultValue={identity.identifier ?? ""}
+              value={identity.identifier ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
@@ -184,10 +194,11 @@ export default async function EditIdentityPage({ params, searchParams }: PagePro
             <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
               Notes (optional)
             </label>
-            <input
+            <SensitiveTextInput
+              obfuscate={obfuscate}
               id="notes"
               name="notes"
-              defaultValue={identity.notes ?? ""}
+              value={identity.notes ?? ""}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               placeholder="Optional notes"
             />

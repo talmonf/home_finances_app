@@ -1,6 +1,7 @@
-import { getCurrentHouseholdDateDisplayFormat, prisma } from "@/lib/auth";
+import { getCurrentHouseholdDateDisplayFormat, getCurrentObfuscateSensitive, prisma } from "@/lib/auth";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 export type TherapyTransactionOption = {
   id: string;
@@ -35,6 +36,7 @@ export async function TherapyTransactionLinkSelect({
   dateDisplayFormat?: HouseholdDateDisplayFormat;
 }) {
   const dateFmt = dateDisplayFormat ?? (await getCurrentHouseholdDateDisplayFormat());
+  const obfuscate = await getCurrentObfuscateSensitive();
   const txs =
     transactionOptions ??
     (await prisma.transactions.findMany({
@@ -65,7 +67,9 @@ export async function TherapyTransactionLinkSelect({
       {txs.map((t) => {
         const amt = t.amount.toString();
         const dir = t.transaction_direction === "credit" ? "+" : "−";
-        const label = `${formatHouseholdDate(t.transaction_date, dateFmt)} ${dir}${amt} ${t.description ?? ""}`.slice(
+        const money = obfuscate ? "••••" : `${dir}${amt}`;
+        const description = maskSensitiveText(obfuscate, t.description);
+        const label = `${formatHouseholdDate(t.transaction_date, dateFmt)} ${money} ${description}`.trim().slice(
           0,
           120,
         );

@@ -3,11 +3,13 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate } from "@/lib/household-date-format";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -40,6 +42,7 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
   const householdId = await getCurrentHouseholdId();
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
   const uiLanguage = await getCurrentUiLanguage();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const isHebrew = uiLanguage === "he";
   if (!householdId) {
     redirect("/");
@@ -139,38 +142,52 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {accounts.map((a) => (
+                  {accounts.map((a) => {
+                    const branchLabel = [a.branch_number, a.branch_name, formatSortCode(a.sort_code)]
+                      .filter(Boolean)
+                      .join(" ");
+                    const membersLabel =
+                      a.bank_account_members.length === 0
+                        ? ""
+                        : a.bank_account_members.map((m) => m.family_member.full_name).join(", ");
+                    return (
                     <tr key={a.id} className="border-b border-slate-700/80 hover:bg-slate-800/40">
-                      <td className="px-4 py-3 text-slate-100">{a.account_name}</td>
-                      <td className="px-4 py-3 text-slate-300">{a.bank_name}</td>
-                      <td className="px-4 py-3 text-slate-400">
-                        {[a.branch_number, a.branch_name, formatSortCode(a.sort_code)]
-                          .filter(Boolean)
-                          .join(" ") || "—"}
+                      <td className="px-4 py-3 text-slate-100">
+                        {maskSensitiveText(obfuscate, a.account_name)}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{a.account_number ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {maskSensitiveText(obfuscate, a.bank_name)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, branchLabel) || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {maskSensitiveText(obfuscate, a.account_number) || "—"}
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{a.currency}</td>
                       <td className="px-4 py-3 text-slate-400">
                         {a.date_opened ? formatHouseholdDate(a.date_opened, dateDisplayFormat) : "—"}
                       </td>
-                      <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={a.website_url ?? undefined}>
+                      <td className="max-w-[14rem] truncate px-4 py-3 text-slate-400" title={obfuscate ? undefined : a.website_url ?? undefined}>
                         {a.website_url ? (
-                          <a
-                            href={a.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sky-400 hover:text-sky-300"
-                          >
-                            {a.website_url}
-                          </a>
+                          obfuscate ? (
+                            maskSensitiveText(obfuscate, a.website_url)
+                          ) : (
+                            <a
+                              href={a.website_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:text-sky-300"
+                            >
+                              {a.website_url}
+                            </a>
+                          )
                         ) : (
                           "—"
                         )}
                       </td>
                       <td className="max-w-[12rem] px-4 py-3 text-slate-400">
-                        {a.bank_account_members.length === 0
-                          ? "—"
-                          : a.bank_account_members.map((m) => m.family_member.full_name).join(", ")}
+                        {maskSensitiveText(obfuscate, membersLabel) || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <Link
@@ -181,7 +198,8 @@ export default async function BankAccountsPage({ searchParams }: PageProps) {
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
