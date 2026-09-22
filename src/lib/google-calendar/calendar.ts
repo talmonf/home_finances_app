@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/auth";
 import {
+  HEBREW_EVENING_END_HOUR,
+  HEBREW_EVENING_START_HOUR,
+} from "@/lib/family-calendar-sync/keys";
+import {
   decryptGoogleToken,
   getGoogleOAuthClient,
   persistRefreshedGoogleTokens,
@@ -276,6 +280,49 @@ export async function findAllDayGoogleEventByPrivateKey(params: {
   return match?.id ?? null;
 }
 
+function familyCalendarEventBody(params: {
+  summary: string;
+  description: string;
+  startDate: string;
+  recurringYearly: boolean;
+  allDay: boolean;
+  privateKey: string;
+}) {
+  const extendedProperties = {
+    private: {
+      app: "home_finances",
+      key: params.privateKey,
+    },
+  };
+  if (params.allDay) {
+    return {
+      summary: params.summary,
+      description: params.description,
+      start: { date: params.startDate },
+      end: { date: addOneIsoCalendarDay(params.startDate) },
+      reminders: FAMILY_DATE_REMINDERS,
+      extendedProperties,
+      ...(params.recurringYearly ? { recurrence: ["RRULE:FREQ=YEARLY"] } : {}),
+    };
+  }
+  const startHour = String(HEBREW_EVENING_START_HOUR).padStart(2, "0");
+  const endHour = String(HEBREW_EVENING_END_HOUR).padStart(2, "0");
+  return {
+    summary: params.summary,
+    description: params.description,
+    start: { date: null, dateTime: `${params.startDate}T${startHour}:00:00`, timeZone: APPOINTMENT_TIME_ZONE },
+    end: { date: null, dateTime: `${params.startDate}T${endHour}:00:00`, timeZone: APPOINTMENT_TIME_ZONE },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: "popup" as const, minutes: 0 },
+        ...FAMILY_DATE_REMINDERS.overrides,
+      ],
+    },
+    extendedProperties,
+  };
+}
+
 export async function upsertAllDayGoogleCalendarEvent(params: {
   user: GoogleCalendarUserConfig;
   existingEventId: string | null;
@@ -283,23 +330,18 @@ export async function upsertAllDayGoogleCalendarEvent(params: {
   description: string;
   startDate: string;
   recurringYearly: boolean;
+  allDay?: boolean;
   privateKey: string;
 }): Promise<string> {
   const calendar = await getCalendarClientForUser(params.user);
-  const eventBody = {
+  const eventBody = familyCalendarEventBody({
     summary: params.summary,
     description: params.description,
-    start: { date: params.startDate },
-    end: { date: addOneIsoCalendarDay(params.startDate) },
-    reminders: FAMILY_DATE_REMINDERS,
-    extendedProperties: {
-      private: {
-        app: "home_finances",
-        key: params.privateKey,
-      },
-    },
-    ...(params.recurringYearly ? { recurrence: ["RRULE:FREQ=YEARLY"] } : {}),
-  };
+    startDate: params.startDate,
+    recurringYearly: params.recurringYearly,
+    allDay: params.allDay !== false,
+    privateKey: params.privateKey,
+  });
 
   let eventId = params.existingEventId;
   if (!eventId) {

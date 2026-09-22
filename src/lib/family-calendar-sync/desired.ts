@@ -15,7 +15,10 @@ import { formatYearsSinceLabel, yearsSinceGregorian, yearsSinceHebrew } from "@/
 import {
   familyCalendarLiveSourceKey,
   formatLocalIsoDate,
+  hebrewEveningDateTimes,
   isAnnualSpecialDate,
+  parseIsoDateOnly,
+  previousIsoCalendarDay,
   YEARLY_OCCURRENCE_KEY,
   type DesiredFamilyCalendarEvent,
 } from "@/lib/family-calendar-sync/keys";
@@ -114,8 +117,43 @@ function gregorianYearlyEvent(params: {
     occurrenceKey: YEARLY_OCCURRENCE_KEY,
     startDate: formatLocalIsoDate(params.original),
     recurringYearly: true,
+    allDay: true,
     summary: params.summary,
     description: descriptionLines({ language: params.language, url: params.url, yearsSince }),
+  };
+}
+
+function hebrewEveningHasPassed(civil: Date, today: Date): boolean {
+  const eveningIso = previousIsoCalendarDay(formatLocalIsoDate(dateOnlyLocal(civil)));
+  const evening = parseIsoDateOnly(eveningIso);
+  if (!evening) return true;
+  return dateOnlyLocal(today) > evening;
+}
+
+/** Next Hebrew civil date whose start-evening (the prior night) has not already passed. */
+function nextHebrewCivilDateForEveningEvent(month: number, day: number, today: Date): Date | null {
+  let fromDate = dateOnlyLocal(today);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const civil = nextGregorianOccurrenceForHebrewMonthDay({ month, day, fromDate });
+    if (!civil) return null;
+    if (!hebrewEveningHasPassed(civil, today)) return civil;
+    fromDate = new Date(civil.getFullYear(), civil.getMonth(), civil.getDate() + 1);
+  }
+  return null;
+}
+
+function hebrewCalendarEventFields(civil: Date): {
+  occurrenceKey: string;
+  startDate: string;
+  allDay: false;
+  recurringYearly: false;
+} {
+  const occurrenceKey = formatLocalIsoDate(civil);
+  return {
+    occurrenceKey,
+    startDate: hebrewEveningDateTimes(occurrenceKey).eveningDate,
+    allDay: false,
+    recurringYearly: false,
   };
 }
 
@@ -130,11 +168,7 @@ function hebrewNextOccurrenceEvent(params: {
   language: "en" | "he";
   url: string;
 }): DesiredFamilyCalendarEvent | null {
-  const next = nextGregorianOccurrenceForHebrewMonthDay({
-    month: params.month,
-    day: params.day,
-    fromDate: params.today,
-  });
+  const next = nextHebrewCivilDateForEveningEvent(params.month, params.day, params.today);
   if (!next) return null;
   const hebrewLabel = formatHebrewOccurrenceLabel(params.language, next, {
     month: params.month,
@@ -150,9 +184,7 @@ function hebrewNextOccurrenceEvent(params: {
     sourceKind: params.sourceKind,
     sourceId: params.sourceId,
     calendarKind: "hebrew",
-    occurrenceKey: formatLocalIsoDate(next),
-    startDate: formatLocalIsoDate(next),
-    recurringYearly: false,
+    ...hebrewCalendarEventFields(next),
     summary: yearsSince != null ? `${summary} · ${formatYearsSinceLabel(yearsSince, params.language)}` : summary,
     description: descriptionLines({
       language: params.language,
@@ -181,6 +213,7 @@ function oneTimeGregorianEvent(params: {
     occurrenceKey: formatLocalIsoDate(local),
     startDate: formatLocalIsoDate(local),
     recurringYearly: false,
+    allDay: true,
     summary: params.summary,
     description: descriptionLines({ language: params.language, url: params.url }),
   };
@@ -208,7 +241,7 @@ function oneTimeHebrewEvent(params: {
   } catch {
     return null;
   }
-  if (dateOnlyLocal(occurrence) < dateOnlyLocal(params.today)) return null;
+  if (hebrewEveningHasPassed(occurrence, params.today)) return null;
   const hebrewLabel = formatHebrewOccurrenceLabel(params.language, occurrence, {
     month: params.month,
     day: params.day,
@@ -217,9 +250,7 @@ function oneTimeHebrewEvent(params: {
     sourceKind: params.sourceKind,
     sourceId: params.sourceId,
     calendarKind: "hebrew",
-    occurrenceKey: formatLocalIsoDate(occurrence),
-    startDate: formatLocalIsoDate(occurrence),
-    recurringYearly: false,
+    ...hebrewCalendarEventFields(occurrence),
     summary: `${params.summaryPrefix} · ${hebrewLabel}`,
     description: descriptionLines({
       language: params.language,

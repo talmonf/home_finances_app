@@ -302,6 +302,7 @@ async function syncFamilyCalendarForUser(params: {
         description: event.description,
         startDate: event.startDate,
         recurringYearly: event.recurringYearly,
+        allDay: event.allDay,
         privateKey: familyCalendarSyncKey(event),
       });
       await prisma.family_calendar_sync_events.upsert({

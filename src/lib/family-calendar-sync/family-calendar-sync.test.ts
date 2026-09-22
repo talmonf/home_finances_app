@@ -5,14 +5,16 @@ import {
   familyCalendarLiveSourceKey,
   familyCalendarSyncKey,
   formatLocalIsoDate,
+  hebrewEveningDateTimes,
   isAnnualSpecialDate,
+  previousIsoCalendarDay,
   YEARLY_OCCURRENCE_KEY,
 } from "@/lib/family-calendar-sync/keys";
 import { shouldSendFamilyCalendarFailureEmail, renderFamilyCalendarFailureEmail } from "@/lib/family-calendar-sync/notify";
 import { isFamilyCalendarSyncEligible } from "@/lib/family-calendar-sync/eligibility";
 import { isGoogleInvalidGrant } from "@/lib/google-calendar/errors";
 import { planFamilyCalendarReconcile } from "@/lib/family-calendar-sync/reconcile";
-import { nextGregorianOccurrenceForHebrewMonthDay } from "@/lib/hebrew-calendar";
+import { hebrewComponentsToGregorian, nextGregorianOccurrenceForHebrewMonthDay } from "@/lib/hebrew-calendar";
 
 const BASE = "https://example.test";
 
@@ -51,6 +53,7 @@ test("gregorian birthday uses yearly occurrence key without age in the title", (
   assert.equal(events[0]!.occurrenceKey, YEARLY_OCCURRENCE_KEY);
   assert.equal(events[0]!.recurringYearly, true);
   assert.equal(events[0]!.startDate, "1990-03-15");
+  assert.equal(events[0]!.allDay, true);
   assert.equal(events[0]!.summary, "Birthday: Dana");
   assert.equal(familyCalendarSyncKey(events[0]!), "birthday:m1:gregorian:yearly");
   assert.match(events[0]!.description, /This year: \d+ years/);
@@ -88,8 +91,29 @@ test("hebrew birthday occurrence key is the next civil date and rolls over after
   assert.equal(upcoming.length, 1);
   assert.equal(upcoming[0]!.calendarKind, "hebrew");
   assert.equal(upcoming[0]!.occurrenceKey, formatLocalIsoDate(next));
+  assert.equal(upcoming[0]!.allDay, false);
+  assert.equal(upcoming[0]!.startDate, previousIsoCalendarDay(formatLocalIsoDate(next)));
   assert.equal(upcoming[0]!.recurringYearly, false);
   assert.match(upcoming[0]!.summary, /^Birthday: Dana · Hebrew:/);
+
+  const onEvening = new Date(next.getFullYear(), next.getMonth(), next.getDate() - 1);
+  const stillThisYear = buildDesiredFamilyCalendarEvents({
+    today: onEvening,
+    language: "en",
+    baseUrl: BASE,
+    household,
+  });
+  assert.equal(stillThisYear[0]!.occurrenceKey, upcoming[0]!.occurrenceKey);
+  assert.equal(stillThisYear[0]!.startDate, formatLocalIsoDate(onEvening));
+
+  const onCivilDay = new Date(next.getFullYear(), next.getMonth(), next.getDate());
+  const rolledOnCivil = buildDesiredFamilyCalendarEvents({
+    today: onCivilDay,
+    language: "en",
+    baseUrl: BASE,
+    household,
+  });
+  assert.notEqual(rolledOnCivil[0]!.occurrenceKey, upcoming[0]!.occurrenceKey);
 
   const dayAfter = new Date(next.getFullYear(), next.getMonth(), next.getDate() + 1);
   const rolled = buildDesiredFamilyCalendarEvents({
@@ -99,7 +123,7 @@ test("hebrew birthday occurrence key is the next civil date and rolls over after
     household,
   });
   assert.equal(rolled.length, 1);
-  assert.notEqual(rolled[0]!.occurrenceKey, upcoming[0]!.occurrenceKey);
+  assert.equal(rolled[0]!.occurrenceKey, rolledOnCivil[0]!.occurrenceKey);
   const nextYear = nextGregorianOccurrenceForHebrewMonthDay({
     month: 7,
     day: 1,
@@ -107,6 +131,44 @@ test("hebrew birthday occurrence key is the next civil date and rolls over after
   });
   assert.ok(nextYear);
   assert.equal(rolled[0]!.occurrenceKey, formatLocalIsoDate(nextYear));
+});
+
+test("hebrew 13 Tishrei 5787 is Wednesday 23/09/2026 18:00-20:00, not all-day Thursday", () => {
+  const civil = hebrewComponentsToGregorian({ day: 13, month: 7, year: 5787 });
+  assert.equal(formatLocalIsoDate(civil), "2026-09-24");
+  assert.deepEqual(hebrewEveningDateTimes("2026-09-24"), {
+    eveningDate: "2026-09-23",
+    startDateTime: "2026-09-23T18:00:00",
+    endDateTime: "2026-09-23T20:00:00",
+  });
+
+  const events = buildDesiredFamilyCalendarEvents({
+    today: new Date(2026, 8, 23),
+    language: "en",
+    baseUrl: BASE,
+    household: {
+      members: [
+        {
+          id: "m1",
+          full_name: "Talmon Friedlander",
+          is_active: true,
+          date_of_birth: null,
+          hebrew_date_of_birth_day: 13,
+          hebrew_date_of_birth_month: 7,
+          hebrew_date_of_birth_year: 5787,
+        },
+      ],
+      marriages: [],
+      specialDates: [],
+    },
+  });
+  assert.equal(events.length, 1);
+  assert.equal(events[0]!.allDay, false);
+  assert.equal(events[0]!.recurringYearly, false);
+  assert.equal(events[0]!.occurrenceKey, "2026-09-24");
+  assert.equal(events[0]!.startDate, "2026-09-23");
+  assert.match(events[0]!.summary, /13 Tishrei 5787/);
+  assert.match(events[0]!.summary, /Wed night-Thu 23\/09\/2026-24\/09\/2026/);
 });
 
 test("one-time special dates skip the past and do not recur; death stays yearly", () => {
@@ -243,8 +305,9 @@ test("reconcile keeps past Hebrew occurrences and deletes stale future ones", ()
         sourceId: "m1",
         calendarKind: "hebrew",
         occurrenceKey: "2027-03-11",
-        startDate: "2027-03-11",
+        startDate: "2027-03-10",
         recurringYearly: false,
+        allDay: false,
         summary: "Birthday: Dana",
         description: "",
       },
