@@ -10,6 +10,7 @@ import {
 } from "../actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 import { resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
 type JobOption = { id: string; label: string; defaultDurationMinutes: number | null };
 type ProgramOption = { id: string; jobId: string; label: string; defaultDurationMinutes: number | null };
@@ -116,10 +117,7 @@ export function AppointmentAddForm({
     () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
     [],
   );
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
-    [],
-  );
+  const minuteOptions = useMemo(() => fiveMinuteClockOptions(startMinute), [startMinute]);
   const startTime = useMemo(() => {
     if (!startHour || !startMinute) return "";
     return `${startHour}:${startMinute}`;

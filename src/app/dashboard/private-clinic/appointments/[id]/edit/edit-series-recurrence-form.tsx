@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 import { updateTherapyAppointmentSeriesFromDate } from "../../../actions";
 
 type DowOption = { v: number; label: string };
@@ -55,10 +56,7 @@ export function EditSeriesRecurrenceForm({
     () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
     [],
   );
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
-    [],
-  );
+  const minuteOptions = useMemo(() => fiveMinuteClockOptions(timeMinute), [timeMinute]);
   const timeOfDay = useMemo(() => {
     if (!timeHour || !timeMinute) return "";
     return `${timeHour}:${timeMinute}`;

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -103,6 +104,10 @@ export function AppointmentEditFormClient(props: Props) {
   const timeMinuteOptions = useMemo(
     () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
     [],
+  );
+  const startMinuteOptions = useMemo(
+    () => fiveMinuteClockOptions(startTimeMinute),
+    [startTimeMinute],
   );
 
   const selectedProgramId = programId && programsForJob.some((p) => p.id === programId) ? programId : "";
@@ -309,7 +314,7 @@ export function AppointmentEditFormClient(props: Props) {
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
               aria-label={`${props.labels.startTime} ${timeMinuteSuffix}`}
             >
-              {timeMinuteOptions.map((minute) => (
+              {startMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
                   {minute}
                 </option>

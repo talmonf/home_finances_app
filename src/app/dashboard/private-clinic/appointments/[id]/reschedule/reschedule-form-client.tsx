@@ -1,6 +1,7 @@
 "use client";
 
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
@@ -63,9 +64,13 @@ export function RescheduleFormClient({
     () => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")),
     [],
   );
-  const timeMinuteOptions = useMemo(
+  const endMinuteOptions = useMemo(
     () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
     [],
+  );
+  const startMinuteOptions = useMemo(
+    () => fiveMinuteClockOptions(startTimeMinute),
+    [startTimeMinute],
   );
 
   const startAtValue = useMemo(() => {
@@ -143,7 +148,7 @@ export function RescheduleFormClient({
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
               aria-label={`${labels.startTime} ${timeMinuteSuffix}`}
             >
-              {timeMinuteOptions.map((minute) => (
+              {startMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
                   {minute}
                 </option>
@@ -197,7 +202,7 @@ export function RescheduleFormClient({
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
               aria-label={`${labels.startTime} ${timeMinuteSuffix}`}
             >
-              {timeMinuteOptions.map((minute) => (
+              {endMinuteOptions.map((minute) => (
                 <option key={minute} value={minute}>
                   {minute}
                 </option>

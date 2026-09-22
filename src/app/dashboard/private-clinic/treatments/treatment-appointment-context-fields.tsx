@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 
 type ClientOption = { id: string; label: string };
 
@@ -53,10 +54,7 @@ export function TreatmentAppointmentContextFields({
     () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
     [],
   );
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
-    [],
-  );
+  const minuteOptions = useMemo(() => fiveMinuteClockOptions(nextMinute), [nextMinute]);
   const nextStartAt = useMemo(() => {
     if (!nextDate || !nextHour || !nextMinute) return "";
     return `${nextDate}T${nextHour}:${nextMinute}`;
