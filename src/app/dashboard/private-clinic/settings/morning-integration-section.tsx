@@ -53,6 +53,7 @@ export type MorningIntegrationInitial = {
 };
 
 const MORNING_DOCS_URL = "https://developers.morning.co/";
+const MORNING_SITE_URL = "https://www.greeninvoice.co.il/";
 
 export function MorningIntegrationSection({
   jobs,
@@ -96,7 +97,16 @@ export function MorningIntegrationSection({
 
   return (
     <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
-      <h2 className="text-lg font-medium text-slate-200">{labels.title}</h2>
+      <h2 className="text-lg font-medium text-slate-200">
+        <a
+          href={MORNING_SITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-slate-500 underline-offset-2 hover:text-sky-300 hover:decoration-sky-300"
+        >
+          {labels.title}
+        </a>
+      </h2>
       <p className="mt-2 text-sm text-slate-400">{labels.intro}</p>
 
       <details className="mt-4 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:p-4" open>

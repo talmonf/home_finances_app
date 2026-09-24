@@ -1581,7 +1581,7 @@ export function privateClinicSettings(lang: UiLanguage) {
     digestItems: p("items", "פריטים"),
     digestTest: p("Test", "בדיקה"),
     digestScheduled: p("Scheduled", "מתוזמן"),
-    morningTitle: p("Morning (Green Invoice)", "Morning (חשבונית ירוקה)"),
+    morningTitle: p("Morning (Green Invoice)", "מורנינג של חשבונית ירוקה"),
     morningIntro: p(
       "Connect your Morning business account to issue receipts automatically when saving a new receipt.",
       "חברו את חשבון העסק ב-Morning כדי להפיק קבלות אוטומטית בעת שמירת קבלה חדשה.",
