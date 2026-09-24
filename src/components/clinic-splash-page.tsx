@@ -10,6 +10,35 @@ function browserLanguage(): UiLanguage {
   return uiLanguageFromBrowser(navigator.language);
 }
 
+function SplashActions({
+  copy,
+  onSignIn,
+  onRequestAccess,
+}: {
+  copy: ClinicSplashCopy;
+  onSignIn: () => void;
+  onRequestAccess: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="button"
+        onClick={onSignIn}
+        className="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+      >
+        {copy.signIn}
+      </button>
+      <button
+        type="button"
+        onClick={onRequestAccess}
+        className="rounded-lg px-4 py-2.5 text-sm font-semibold text-sky-200 ring-1 ring-sky-400/50 hover:bg-sky-500/10"
+      >
+        {copy.requestAccess}
+      </button>
+    </div>
+  );
+}
+
 function SplashColumn({
   copy,
   dir,
@@ -26,29 +55,28 @@ function SplashColumn({
       <p className="text-sm font-medium uppercase tracking-wide text-sky-300">{copy.kicker}</p>
       <h1 className="mt-3 text-3xl font-semibold text-slate-50 sm:text-4xl">{copy.productName}</h1>
       <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-300">{copy.pitch}</p>
-      <ul className="mt-8 flex flex-col gap-5">
-        {copy.features.map((feature) => (
-          <li key={feature.title}>
-            <p className="font-medium text-slate-50">{feature.title}</p>
-            <p className="mt-1 text-sm leading-relaxed text-slate-400">{feature.body}</p>
-          </li>
+      <div className="mt-8">
+        <SplashActions copy={copy} onSignIn={onSignIn} onRequestAccess={onRequestAccess} />
+      </div>
+      <div className="mt-10 flex flex-col gap-4">
+        {copy.sections.map((section) => (
+          <article
+            key={section.id}
+            className={
+              section.highlight
+                ? "rounded-2xl bg-sky-500/10 p-5 ring-1 ring-sky-400/60"
+                : "rounded-2xl bg-slate-900/80 p-5 ring-1 ring-slate-800"
+            }
+          >
+            <h2 className={section.highlight ? "text-lg font-semibold text-sky-100" : "text-lg font-semibold text-slate-50"}>
+              {section.title}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{section.body}</p>
+          </article>
         ))}
-      </ul>
-      <div className="mt-10 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onSignIn}
-          className="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-        >
-          {copy.signIn}
-        </button>
-        <button
-          type="button"
-          onClick={onRequestAccess}
-          className="rounded-lg px-4 py-2.5 text-sm font-semibold text-sky-200 ring-1 ring-sky-400/50 hover:bg-sky-500/10"
-        >
-          {copy.requestAccess}
-        </button>
+      </div>
+      <div className="mt-10">
+        <SplashActions copy={copy} onSignIn={onSignIn} onRequestAccess={onRequestAccess} />
       </div>
     </section>
   );

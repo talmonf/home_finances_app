@@ -1,15 +1,17 @@
 import type { UiLanguage } from "@/lib/ui-language";
 
-export type ClinicSplashFeature = {
+export type ClinicSplashSection = {
+  id: string;
   title: string;
   body: string;
+  highlight?: boolean;
 };
 
 export type ClinicSplashCopy = {
   productName: string;
   kicker: string;
   pitch: string;
-  features: ClinicSplashFeature[];
+  sections: ClinicSplashSection[];
   signIn: string;
   requestAccess: string;
   formTitle: string;
@@ -29,57 +31,71 @@ export type ClinicSplashCopy = {
   close: string;
 };
 
-const FEATURES_EN: ClinicSplashFeature[] = [
+const SECTIONS_EN: ClinicSplashSection[] = [
   {
-    title: "Clients and schedule",
-    body: "Clients, appointments, and upcoming visits from a planned cadence.",
+    id: "day",
+    title: "The working day",
+    body: "Two ways to run the practice, and you can combine them. Book an appointment for a specific date and time, or set a cadence — once a week, for example — so the next visit appears on Upcoming visits after each session.",
   },
   {
-    title: "Session notes",
-    body: "Record treatments and transcribe audio in English or Hebrew.",
+    id: "notes",
+    title: "Between clients",
+    body: "Log the treatment and attach files while the session is still fresh. Transcribe a short spoken summary in English or Hebrew, then review it before it becomes clinical notes. In Settings, name the note fields the way you actually write.",
   },
   {
-    title: "Receipts",
-    body: "Tie payments to treatments, consultations, and travel, including Morning (Green Invoice).",
+    id: "paid",
+    title: "Getting paid",
+    body: "Receipts are the money collected. Treatments, consultations, and travel are the work. When the period total matches, link them on the new receipt, then review or adjust those links on the same screen.",
   },
   {
-    title: "Google Calendar",
-    body: "Push appointments one way from the clinic to your calendar.",
+    id: "morning",
+    title: "Morning (Green Invoice)",
+    highlight: true,
+    body: "Connect your Morning business account in Settings. Saving a new receipt can issue it in Morning and assign the receipt number automatically. A physical receipt book still works when you do not want Morning to issue that one.",
   },
   {
-    title: "The practice, in view",
-    body: "Reminders, reports, and a clinic income view.",
+    id: "calendar",
+    title: "Your calendar and inbox",
+    body: "Google Calendar stays in step, one way: creating, rescheduling, or canceling an appointment updates Google. A scheduled clinic digest email lists the appointments and visits coming up, so the week is in your inbox before you open the app.",
   },
   {
-    title: "Your language",
-    body: "The app itself in Hebrew and English.",
+    id: "practice",
+    title: "The rest of the practice",
+    body: "Start from a job and its programs — service lines and prices — then add clients. Consultations sit apart from sessions. Expenses, travel, petrol, clinic insurance, and work subscriptions sit beside reminders, reports, and an income view. Import or export a workbook when you move in. Families are optional, for grouping related clients. The app itself is in Hebrew and English.",
   },
 ];
 
-const FEATURES_HE: ClinicSplashFeature[] = [
+const SECTIONS_HE: ClinicSplashSection[] = [
   {
-    title: "לקוחות ולוח זמנים",
-    body: "לקוחות, תורים, וביקורים קרובים לפי קצב טיפול מתוכנן.",
+    id: "day",
+    title: "יום העבודה",
+    body: "שתי דרכים לנהל את הפרקטיקה, ואפשר לשלב ביניהן. קובעים תור לתאריך ושעה, או מגדירים קצב — למשל פעם בשבוע — כך שהביקור הבא מופיע בביקורים קרובים אחרי כל מפגש.",
   },
   {
-    title: "תיעוד מפגשים",
-    body: "רישום טיפולים ותמלול הקלטות בעברית או באנגלית.",
+    id: "notes",
+    title: "בין לקוח ללקוח",
+    body: "מתעדים את הטיפול ומצרפים קבצים כשהמפגש עוד טרי. מתמללים סיכום קצר בעברית או באנגלית, ואז עוברים עליו לפני שהוא נכנס להערות. בהגדרות נותנים לשדות ההערה את השמות שבהם באמת כותבים.",
   },
   {
-    title: "קבלות",
-    body: "שיוך תשלומים לטיפולים, לייעוצים ולנסיעות, כולל מורנינג (חשבונית ירוקה).",
+    id: "paid",
+    title: "הגבייה",
+    body: "קבלות הן הכסף שנגבה. טיפולים, ייעוצים ונסיעות הם העבודה. כשהסכום בתקופה תואם, משייכים אותם בקבלה החדשה, ואז בודקים או מתקנים את השיוך באותו מסך.",
   },
   {
-    title: "Google Calendar",
-    body: "דחיפת תורים בכיוון אחד מהקליניקה אל היומן.",
+    id: "morning",
+    title: "Morning (חשבונית ירוקה)",
+    highlight: true,
+    body: "מחברים את חשבון העסק ב-Morning מתוך ההגדרות. שמירת קבלה חדשה יכולה להפיק אותה ב-Morning ולהקצות מספר קבלה אוטומטית. פנקס קבלות פיזי נשאר זמין כשלא רוצים ש-Morning יפיק את הקבלה הזו.",
   },
   {
-    title: "הפרקטיקה במבט אחד",
-    body: "תזכורות, דוחות, ותצוגת הכנסות הקליניקה.",
+    id: "calendar",
+    title: "היומן ותיבת הדואר",
+    body: "Google Calendar נשאר מעודכן, בכיוון אחד: יצירה, שינוי מועד או ביטול של תור מעדכנים את Google. אימייל סיכום מתוזמן מציג את התורים והביקורים הקרובים, כך שהשבוע מחכה בתיבה לפני שפותחים את המערכת.",
   },
   {
-    title: "השפה שלכם",
-    body: "המערכת עצמה בעברית ובאנגלית.",
+    id: "practice",
+    title: "שאר הפרקטיקה",
+    body: "מתחילים ממשרה והתוכניות שלה — קווי שירות ומחירים — ואז מוסיפים לקוחות. ייעוצים נפרדים ממפגשים. הוצאות, נסיעות, דלק, ביטוח קליניקה ומנויים מקצועיים יושבים לצד תזכורות, דוחות ותצוגת הכנסות. מייבאים או מייצאים חוברת כשעוברים למערכת. משפחות הן אופציה, לקיבוץ לקוחות קשורים. המערכת עצמה בעברית ובאנגלית.",
   },
 ];
 
@@ -88,8 +104,9 @@ export function clinicSplashCopy(lang: UiLanguage): ClinicSplashCopy {
     return {
       productName: "ניהול קליניקה",
       kicker: "לקליניקה פרטית",
-      pitch: "ניהול קליניקה פרטית במקום אחד: לקוחות, מפגשים, תיעוד ותשלומים.",
-      features: FEATURES_HE,
+      pitch:
+        "ניהול קליניקה פרטית במקום אחד: לקוחות, מפגשים, תיעוד, והכסף שנגבה. קובעים תורים, עוקבים אחרי קצב טיפול, ומפיקים קבלות בלי לצאת מהפרקטיקה.",
+      sections: SECTIONS_HE,
       signIn: "התחברות",
       requestAccess: "בקשת גישה",
       formTitle: "בקשת גישה",
@@ -112,8 +129,9 @@ export function clinicSplashCopy(lang: UiLanguage): ClinicSplashCopy {
   return {
     productName: "Clinic management",
     kicker: "For private practices",
-    pitch: "Run a private clinic in one place: clients, visits, notes, and payments.",
-    features: FEATURES_EN,
+    pitch:
+      "Run a private clinic in one place: clients, visits, notes, and the money you collect. Book sessions, follow a planned cadence, and issue receipts without leaving the practice.",
+    sections: SECTIONS_EN,
     signIn: "Sign in",
     requestAccess: "Request access",
     formTitle: "Request access",
