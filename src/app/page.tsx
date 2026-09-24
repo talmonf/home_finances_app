@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ClinicSplashPage } from "@/components/clinic-splash-page";
+import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
 import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
@@ -40,11 +43,19 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getAuthSession();
 
   if (!session?.user) {
+    const homePortal = resolvedSearchParams?.portal === "home";
+    const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";
+    if (!homePortal && !passwordUpdated) {
+      const headerList = await headers();
+      if (isClinicSplashRequest({ headers: headerList })) {
+        return <ClinicSplashPage />;
+      }
+    }
     const qs = new URLSearchParams();
-    if (resolvedSearchParams?.portal === "home") {
+    if (homePortal) {
       qs.set("portal", "home");
     }
-    if (resolvedSearchParams?.passwordUpdated === "1") {
+    if (passwordUpdated) {
       qs.set("passwordUpdated", "1");
     }
     const suffix = qs.toString() ? `?${qs.toString()}` : "";

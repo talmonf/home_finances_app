@@ -9,6 +9,7 @@ import {
   LOGIN_UI_LANGUAGE_COOKIE,
   LOGIN_UI_LANGUAGE_COOKIE_OPTIONS,
 } from "@/lib/login-ui-language-cookie";
+import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
 import {
   clientIpFromRequest,
   expensiveApiRatelimit,
@@ -105,6 +106,17 @@ export async function middleware(req: NextRequest) {
     return applyLoginRouteCookies(pathname, req);
   }
 
+  if (pathname === "/api/clinic/access-request" && req.method === "POST") {
+    if (loginRatelimit) {
+      const ip = clientIpFromRequest(req);
+      const { success } = await loginRatelimit.limit(`clinic-access:${ip}`);
+      if (!success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      }
+    }
+    return NextResponse.next();
+  }
+
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
@@ -112,11 +124,27 @@ export async function middleware(req: NextRequest) {
 
   if (!token) {
     if (pathname === "/") {
+      const homePortal = req.nextUrl.searchParams.get("portal") === "home";
+      const passwordUpdated = req.nextUrl.searchParams.get("passwordUpdated") === "1";
+      if (!homePortal && !passwordUpdated && isClinicSplashRequest({
+        headers: req.headers,
+        nextUrlHostname: req.nextUrl.hostname,
+      })) {
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-pathname", pathname);
+        requestHeaders.set("x-clinic-splash", "1");
+        const next = NextResponse.next({
+          request: { headers: requestHeaders },
+        });
+        next.cookies.set(APP_PORTAL_COOKIE, "clinic", APP_PORTAL_COOKIE_OPTIONS);
+        return next;
+      }
+
       const qs = new URLSearchParams();
-      if (req.nextUrl.searchParams.get("portal") === "home") {
+      if (homePortal) {
         qs.set("portal", "home");
       }
-      if (req.nextUrl.searchParams.get("passwordUpdated") === "1") {
+      if (passwordUpdated) {
         qs.set("passwordUpdated", "1");
       }
       const lang = req.nextUrl.searchParams.get("lang");

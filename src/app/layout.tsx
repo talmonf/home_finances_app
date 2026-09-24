@@ -62,6 +62,7 @@ export default async function RootLayout({
   });
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
+  const clinicSplash = headerList.get("x-clinic-splash") === "1";
   const moduleAccess =
     householdMember && session?.user?.householdId && session.user.id
       ? await getEffectiveModuleAccess(session.user.householdId, session.user.id, uiLanguage)
@@ -83,19 +84,21 @@ export default async function RootLayout({
     <html lang={htmlLang} dir={dir}>
       <body className="antialiased bg-slate-950 text-slate-50">
         <div className="min-h-screen">
-          <AppShellHeader
-            uiLanguage={uiLanguage}
-            portal={portal}
-            pathname={pathname}
-            householdMember={Boolean(householdMember)}
-            clinicEnabled={moduleAccess.clinicEnabled}
-            householdEnabled={moduleAccess.householdEnabled}
-            obfuscate={obfuscate}
-            signedInLabel={
-              session?.user ? (session.user.name ?? session.user.email ?? "") : null
-            }
-            isSuperAdmin={Boolean(session?.user?.isSuperAdmin)}
-          />
+          {clinicSplash ? null : (
+            <AppShellHeader
+              uiLanguage={uiLanguage}
+              portal={portal}
+              pathname={pathname}
+              householdMember={Boolean(householdMember)}
+              clinicEnabled={moduleAccess.clinicEnabled}
+              householdEnabled={moduleAccess.householdEnabled}
+              obfuscate={obfuscate}
+              signedInLabel={
+                session?.user ? (session.user.name ?? session.user.email ?? "") : null
+              }
+              isSuperAdmin={Boolean(session?.user?.isSuperAdmin)}
+            />
+          )}
           <main>{children}</main>
         </div>
       </body>
