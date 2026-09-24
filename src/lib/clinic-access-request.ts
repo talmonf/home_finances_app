@@ -1,4 +1,7 @@
+export type ClinicRequestKind = "access" | "demo";
+
 export type ClinicAccessRequest = {
+  kind: ClinicRequestKind;
   name: string;
   email: string;
   phone: string;
@@ -30,16 +33,22 @@ export function parseClinicAccessRequest(body: unknown): ClinicAccessRequestPars
   const website = asTrimmed(record.website, 200);
   if (website) return { ok: true, honeypot: true };
 
+  const kind: ClinicRequestKind | null =
+    record.kind === "demo" || record.kind === "access"
+      ? record.kind
+      : record.kind == null
+        ? "access"
+        : null;
   const name = asTrimmed(record.name, NAME_MAX);
   const email = asTrimmed(record.email, EMAIL_MAX).toLowerCase();
   const phone = asTrimmed(record.phone, PHONE_MAX);
   const message = asTrimmed(record.message, MESSAGE_MAX);
-  if (!name || !looksLikeEmail(email)) return { ok: false };
+  if (!kind || !name || !looksLikeEmail(email)) return { ok: false };
 
   return {
     ok: true,
     honeypot: false,
-    request: { name, email, phone, message },
+    request: { kind, name, email, phone, message },
   };
 }
 
@@ -48,7 +57,10 @@ export function clinicAccessRequestEmail(request: ClinicAccessRequest): {
   text: string;
   html: string;
 } {
-  const subject = `Clinic access request: ${request.name}`;
+  const subject =
+    request.kind === "demo"
+      ? `Clinic demo request: ${request.name}`
+      : `Clinic access request: ${request.name}`;
   const lines = [
     `Name: ${request.name}`,
     `Email: ${request.email}`,

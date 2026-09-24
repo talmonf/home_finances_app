@@ -14,10 +14,12 @@ function SplashActions({
   copy,
   onSignIn,
   onRequestAccess,
+  onRequestDemo,
 }: {
   copy: ClinicSplashCopy;
   onSignIn: () => void;
   onRequestAccess: () => void;
+  onRequestDemo: () => void;
 }) {
   return (
     <div className="flex flex-wrap gap-3">
@@ -35,6 +37,13 @@ function SplashActions({
       >
         {copy.requestAccess}
       </button>
+      <button
+        type="button"
+        onClick={onRequestDemo}
+        className="rounded-lg px-4 py-2.5 text-sm font-semibold text-sky-200 ring-1 ring-sky-400/50 hover:bg-sky-500/10"
+      >
+        {copy.requestDemo}
+      </button>
     </div>
   );
 }
@@ -44,11 +53,13 @@ function SplashColumn({
   dir,
   onSignIn,
   onRequestAccess,
+  onRequestDemo,
 }: {
   copy: ClinicSplashCopy;
   dir: "ltr" | "rtl";
   onSignIn: () => void;
   onRequestAccess: () => void;
+  onRequestDemo: () => void;
 }) {
   return (
     <section dir={dir} className="flex flex-col px-6 py-10 sm:px-10 lg:px-12 lg:py-16">
@@ -56,27 +67,28 @@ function SplashColumn({
       <h1 className="mt-3 text-3xl font-semibold text-slate-50 sm:text-4xl">{copy.productName}</h1>
       <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-300">{copy.pitch}</p>
       <div className="mt-8">
-        <SplashActions copy={copy} onSignIn={onSignIn} onRequestAccess={onRequestAccess} />
+        <SplashActions
+          copy={copy}
+          onSignIn={onSignIn}
+          onRequestAccess={onRequestAccess}
+          onRequestDemo={onRequestDemo}
+        />
       </div>
       <div className="mt-10 flex flex-col gap-4">
         {copy.sections.map((section) => (
-          <article
-            key={section.id}
-            className={
-              section.highlight
-                ? "rounded-2xl bg-sky-500/10 p-5 ring-1 ring-sky-400/60"
-                : "rounded-2xl bg-slate-900/80 p-5 ring-1 ring-slate-800"
-            }
-          >
-            <h2 className={section.highlight ? "text-lg font-semibold text-sky-100" : "text-lg font-semibold text-slate-50"}>
-              {section.title}
-            </h2>
+          <article key={section.id} className="rounded-2xl bg-slate-900/80 p-5 ring-1 ring-slate-800">
+            <h2 className="text-lg font-semibold text-slate-50">{section.title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">{section.body}</p>
           </article>
         ))}
       </div>
       <div className="mt-10">
-        <SplashActions copy={copy} onSignIn={onSignIn} onRequestAccess={onRequestAccess} />
+        <SplashActions
+          copy={copy}
+          onSignIn={onSignIn}
+          onRequestAccess={onRequestAccess}
+          onRequestDemo={onRequestDemo}
+        />
       </div>
     </section>
   );
@@ -86,6 +98,7 @@ export function ClinicSplashPage() {
   const english = clinicSplashCopy("en");
   const hebrew = clinicSplashCopy("he");
   const [open, setOpen] = useState(false);
+  const [requestKind, setRequestKind] = useState<"access" | "demo">("access");
   const [language, setLanguage] = useState<UiLanguage>("he");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -102,9 +115,15 @@ export function ClinicSplashPage() {
     window.location.href = clinicLoginHref(browserLanguage());
   }
 
-  function openRequest() {
+  function openForm(kind: "access" | "demo") {
+    setRequestKind(kind);
     setLanguage(browserLanguage());
     setStatus("idle");
+    setName("");
+    setEmail("");
+    setPhone("");
+    setMessage("");
+    setWebsite("");
     setOpen(true);
   }
 
@@ -115,7 +134,7 @@ export function ClinicSplashPage() {
       const response = await fetch("/api/clinic/access-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, message, website }),
+        body: JSON.stringify({ kind: requestKind, name, email, phone, message, website }),
       });
       if (response.ok) {
         setStatus("sent");
@@ -145,7 +164,8 @@ export function ClinicSplashPage() {
             copy={english}
             dir="ltr"
             onSignIn={signIn}
-            onRequestAccess={openRequest}
+            onRequestAccess={() => openForm("access")}
+            onRequestDemo={() => openForm("demo")}
           />
         </div>
         <div className="order-1 lg:order-2">
@@ -153,7 +173,8 @@ export function ClinicSplashPage() {
             copy={hebrew}
             dir="rtl"
             onSignIn={signIn}
-            onRequestAccess={openRequest}
+            onRequestAccess={() => openForm("access")}
+            onRequestDemo={() => openForm("demo")}
           />
         </div>
       </div>
@@ -168,7 +189,7 @@ export function ClinicSplashPage() {
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 id="clinic-access-title" className="text-lg font-semibold text-slate-50">
-                {formCopy.formTitle}
+                {requestKind === "demo" ? formCopy.demoFormTitle : formCopy.formTitle}
               </h2>
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-slate-500">{formCopy.languageLabel}</span>
@@ -209,7 +230,9 @@ export function ClinicSplashPage() {
               </div>
             ) : (
               <form onSubmit={(event) => void submitRequest(event)} className="flex flex-col gap-3">
-                <p className="text-sm text-slate-400">{formCopy.formIntro}</p>
+                <p className="text-sm text-slate-400">
+                  {requestKind === "demo" ? formCopy.demoFormIntro : formCopy.formIntro}
+                </p>
                 <label className="text-sm text-slate-200">
                   {formCopy.nameLabel}
                   <input

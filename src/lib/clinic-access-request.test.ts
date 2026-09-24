@@ -18,6 +18,19 @@ test("parseClinicAccessRequest accepts a complete request", () => {
   assert.equal(parsed.request.name, "Dana Cohen");
   assert.equal(parsed.request.email, "dana@example.com");
   assert.equal(parsed.request.phone, "050-0000000");
+  assert.equal(parsed.request.kind, "access");
+});
+
+test("clinicAccessRequestEmail uses a demo subject", () => {
+  const email = clinicAccessRequestEmail({
+    kind: "demo",
+    name: "Dana",
+    email: "dana@example.com",
+    phone: "",
+    message: "Thursday afternoon",
+  });
+  assert.match(email.subject, /demo request/);
+  assert.match(email.text, /Thursday afternoon/);
 });
 
 test("parseClinicAccessRequest rejects a missing email and swallows honeypot", () => {
@@ -38,7 +51,9 @@ test("clinicAccessRequestEmail includes the contact details", () => {
     email: "dana@example.com",
     phone: "",
     message: "Need a clinic",
+    kind: "access",
   });
+  assert.match(email.subject, /access request/);
   assert.match(email.subject, /Dana/);
   assert.match(email.text, /dana@example.com/);
   assert.match(email.text, /Need a clinic/);
