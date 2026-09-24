@@ -1,12 +1,9 @@
 import { setMyUiLanguage } from "@/app/dashboard/user-preferences-actions";
-import { dashboardHomeStrings, type UiLanguage } from "@/lib/ui-language";
+import type { UiLanguage } from "@/lib/ui-language";
 
 export function UiLanguageToggle({ uiLanguage }: { uiLanguage: UiLanguage }) {
-  const copy = dashboardHomeStrings(uiLanguage);
-
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-slate-500">{copy.languageLabel}</span>
+    <div className="flex items-center gap-1.5" aria-label={uiLanguage === "he" ? "שפה" : "Language"}>
       <form action={setMyUiLanguage} className="inline" data-skip-global-submit-feedback>
         <input type="hidden" name="ui_language" value="en" />
         <button

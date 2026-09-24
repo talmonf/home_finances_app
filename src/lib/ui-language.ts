@@ -56,6 +56,7 @@ export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
     return {
       appTitle,
       signedInAs: "מחובר כ־",
+      myProfile: "הפרופיל שלי",
       changePassword: "שינוי סיסמה",
       signOut: "התנתק",
       signOutConfirm: "האם להתנתק עכשיו?",
@@ -66,6 +67,7 @@ export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
   return {
     appTitle,
     signedInAs: "Signed in as",
+    myProfile: "My profile",
     changePassword: "Change password",
     signOut: "Sign out",
     signOutConfirm: "Do you want to sign out now?",

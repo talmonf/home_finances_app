@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ObfuscateSessionToggle } from "@/components/obfuscate-session-toggle";
-import { SignOutButton } from "@/components/sign-out-button";
+import { ProfileMenu } from "@/components/profile-menu";
 import { UiLanguageToggle } from "@/components/ui-language-toggle";
 import {
   appBrandingStrings,
@@ -47,7 +47,7 @@ export function AppShellHeader({
   const brand = showModuleSwitcher ? (
     <nav
       aria-label={uiLanguage === "he" ? "מודולים" : "Modules"}
-      className="flex flex-wrap items-center gap-x-2 gap-y-1"
+      className="flex flex-nowrap items-center gap-x-2 whitespace-nowrap"
     >
       <Link
         href="/"
@@ -70,23 +70,23 @@ export function AppShellHeader({
   ) : (
     <Link
       href={clinicOnly ? "/dashboard/private-clinic" : "/"}
-      className={titleClass}
+      className={`${titleClass} whitespace-nowrap`}
     >
       {clinicOnly ? clinicProductTitle : h.appTitle}
     </Link>
   );
 
+  const maskedName = maskSensitiveText(obfuscate, signedInLabel ?? "");
+
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
-      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4">
+      <div className="mx-auto flex max-w-screen-2xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         {brand}
         {signedInLabel != null ? (
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-slate-300">
-            <span>
+            <span className="hidden sm:inline">
               {h.signedInAs}{" "}
-              <span className="font-medium text-slate-50">
-                {maskSensitiveText(obfuscate, signedInLabel)}
-              </span>
+              <span className="font-medium text-slate-50">{maskedName}</span>
               {isSuperAdmin ? (
                 <span className="ms-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
                   {h.superAdmin}
@@ -105,16 +105,19 @@ export function AppShellHeader({
                   </Link>
                 ) : null}
                 <ObfuscateSessionToggle initialOn={obfuscate} isHebrew={uiLanguage === "he"} />
-                <div className="h-4 w-px bg-slate-700" aria-hidden />
+                <div className="hidden h-4 w-px bg-slate-700 sm:block" aria-hidden />
               </>
             ) : null}
-            <Link
-              href="/change-password"
-              className="rounded-lg border border-slate-600 px-3 py-1 font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-            >
-              {h.changePassword}
-            </Link>
-            <SignOutButton label={h.signOut} confirmMessage={h.signOutConfirm} />
+            <ProfileMenu
+              menuLabel={h.myProfile}
+              signedInAs={h.signedInAs}
+              signedInName={maskedName}
+              changePasswordLabel={h.changePassword}
+              signOutLabel={h.signOut}
+              signOutConfirm={h.signOutConfirm}
+              isSuperAdmin={isSuperAdmin}
+              superAdminLabel={h.superAdmin}
+            />
           </div>
         ) : (
           <Link
