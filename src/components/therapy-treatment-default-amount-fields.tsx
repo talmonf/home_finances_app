@@ -11,6 +11,7 @@ import {
   type VisitTypeDefaultRow,
 } from "@/lib/therapy/visit-type-defaults";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 
 type JobOpt = { id: string; job_title: string };
 type ProgramOpt = { id: string; job_id: string; name: string };
@@ -130,10 +131,7 @@ export function TherapyTreatmentDefaultAmountFields(props: {
     () => Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
     [],
   );
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")),
-    [],
-  );
+  const minuteOptions = useMemo(() => fiveMinuteClockOptions(occurredMinute), [occurredMinute]);
   const hourSuffix = uiLanguage === "he" ? "שעה" : "hour";
   const minuteSuffix = uiLanguage === "he" ? "דקות" : "minute";
 
