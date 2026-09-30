@@ -83,6 +83,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/api/private-clinic/intake/receipts" && req.method === "POST") {
+    return NextResponse.next();
+  }
+
   const expensivePath =
     (pathname === "/api/import/assist" && req.method === "POST") ||
     (/\/api\/private-clinic\/treatment-attachments\/[^/]+\/transcribe$/.test(pathname) &&

@@ -14,6 +14,8 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 147_therapy_receipt_intake_import_key.sql (2026-09-30)
+- [x] 146_therapy_treatment_intake_token_per_user.sql (2026-09-30)
 - [x] 145_therapy_treatment_intake_token.sql (2026-09-30)
 - [x] 144_family_calendar_sync.sql (2026-09-17)
 - [x] 143_utility_client_number.sql
@@ -166,6 +168,8 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 147 | `147_therapy_receipt_intake_import_key.sql` (2026-09-30) | ALTER | Unique `(household_id, import_key)` on `therapy_receipts` for keys beginning with `gform-receipt:`, so a retried receipt form response cannot insert a second receipt. |
+| 146 | `146_therapy_treatment_intake_token_per_user.sql` (2026-09-30) | ALTER | `users`: optional `treatment_intake_token_hash` (unique) and `treatment_intake_token_last4`, so each clinic user has their own Make token. Drops the household-wide token columns added on `therapy_settings` in 145. |
 | 145 | `145_therapy_treatment_intake_token.sql` (2026-09-30) | ALTER | `therapy_settings`: optional `treatment_intake_token_hash` (unique) and `treatment_intake_token_last4` for the Make/Google Form treatment webhook; unique `(household_id, import_key)` for `gform:` keys so a form response creates one treatment. |
 | 144 | `144_family_calendar_sync.sql` (2026-09-17) | CREATE/ALTER | `users.google_calendar_sync_family_dates` plus family calendar sync error/notification fields; table `family_calendar_sync_events` (per-user Google event mapping for birthdays, anniversaries, special dates). |
 | 143 | `143_utility_client_number.sql` | ALTER | `property_utilities` and `rental_utilities`: optional `client_number` (customer number) alongside account and meter numbers. |

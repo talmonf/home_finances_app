@@ -11,6 +11,8 @@ import {
 
 const TOKEN = "test-intake-token";
 const HOUSEHOLD = "hh-1";
+const USER_ID = "user-1";
+const FAMILY_MEMBER_ID = "fm-1";
 
 function client(partial: Partial<IntakeClientRow> & Pick<IntakeClientRow, "id" | "first_name">): IntakeClientRow {
   return {
@@ -27,17 +29,26 @@ function client(partial: Partial<IntakeClientRow> & Pick<IntakeClientRow, "id" |
 
 function memoryStore(options?: {
   clients?: IntakeClientRow[];
+  clientsByFamilyMember?: Record<string, IntakeClientRow[]>;
   programCount?: number;
   externalReporting?: string | null;
+  familyMemberId?: string | null;
+  accounts?: Record<string, { userId: string; familyMemberId: string | null }>;
 }): { store: IntakeStore; rows: IntakeTreatmentInsert[] } {
   const rows: IntakeTreatmentInsert[] = [];
   const clients = options?.clients ?? [client({ id: "dana", first_name: "דנה", last_name: "כהן" })];
+  const familyMemberId = options?.familyMemberId === undefined ? FAMILY_MEMBER_ID : options.familyMemberId;
+  const accounts = options?.accounts ?? {
+    [hashTreatmentIntakeToken(TOKEN)]: { userId: USER_ID, familyMemberId },
+  };
   const store: IntakeStore = {
-    async householdIdForTokenHash(hash) {
-      return hash === hashTreatmentIntakeToken(TOKEN) ? HOUSEHOLD : null;
+    async accountForTokenHash(hash) {
+      const account = accounts[hash];
+      if (!account) return null;
+      return { householdId: HOUSEHOLD, userId: account.userId, familyMemberId: account.familyMemberId };
     },
-    async activeClients() {
-      return clients;
+    async activeClients(_householdId, memberId) {
+      return options?.clientsByFamilyMember?.[memberId] ?? clients;
     },
     async job() {
       return { id: "job-1", external_reporting_system: options?.externalReporting ?? "Ministry" };
@@ -92,7 +103,7 @@ test("creates a treatment and returns the same id for the same external_id", asy
   assert.equal(rows[0]?.amount, "350.00");
   assert.equal(rows[0]?.note_1, "סיכום");
   assert.equal(rows[0]?.reported_to_external_system, true);
-  assert.equal(rows[0]?.import_key, "gform:response-1");
+  assert.equal(rows[0]?.import_key, "gform:user-1:response-1");
 
   const second = await ingestTreatmentIntake({
     authorization: `Bearer ${TOKEN}`,
@@ -120,7 +131,7 @@ test("a conflicting insert still returns the existing treatment", async () => {
     note_2: null,
     note_3: null,
     reported_to_external_system: false,
-    import_key: "gform:response-1",
+    import_key: "gform:user-1:response-1",
   });
   const originalFind = store.findByImportKey;
   let lookups = 0;
@@ -171,6 +182,50 @@ test("unknown client is 404 and a shared first name is 409", async () => {
   if (ambiguous.status === 409) {
     assert.deepEqual(ambiguous.body.candidates, ["דנה כה", "דנה לו"]);
   }
+});
+
+test("each user's token matches only that user's clients", async () => {
+  const tokenA = "token-a";
+  const tokenB = "token-b";
+  const { store, rows } = memoryStore({
+    accounts: {
+      [hashTreatmentIntakeToken(tokenA)]: { userId: "user-a", familyMemberId: "fm-a" },
+      [hashTreatmentIntakeToken(tokenB)]: { userId: "user-b", familyMemberId: "fm-b" },
+    },
+    clientsByFamilyMember: {
+      "fm-a": [client({ id: "dana-a", first_name: "דנה", last_name: "כהן", default_job_id: "job-a" })],
+      "fm-b": [client({ id: "dana-b", first_name: "דנה", last_name: "לוי", default_job_id: "job-b" })],
+    },
+  });
+  const result = await ingestTreatmentIntake({
+    authorization: `Bearer ${tokenA}`,
+    payload: { ...payload, external_id: "from-a" },
+    store,
+    newId: () => "treatment-a",
+  });
+  assert.equal(result.status, 201);
+  assert.equal(rows[0]?.client_id, "dana-a");
+  assert.equal(rows[0]?.import_key, "gform:user-a:from-a");
+
+  const other = await ingestTreatmentIntake({
+    authorization: `Bearer ${tokenB}`,
+    payload: { ...payload, client_name: "דנה ל", external_id: "from-b" },
+    store,
+    newId: () => "treatment-b",
+  });
+  assert.equal(other.status, 201);
+  assert.equal(rows[1]?.client_id, "dana-b");
+});
+
+test("a token for a user who is not linked to a family member is rejected", async () => {
+  const { store } = memoryStore({ familyMemberId: null });
+  const result = await ingestTreatmentIntake({
+    authorization: `Bearer ${TOKEN}`,
+    payload,
+    store,
+  });
+  assert.equal(result.status, 422);
+  if (result.status === 422) assert.equal(result.body.error, "user_not_linked");
 });
 
 test("requires a program when the job has programs and the client has none", async () => {

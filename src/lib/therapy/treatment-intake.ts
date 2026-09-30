@@ -88,11 +88,12 @@ export type IntakeTreatmentInsert = {
 };
 
 export type IntakeStore = {
-  householdIdForTokenHash(hash: string): Promise<string | null>;
-  activeClients(householdId: string): Promise<IntakeClientRow[]>;
+  accountForTokenHash(hash: string): Promise<IntakeAccount | null>;
+  activeClients(householdId: string, familyMemberId: string): Promise<IntakeClientRow[]>;
   job(
     householdId: string,
     jobId: string,
+    familyMemberId: string,
   ): Promise<{ id: string; external_reporting_system: string | null } | null>;
   programCount(householdId: string, jobId: string): Promise<number>;
   programBelongsToJob(householdId: string, programId: string, jobId: string): Promise<boolean>;
@@ -143,9 +144,15 @@ function noteOrNull(value: unknown): string | null {
   return text;
 }
 
-export function intakeImportKey(externalId: string): string {
-  return `gform:${externalId}`;
+export function intakeImportKey(userId: string, externalId: string): string {
+  return `gform:${userId}:${externalId}`;
 }
+
+export type IntakeAccount = {
+  householdId: string;
+  userId: string;
+  familyMemberId: string | null;
+};
 
 export async function ingestTreatmentIntake(input: {
   authorization: string | null;
@@ -157,10 +164,18 @@ export async function ingestTreatmentIntake(input: {
   if (!token) {
     return fail(401, "unauthorized", "Missing bearer token.");
   }
-  const householdId = await input.store.householdIdForTokenHash(hashTreatmentIntakeToken(token));
-  if (!householdId) {
+  const account = await input.store.accountForTokenHash(hashTreatmentIntakeToken(token));
+  if (!account) {
     return fail(401, "unauthorized", "Unknown intake token.");
   }
+  if (!account.familyMemberId) {
+    return fail(
+      422,
+      "user_not_linked",
+      "This user is not linked to a family member, so the token cannot tell the two clinics apart.",
+    );
+  }
+  const householdId = account.householdId;
 
   if (!input.payload || typeof input.payload !== "object" || Array.isArray(input.payload)) {
     return fail(400, "invalid_json", "Request body must be a JSON object.");
@@ -174,7 +189,7 @@ export async function ingestTreatmentIntake(input: {
       "external_id is required and must be a single line of at most 200 characters.",
     );
   }
-  const importKey = intakeImportKey(externalId);
+  const importKey = intakeImportKey(account.userId, externalId);
   const existing = await input.store.findByImportKey(householdId, importKey);
   if (existing) return { status: 200, body: { id: existing.id } };
 
@@ -224,7 +239,7 @@ export async function ingestTreatmentIntake(input: {
     explicitCurrency = currencyRaw.toUpperCase();
   }
 
-  const clients = await input.store.activeClients(householdId);
+  const clients = await input.store.activeClients(householdId, account.familyMemberId);
   const matched = matchIntakeClients(clientName, clients);
   if (!matched.ok) {
     if (matched.error === "ambiguous_client") {
@@ -239,9 +254,13 @@ export async function ingestTreatmentIntake(input: {
   }
   const client = matched.client;
 
-  const job = await input.store.job(householdId, client.default_job_id);
+  const job = await input.store.job(householdId, client.default_job_id, account.familyMemberId);
   if (!job) {
-    return fail(422, "job_not_found", "The client's default job is missing.");
+    return fail(
+      422,
+      "job_not_in_clinic",
+      "The client's default job is not in this user's clinic.",
+    );
   }
 
   let programId = client.default_program_id;

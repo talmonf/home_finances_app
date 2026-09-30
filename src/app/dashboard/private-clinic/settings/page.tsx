@@ -39,6 +39,7 @@ import {
 } from "./morning-integration-section";
 import { TreatmentIntakeSection } from "./treatment-intake-section";
 import { treatmentIntakeWebhookUrl } from "@/lib/therapy/treatment-intake";
+import { receiptIntakeWebhookUrl } from "@/lib/therapy/receipt-intake";
 import { jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { decryptSecret } from "@/lib/crypto/secret";
@@ -57,6 +58,7 @@ type Search = {
   morningJob?: string;
   intake?: string;
   intakeToken?: string;
+  intakeReason?: string;
 };
 
 export default async function PrivateClinicSettingsPage({
@@ -99,7 +101,6 @@ export default async function PrivateClinicSettingsPage({
         note_1_visible: true,
         note_2_visible: true,
         note_3_visible: true,
-        treatment_intake_token_last4: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -116,6 +117,8 @@ export default async function PrivateClinicSettingsPage({
           where: { id: session.user.id, household_id: householdId },
           select: {
             email: true,
+            family_member_id: true,
+            treatment_intake_token_last4: true,
             google_calendar_enabled: true,
             google_gmail_address: true,
             google_calendar_refresh_token_encrypted: true,
@@ -195,7 +198,9 @@ export default async function PrivateClinicSettingsPage({
   const intakeFlash =
     sp.intake === "created"
       ? ({ kind: "ok" as const, text: st.intakeCreated })
-      : null;
+      : sp.intake === "error" && sp.intakeReason === "unlinked"
+        ? ({ kind: "err" as const, text: st.intakeUnlinked })
+        : null;
 
   const headerList = await headers();
   const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ?? "";
@@ -360,15 +365,18 @@ export default async function PrivateClinicSettingsPage({
 
       <TreatmentIntakeSection
         webhookUrl={treatmentIntakeWebhookUrl(intakeOrigin)}
-        tokenLast4={settings?.treatment_intake_token_last4 ?? null}
+        receiptWebhookUrl={receiptIntakeWebhookUrl(intakeOrigin)}
+        tokenLast4={currentUser?.treatment_intake_token_last4 ?? null}
         revealedToken={sp.intakeToken?.trim() || null}
+        linkedToFamilyMember={Boolean(currentUser?.family_member_id)}
         labels={{
           title: st.intakeTitle,
           intro: st.intakeIntro,
           webhookUrl: st.intakeWebhookUrl,
+          receiptWebhookUrl: st.intakeReceiptWebhookUrl,
           noToken: st.intakeNoToken,
-          tokenEnding: settings?.treatment_intake_token_last4
-            ? st.intakeTokenEnding(settings.treatment_intake_token_last4)
+          tokenEnding: currentUser?.treatment_intake_token_last4
+            ? st.intakeTokenEnding(currentUser.treatment_intake_token_last4)
             : null,
           generate: st.intakeGenerate,
           rotate: st.intakeRotate,
@@ -376,6 +384,7 @@ export default async function PrivateClinicSettingsPage({
           copy: st.intakeCopy,
           copied: st.intakeCopied,
           tokenOnce: st.intakeTokenOnce,
+          unlinked: st.intakeUnlinked,
         }}
       />
 

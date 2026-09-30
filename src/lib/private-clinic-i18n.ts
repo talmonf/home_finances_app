@@ -1657,25 +1657,30 @@ export function privateClinicSettings(lang: UiLanguage) {
     ),
     intakeTitle: p("Treatment intake", "קליטת טיפולים"),
     intakeIntro: p(
-      "Make can create a treatment from each Google Form response by posting JSON to this address with the bearer token. The form identifies the client by first name, or by first name plus the first one or two letters of the last name when several clients share a first name. Job and program come from the client.",
-      "Make יכול ליצור טיפול מכל תשובה בטופס Google על ידי שליחת JSON לכתובת הזו עם אסימון הגישה. הטופס מזהה את הלקוח לפי שם פרטי, או לפי שם פרטי ועוד האות או שתי האותיות הראשונות של שם המשפחה כשיש כמה לקוחות עם אותו שם פרטי. המשרה והתוכנית נלקחות מהלקוח.",
+      "This token belongs to the user who is signed in. It is used for both webhook addresses below. Make creates treatments only for this user's clients. The other person in the household signs in and generates their own token.",
+      "האסימון שייך למשתמש המחובר. הוא משמש את שתי כתובות ה-webhook למטה. Make יוצר טיפולים רק עבור הלקוחות של המשתמש הזה. האדם השני במשק הבית מתחבר ויוצר אסימון משלו.",
     ),
-    intakeWebhookUrl: p("Webhook URL", "כתובת ה-webhook"),
+    intakeWebhookUrl: p("Treatment webhook URL", "כתובת webhook לטיפולים"),
+    intakeReceiptWebhookUrl: p("Receipt webhook URL", "כתובת webhook לקבלות"),
     intakeNoToken: p("No intake token yet.", "עדיין אין אסימון קליטה."),
     intakeTokenEnding: (last4: string) =>
       p(`Active token ending in ${last4}.`, `אסימון פעיל שמסתיים ב-${last4}.`),
     intakeGenerate: p("Generate token", "יצירת אסימון"),
     intakeRotate: p("Rotate token", "החלפת אסימון"),
     intakeRotateConfirm: p(
-      "Rotating the token stops the current Make scenario until you paste the new token. Continue?",
-      "החלפת האסימון תעצור את תרחיש Make הנוכחי עד שתדביקו את האסימון החדש. להמשיך?",
+      "Rotating replaces only your token. The other person's token stays as it is. Your Make scenario stops until you paste the new token. Continue?",
+      "ההחלפה מחליפה רק את האסימון שלך. האסימון של האדם השני נשאר כפי שהוא. תרחיש Make שלך ייעצר עד שתדביקו את האסימון החדש. להמשיך?",
     ),
     intakeCopy: p("Copy", "העתקה"),
     intakeCopied: p("Copied", "הועתק"),
     intakeTokenOnce: p("Copy this token now. It will not be shown again.", "העתיקו את האסימון עכשיו. הוא לא יוצג שוב."),
     intakeCreated: p(
-      "Intake token created. Copy it into Make before you leave this page.",
-      "אסימון הקליטה נוצר. העתיקו אותו אל Make לפני שתעזבו את העמוד.",
+      "Intake token created for your user. Copy it into your Make scenario before you leave this page.",
+      "אסימון הקליטה נוצר עבור המשתמש שלך. העתיקו אותו אל תרחיש Make שלך לפני שתעזבו את העמוד.",
+    ),
+    intakeUnlinked: p(
+      "Link this user to your family member before generating a token. Each clinic in the household needs its own user.",
+      "קשרו את המשתמש הזה לבן המשפחה שלכם לפני יצירת אסימון. לכל קליניקה במשק הבית צריך משתמש משלה.",
     ),
   };
 }

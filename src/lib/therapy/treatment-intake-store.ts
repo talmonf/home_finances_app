@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/auth";
+import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import {
   IntakeImportKeyConflict,
   type IntakeStore,
@@ -11,16 +12,25 @@ function isUniqueConflict(error: unknown): boolean {
 }
 
 export const prismaTreatmentIntakeStore: IntakeStore = {
-  async householdIdForTokenHash(hash) {
-    const row = await prisma.therapy_settings.findUnique({
+  async accountForTokenHash(hash) {
+    const row = await prisma.users.findUnique({
       where: { treatment_intake_token_hash: hash },
-      select: { household_id: true },
+      select: { id: true, household_id: true, family_member_id: true, is_active: true },
     });
-    return row?.household_id ?? null;
+    if (!row?.is_active || !row.household_id) return null;
+    return {
+      householdId: row.household_id,
+      userId: row.id,
+      familyMemberId: row.family_member_id,
+    };
   },
-  async activeClients(householdId) {
+  async activeClients(householdId, familyMemberId) {
     return prisma.therapy_clients.findMany({
-      where: { household_id: householdId, is_active: true },
+      where: {
+        household_id: householdId,
+        is_active: true,
+        ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
+      },
       select: {
         id: true,
         first_name: true,
@@ -34,9 +44,14 @@ export const prismaTreatmentIntakeStore: IntakeStore = {
       },
     });
   },
-  async job(householdId, jobId) {
+  async job(householdId, jobId, familyMemberId) {
     return prisma.jobs.findFirst({
-      where: { id: jobId, household_id: householdId },
+      where: {
+        id: jobId,
+        household_id: householdId,
+        is_private_clinic: true,
+        family_member_id: familyMemberId,
+      },
       select: { id: true, external_reporting_system: true },
     });
   },
