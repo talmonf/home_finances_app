@@ -5,6 +5,7 @@ import {
   getCurrentUiLanguage,
   getAuthSession,
 } from "@/lib/auth";
+import { headers } from "next/headers";
 import {
   ensureDefaultConsultationTypes,
   ensureDefaultExpenseCategories,
@@ -36,6 +37,8 @@ import {
   MorningIntegrationSection,
   type MorningIntegrationInitial,
 } from "./morning-integration-section";
+import { TreatmentIntakeSection } from "./treatment-intake-section";
+import { treatmentIntakeWebhookUrl } from "@/lib/therapy/treatment-intake";
 import { jobsWhereActiveForPrivateClinicPickers } from "@/lib/private-clinic/jobs-scope";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { decryptSecret } from "@/lib/crypto/secret";
@@ -52,6 +55,8 @@ type Search = {
   morning?: string;
   morningReason?: string;
   morningJob?: string;
+  intake?: string;
+  intakeToken?: string;
 };
 
 export default async function PrivateClinicSettingsPage({
@@ -94,6 +99,7 @@ export default async function PrivateClinicSettingsPage({
         note_1_visible: true,
         note_2_visible: true,
         note_3_visible: true,
+        treatment_intake_token_last4: true,
       },
     }),
     prisma.therapy_consultation_types.findMany({
@@ -186,7 +192,23 @@ export default async function PrivateClinicSettingsPage({
     };
   }
 
+  const intakeFlash =
+    sp.intake === "created"
+      ? ({ kind: "ok" as const, text: st.intakeCreated })
+      : null;
+
+  const headerList = await headers();
+  const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ?? "";
+  const forwardedHost = headerList.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || headerList.get("host") || "localhost:3000";
+  const forwardedProto = headerList.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const proto =
+    forwardedProto ||
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+  const intakeOrigin = envOrigin || `${proto}://${host}`;
+
   const flash =
+    intakeFlash ??
     morningFlash ??
     (sp.error === "google-gmail"
       ? ({ kind: "err" as const, text: "Please enter a valid Gmail address to enable integration." })
@@ -333,6 +355,27 @@ export default async function PrivateClinicSettingsPage({
           receiptNumberingAuto: st.morningReceiptNumberingAuto,
           receiptNumberingAsk: st.morningReceiptNumberingAsk,
           receiptNumberingHint: st.morningReceiptNumberingHint,
+        }}
+      />
+
+      <TreatmentIntakeSection
+        webhookUrl={treatmentIntakeWebhookUrl(intakeOrigin)}
+        tokenLast4={settings?.treatment_intake_token_last4 ?? null}
+        revealedToken={sp.intakeToken?.trim() || null}
+        labels={{
+          title: st.intakeTitle,
+          intro: st.intakeIntro,
+          webhookUrl: st.intakeWebhookUrl,
+          noToken: st.intakeNoToken,
+          tokenEnding: settings?.treatment_intake_token_last4
+            ? st.intakeTokenEnding(settings.treatment_intake_token_last4)
+            : null,
+          generate: st.intakeGenerate,
+          rotate: st.intakeRotate,
+          rotateConfirm: st.intakeRotateConfirm,
+          copy: st.intakeCopy,
+          copied: st.intakeCopied,
+          tokenOnce: st.intakeTokenOnce,
         }}
       />
 

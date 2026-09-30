@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 145_therapy_treatment_intake_token.sql (2026-09-30)
 - [x] 144_family_calendar_sync.sql (2026-09-17)
 - [x] 143_utility_client_number.sql
 - [x] 142_therapy_client_hold_periods.sql
@@ -165,6 +166,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 145 | `145_therapy_treatment_intake_token.sql` (2026-09-30) | ALTER | `therapy_settings`: optional `treatment_intake_token_hash` (unique) and `treatment_intake_token_last4` for the Make/Google Form treatment webhook; unique `(household_id, import_key)` for `gform:` keys so a form response creates one treatment. |
 | 144 | `144_family_calendar_sync.sql` (2026-09-17) | CREATE/ALTER | `users.google_calendar_sync_family_dates` plus family calendar sync error/notification fields; table `family_calendar_sync_events` (per-user Google event mapping for birthdays, anniversaries, special dates). |
 | 143 | `143_utility_client_number.sql` | ALTER | `property_utilities` and `rental_utilities`: optional `client_number` (customer number) alongside account and meter numbers. |
 | 142 | `142_therapy_client_hold_periods.sql` | CREATE | Enum `therapy_client_hold_reason`; table `therapy_client_hold_periods` (dated on-hold intervals, optional resume date); backfill open periods for clients currently `on_hold`. |

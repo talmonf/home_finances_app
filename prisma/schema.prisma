@@ -2074,6 +2074,10 @@ model therapy_settings {
   /// Optional currency for private-clinic receipt import default amount.
   usual_treatment_cost_currency_for_import String?
   default_session_length_minutes Int?
+  /// SHA-256 hex of the Make/Google Form treatment intake bearer token. Null until generated in Clinic settings.
+  treatment_intake_token_hash String? @unique
+  /// Last 4 characters of the intake token, so settings can show which token is active without storing it.
+  treatment_intake_token_last4 String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
