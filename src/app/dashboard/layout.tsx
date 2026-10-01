@@ -16,11 +16,13 @@ import {
   htmlLangForDateDisplayFormat,
 } from "@/lib/household-date-format";
 import { sectionIdFromDashboardPathname } from "@/lib/useful-links/pathname-to-section";
+import { redirectIfPasswordChangeRequired } from "@/lib/require-password-change";
 import { uiLanguageDirection } from "@/lib/ui-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  await redirectIfPasswordChangeRequired();
   const session = await getAuthSession();
   const dateFormat =
     session?.user?.householdId && !session.user.isSuperAdmin

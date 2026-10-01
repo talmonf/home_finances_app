@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ClinicSplashPage } from "@/components/clinic-splash-page";
 import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
 import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { redirectIfPasswordChangeRequired } from "@/lib/require-password-change";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
 import { getEffectiveEnabledSections } from "@/lib/household-sections";
@@ -61,6 +62,8 @@ export default async function Home({ searchParams }: HomeProps) {
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     redirect(`/login${suffix}`);
   }
+
+  await redirectIfPasswordChangeRequired();
 
   const isSuperAdmin = session.user.isSuperAdmin;
   const uiLanguage = isSuperAdmin ? "en" : await getCurrentUiLanguage();

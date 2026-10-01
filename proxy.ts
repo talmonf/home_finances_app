@@ -54,7 +54,7 @@ function applyLoginRouteCookies(pathname: string, req: NextRequest): NextRespons
   return res;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api/auth")) {
@@ -194,8 +194,7 @@ export async function middleware(req: NextRequest) {
     const exempt =
       pathname.startsWith("/change-password") || pathname.startsWith("/api/auth");
     if (!exempt) {
-      const changeUrl = new URL("/change-password", req.url);
-      return NextResponse.redirect(changeUrl);
+      return NextResponse.redirect(new URL("/change-password", req.url));
     }
   }
 
