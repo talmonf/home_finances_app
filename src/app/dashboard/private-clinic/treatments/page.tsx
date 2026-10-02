@@ -601,17 +601,18 @@ export default async function TreatmentsPage({
           ) : (
             <div className="flex-1" />
           )}
-          <div className="grid w-full shrink-0 gap-2 sm:flex sm:w-auto sm:items-center">
-            <OpenPrivateClinicTreatmentsImportButton
-              label={tr.importBtn}
-              importPath="/dashboard/private-clinic/treatments/import"
-            />
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href={`${baseListHref}&modal=new`}
-              className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
+              className="rounded-lg bg-sky-500 px-3 py-1.5 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400"
             >
               {tr.addTreatmentBtn}
             </Link>
+            <OpenPrivateClinicTreatmentsImportButton
+              label={tr.importBtn}
+              importPath="/dashboard/private-clinic/treatments/import"
+              className="inline-flex rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+            />
           </div>
         </div>
         {firstPage.rows.length === 0 ? (
