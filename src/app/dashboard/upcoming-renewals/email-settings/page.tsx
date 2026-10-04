@@ -236,6 +236,26 @@ export default async function RenewalEmailSettingsPage({
           </div>
 
           <div className="space-y-1">
+            <label htmlFor="layout" className="block text-sm font-medium text-slate-300">
+              {isHebrew ? "פריסת האימייל" : "Email layout"}
+            </label>
+            <select
+              id="layout"
+              name="layout"
+              defaultValue={sub?.layout ?? "grouped"}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="grouped">{isHebrew ? "לפי נושא" : "Grouped by topic"}</option>
+              <option value="flat">{isHebrew ? "רשימה לפי תאריך" : "Flat list by date"}</option>
+            </select>
+            <p className="text-xs text-slate-500">
+              {isHebrew
+                ? "לפי נושא: כותרת לכל נושא. רשימה לפי תאריך: כל הפריטים לפי התאריך, עם שם הנושא בצבע."
+                : "Grouped keeps each topic under its own heading. Flat lists every item by date and marks the topic in color."}
+            </p>
+          </div>
+
+          <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-300">
               {isHebrew ? "כתובת נמען (ריק = המייל של המשתמש)" : "Recipient email (blank = your user email)"}
             </label>

@@ -88,6 +88,7 @@ export async function sendRenewalDigestForSubscription(
     baseUrl,
     daysAhead: sub.days_ahead,
     today,
+    layout: sub.layout,
   });
 
   const isTest = options.isTest === true;

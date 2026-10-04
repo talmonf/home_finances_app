@@ -1560,6 +1560,13 @@ enum RenewalEmailFrequency {
   @@map("renewal_email_frequency")
 }
 
+enum RenewalEmailLayout {
+  grouped
+  flat
+
+  @@map("renewal_email_layout")
+}
+
 model renewal_email_subscriptions {
   id               String                 @id @default(uuid())
   user_id          String                 @unique
@@ -1572,6 +1579,7 @@ model renewal_email_subscriptions {
   send_hour        Int                    @default(7)
   timezone         String                 @default("Asia/Jerusalem")
   days_ahead       Int                    @default(30)
+  layout           RenewalEmailLayout     @default(grouped)
   last_sent_at     DateTime?
   created_at       DateTime               @default(now())
   updated_at       DateTime               @updatedAt

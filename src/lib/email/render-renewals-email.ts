@@ -5,6 +5,28 @@ import { dateOnlyLocal, RENEWAL_CATEGORY_ORDER, type RenewalRow } from "@/lib/up
 import { overdueLabelForCategory } from "@/lib/upcoming-renewals/overdue-labels";
 export { getAppBaseUrl } from "@/lib/email/app-base-url";
 
+export type RenewalEmailLayoutMode = "grouped" | "flat";
+
+/** Inline colors for topic labels. Email clients ignore stylesheets, so these stay on the element. */
+const RENEWAL_CATEGORY_COLORS: Record<string, string> = {
+  Birthday: "#be185d",
+  Anniversary: "#7c3aed",
+  "Special date": "#0f766e",
+  Subscription: "#0369a1",
+  Identity: "#b45309",
+  "Credit card": "#c2410c",
+  Insurance: "#047857",
+  "Savings policy": "#0e7490",
+  "Car license": "#4338ca",
+  "Car service": "#6d28d9",
+  Rental: "#a16207",
+  Utility: "#155e75",
+  Task: "#9f1239",
+  Donation: "#9d174d",
+  Loan: "#1d4ed8",
+  Warranty: "#3f6212",
+};
+
 export type RenderRenewalsEmailParams = {
   rows: RenewalRow[];
   dateDisplayFormat: HouseholdDateDisplayFormat;
@@ -12,6 +34,7 @@ export type RenderRenewalsEmailParams = {
   baseUrl: string;
   daysAhead: number;
   today: Date;
+  layout?: RenewalEmailLayoutMode;
 };
 
 function daysFromToday(renewalDate: Date, today: Date): number {
@@ -20,16 +43,32 @@ function daysFromToday(renewalDate: Date, today: Date): number {
   return Math.round((a - b) / 86400000);
 }
 
+function categoryRank(category: string): number {
+  const index = (RENEWAL_CATEGORY_ORDER as readonly string[]).indexOf(category);
+  return index === -1 ? RENEWAL_CATEGORY_ORDER.length : index;
+}
+
 function sortCategories(cats: string[]): string[] {
-  const order = [...RENEWAL_CATEGORY_ORDER] as string[];
   return [...cats].sort((a, b) => {
-    const ia = order.indexOf(a);
-    const ib = order.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
+    const ia = categoryRank(a);
+    const ib = categoryRank(b);
+    if (ia !== ib) return ia - ib;
+    return a.localeCompare(b);
   });
+}
+
+function sortFlatRows(rows: RenewalRow[]): RenewalRow[] {
+  return [...rows].sort((a, b) => {
+    const byDate = dateOnlyLocal(a.renewalDate).getTime() - dateOnlyLocal(b.renewalDate).getTime();
+    if (byDate !== 0) return byDate;
+    const byCategory = categoryRank(a.category) - categoryRank(b.category);
+    if (byCategory !== 0) return byCategory;
+    return a.itemName.localeCompare(b.itemName);
+  });
+}
+
+function categoryColor(category: string): string {
+  return RENEWAL_CATEGORY_COLORS[category] ?? "#334155";
 }
 
 export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
@@ -38,6 +77,7 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
   text: string;
 } {
   const { rows, dateDisplayFormat, language, baseUrl, daysAhead, today } = params;
+  const layout: RenewalEmailLayoutMode = params.layout === "flat" ? "flat" : "grouped";
   const he = language === "he";
   const dir = he ? "rtl" : "ltr";
   const align = he ? "right" : "left";
@@ -66,14 +106,6 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
     return { subject, html, text };
   }
 
-  const byCat = new Map<string, RenewalRow[]>();
-  for (const r of rows) {
-    const list = byCat.get(r.category) ?? [];
-    list.push(r);
-    byCat.set(r.category, list);
-  }
-  const categories = sortCategories([...byCat.keys()]);
-
   const timingLabel = (n: number, category: string) => {
     if (n < 0) {
       const daysAgo = Math.abs(n);
@@ -88,38 +120,65 @@ export function renderRenewalsEmail(params: RenderRenewalsEmailParams): {
     return he ? `בעוד ${n} ימים` : `In ${n} day${n === 1 ? "" : "s"}`;
   };
 
+  const renderLine = (r: RenewalRow, showTopic: boolean): { text: string; html: string } => {
+    const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
+    const n = daysFromToday(r.renewalDate, today);
+    const timing = timingLabel(n, r.category);
+    const middle = renewalEmailMiddleSegments(r, language);
+    const middleText = middle.join(" · ");
+    const topicText = showTopic ? `${r.category} · ` : "";
+    const line = `${dateStr} · ${topicText}${middleText} (${timing})`;
+    const timingStyle = n < 0 ? "color:#b91c1c;" : "";
+    const middleHtml = middle
+      .map((part, i) => {
+        const isOwner = i === middle.length - 1 && part === r.owner.trim() && part !== r.itemName;
+        return isOwner
+          ? `<span style="color:#555;">${escapeHtml(part)}</span>`
+          : escapeHtml(part);
+      })
+      .join(" · ");
+    const topicHtml = showTopic
+      ? ` <span style="color:${categoryColor(r.category)};font-weight:600;">${escapeHtml(r.category)}</span> ·`
+      : "";
+    const html = `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> ·${topicHtml} ${middleHtml} <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`;
+    return { text: line, html };
+  };
+
   let textBody = `${intro}\n\n`;
   const htmlSections: string[] = [`<p>${escapeHtml(intro)}</p>`];
 
-  for (const cat of categories) {
-    const list = byCat.get(cat) ?? [];
-    htmlSections.push(
-      `<h2 style="font-size:16px;margin:20px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px;">${escapeHtml(cat)}</h2><ul style="margin:0;padding-${he ? "right" : "left"}:20px;">`,
-    );
-    textBody += `${cat}\n`;
-    for (const r of list) {
-      const dateStr = formatHouseholdDate(r.renewalDate, dateDisplayFormat);
-      const n = daysFromToday(r.renewalDate, today);
-      const timing = timingLabel(n, r.category);
-      const middle = renewalEmailMiddleSegments(r, language);
-      const middleText = middle.join(" · ");
-      const line = `${dateStr} · ${middleText} (${timing})`;
-      textBody += `  - ${line}\n`;
-      const timingStyle = n < 0 ? "color:#b91c1c;" : "";
-      const middleHtml = middle
-        .map((part, i) => {
-          const isOwner = i === middle.length - 1 && part === r.owner.trim() && part !== r.itemName;
-          return isOwner
-            ? `<span style="color:#555;">${escapeHtml(part)}</span>`
-            : escapeHtml(part);
-        })
-        .join(" · ");
-      htmlSections.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(dateStr)}</strong> · ${middleHtml} <em style="${timingStyle}">(${escapeHtml(timing)})</em></li>`,
-      );
+  if (layout === "flat") {
+    htmlSections.push(`<ul style="margin:0;padding-${he ? "right" : "left"}:20px;">`);
+    for (const r of sortFlatRows(rows)) {
+      const line = renderLine(r, true);
+      textBody += `  - ${line.text}\n`;
+      htmlSections.push(line.html);
     }
     htmlSections.push(`</ul>`);
     textBody += "\n";
+  } else {
+    const byCat = new Map<string, RenewalRow[]>();
+    for (const r of rows) {
+      const list = byCat.get(r.category) ?? [];
+      list.push(r);
+      byCat.set(r.category, list);
+    }
+    const categories = sortCategories([...byCat.keys()]);
+
+    for (const cat of categories) {
+      const list = byCat.get(cat) ?? [];
+      htmlSections.push(
+        `<h2 style="font-size:16px;margin:20px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px;">${escapeHtml(cat)}</h2><ul style="margin:0;padding-${he ? "right" : "left"}:20px;">`,
+      );
+      textBody += `${cat}\n`;
+      for (const r of list) {
+        const line = renderLine(r, false);
+        textBody += `  - ${line.text}\n`;
+        htmlSections.push(line.html);
+      }
+      htmlSections.push(`</ul>`);
+      textBody += "\n";
+    }
   }
 
   htmlSections.push(

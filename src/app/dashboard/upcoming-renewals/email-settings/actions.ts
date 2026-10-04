@@ -3,10 +3,11 @@
 import { prisma, requireHouseholdMember, getAuthSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { RenewalEmailFrequency } from "@/generated/prisma/client";
+import type { RenewalEmailFrequency, RenewalEmailLayout } from "@/generated/prisma/client";
 import { sendRenewalDigestForSubscription } from "@/lib/renewal-email/send-digest";
 
 const FREQ: RenewalEmailFrequency[] = ["daily", "weekly", "monthly"];
+const LAYOUTS: RenewalEmailLayout[] = ["grouped", "flat"];
 
 function parseBool(v: FormDataEntryValue | null): boolean {
   return v === "on" || v === "true" || v === "1";
@@ -35,6 +36,8 @@ export async function upsertRenewalEmailSubscription(formData: FormData) {
   const day_of_month = Math.min(31, Math.max(1, Number(formData.get("day_of_month")) || 1));
   const timezone = ((formData.get("timezone") as string | null)?.trim() || "Asia/Jerusalem").slice(0, 64);
   const recipient_email = parseEmailOrNull((formData.get("recipient_email") as string | null) ?? null);
+  const rawLayout = (formData.get("layout") as string | null)?.trim() ?? "grouped";
+  const layout = (LAYOUTS.includes(rawLayout as RenewalEmailLayout) ? rawLayout : "grouped") as RenewalEmailLayout;
 
   let dayOfWeek: number | null = null;
   let dayOfMonth: number | null = null;
@@ -57,6 +60,7 @@ export async function upsertRenewalEmailSubscription(formData: FormData) {
       send_hour,
       timezone,
       days_ahead,
+      layout,
     },
     update: {
       household_id: householdId,
@@ -68,6 +72,7 @@ export async function upsertRenewalEmailSubscription(formData: FormData) {
       send_hour,
       timezone,
       days_ahead,
+      layout,
     },
   });
 
