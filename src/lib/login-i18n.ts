@@ -16,6 +16,8 @@ export function loginPageStrings(portal: AppPortal, lang: UiLanguage) {
       invalidCredentials: "אימייל או סיסמה שגויים",
       passwordUpdated:
         "הסיסמה עודכנה. התחברו עם הסיסמה החדשה.",
+      householdCalendarAccount:
+        "חיבור Google Calendar שייך לחשבון משק הבית. התחברו עם החשבון הזה, לא עם חשבון המנהל.",
       goToLogin: "לדף ההתחברות",
     };
   }
@@ -29,6 +31,8 @@ export function loginPageStrings(portal: AppPortal, lang: UiLanguage) {
     signingIn: "Signing in...",
     invalidCredentials: "Invalid email or password",
     passwordUpdated: "Password updated. Sign in with your new password.",
+    householdCalendarAccount:
+      "This Google Calendar connection belongs to a household account. Sign in with that account, not the admin account.",
     goToLogin: "Go to login",
   };
 }

@@ -21,6 +21,7 @@ export function LoginForm({
   pinInitialLanguage = false,
   callbackUrl,
   passwordUpdated,
+  householdCalendarNotice,
 }: {
   portal?: AppPortal;
   initialLanguage?: UiLanguage;
@@ -28,6 +29,7 @@ export function LoginForm({
   pinInitialLanguage?: boolean;
   callbackUrl?: string;
   passwordUpdated?: boolean;
+  householdCalendarNotice?: boolean;
 }) {
   const [language, setLanguage] = useState<UiLanguage>(initialLanguage);
   const [email, setEmail] = useState("");
@@ -177,6 +179,11 @@ export function LoginForm({
         {passwordUpdated ? (
           <p className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
             {copy.passwordUpdated}
+          </p>
+        ) : null}
+        {householdCalendarNotice ? (
+          <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center text-sm text-amber-100">
+            {copy.householdCalendarAccount}
           </p>
         ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">

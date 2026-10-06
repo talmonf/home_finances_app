@@ -1,5 +1,6 @@
 import type { DefaultSession, NextAuthOptions, User as NextAuthUser } from "next-auth";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -14,6 +15,7 @@ import {
 import { LOGIN_UI_LANGUAGE_COOKIE } from "@/lib/login-ui-language-cookie";
 import { DEFAULT_UI_LANGUAGE, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-language";
 import { SESSION_OBFUSCATE_COOKIE } from "@/lib/session-obfuscate-cookie";
+import { householdMemberLoginPath } from "@/lib/household-member-login-path";
 import { isPasswordExpired } from "@/lib/password-policy";
 
 const globalForPrisma = globalThis as unknown as {
@@ -256,10 +258,24 @@ export async function requireHouseholdAdmin() {
 
 export async function requireHouseholdMember() {
   const session = await getAuthSession();
-  if (!session?.user || session.user.isSuperAdmin) {
+  if (session?.user && !session.user.isSuperAdmin) {
+    return session;
+  }
+
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  // API callers expect an error response. Pages and actions should send the
+  // visitor to sign in instead of an uncaught "Not authorized" crash.
+  if (pathname.startsWith("/api/")) {
     throw new Error("Not authorized");
   }
-  return session;
+
+  console.warn("[auth] household page requires a household account", {
+    pathname: pathname || "/",
+    signedIn: Boolean(session?.user),
+    superAdmin: Boolean(session?.user?.isSuperAdmin),
+  });
+  redirect(householdMemberLoginPath(pathname));
 }
 
 export async function getCurrentHouseholdId() {

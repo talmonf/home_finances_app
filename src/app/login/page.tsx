@@ -9,6 +9,7 @@ type LoginPageProps = {
     passwordUpdated?: string;
     portal?: string;
     lang?: string;
+    notice?: string;
   }>;
 };
 
@@ -17,6 +18,7 @@ function loginQuerySuffix(params: {
   passwordUpdated?: string;
   portal?: string;
   lang?: string;
+  notice?: string;
 }): string {
   const qs = new URLSearchParams();
   if (params.callbackUrl) {
@@ -31,6 +33,9 @@ function loginQuerySuffix(params: {
   }
   if (params.portal === "home") {
     qs.set("portal", "home");
+  }
+  if (params.notice === "household-calendar") {
+    qs.set("notice", "household-calendar");
   }
   const s = qs.toString();
   return s ? `?${s}` : "";
@@ -59,6 +64,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         pinInitialLanguage={pinInitialLanguage}
         callbackUrl={callbackUrl}
         passwordUpdated={passwordUpdated}
+        householdCalendarNotice={resolvedSearchParams?.notice === "household-calendar"}
       />
     </Suspense>
   );
