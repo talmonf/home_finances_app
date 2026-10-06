@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ClinicSplashPage } from "@/components/clinic-splash-page";
 import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
 import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import { googleCalendarReconnectHref } from "@/lib/household-member-login-path";
 import { redirectIfPasswordChangeRequired } from "@/lib/require-password-change";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import { getDashboardSections, type SetupCounts } from "@/lib/dashboard-sections";
@@ -82,6 +83,15 @@ export default async function Home({ searchParams }: HomeProps) {
           where: { id: householdId },
           select: { home_frequent_links_json: true },
         })
+      : null;
+  const calendarSyncError =
+    !isSuperAdmin && householdId && userId
+      ? (
+          await prisma.users.findFirst({
+            where: { id: userId, household_id: householdId },
+            select: { family_calendar_sync_error: true },
+          })
+        )?.family_calendar_sync_error
       : null;
 
   const setupCounts: SetupCounts | null = !isSuperAdmin && householdId
@@ -382,6 +392,22 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
           </>
         ) : (
+          <>
+          {calendarSyncError ? (
+            <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+              <p className="text-sm font-medium text-amber-100">
+                {uiLanguage === "he"
+                  ? "צריך לחבר מחדש את Google Calendar כדי להוסיף מועדים משפחתיים."
+                  : "Google Calendar needs to be reconnected before family dates can be added."}
+              </p>
+              <Link
+                href={googleCalendarReconnectHref()}
+                className="mt-3 inline-flex items-center rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
+              >
+                {uiLanguage === "he" ? "חברו מחדש את Google Calendar" : "Reconnect Google Calendar"}
+              </Link>
+            </div>
+          ) : null}
           <HouseholdDashboardPanel
             uiLanguage={uiLanguage}
             welcomeTitle={welcomeTitleNonAdmin}
@@ -393,6 +419,7 @@ export default async function Home({ searchParams }: HomeProps) {
             setupTiles={setupTiles}
             ongoingTiles={ongoingTiles}
           />
+          </>
         )}
       </div>
     </div>

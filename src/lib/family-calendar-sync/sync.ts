@@ -28,7 +28,7 @@ import { clearInvalidGoogleGrantForUser, decryptGoogleToken } from "@/lib/google
 import { normalizeUiLanguage } from "@/lib/ui-language";
 import type { FamilyCalendarKind, FamilyCalendarSourceKind } from "@/generated/prisma/enums";
 
-const FAMILY_CALENDAR_SETTINGS_PATH = "/dashboard/upcoming-renewals/email-settings";
+const FAMILY_CALENDAR_SETTINGS_PATH = "/dashboard/upcoming-renewals/email-settings#google-calendar";
 
 type FamilyCalendarUserRow = GoogleCalendarUserConfig & {
   email: string;

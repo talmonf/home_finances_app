@@ -149,7 +149,7 @@ export default async function UpcomingRenewalsPage({ searchParams }: PageProps) 
             </button>
           </form>
           <Link
-            href="/dashboard/upcoming-renewals/email-settings"
+            href="/dashboard/upcoming-renewals/email-settings#google-calendar"
             className="text-sm font-medium text-sky-400 hover:text-sky-300"
           >
             {isHebrew ? "הגדרות אימייל ויומן" : "Email & calendar settings"}

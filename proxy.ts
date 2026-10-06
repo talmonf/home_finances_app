@@ -10,6 +10,7 @@ import {
   LOGIN_UI_LANGUAGE_COOKIE_OPTIONS,
 } from "@/lib/login-ui-language-cookie";
 import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
+import { isGoogleCalendarSettingsPath, googleCalendarReconnectHref } from "@/lib/household-member-login-path";
 import {
   clientIpFromRequest,
   expensiveApiRatelimit,
@@ -169,8 +170,9 @@ export async function proxy(req: NextRequest) {
       return applyLoginUiLanguageFromQuery(req, redirect);
     }
 
+    const returnPath = req.nextUrl.pathname + req.nextUrl.search;
     const callbackUrl = encodeURIComponent(
-      req.nextUrl.pathname + req.nextUrl.search,
+      isGoogleCalendarSettingsPath(pathname) ? googleCalendarReconnectHref(returnPath) : returnPath,
     );
     const clinicLogin = pathname.startsWith("/dashboard/private-clinic");
     const loginPath = clinicLogin ? "/login" : "/login?portal=home";

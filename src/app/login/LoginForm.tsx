@@ -1,6 +1,7 @@
 "use client";
 
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
+import { safePostLoginPath } from "@/lib/household-member-login-path";
 import type { AppPortal } from "@/lib/app-branding-strings";
 import { loginPageStrings } from "@/lib/login-i18n";
 import { uiLanguageDirection, type UiLanguage } from "@/lib/ui-language";
@@ -121,12 +122,13 @@ export function LoginForm({
     setLoading(true);
     try {
       await persistLoginUiLanguage(language);
+      const destination = safePostLoginPath(callbackUrl);
       const result = await signIn("credentials", {
         email: emailToSubmit,
         password: passwordToSubmit,
         ui_language: language,
         redirect: false,
-        callbackUrl: callbackUrl ?? "/",
+        callbackUrl: destination,
       });
 
       if (result?.error) {
@@ -135,7 +137,7 @@ export function LoginForm({
         return;
       }
 
-      window.location.href = result?.url ?? "/";
+      window.location.href = destination !== "/" ? destination : (result?.url ?? "/");
     } catch {
       setLoading(false);
     }
