@@ -40,7 +40,7 @@ export function TreatmentAppointmentContextFields({
   const [additionalParticipantIds, setAdditionalParticipantIds] = useState<string[]>(
     initialAdditionalParticipantIds.filter(Boolean),
   );
-  const [scheduleNext, setScheduleNext] = useState(showScheduleNext);
+  const [scheduleNext, setScheduleNext] = useState(false);
   const [nextDate, setNextDate] = useState(defaultNextDate);
   const [nextHour, setNextHour] = useState(defaultNextHour);
   const [nextMinute, setNextMinute] = useState(defaultNextMinute);
