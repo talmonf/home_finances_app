@@ -116,9 +116,13 @@ export default async function RenewalEmailSettingsPage({
         qp?.saved === "family-calendar-synced" ? (
           <p className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
             {qp.saved === "google-connected"
-              ? isHebrew
-                ? "חשבון Google Calendar חובר. מועדים משפחתיים יסונכרנו ליומן."
-                : "Google Calendar connected. Family dates will sync to your calendar."
+              ? user.family_calendar_sync_error
+                ? isHebrew
+                  ? "חשבון Google Calendar חובר."
+                  : "Google Calendar connected."
+                : isHebrew
+                  ? "חשבון Google Calendar חובר, והמועדים המשפחתיים נוספו ליומן."
+                  : "Google Calendar connected, and family dates were added to your calendar."
               : qp.saved === "family-calendar-synced"
                 ? isHebrew
                   ? "המועדים המשפחתיים סונכרנו ליומן Google."
@@ -192,16 +196,9 @@ export default async function RenewalEmailSettingsPage({
           </h2>
           <p className="text-sm text-slate-400">
             {isHebrew
-              ? "אם Google Calendar כבר מחובר (גם ממרפאה), ימי הולדת, ימי נישואין ומועדים מיוחדים יתווספו ליומן כשהאימייל היומי/שבועי נשלח. אפשר גם לסנכרן עכשיו."
-              : "If Google Calendar is already connected (including from private clinic), birthdays, anniversaries, and special dates are added to the calendar when the digest email is sent. You can also sync now."}
+              ? "ימי הולדת, ימי נישואין ומועדים מיוחדים מתווספים ליומן הזה."
+              : "Birthdays, anniversaries, and special dates are added to this calendar."}
           </p>
-          {!googleConnected ? (
-            <p className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
-              {isHebrew
-                ? "חברו חשבון Google Calendar לפני הפעלת הסנכרון."
-                : "Connect a Google Calendar account before enabling sync."}
-            </p>
-          ) : null}
           <label className="inline-flex items-center gap-2 text-sm text-slate-200">
             <input
               type="checkbox"
@@ -228,14 +225,11 @@ export default async function RenewalEmailSettingsPage({
               gmailPlaceholder: "name@gmail.com",
             }}
           />
-          {user.family_calendar_sync_error ? (
+          {user.family_calendar_sync_error &&
+          !user.family_calendar_sync_error.toLowerCase().includes("expired") &&
+          !user.family_calendar_sync_error.toLowerCase().includes("invalid_grant") ? (
             <p className="rounded-md border border-rose-800/50 bg-rose-950/30 px-3 py-2 text-sm text-rose-100">
-              {user.family_calendar_sync_error.toLowerCase().includes("expired") ||
-              user.family_calendar_sync_error.toLowerCase().includes("invalid_grant")
-                ? isHebrew
-                  ? "הגישה ליומן Google פגה. לחצו על «חברו מחדש את Google Calendar», ואז על «סנכרן מועדים ליומן עכשיו»."
-                  : "Google Calendar access expired. Click Reconnect Google Calendar, then Sync family dates to calendar now."
-                : `${isHebrew ? "שגיאת סנכרון אחרונה:" : "Last sync error:"} ${user.family_calendar_sync_error}`}
+              {`${isHebrew ? "שגיאת סנכרון אחרונה:" : "Last sync error:"} ${user.family_calendar_sync_error}`}
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
