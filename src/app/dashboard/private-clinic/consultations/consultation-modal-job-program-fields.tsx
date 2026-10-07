@@ -6,13 +6,31 @@ import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 type JobOption = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
 
+type ScheduleDuration = {
+  initialMinutes: number;
+  fallbackMinutes: number;
+  label: string;
+  jobMinutes: Record<string, number>;
+  programMinutes: Record<string, number>;
+};
+
+function durationForSelection(
+  scheduleDuration: ScheduleDuration,
+  jobId: string,
+  programId: string,
+): number {
+  const programMinutes = programId ? scheduleDuration.programMinutes[programId] : undefined;
+  const jobMinutes = jobId ? scheduleDuration.jobMinutes[jobId] : undefined;
+  return programMinutes ?? jobMinutes ?? scheduleDuration.fallbackMinutes;
+}
+
 export function ConsultationModalJobProgramFields({
   jobs,
   programs,
   initialJobId,
   initialProgramId,
   labels,
-  onSelectionChange,
+  scheduleDuration,
 }: {
   jobs: JobOption[];
   programs: ProgramOption[];
@@ -23,10 +41,13 @@ export function ConsultationModalJobProgramFields({
     program: string;
     select: string;
   };
-  onSelectionChange?: (jobId: string, programId: string) => void;
+  scheduleDuration?: ScheduleDuration;
 }) {
   const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs, initialJobId));
   const [programId, setProgramId] = useState(initialProgramId ?? "");
+  const [durationMinutes, setDurationMinutes] = useState(
+    () => scheduleDuration?.initialMinutes ?? scheduleDuration?.fallbackMinutes ?? 50,
+  );
 
   const programsForJob = useMemo(
     () => (jobId ? programs.filter((p) => p.jobId === jobId) : []),
@@ -51,7 +72,9 @@ export function ConsultationModalJobProgramFields({
             const nextJobId = e.target.value;
             setJobId(nextJobId);
             setProgramId("");
-            onSelectionChange?.(nextJobId, "");
+            if (scheduleDuration) {
+              setDurationMinutes(durationForSelection(scheduleDuration, nextJobId, ""));
+            }
           }}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
@@ -71,7 +94,9 @@ export function ConsultationModalJobProgramFields({
           onChange={(e) => {
             const nextProgramId = e.target.value;
             setProgramId(nextProgramId);
-            onSelectionChange?.(jobId, nextProgramId);
+            if (scheduleDuration) {
+              setDurationMinutes(durationForSelection(scheduleDuration, jobId, nextProgramId));
+            }
           }}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
@@ -83,6 +108,22 @@ export function ConsultationModalJobProgramFields({
           ))}
         </select>
       </div>
+      {scheduleDuration ? (
+        <div>
+          <label className="block text-xs text-slate-400">{scheduleDuration.label}</label>
+          <input
+            name="duration_minutes"
+            type="number"
+            min={1}
+            max={999}
+            step={1}
+            required
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+          />
+        </div>
+      ) : null}
     </>
   );
 }

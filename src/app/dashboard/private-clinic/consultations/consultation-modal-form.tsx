@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
@@ -101,16 +98,6 @@ export function ConsultationModalForm({
   scheduleDuration?: ScheduleDuration;
 }) {
   const scheduling = mode === "schedule";
-  const [durationMinutes, setDurationMinutes] = useState(
-    () => scheduleDuration?.initialMinutes ?? scheduleDuration?.fallbackMinutes ?? 50,
-  );
-
-  function durationForSelection(jobId: string, programId: string) {
-    if (!scheduleDuration) return;
-    const programMinutes = programId ? scheduleDuration.programMinutes[programId] : undefined;
-    const jobMinutes = jobId ? scheduleDuration.jobMinutes[jobId] : undefined;
-    setDurationMinutes(programMinutes ?? jobMinutes ?? scheduleDuration.fallbackMinutes);
-  }
 
   return (
     <ConsultationModalShell title={labels.title} closeHref={closeHref} closeLabel={labels.cancel}>
@@ -126,7 +113,7 @@ export function ConsultationModalForm({
           programs={programs}
           initialJobId={initial?.job_id}
           initialProgramId={initial?.program_id}
-          onSelectionChange={scheduling ? durationForSelection : undefined}
+          scheduleDuration={scheduling ? scheduleDuration : undefined}
           labels={{
             job: labels.job,
             program: labels.program,
@@ -165,22 +152,6 @@ export function ConsultationModalForm({
             />
           </div>
         </div>
-        {scheduling && scheduleDuration ? (
-          <div>
-            <label className="block text-xs text-slate-400">{scheduleDuration.label}</label>
-            <input
-              name="duration_minutes"
-              type="number"
-              min={1}
-              max={999}
-              step={1}
-              required
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-          </div>
-        ) : null}
         {scheduling ? null : (
         <div>
           <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
