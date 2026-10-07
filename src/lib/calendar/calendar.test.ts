@@ -8,6 +8,7 @@ import {
   pinsInVisibleRange,
   selectUnscheduledVisits,
   daysForView,
+  isCurrentCalendarPeriod,
   monthlyOccurrencesInRange,
 } from "@/lib/calendar/model";
 
@@ -114,4 +115,14 @@ test("annual and monthly occurrences fall inside a past month and a future month
     monthly.map((d) => isoDateLocal(d)),
     ["2026-10-01", "2026-11-01"],
   );
+});
+
+test("current period is the day, week, or month that contains today", () => {
+  const now = new Date(2026, 9, 7);
+  assert.equal(isCurrentCalendarPeriod("day", now, now), true);
+  assert.equal(isCurrentCalendarPeriod("day", new Date(2026, 9, 6), now), false);
+  assert.equal(isCurrentCalendarPeriod("week", new Date(2026, 9, 4), now), true);
+  assert.equal(isCurrentCalendarPeriod("week", new Date(2026, 9, 11), now), false);
+  assert.equal(isCurrentCalendarPeriod("month", new Date(2026, 9, 31), now), true);
+  assert.equal(isCurrentCalendarPeriod("month", new Date(2026, 8, 30), now), false);
 });

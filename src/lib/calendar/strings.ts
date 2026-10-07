@@ -10,7 +10,7 @@ export type CalendarCopy = {
   week: string;
   month: string;
   today: string;
-  /** Tooltip for the Today control. */
+  /** Tooltip for the Current control. */
   todayHint: string;
   previous: string;
   next: string;
@@ -62,8 +62,8 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
       day: "יום",
       week: "שבוע",
       month: "חודש",
-      today: "היום",
-      todayHint: "הצגת התקופה שכוללת את היום",
+      today: "נוכחי",
+      todayHint: "הצגת התקופה הנוכחית",
       previous: "הקודם",
       next: "הבא",
       jumpToDate: "מעבר לתאריך",
@@ -101,8 +101,8 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
     day: "Day",
     week: "Week",
     month: "Month",
-    today: "Today",
-    todayHint: "Show the period that includes today",
+    today: "Current",
+    todayHint: "Show the current period",
     previous: "Previous",
     next: "Next",
     jumpToDate: "Jump to date",

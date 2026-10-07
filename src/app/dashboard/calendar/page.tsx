@@ -11,6 +11,7 @@ import {
   calendarHref,
   calendarKindsForModules,
   daysForView,
+  isCurrentCalendarPeriod,
   parseAnchorDate,
   parseCalendarView,
   rangeIncludesDate,
@@ -120,6 +121,7 @@ export default async function CalendarPage({
           prevHref={calendarHref(view, shiftAnchor(view, anchor, -1))}
           nextHref={calendarHref(view, shiftAnchor(view, anchor, 1))}
           todayHref={calendarHref(view, today)}
+          showingCurrentPeriod={isCurrentCalendarPeriod(view, anchor, today)}
           viewHrefs={viewHrefs}
           weekdayLabels={weekdayLabels(uiLanguage)}
           showOverdueStrip={rangeIncludesDate(days, today)}

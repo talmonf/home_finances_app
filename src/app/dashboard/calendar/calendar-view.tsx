@@ -1,6 +1,7 @@
 "use client";
 
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import {
   calendarHref,
   hourWindow,
@@ -12,7 +13,7 @@ import type { CalendarCopy } from "@/lib/calendar/strings";
 import { openSeriesOccurrence } from "@/app/dashboard/private-clinic/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 const KIND_CLASS: Record<CalendarEvent["kind"], string> = {
   clinicAppointment: "border-sky-400/50 bg-sky-500/20 text-sky-50",
@@ -40,6 +41,7 @@ type Props = {
   prevHref: string;
   nextHref: string;
   todayHref: string;
+  showingCurrentPeriod: boolean;
   viewHrefs: Record<CalendarView, string>;
   days: DayCell[];
   weekdayLabels: string[];
@@ -53,6 +55,57 @@ function formatClock(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+type PeriodNavKey = "prev" | "current" | "next";
+
+function PeriodNavControl({
+  href,
+  label,
+  title,
+  navKey,
+  pendingNav,
+  onNavigate,
+  disabled = false,
+}: {
+  href: string;
+  label: string;
+  title?: string;
+  navKey: PeriodNavKey;
+  pendingNav: PeriodNavKey | null;
+  onNavigate: (key: PeriodNavKey, href: string) => void;
+  disabled?: boolean;
+}) {
+  const className =
+    "inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700";
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        title={title}
+        className="inline-flex cursor-default items-center rounded-lg bg-slate-800/40 px-3 py-1.5 text-sm text-slate-500 ring-1 ring-slate-800"
+      >
+        {label}
+      </span>
+    );
+  }
+  const pending = pendingNav === navKey;
+  return (
+    <Link
+      href={href}
+      title={title}
+      aria-busy={pending}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        onNavigate(navKey, href);
+      }}
+      className={className}
+    >
+      {pending ? <LoadingSpinner className="h-3.5 w-3.5" /> : null}
+      {label}
+    </Link>
+  );
+}
+
 function chipLabel(event: CalendarEvent): string {
   if (event.startMinutes == null) return event.title;
   return `${formatClock(event.startMinutes)} ${event.title}`;
@@ -60,12 +113,24 @@ function chipLabel(event: CalendarEvent): string {
 
 export function CalendarBoard(props: Props) {
   const router = useRouter();
+  const [pendingNav, setPendingNav] = useState<PeriodNavKey | null>(null);
+  const [isNavPending, startNavTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hiddenKinds, setHiddenKinds] = useState<CalendarEventKind[]>([]);
   const [jumpIso, setJumpIso] = useState(props.anchorIso);
   useEffect(() => {
     setJumpIso(props.anchorIso);
   }, [props.anchorIso]);
+  useEffect(() => {
+    if (!isNavPending) setPendingNav(null);
+  }, [isNavPending]);
+
+  function navigatePeriod(key: PeriodNavKey, href: string) {
+    setPendingNav(key);
+    startNavTransition(() => {
+      router.push(href);
+    });
+  }
   const hidden = useMemo(() => new Set(hiddenKinds), [hiddenKinds]);
   const shownEvents = useMemo(
     () => props.events.filter((event) => !hidden.has(event.kind)),
@@ -113,19 +178,29 @@ export function CalendarBoard(props: Props) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={props.prevHref} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700">
-            {props.copy.previous}
-          </Link>
-          <Link
+          <PeriodNavControl
+            href={props.prevHref}
+            label={props.copy.previous}
+            navKey="prev"
+            pendingNav={isNavPending ? pendingNav : null}
+            onNavigate={navigatePeriod}
+          />
+          <PeriodNavControl
             href={props.todayHref}
+            label={props.copy.today}
             title={props.copy.todayHint}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700"
-          >
-            {props.copy.today}
-          </Link>
-          <Link href={props.nextHref} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700">
-            {props.copy.next}
-          </Link>
+            navKey="current"
+            pendingNav={isNavPending ? pendingNav : null}
+            onNavigate={navigatePeriod}
+            disabled={props.showingCurrentPeriod}
+          />
+          <PeriodNavControl
+            href={props.nextHref}
+            label={props.copy.next}
+            navKey="next"
+            pendingNav={isNavPending ? pendingNav : null}
+            onNavigate={navigatePeriod}
+          />
           <h2 className="px-1 text-base font-medium text-slate-100">{props.periodLabel}</h2>
         </div>
         <div className="flex rounded-lg bg-slate-900 p-1 ring-1 ring-slate-700" role="group" aria-label={props.copy.title}>

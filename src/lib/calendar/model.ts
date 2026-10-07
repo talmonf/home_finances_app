@@ -144,6 +144,19 @@ export function rangeIncludesDate(days: readonly Date[], target: Date): boolean 
   return days.some((d) => isoDateLocal(d) === iso);
 }
 
+/** True when the day, week, or month on screen is the one that contains today. */
+export function isCurrentCalendarPeriod(view: CalendarView, anchor: Date, today: Date): boolean {
+  const day = dateOnly(anchor);
+  const now = dateOnly(today);
+  if (view === "month") {
+    return day.getFullYear() === now.getFullYear() && day.getMonth() === now.getMonth();
+  }
+  if (view === "week") {
+    return rangeIncludesDate(daysForView("week", day), now);
+  }
+  return isoDateLocal(day) === isoDateLocal(now);
+}
+
 /**
  * Cadence pins for clients who are not on hold, have a due date, and do not already
  * have an upcoming scheduled appointment.
