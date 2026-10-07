@@ -9,6 +9,7 @@ import {
   ConsultationScheduleDurationField,
 } from "./consultation-modal-job-program-fields";
 import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
+import { ConsultationReportActions } from "./consultation-report-actions";
 import { ConsultationModalCancelLink, ConsultationModalShell } from "./consultation-modal-shell";
 
 type JobOption = { id: string; label: string };
@@ -101,15 +102,16 @@ export function ConsultationModalForm({
   scheduleDuration?: ScheduleDuration;
 }) {
   const scheduling = mode === "schedule";
+  const reporting = mode === "report";
 
   return (
     <ConsultationModalShell title={labels.title} closeHref={closeHref} closeLabel={labels.cancel}>
       <GlobalFormSubmitFeedback />
       <form action={action} className="grid gap-3 md:grid-cols-2">
-        <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
+        <input type="hidden" name="redirect_on_success" defaultValue={redirectOnSuccess} />
         <input type="hidden" name="redirect_on_error" value={redirectOnError} />
         {initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
-        {mode === "report" ? <input type="hidden" name="report" value="1" /> : null}
+        {reporting ? <input type="hidden" name="report" value="1" /> : null}
 
         <ConsultationModalJobProgramFields
           jobs={jobs}
@@ -140,7 +142,7 @@ export function ConsultationModalForm({
             ))}
           </select>
         </div>
-        {scheduling ? (
+        {scheduling || reporting ? (
           <ConsultationModalParticipantsPicker
             column
             clients={clients}
@@ -154,7 +156,7 @@ export function ConsultationModalForm({
           />
         ) : null}
         <div className="md:col-span-2">
-          {scheduling ? (
+          {scheduling || reporting ? (
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="block text-xs text-slate-400">{labels.dateTime}</label>
@@ -162,7 +164,8 @@ export function ConsultationModalForm({
                   <SplitDateTimeField
                     name="occurred_at"
                     required
-                    fiveMinuteSteps
+                    fiveMinuteSteps={scheduling}
+                    timeOptional={reporting}
                     compactDate
                     initialValue={initial?.occurred_at}
                     uiLanguage={uiLanguage}
@@ -173,7 +176,26 @@ export function ConsultationModalForm({
                   />
                 </div>
               </div>
-              <ConsultationScheduleDurationField />
+              {scheduling ? (
+                <ConsultationScheduleDurationField />
+              ) : (
+                <div>
+                  <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      name="amount"
+                      defaultValue={initial?.amount ?? ""}
+                      placeholder="0.00"
+                      className="w-28 max-w-[9rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    />
+                    <input
+                      name="currency"
+                      defaultValue={initial?.currency ?? "ILS"}
+                      className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -194,7 +216,7 @@ export function ConsultationModalForm({
             </>
           )}
         </div>
-        {scheduling ? null : (
+        {scheduling || reporting ? null : (
         <div>
           <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
           <div className="mt-1 flex gap-2">
@@ -212,7 +234,7 @@ export function ConsultationModalForm({
           </div>
         </div>
         )}
-        {scheduling ? null : (
+        {scheduling || reporting ? null : (
         <ConsultationModalParticipantsPicker
           clients={clients}
           initialParticipantIds={initial?.participant_ids ?? []}
@@ -247,6 +269,16 @@ export function ConsultationModalForm({
         ) : (
           <input type="hidden" name="linked_transaction_id" value={initial?.linked_transaction_id ?? ""} />
         )}
+        {reporting && initial?.id && deleteAction ? (
+          <ConsultationReportActions
+            deleteAction={deleteAction}
+            saveLabel={labels.save}
+            savingLabel={labels.saving}
+            deleteLabel={labels.delete}
+            deletingLabel={labels.deleting}
+            redirectOnDeleteSuccess={redirectOnDeleteSuccess ?? redirectOnSuccess}
+          />
+        ) : (
         <div className="md:col-span-2 flex flex-wrap items-center gap-3">
           <PendingSubmitButtonWithSpinner
             label={labels.save}
@@ -255,8 +287,9 @@ export function ConsultationModalForm({
           />
           <ConsultationModalCancelLink label={labels.cancel} className="text-sm text-slate-300 hover:text-slate-100" />
         </div>
+        )}
       </form>
-      {initial?.id && deleteAction ? (
+      {!reporting && initial?.id && deleteAction ? (
         <ConfirmDeleteForm action={deleteAction} className="mt-5 border-t border-slate-700 pt-4">
           <input type="hidden" name="id" value={initial.id} />
           <input
