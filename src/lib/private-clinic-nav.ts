@@ -9,6 +9,12 @@ export const PRIVATE_CLINIC_NAV_ITEMS = [
     placement: "primary",
   },
   {
+    key: "calendar",
+    href: "/dashboard/calendar",
+    label: "Calendar",
+    placement: "primary",
+  },
+  {
     key: "upcomingVisits",
     href: "/dashboard/private-clinic/upcoming-visits",
     label: "Upcoming visits",

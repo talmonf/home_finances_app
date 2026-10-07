@@ -287,7 +287,10 @@ export default async function TreatmentsPage({
 
   const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
   const appointmentId = (sp.appointment ?? "").trim();
-  const returnFrom = sp.returnTo === "upcoming" || sp.returnTo === "appointments" ? sp.returnTo : "";
+  const returnFrom =
+    sp.returnTo === "upcoming" || sp.returnTo === "appointments" || sp.returnTo === "calendar"
+      ? sp.returnTo
+      : "";
   const fromQuery = returnFrom ? `&returnTo=${encodeURIComponent(returnFrom)}` : "";
   const appointmentQuery = appointmentId ? `&appointment=${encodeURIComponent(appointmentId)}` : "";
   const modalCloseHref =
@@ -295,7 +298,9 @@ export default async function TreatmentsPage({
       ? "/dashboard/private-clinic/upcoming-visits"
       : returnFrom === "appointments"
         ? "/dashboard/private-clinic/appointments"
-        : baseListHref;
+        : returnFrom === "calendar"
+          ? "/dashboard/calendar"
+          : baseListHref;
   const showExternalReporting =
     filters.reported !== "all" ||
     jobs.some((j) => Boolean(j.external_reporting_system)) ||

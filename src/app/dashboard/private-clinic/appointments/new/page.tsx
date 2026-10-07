@@ -15,6 +15,7 @@ import {
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import { resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
+import { CALENDAR_PATH } from "@/lib/calendar/model";
 import { redirect } from "next/navigation";
 import { AppointmentAddForm } from "../appointment-add-form";
 
@@ -35,6 +36,7 @@ export default async function NewAppointmentPage({
     startAt?: string;
     durationMinutes?: string;
     fromUpcoming?: string;
+    from?: string;
   }>;
 }) {
   const session = await requireHouseholdMember();
@@ -107,6 +109,13 @@ export default async function NewAppointmentPage({
     defaultDurationMinutes: cl.default_session_length_minutes ?? null,
   }));
   const fromUpcoming = sp.fromUpcoming === "1";
+  const fromCalendar = sp.from === "calendar";
+  const backHref = fromCalendar ? CALENDAR_PATH : fromUpcoming ? UPCOMING_VISITS : LIST;
+  const backLabel = fromCalendar
+    ? ap.backToCalendar
+    : fromUpcoming
+      ? ap.backToUpcomingVisits
+      : ap.backToAppointments;
   const startDatePrefill = (sp.startDate ?? "").trim() || (sp.startAt ?? "").trim().slice(0, 10) || undefined;
   const prefillClient = sp.client ? clients.find((cl) => cl.id === sp.client) : undefined;
   const prefillJobId = defaultClinicJobId(jobOpts, sp.job ?? prefillClient?.default_job_id ?? undefined);
@@ -129,8 +138,8 @@ export default async function NewAppointmentPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={fromUpcoming ? UPCOMING_VISITS : LIST} className="text-sm text-slate-400 hover:text-slate-200">
-          {fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments}
+        <Link href={backHref} className="text-sm text-slate-400 hover:text-slate-200">
+          {backLabel}
         </Link>
         <h2 className="mt-2 text-lg font-medium text-slate-200">{ap.newTitle}</h2>
       </div>
@@ -172,8 +181,8 @@ export default async function NewAppointmentPage({
           startDate: startDatePrefill,
           durationMinutes: durationMinutesPrefill,
         }}
-        allowRecurring={!fromUpcoming}
-        redirectOnSuccess={`${LIST}?created=1`}
+        allowRecurring={!fromUpcoming && !fromCalendar}
+        redirectOnSuccess={fromCalendar ? CALENDAR_PATH : `${LIST}?created=1`}
       />
     </div>
   );

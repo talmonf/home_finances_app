@@ -8,6 +8,7 @@ import {
 import { privateClinicAppointments } from "@/lib/private-clinic-i18n";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { rescheduleTherapyAppointment } from "../../../actions";
+import { CALENDAR_PATH } from "@/lib/calendar/model";
 import { dateToDatetimeLocalValue } from "@/lib/household-date-format";
 import { DashboardModal } from "@/components/dashboard-modal";
 import { RescheduleFormClient } from "./reschedule-form-client";
@@ -23,7 +24,7 @@ const UPCOMING_VISITS = "/dashboard/private-clinic/upcoming-visits";
 export default async function RescheduleAppointmentPage({
   params,
   searchParams,
-}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string }> }) {
+}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string; from?: string }> }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -53,22 +54,27 @@ export default async function RescheduleAppointmentPage({
   if (apt.status !== "scheduled") redirect(`${LIST}/${apt.id}/edit`);
 
   const fromUpcoming = sp.fromUpcoming === "1";
-  const redirectOnSuccess = fromUpcoming ? UPCOMING_VISITS : LIST;
+  const fromCalendar = sp.from === "calendar";
+  const redirectOnSuccess = fromCalendar ? CALENDAR_PATH : fromUpcoming ? UPCOMING_VISITS : LIST;
   const startAtLocal = dateToDatetimeLocalValue(apt.start_at);
   const endAtLocal = apt.end_at ? dateToDatetimeLocalValue(apt.end_at) : "";
   const startDate = startAtLocal.slice(0, 10);
   const startTime = startAtLocal.slice(11, 16);
   const endDate = endAtLocal ? endAtLocal.slice(0, 10) : startDate;
   const endTime = endAtLocal ? endAtLocal.slice(11, 16) : "";
-  const cancelHref = fromUpcoming
-    ? `${LIST}/${apt.id}/cancel?fromUpcoming=1`
-    : `${LIST}/${apt.id}/cancel`;
+  const cancelHref = fromCalendar
+    ? `${LIST}/${apt.id}/cancel?from=calendar`
+    : fromUpcoming
+      ? `${LIST}/${apt.id}/cancel?fromUpcoming=1`
+      : `${LIST}/${apt.id}/cancel`;
 
   return (
     <DashboardModal
       title={ap.rescheduleTitle}
       closeHref={redirectOnSuccess}
-      closeLabel={fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments}
+      closeLabel={
+        fromCalendar ? ap.backToCalendar : fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments
+      }
       maxWidthClassName="max-w-xl"
     >
       <p className="mb-4 text-sm text-slate-400">

@@ -1,4 +1,4 @@
-export type LogTreatmentFrom = "upcoming" | "appointments";
+export type LogTreatmentFrom = "upcoming" | "appointments" | "calendar";
 
 export type UpcomingVisitAppointmentRef = {
   id: string | null;

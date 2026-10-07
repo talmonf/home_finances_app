@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { monthlyOccurrencesInRange } from "@/lib/calendar/model";
 import { loadUpcomingFamilyEventRows } from "@/lib/family-events/upcoming";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 
@@ -51,6 +52,13 @@ export function startOfToday() {
 
 export function dateOnlyLocal(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function localIsoDate(d: Date): string {
+  const x = dateOnlyLocal(d);
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${x.getFullYear()}-${m}-${day}`;
 }
 
 function getDaysInMonth(year: number, monthZeroBased: number) {
@@ -155,12 +163,17 @@ export const RENEWAL_CATEGORY_ORDER = [
 
 export type ComputeUpcomingRenewalsParams = {
   householdId: string;
-  /** Defaults to start of today in local time. */
+  /** Defaults to start of today in local time. Ignored when `window` is set. */
   today?: Date;
-  /** When set, only rows with renewal date in [today, today + daysAhead] (inclusive). */
+  /** When set, only rows with renewal date in [today, today + daysAhead] (inclusive). Ignored when `window` is set. */
   daysAhead?: number;
   /** When true with `daysAhead`, also include renewal dates before today (overdue / past due). */
   includePastDue?: boolean;
+  /**
+   * Inclusive local-date window. Monthly items emit every occurrence in the window,
+   * including one that falls on `start`. The today/daysAhead path is unchanged when this is omitted.
+   */
+  window?: { start: Date; end: Date };
   language: "en" | "he";
 };
 
@@ -171,9 +184,12 @@ export async function computeUpcomingRenewals(
   params: ComputeUpcomingRenewalsParams,
 ): Promise<RenewalRow[]> {
   const { householdId, daysAhead, includePastDue, language } = params;
-  const today = params.today ?? startOfToday();
+  const windowStartDay = params.window ? dateOnlyLocal(params.window.start) : null;
+  const windowEndDay = params.window ? dateOnlyLocal(params.window.end) : null;
+  const today = windowStartDay ?? params.today ?? startOfToday();
   const isHebrew = language === "he";
-  const windowStart = includePastDue === true ? RENEWAL_LOOKBACK_START : today;
+  const windowStart =
+    windowStartDay ?? (includePastDue === true ? RENEWAL_LOOKBACK_START : today);
 
   const familyEventRows = await loadUpcomingFamilyEventRows({
     householdId,
@@ -318,27 +334,47 @@ export async function computeUpcomingRenewals(
   const renewalsLang: "en" | "he" = language;
 
   const rows: RenewalRow[] = [
-    ...subscriptions.map((s) => ({
-      id: `sub-${s.id}`,
-      category: "Subscription",
-      itemName: s.name,
-      owner:
+    ...subscriptions.flatMap((s) => {
+      const owner =
         s.family_member?.full_name ??
         s.digital_payment_method?.family_member?.full_name ??
         s.credit_card?.family_member?.full_name ??
-        "Household",
-      ownerId:
+        "Household";
+      const ownerId =
         s.family_member?.id ??
         s.digital_payment_method?.family_member?.id ??
         s.credit_card?.family_member?.id ??
-        null,
-      renewalDate:
-        s.billing_interval === "monthly" && s.monthly_day_of_month
-          ? nextMonthlyRenewal(s.monthly_day_of_month, today)
-          : (s.renewal_date as Date),
-      renewalType: s.billing_interval === "monthly" ? "Monthly" : "Annual",
-      href: `/dashboard/subscriptions/${encodeURIComponent(s.id)}`,
-    })),
+        null;
+      const href = `/dashboard/subscriptions/${encodeURIComponent(s.id)}`;
+      if (s.billing_interval === "monthly" && s.monthly_day_of_month) {
+        const dates = windowEndDay
+          ? monthlyOccurrencesInRange(s.monthly_day_of_month, today, windowEndDay)
+          : [nextMonthlyRenewal(s.monthly_day_of_month, today)];
+        return dates.map((renewalDate) => ({
+          id: dates.length === 1 ? `sub-${s.id}` : `sub-${s.id}-${localIsoDate(renewalDate)}`,
+          category: "Subscription",
+          itemName: s.name,
+          owner,
+          ownerId,
+          renewalDate,
+          renewalType: "Monthly",
+          href,
+        }));
+      }
+      if (!s.renewal_date) return [];
+      return [
+        {
+          id: `sub-${s.id}`,
+          category: "Subscription",
+          itemName: s.name,
+          owner,
+          ownerId,
+          renewalDate: s.renewal_date as Date,
+          renewalType: "Annual",
+          href,
+        },
+      ];
+    }),
     ...identities.map((i) => ({
       id: `identity-${i.id}`,
       category: "Identity",
@@ -511,16 +547,26 @@ export async function computeUpcomingRenewals(
     ...loansForRenewals.flatMap((loan) => {
       const parts: RenewalRow[] = [];
       if (loan.repayment_day_of_month != null) {
-        parts.push({
-          id: `loan-monthly-${loan.id}`,
-          category: "Loan",
-          itemName: `${loan.institution_name}${loan.loan_number ? ` · #${loan.loan_number}` : ""}`,
-          owner: "Household",
-          ownerId: null,
-          renewalDate: nextMonthlyRenewal(loan.repayment_day_of_month, today),
-          renewalType: "Monthly",
-          href: `/dashboard/loans/${encodeURIComponent(loan.id)}`,
-        });
+        const dates = windowEndDay
+          ? monthlyOccurrencesInRange(loan.repayment_day_of_month, today, windowEndDay)
+          : [nextMonthlyRenewal(loan.repayment_day_of_month, today)];
+        const itemName = `${loan.institution_name}${loan.loan_number ? ` · #${loan.loan_number}` : ""}`;
+        const href = `/dashboard/loans/${encodeURIComponent(loan.id)}`;
+        for (const renewalDate of dates) {
+          parts.push({
+            id:
+              dates.length === 1
+                ? `loan-monthly-${loan.id}`
+                : `loan-monthly-${loan.id}-${localIsoDate(renewalDate)}`,
+            category: "Loan",
+            itemName,
+            owner: "Household",
+            ownerId: null,
+            renewalDate,
+            renewalType: "Monthly",
+            href,
+          });
+        }
       }
       if (loan.maturity_date && dateOnlyLocal(loan.maturity_date as Date) >= windowStart) {
         parts.push({
@@ -538,6 +584,14 @@ export async function computeUpcomingRenewals(
     }),
     ...familyEventRows,
   ].sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
+
+  if (windowStartDay && windowEndDay) {
+    if (windowEndDay < windowStartDay) return [];
+    return rows.filter((row) => {
+      const rd = dateOnlyLocal(row.renewalDate);
+      return rd >= windowStartDay && rd <= windowEndDay;
+    });
+  }
 
   if (daysAhead !== undefined) {
     return filterRenewalRowsByDaysAhead(rows, today, daysAhead, { includePastDue });

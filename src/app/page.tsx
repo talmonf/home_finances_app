@@ -15,6 +15,8 @@ import {
   type DashboardOngoingTileProps,
   type DashboardSetupTileProps,
 } from "@/components/household-dashboard-panel";
+import { CALENDAR_PATH } from "@/lib/calendar/model";
+import { calendarStrings } from "@/lib/calendar/strings";
 import {
   getVisibleHomeFrequentLinks,
   homeFrequentLinksApplyToVisibleDashboard,
@@ -415,6 +417,7 @@ export default async function Home({ searchParams }: HomeProps) {
             welcomeSubtitle={welcomeSubtitleNonAdmin}
             frequentLinksTitle={homeFrequentLinksSectionTitle(uiLanguage)}
             frequentLinks={frequentHomeLinks}
+            calendarLink={{ href: CALENDAR_PATH, label: calendarStrings(uiLanguage).title }}
             hasAnyTiles={hasAnyTiles}
             setupTiles={setupTiles}
             ongoingTiles={ongoingTiles}

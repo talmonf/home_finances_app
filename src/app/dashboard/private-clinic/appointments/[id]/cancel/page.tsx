@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { privateClinicAppointments } from "@/lib/private-clinic-i18n";
+import { CALENDAR_PATH } from "@/lib/calendar/model";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { cancelTherapyAppointment } from "../../../actions";
 import { DashboardModal } from "@/components/dashboard-modal";
@@ -22,7 +23,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export default async function CancelAppointmentPage({
   params,
   searchParams,
-}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string }> }) {
+}: PageProps & { searchParams?: Promise<{ fromUpcoming?: string; from?: string }> }) {
   const session = await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/");
@@ -52,9 +53,18 @@ export default async function CancelAppointmentPage({
   if (apt.status !== "scheduled") redirect(`${LIST}/${apt.id}/edit`);
 
   const fromUpcoming = sp.fromUpcoming === "1";
-  const redirectOnSuccess = fromUpcoming ? `${UPCOMING_VISITS}?updated=1` : `${LIST}?updated=1`;
-  const closeHref = fromUpcoming ? UPCOMING_VISITS : LIST;
-  const closeLabel = fromUpcoming ? ap.backToUpcomingVisits : ap.backToAppointments;
+  const fromCalendar = sp.from === "calendar";
+  const redirectOnSuccess = fromCalendar
+    ? CALENDAR_PATH
+    : fromUpcoming
+      ? `${UPCOMING_VISITS}?updated=1`
+      : `${LIST}?updated=1`;
+  const closeHref = fromCalendar ? CALENDAR_PATH : fromUpcoming ? UPCOMING_VISITS : LIST;
+  const closeLabel = fromCalendar
+    ? ap.backToCalendar
+    : fromUpcoming
+      ? ap.backToUpcomingVisits
+      : ap.backToAppointments;
 
   return (
     <DashboardModal title={ap.cancelTitle} closeHref={closeHref} closeLabel={closeLabel} maxWidthClassName="max-w-xl">

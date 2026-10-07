@@ -43,6 +43,9 @@ export function AppShellHeader({
   const showModuleSwitcher = householdMember && clinicEnabled && householdEnabled;
   const clinicOnly = householdMember && clinicEnabled && !householdEnabled;
   const showUserGuide = householdMember && clinicEnabled && clinicActive;
+  const showCalendar = householdMember && (clinicEnabled || householdEnabled);
+  const calendarActive = pathname === "/dashboard/calendar" || pathname.startsWith("/dashboard/calendar/");
+  const calendarLabel = uiLanguage === "he" ? "יומן" : "Calendar";
 
   const brand = showModuleSwitcher ? (
     <nav
@@ -81,7 +84,18 @@ export function AppShellHeader({
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 backdrop-blur">
       <div className="mx-auto flex max-w-screen-2xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        {brand}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {brand}
+          {showCalendar ? (
+            <Link
+              href="/dashboard/calendar"
+              aria-current={calendarActive ? "page" : undefined}
+              className={calendarActive ? titleClass : quietTitleClass}
+            >
+              {calendarLabel}
+            </Link>
+          ) : null}
+        </div>
         {signedInLabel != null ? (
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-slate-300">
             <span className="hidden sm:inline">

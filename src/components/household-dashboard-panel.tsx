@@ -38,6 +38,7 @@ type HouseholdDashboardPanelProps = {
   welcomeSubtitle: string;
   frequentLinksTitle: string;
   frequentLinks: HomeFrequentLinkItem[];
+  calendarLink: { href: string; label: string };
   hasAnyTiles: boolean;
   setupTiles: DashboardSetupTileProps[];
   ongoingTiles: DashboardOngoingTileProps[];
@@ -84,6 +85,7 @@ export function HouseholdDashboardPanel({
   welcomeSubtitle,
   frequentLinksTitle,
   frequentLinks,
+  calendarLink,
   hasAnyTiles,
   setupTiles,
   ongoingTiles,
@@ -142,11 +144,18 @@ export function HouseholdDashboardPanel({
         </div>
       </div>
 
-      {frequentLinks.length > 0 ? (
-        <section className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-200">{frequentLinksTitle}</h2>
-          <div className="flex flex-wrap gap-2">
-            {frequentLinks.map((link) => {
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold text-slate-200">
+          {frequentLinks.length > 0 ? frequentLinksTitle : calendarLink.label}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={calendarLink.href}
+            className="inline-flex items-center gap-2 rounded-lg border border-sky-400/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-slate-50 shadow-sm shadow-slate-950/40 transition hover:-translate-y-0.5 hover:border-sky-300/70 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+          >
+            {calendarLink.label}
+          </Link>
+          {frequentLinks.map((link) => {
               const normalizedHref = normalizeHrefPath(link.href);
               const isActive = normalizedPathname === normalizedHref;
               const isPending = pendingHref === normalizedHref && !isActive;
@@ -192,7 +201,6 @@ export function HouseholdDashboardPanel({
             })}
           </div>
         </section>
-      ) : null}
 
       <div>
         {filteredEmpty ? (

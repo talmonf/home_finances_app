@@ -4636,7 +4636,9 @@ export async function openSeriesOccurrence(formData: FormData) {
   const occurrenceDate = (formData.get("occurrence_date") as string)?.trim() || "";
   const redirectTarget = (formData.get("redirect_target") as string)?.trim() || "edit";
   const fromUpcoming = (formData.get("from_upcoming") as string)?.trim() === "1";
-  const fromUpcomingQuery = fromUpcoming ? "?fromUpcoming=1" : "";
+  const fromCalendar = (formData.get("from_calendar") as string)?.trim() === "1";
+  const originQuery = fromCalendar ? "?from=calendar" : fromUpcoming ? "?fromUpcoming=1" : "";
+  const reportReturnTo = fromCalendar ? "calendar" : fromUpcoming ? "upcoming" : "appointments";
   if (!seriesId || !occurrenceDate) redirect(`${BASE}/appointments?error=missing`);
 
   const instance = await ensureAppointmentInstance({
@@ -4652,17 +4654,17 @@ export async function openSeriesOccurrence(formData: FormData) {
 
   const path =
     redirectTarget === "cancel"
-      ? `${BASE}/appointments/${instance.id}/cancel${fromUpcomingQuery}`
+      ? `${BASE}/appointments/${instance.id}/cancel${originQuery}`
       : redirectTarget === "reschedule"
-        ? `${BASE}/appointments/${instance.id}/reschedule${fromUpcomingQuery}`
+        ? `${BASE}/appointments/${instance.id}/reschedule${originQuery}`
         : redirectTarget === "report"
           ? `${BASE}/treatments?${new URLSearchParams({
               modal: "new",
               appointment: instance.id,
               client: instance.client_id,
-              returnTo: fromUpcoming ? "upcoming" : "appointments",
+              returnTo: reportReturnTo,
             }).toString()}`
-          : `${BASE}/appointments/${instance.id}/edit${fromUpcomingQuery}`;
+          : `${BASE}/appointments/${instance.id}/edit${originQuery}`;
   redirect(path);
 }
 
