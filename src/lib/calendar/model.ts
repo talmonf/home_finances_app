@@ -14,11 +14,26 @@ export type CalendarView = "day" | "week" | "month";
 
 export type CalendarEventKind =
   | "clinicAppointment"
+  | "clinicConsultation"
   | "clinicVisit"
   | "familyDate"
   | "medical"
   | "task"
   | "renewal";
+
+const CLINIC_EVENT_KINDS: CalendarEventKind[] = ["clinicAppointment", "clinicConsultation", "clinicVisit"];
+const HOME_EVENT_KINDS: CalendarEventKind[] = ["familyDate", "medical", "task", "renewal"];
+
+/** Category chips for the enabled modules. Clinic kinds come first when both are on. */
+export function calendarKindsForModules(flags: {
+  clinicEnabled: boolean;
+  householdEnabled: boolean;
+}): CalendarEventKind[] {
+  return [
+    ...(flags.clinicEnabled ? CLINIC_EVENT_KINDS : []),
+    ...(flags.householdEnabled ? HOME_EVENT_KINDS : []),
+  ];
+}
 
 export type CalendarEventAction =
   | { kind: "visit"; scheduleHref: string; logTreatmentHref: string }
@@ -28,6 +43,12 @@ export type CalendarEventAction =
       reportHref: string | null;
       seriesId: string | null;
       occurrenceDate: string | null;
+    }
+  | {
+      kind: "consultation";
+      rescheduleHref: string;
+      reportHref: string;
+      cancelHref: string;
     };
 
 export type CalendarEvent = {
@@ -231,6 +252,18 @@ export function appointmentReportHref(clientId: string, appointmentId: string): 
 
 export function appointmentRescheduleHref(appointmentId: string): string {
   return `/dashboard/private-clinic/appointments/${encodeURIComponent(appointmentId)}/reschedule?from=calendar`;
+}
+
+export function consultationReportHref(consultationId: string): string {
+  return `/dashboard/private-clinic/consultations?modal=edit&edit_id=${encodeURIComponent(consultationId)}&report=1`;
+}
+
+export function consultationRescheduleHref(consultationId: string): string {
+  return `/dashboard/private-clinic/consultations?modal=reschedule&edit_id=${encodeURIComponent(consultationId)}`;
+}
+
+export function consultationCancelHref(consultationId: string): string {
+  return `/dashboard/private-clinic/consultations?modal=cancel&edit_id=${encodeURIComponent(consultationId)}`;
 }
 
 /** Every monthly due date in [rangeStart, rangeEnd], including a due date that falls on rangeStart. */

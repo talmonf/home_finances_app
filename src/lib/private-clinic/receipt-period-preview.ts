@@ -103,6 +103,7 @@ export async function loadReceiptPeriodPreview(params: {
       where: {
         household_id: householdId,
         job_id: jobId,
+        status: "completed",
         receipt_allocations: { none: {} },
         ...rangeWhere,
       },

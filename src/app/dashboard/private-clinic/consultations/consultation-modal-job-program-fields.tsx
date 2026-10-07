@@ -12,6 +12,7 @@ export function ConsultationModalJobProgramFields({
   initialJobId,
   initialProgramId,
   labels,
+  onSelectionChange,
 }: {
   jobs: JobOption[];
   programs: ProgramOption[];
@@ -22,6 +23,7 @@ export function ConsultationModalJobProgramFields({
     program: string;
     select: string;
   };
+  onSelectionChange?: (jobId: string, programId: string) => void;
 }) {
   const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs, initialJobId));
   const [programId, setProgramId] = useState(initialProgramId ?? "");
@@ -46,8 +48,10 @@ export function ConsultationModalJobProgramFields({
           required
           value={jobId}
           onChange={(e) => {
-            setJobId(e.target.value);
+            const nextJobId = e.target.value;
+            setJobId(nextJobId);
             setProgramId("");
+            onSelectionChange?.(nextJobId, "");
           }}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
@@ -64,7 +68,11 @@ export function ConsultationModalJobProgramFields({
         <select
           name="program_id"
           value={programId}
-          onChange={(e) => setProgramId(e.target.value)}
+          onChange={(e) => {
+            const nextProgramId = e.target.value;
+            setProgramId(nextProgramId);
+            onSelectionChange?.(jobId, nextProgramId);
+          }}
           className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="">{labels.select}</option>

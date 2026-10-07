@@ -52,6 +52,8 @@ import {
   isGmailAddress,
   saveGoogleSeriesSyncFailure,
   saveGoogleSeriesSyncSuccess,
+  saveGoogleConsultationSyncFailure,
+  saveGoogleConsultationSyncSuccess,
   saveGoogleSyncFailure,
   saveGoogleSyncSuccess,
   upsertGoogleCalendarEvent,
@@ -67,6 +69,7 @@ import type {
   TherapyBillingBasis,
   TherapyBillingTiming,
   TherapyClientHoldReason,
+  TherapyConsultationStatus,
   TherapyClientRelationshipType,
   TherapyFamilyMemberPosition,
   TherapyReceiptKind,
@@ -3605,6 +3608,7 @@ export async function linkConsultationsToReceipt(formData: FormData) {
       household_id: householdId,
       id: { in: consultationIds },
       job_id: receipt.job_id,
+      status: "completed",
       receipt_allocations: { none: {} },
       ...orgRangeWhere,
     },
@@ -5277,8 +5281,8 @@ async function assertTreatmentForHousehold(householdId: string, treatmentId: str
 
 async function assertConsultationForHousehold(householdId: string, consultationId: string) {
   return prisma.therapy_consultations.findFirst({
-    where: { id: consultationId, household_id: householdId },
-    select: { id: true, job_id: true },
+    where: { id: consultationId, household_id: householdId, status: "completed" },
+    select: { id: true, job_id: true, status: true },
   });
 }
 
@@ -5406,6 +5410,141 @@ export async function deleteTherapyConsultationType(formData: FormData) {
   redirectAfterTherapyHouseholdScopedSave(isSuperAdminContext, householdId, "saved=ctype-removed");
 }
 
+function parseScheduledConsultationStart(raw: string): Date | null {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(raw.trim());
+  if (!match) return null;
+  return parseTherapyOccurredAtFromForm(match[1], match[2]);
+}
+
+function revalidateConsultationSurfaces() {
+  revalidatePath(`${BASE}/consultations`);
+  revalidatePath(`${BASE}/reports`);
+  revalidatePath("/dashboard/calendar");
+}
+
+async function actingClinicCalendarUser(): Promise<{ id: string; language: "he" | "en" } | null> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const user = await prisma.users.findFirst({
+    where: { id: userId, is_active: true },
+    select: { ui_language: true },
+  });
+  return { id: userId, language: user?.ui_language === "he" ? "he" : "en" };
+}
+
+function consultationCalendarText(language: "he" | "en") {
+  if (language === "he") {
+    return { summaryPrefix: "ייעוץ", descriptionPrefix: "סנכרון אוטומטי ממערכת הקליניקה." };
+  }
+  return { summaryPrefix: "Consultation", descriptionPrefix: "Automatically synced from the clinic app." };
+}
+
+const CONSULTATION_CALENDAR_INCLUDE = {
+  job: { select: { job_title: true } },
+  consultation_type: { select: { name: true, name_he: true } },
+  participants: {
+    include: {
+      client: { select: { first_name: true, last_name: true } },
+    },
+  },
+} satisfies Prisma.therapy_consultationsInclude;
+
+async function syncConsultationToGoogleCalendar(params: {
+  householdId: string;
+  actingUserId: string;
+  actingUserLanguage: "he" | "en";
+  consultation: Prisma.therapy_consultationsGetPayload<{ include: typeof CONSULTATION_CALENDAR_INCLUDE }>;
+}): Promise<string | null> {
+  const googleUser = await getGoogleCalendarUserForSync(params.householdId, params.actingUserId);
+  if (!googleUser) return null;
+
+  const row = params.consultation;
+  try {
+    if (row.status === "cancelled") {
+      if (row.google_calendar_event_id) {
+        await deleteGoogleCalendarEvent({
+          user: googleUser,
+          eventId: row.google_calendar_event_id,
+        });
+        await saveGoogleConsultationSyncSuccess(row.id, null);
+      }
+      return null;
+    }
+
+    if (row.status === "completed" && !row.google_calendar_event_id) return null;
+
+    const duration =
+      row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : getSystemDefaultSessionMinutes();
+    const endAt = new Date(row.occurred_at.getTime() + duration * 60 * 1000);
+    const text = consultationCalendarText(params.actingUserLanguage);
+    const typeName =
+      params.actingUserLanguage === "he" && row.consultation_type.name_he?.trim()
+        ? row.consultation_type.name_he.trim()
+        : row.consultation_type.name;
+    const clientNames = row.participants
+      .map((participant) =>
+        [participant.client.first_name, participant.client.last_name].filter(Boolean).join(" ").trim(),
+      )
+      .filter(Boolean)
+      .join(", ");
+    const roleLabel = params.actingUserLanguage === "he" ? "תפקיד" : "Role";
+    const clientLabel = params.actingUserLanguage === "he" ? "לקוח" : "Client";
+    const description = [
+      text.descriptionPrefix,
+      `${roleLabel}: ${row.job.job_title}`,
+      clientNames ? `${clientLabel}: ${clientNames}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const eventId = await upsertGoogleCalendarEvent({
+      user: googleUser,
+      existingEventId: row.google_calendar_event_id,
+      summary: `${text.summaryPrefix}: ${typeName}`,
+      description,
+      startIsoUtc: row.occurred_at.toISOString(),
+      endIsoUtc: endAt.toISOString(),
+    });
+    await saveGoogleConsultationSyncSuccess(row.id, eventId);
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Google Calendar sync failed";
+    await saveGoogleConsultationSyncFailure(row.id, message);
+    return message;
+  }
+}
+
+async function syncConsultationCalendarById(householdId: string, consultationId: string) {
+  const actor = await actingClinicCalendarUser();
+  if (!actor) return;
+  const consultation = await prisma.therapy_consultations.findFirst({
+    where: { id: consultationId, household_id: householdId },
+    include: CONSULTATION_CALENDAR_INCLUDE,
+  });
+  if (!consultation) return;
+  if (consultation.status === "completed" && !consultation.google_calendar_event_id) return;
+  await syncConsultationToGoogleCalendar({
+    householdId,
+    actingUserId: actor.id,
+    actingUserLanguage: actor.language,
+    consultation,
+  });
+}
+
+async function deleteConsultationGoogleEvent(householdId: string, eventId: string | null) {
+  if (!eventId) return;
+  const actor = await actingClinicCalendarUser();
+  if (!actor) return;
+  const googleUser = await getGoogleCalendarUserForSync(householdId, actor.id);
+  if (!googleUser) return;
+  try {
+    await deleteGoogleCalendarEvent({ user: googleUser, eventId });
+  } catch {
+    // The consultation row is still removed if Google is unreachable.
+  }
+}
+
 // --- Consultations (meetings) ---
 
 export async function createTherapyConsultation(formData: FormData) {
@@ -5467,6 +5606,7 @@ export async function createTherapyConsultation(formData: FormData) {
         linked_transaction_id,
         linked_income_transaction_id: linked_transaction_id,
         linked_cost_transaction_id: null,
+        status: "completed",
       },
     });
     for (const clientId of additionalParticipantIds) {
@@ -5485,7 +5625,167 @@ export async function createTherapyConsultation(formData: FormData) {
     resourceType: "consultation",
     resourceId: consultationId,
   });
-  revalidatePath(`${BASE}/consultations`);
+  revalidateConsultationSurfaces();
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
+}
+
+export async function scheduleTherapyConsultation(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?created=1`;
+  const fallbackError = `${BASE}/consultations`;
+  const job_id = (formData.get("job_id") as string)?.trim() || "";
+  const program_id_raw = (formData.get("program_id") as string)?.trim() || "";
+  const consultation_type_id = (formData.get("consultation_type_id") as string)?.trim() || "";
+  const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
+  if (!job_id || !consultation_type_id || !occurred_at_raw) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+  }
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
+  if (!(await assertConsultationType(householdId, consultation_type_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "type");
+  }
+  const program_id: string | null = program_id_raw || null;
+  if (program_id) {
+    const prog = await assertProgram(householdId, program_id);
+    if (!prog || prog.job_id !== job_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "program");
+  }
+
+  const occurred_at = parseScheduledConsultationStart(occurred_at_raw);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
+
+  const submittedDuration = parsePositiveInt((formData.get("duration_minutes") as string | null) ?? null);
+  const duration_minutes =
+    submittedDuration ??
+    (await resolveAppointmentDurationMinutes({
+      householdId,
+      clientId: null,
+      jobId: job_id,
+      programId: program_id,
+      appointmentDurationMinutes: null,
+    }));
+  if (!duration_minutes) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+
+  const additionalParticipantIds = parseUniqueIds(formData.getAll("additional_participant_ids"));
+  for (const participantId of additionalParticipantIds) {
+    if (!(await assertClientForCurrentUserScope(householdId, userFm, participantId))) {
+      redirectPrivateClinicScoped(formData, "error", fallbackError, "client");
+    }
+  }
+
+  const consultationId = crypto.randomUUID();
+  await prisma.$transaction(async (tx) => {
+    await tx.therapy_consultations.create({
+      data: {
+        id: consultationId,
+        household_id: householdId,
+        job_id,
+        program_id,
+        consultation_type_id,
+        occurred_at,
+        amount: null,
+        currency: "ILS",
+        income_amount: null,
+        income_currency: "ILS",
+        cost_amount: null,
+        cost_currency: "ILS",
+        notes: (formData.get("notes") as string)?.trim() || null,
+        status: "scheduled",
+        duration_minutes,
+      },
+    });
+    for (const clientId of additionalParticipantIds) {
+      await tx.therapy_consultation_participants.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: householdId,
+          consultation_id: consultationId,
+          client_id: clientId,
+        },
+      });
+    }
+  });
+
+  await syncConsultationCalendarById(householdId, consultationId);
+  await logClinicUsage("consultations", "schedule", {
+    resourceType: "consultation",
+    resourceId: consultationId,
+  });
+  revalidateConsultationSurfaces();
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
+}
+
+export async function rescheduleTherapyConsultation(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?updated=1`;
+  const fallbackError = `${BASE}/consultations`;
+  const id = (formData.get("id") as string)?.trim() || "";
+  const row = await prisma.therapy_consultations.findFirst({
+    where: { id, household_id: householdId, status: "scheduled" },
+    select: { id: true, job_id: true, program_id: true },
+  });
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  }
+
+  const occurred_at_raw = (formData.get("occurred_at") as string)?.trim() || "";
+  const occurred_at = parseScheduledConsultationStart(occurred_at_raw);
+  if (!occurred_at) redirectPrivateClinicScoped(formData, "error", fallbackError, "date");
+
+  const submittedDuration = parsePositiveInt((formData.get("duration_minutes") as string | null) ?? null);
+  const duration_minutes =
+    submittedDuration ??
+    (await resolveAppointmentDurationMinutes({
+      householdId,
+      clientId: null,
+      jobId: row.job_id,
+      programId: row.program_id,
+      appointmentDurationMinutes: null,
+    }));
+  if (!duration_minutes) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+
+  await prisma.therapy_consultations.updateMany({
+    where: { id, household_id: householdId, status: "scheduled" },
+    data: { occurred_at, duration_minutes },
+  });
+  await syncConsultationCalendarById(householdId, id);
+  await logClinicUsage("consultations", "reschedule", {
+    resourceType: "consultation",
+    resourceId: id,
+  });
+  revalidateConsultationSurfaces();
+  redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
+}
+
+export async function cancelTherapyConsultation(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFm = await getCurrentUserFamilyMemberId(householdId);
+  const fallbackSuccess = `${BASE}/consultations?updated=1`;
+  const fallbackError = `${BASE}/consultations`;
+  const id = (formData.get("id") as string)?.trim() || "";
+  const row = await prisma.therapy_consultations.findFirst({
+    where: { id, household_id: householdId, status: "scheduled" },
+    select: { id: true, job_id: true },
+  });
+  if (!row) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  }
+
+  await prisma.therapy_consultations.updateMany({
+    where: { id, household_id: householdId, status: "scheduled" },
+    data: { status: "cancelled" },
+  });
+  await syncConsultationCalendarById(householdId, id);
+  await logClinicUsage("consultations", "cancel", {
+    resourceType: "consultation",
+    resourceId: id,
+  });
+  revalidateConsultationSurfaces();
   redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
@@ -5537,6 +5837,9 @@ export async function updateTherapyConsultation(formData: FormData) {
     }
   }
 
+  const reporting = (formData.get("report") as string | null) === "1";
+  const nextStatus: TherapyConsultationStatus = reporting ? "completed" : row.status;
+
   await prisma.$transaction(async (tx) => {
     await tx.therapy_consultations.update({
       where: { id },
@@ -5555,6 +5858,7 @@ export async function updateTherapyConsultation(formData: FormData) {
         linked_transaction_id,
         linked_income_transaction_id: linked_transaction_id,
         linked_cost_transaction_id: null,
+        status: nextStatus,
       },
     });
     await tx.therapy_consultation_participants.deleteMany({
@@ -5572,7 +5876,14 @@ export async function updateTherapyConsultation(formData: FormData) {
     }
   });
 
-  revalidatePath(`${BASE}/consultations`);
+  if (reporting) {
+    await logClinicUsage("consultations", "report", {
+      resourceType: "consultation",
+      resourceId: id,
+    });
+  }
+  await syncConsultationCalendarById(householdId, id);
+  revalidateConsultationSurfaces();
   redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 
@@ -5584,14 +5895,15 @@ export async function deleteTherapyConsultation(formData: FormData) {
   if (!id) return;
   const row = await prisma.therapy_consultations.findFirst({
     where: { id, household_id: householdId },
-    select: { job_id: true },
+    select: { job_id: true, google_calendar_event_id: true, status: true },
   });
   if (!row) return;
   if (!(await assertJobForCurrentUserScope(householdId, userFm, row.job_id))) return;
+  await deleteConsultationGoogleEvent(householdId, row.google_calendar_event_id);
   await prisma.therapy_consultations.deleteMany({
     where: { id, household_id: householdId },
   });
-  revalidatePath(`${BASE}/consultations`);
+  revalidateConsultationSurfaces();
   redirectPrivateClinicScoped(formData, "success", fallbackSuccess);
 }
 

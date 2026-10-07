@@ -14,8 +14,12 @@ export type ClinicDigestAppointmentRow = {
   startAt: Date;
   clientName: string;
   jobLabel: string;
-  visitType: TherapyVisitType;
+  visitType: TherapyVisitType | null;
   note: string | null;
+  /** Omitted on older fixtures; treated as an appointment. */
+  kind?: "appointment" | "consultation";
+  consultationTypeName?: string | null;
+  consultationTypeNameHe?: string | null;
 };
 
 export type ClinicDigestVisitRow = {
@@ -94,9 +98,8 @@ export async function computeClinicDigestData(args: {
     householdId,
     jobWhere: jobScope,
   });
-  const appointments: ClinicDigestAppointmentRow[] = mergedUpcoming
+  const appointmentRows: ClinicDigestAppointmentRow[] = mergedUpcoming
     .filter((a) => a.status === "scheduled" && a.startAt >= now && a.startAt <= windowEnd)
-    .slice(0, APPOINTMENTS_CAP)
     .map((a) => ({
       id: a.id ?? `series:${a.seriesId}:${a.occurrenceDate}`,
       startAt: a.startAt,
@@ -106,7 +109,46 @@ export async function computeClinicDigestData(args: {
       jobLabel: a.job ? formatJobDisplayLabel({ job_title: a.job.job_title, employer_name: null }) : "—",
       visitType: a.visitType,
       note: a.note,
+      kind: "appointment",
     }));
+
+  const scheduledConsultations = await prisma.therapy_consultations.findMany({
+    where: {
+      household_id: householdId,
+      status: "scheduled",
+      occurred_at: { gte: now, lte: windowEnd },
+      job: jobScope,
+    },
+    orderBy: { occurred_at: "asc" },
+    include: {
+      job: { select: { job_title: true, employer_name: true } },
+      consultation_type: { select: { name: true, name_he: true } },
+      participants: {
+        include: {
+          client: { select: { first_name: true, last_name: true } },
+        },
+      },
+    },
+  });
+
+  const consultationRows: ClinicDigestAppointmentRow[] = scheduledConsultations.map((row) => ({
+    id: row.id,
+    startAt: row.occurred_at,
+    clientName: row.participants
+      .map((participant) => clientDisplayName(participant.client.first_name, participant.client.last_name))
+      .filter(Boolean)
+      .join(", "),
+    jobLabel: formatJobDisplayLabel(row.job),
+    visitType: null,
+    note: row.notes,
+    kind: "consultation",
+    consultationTypeName: row.consultation_type.name,
+    consultationTypeNameHe: row.consultation_type.name_he,
+  }));
+
+  const appointments = [...appointmentRows, ...consultationRows]
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime() || a.id.localeCompare(b.id))
+    .slice(0, APPOINTMENTS_CAP);
 
   const allActiveClients = await prisma.therapy_clients.findMany({
     where: {

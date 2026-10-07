@@ -52,6 +52,49 @@ test("renderClinicDigestEmail subject includes clinic branding and counts", () =
   assert.ok(html.includes("private-clinic/appointments"));
 });
 
+test("renderClinicDigestEmail lists a scheduled consultation with type and client", () => {
+  const { subject, html, text } = renderClinicDigestEmail({
+    data: {
+      appointments: [
+        {
+          id: "c1",
+          startAt: new Date("2026-06-11T08:00:00Z"),
+          clientName: "Noa Levi",
+          jobLabel: "School",
+          visitType: null,
+          note: null,
+          kind: "consultation",
+          consultationTypeName: "Supervision",
+          consultationTypeNameHe: "הדרכה",
+        },
+        {
+          id: "c2",
+          startAt: new Date("2026-06-12T08:00:00Z"),
+          clientName: "",
+          jobLabel: "Clinic",
+          visitType: null,
+          note: null,
+          kind: "consultation",
+          consultationTypeName: "Team meeting",
+          consultationTypeNameHe: null,
+        },
+      ],
+      visits: [],
+      needsFirstVisit: [],
+    },
+    dateDisplayFormat: "DMY",
+    language: "en",
+    baseUrl: "https://example.com",
+    daysAhead: 90,
+    copy,
+  });
+  assert.match(subject, /2 appointments/);
+  assert.ok(html.includes("Supervision"));
+  assert.ok(html.includes("Noa Levi"));
+  assert.ok(text.includes("Team meeting"));
+  assert.ok(!text.includes("Team meeting ·  ·"));
+});
+
 test("renderClinicDigestEmail includes appointment and visit notes", () => {
   const { html, text } = renderClinicDigestEmail({
     data: {

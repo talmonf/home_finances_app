@@ -83,7 +83,7 @@ export default async function PrivateClinicOverviewPage({
         return rows.filter((r) => r.status === "scheduled" && r.startAt >= now).length;
       })(),
       prisma.therapy_consultations.count({
-        where: { household_id: householdId, job: jobScope },
+        where: { household_id: householdId, job: jobScope, status: "completed" },
       }),
       prisma.therapy_travel_entries.count({
         where: {

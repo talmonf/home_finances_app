@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { ConfirmDeleteForm } from "@/components/confirm-delete";
 import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedback";
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
@@ -23,6 +26,14 @@ type InitialConsultation = {
   linked_transaction_id: string;
   participant_ids: string[];
   notes: string;
+};
+
+type ScheduleDuration = {
+  initialMinutes: number;
+  fallbackMinutes: number;
+  label: string;
+  jobMinutes: Record<string, number>;
+  programMinutes: Record<string, number>;
 };
 
 type Labels = {
@@ -64,6 +75,8 @@ export function ConsultationModalForm({
   labels,
   initial,
   clinicOnly = false,
+  mode = "log",
+  scheduleDuration,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   deleteAction?: (formData: FormData) => void | Promise<void>;
@@ -83,7 +96,22 @@ export function ConsultationModalForm({
   initial?: InitialConsultation;
   /** When true, omit bank link UI (clinic-only households). */
   clinicOnly?: boolean;
+  /** log and report use the payable form. schedule omits amount and requires a time. */
+  mode?: "log" | "schedule" | "report" | "edit";
+  scheduleDuration?: ScheduleDuration;
 }) {
+  const scheduling = mode === "schedule";
+  const [durationMinutes, setDurationMinutes] = useState(
+    () => scheduleDuration?.initialMinutes ?? scheduleDuration?.fallbackMinutes ?? 50,
+  );
+
+  function durationForSelection(jobId: string, programId: string) {
+    if (!scheduleDuration) return;
+    const programMinutes = programId ? scheduleDuration.programMinutes[programId] : undefined;
+    const jobMinutes = jobId ? scheduleDuration.jobMinutes[jobId] : undefined;
+    setDurationMinutes(programMinutes ?? jobMinutes ?? scheduleDuration.fallbackMinutes);
+  }
+
   return (
     <ConsultationModalShell title={labels.title} closeHref={closeHref} closeLabel={labels.cancel}>
       <GlobalFormSubmitFeedback />
@@ -91,12 +119,14 @@ export function ConsultationModalForm({
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
         <input type="hidden" name="redirect_on_error" value={redirectOnError} />
         {initial?.id ? <input type="hidden" name="id" value={initial.id} /> : null}
+        {mode === "report" ? <input type="hidden" name="report" value="1" /> : null}
 
         <ConsultationModalJobProgramFields
           jobs={jobs}
           programs={programs}
           initialJobId={initial?.job_id}
           initialProgramId={initial?.program_id}
+          onSelectionChange={scheduling ? durationForSelection : undefined}
           labels={{
             job: labels.job,
             program: labels.program,
@@ -125,7 +155,7 @@ export function ConsultationModalForm({
             <SplitDateTimeField
               name="occurred_at"
               required
-              timeOptional
+              timeOptional={!scheduling}
               initialValue={initial?.occurred_at}
               uiLanguage={uiLanguage}
               wrapperClassName="flex flex-wrap items-end gap-2"
@@ -135,6 +165,23 @@ export function ConsultationModalForm({
             />
           </div>
         </div>
+        {scheduling && scheduleDuration ? (
+          <div>
+            <label className="block text-xs text-slate-400">{scheduleDuration.label}</label>
+            <input
+              name="duration_minutes"
+              type="number"
+              min={1}
+              max={999}
+              step={1}
+              required
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+        ) : null}
+        {scheduling ? null : (
         <div>
           <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
           <div className="mt-1 flex gap-2">
@@ -151,6 +198,7 @@ export function ConsultationModalForm({
             />
           </div>
         </div>
+        )}
         <ConsultationModalParticipantsPicker
           clients={clients}
           initialParticipantIds={initial?.participant_ids ?? []}
@@ -169,7 +217,7 @@ export function ConsultationModalForm({
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
           />
         </div>
-        {!clinicOnly ? (
+        {!clinicOnly && !scheduling ? (
           <div className="md:col-span-2">
             <TherapyTransactionLinkSelect
               name="linked_transaction_id"

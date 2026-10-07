@@ -5,6 +5,7 @@ import {
   calendarHref,
   hourWindow,
   type CalendarEvent,
+  type CalendarEventKind,
   type CalendarView,
 } from "@/lib/calendar/model";
 import type { CalendarCopy } from "@/lib/calendar/strings";
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const KIND_CLASS: Record<CalendarEvent["kind"], string> = {
   clinicAppointment: "border-sky-400/50 bg-sky-500/20 text-sky-50",
+  clinicConsultation: "border-teal-400/50 bg-teal-500/20 text-teal-50",
   clinicVisit: "border-violet-400/50 bg-violet-500/20 text-violet-50",
   familyDate: "border-amber-400/50 bg-amber-500/20 text-amber-50",
   medical: "border-rose-400/50 bg-rose-500/20 text-rose-50",
@@ -31,6 +33,7 @@ type DayCell = {
 
 type Props = {
   copy: CalendarCopy;
+  kinds: CalendarEventKind[];
   view: CalendarView;
   anchorIso: string;
   periodLabel: string;
@@ -58,23 +61,38 @@ function chipLabel(event: CalendarEvent): string {
 export function CalendarBoard(props: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hiddenKinds, setHiddenKinds] = useState<CalendarEventKind[]>([]);
   const [jumpIso, setJumpIso] = useState(props.anchorIso);
   useEffect(() => {
     setJumpIso(props.anchorIso);
   }, [props.anchorIso]);
-  const selected = props.events.find((event) => event.id === selectedId) ?? null;
+  const hidden = useMemo(() => new Set(hiddenKinds), [hiddenKinds]);
+  const shownEvents = useMemo(
+    () => props.events.filter((event) => !hidden.has(event.kind)),
+    [props.events, hidden],
+  );
+  const selected = shownEvents.find((event) => event.id === selectedId) ?? null;
   const dayIsos = useMemo(() => new Set(props.days.map((day) => day.iso)), [props.days]);
-  const visibleEvents = props.events.filter((event) => dayIsos.has(event.date));
+  const visibleEvents = shownEvents.filter((event) => dayIsos.has(event.date));
   const overdue = props.showOverdueStrip
-    ? props.events.filter((event) => event.kind === "clinicVisit" && event.overdue)
+    ? shownEvents.filter((event) => event.kind === "clinicVisit" && event.overdue)
     : [];
+
+  function toggleKind(kind: CalendarEventKind) {
+    setHiddenKinds((current) =>
+      current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
+    );
+    if (selected?.kind === kind && !hidden.has(kind)) setSelectedId(null);
+  }
 
   return (
     <div className="space-y-4" data-testid="calendar-board">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-50">{props.copy.title}</h1>
-          <p className="mt-1 max-w-3xl text-sm text-slate-400">{props.copy.intro}</p>
+          {props.copy.intro ? (
+            <p className="mt-1 max-w-3xl text-sm text-slate-400">{props.copy.intro}</p>
+          ) : null}
         </div>
         <div className="w-full max-w-xs">
           <label htmlFor="calendar-jump" className="mb-1 block text-xs text-slate-400">
@@ -98,7 +116,11 @@ export function CalendarBoard(props: Props) {
           <Link href={props.prevHref} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700">
             {props.copy.previous}
           </Link>
-          <Link href={props.todayHref} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700">
+          <Link
+            href={props.todayHref}
+            title={props.copy.todayHint}
+            className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700"
+          >
             {props.copy.today}
           </Link>
           <Link href={props.nextHref} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-100 ring-1 ring-slate-700 hover:bg-slate-700">
@@ -124,13 +146,28 @@ export function CalendarBoard(props: Props) {
         </div>
       </div>
 
-      <ul className="flex flex-wrap gap-2 text-[11px] text-slate-300">
-        {(Object.keys(KIND_CLASS) as CalendarEvent["kind"][]).map((kind) => (
-          <li key={kind} className={`rounded-full border px-2 py-0.5 ${KIND_CLASS[kind]}`}>
-            {props.copy.kinds[kind]}
-          </li>
-        ))}
-      </ul>
+      {props.kinds.length > 0 ? (
+        <ul className="flex flex-wrap gap-2 text-[11px] text-slate-300">
+          {props.kinds.map((kind) => {
+            const shown = !hidden.has(kind);
+            return (
+              <li key={kind}>
+                <button
+                  type="button"
+                  aria-pressed={shown}
+                  onClick={() => toggleKind(kind)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
+                    shown ? KIND_CLASS[kind] : "border-slate-600 bg-transparent text-slate-500"
+                  }`}
+                >
+                  {shown ? <span aria-hidden="true">✓</span> : null}
+                  {props.copy.kinds[kind]}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
 
       {selected ? (
         <EventDetail copy={props.copy} event={selected} onClose={() => setSelectedId(null)} />
@@ -387,6 +424,19 @@ function EventDetail({
           <Link href={event.action.reportHref} className="font-medium text-sky-400 hover:text-sky-300">
             {copy.reportTreatment}
           </Link>
+        ) : null}
+        {event.action?.kind === "consultation" ? (
+          <>
+            <Link href={event.action.rescheduleHref} className="font-medium text-sky-400 hover:text-sky-300">
+              {copy.rescheduleConsultation}
+            </Link>
+            <Link href={event.action.reportHref} className="font-medium text-sky-400 hover:text-sky-300">
+              {copy.reportConsultation}
+            </Link>
+            <Link href={event.action.cancelHref} className="font-medium text-rose-300 hover:text-rose-200">
+              {copy.cancelConsultation}
+            </Link>
+          </>
         ) : null}
         {event.action?.kind === "appointment" && event.action.seriesId && event.action.occurrenceDate ? (
           <>

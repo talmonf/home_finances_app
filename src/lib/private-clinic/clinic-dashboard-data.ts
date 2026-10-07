@@ -131,6 +131,7 @@ export async function loadClinicDashboardData(params: {
   const consultationWhere: Prisma.therapy_consultationsWhereInput = {
     household_id: householdId,
     job: jobScope,
+    status: "completed",
     occurred_at: occurredAtRange,
     ...(jobId ? { job_id: jobId } : {}),
     ...(programIds.length ? { program_id: { in: programIds } } : {}),

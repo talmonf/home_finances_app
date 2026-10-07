@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 149_therapy_consultation_scheduling.sql
 - [x] 148_renewal_email_layout.sql (2026-10-04)
 - [x] 147_therapy_receipt_intake_import_key.sql (2026-09-30)
 - [x] 146_therapy_treatment_intake_token_per_user.sql (2026-09-30)
@@ -169,6 +170,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 149 | `149_therapy_consultation_scheduling.sql` | ALTER | `therapy_consultation_status` (`scheduled`, `cancelled`, `completed`) on `therapy_consultations`, plus `duration_minutes` and Google Calendar event fields. Existing rows default to `completed` so logged consultations stay payable. |
 | 148 | `148_renewal_email_layout.sql` (2026-10-04) | ALTER | `renewal_email_layout` enum (`grouped`, `flat`) and `renewal_email_subscriptions.layout` (default `grouped`) so the upcoming-renewals digest can stay grouped by topic or list every item by date. |
 | 147 | `147_therapy_receipt_intake_import_key.sql` (2026-09-30) | ALTER | Unique `(household_id, import_key)` on `therapy_receipts` for keys beginning with `gform-receipt:`, so a retried receipt form response cannot insert a second receipt. |
 | 146 | `146_therapy_treatment_intake_token_per_user.sql` (2026-09-30) | ALTER | `users`: optional `treatment_intake_token_hash` (unique) and `treatment_intake_token_last4`, so each clinic user has their own Make token. Drops the household-wide token columns added on `therapy_settings` in 145. |

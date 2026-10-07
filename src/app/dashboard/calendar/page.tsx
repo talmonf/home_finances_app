@@ -9,6 +9,7 @@ import {
 import { loadCalendarEvents, enabledSectionIdSet } from "@/lib/calendar/load-events";
 import {
   calendarHref,
+  calendarKindsForModules,
   daysForView,
   parseAnchorDate,
   parseCalendarView,
@@ -17,9 +18,9 @@ import {
   isoDateLocal,
   type CalendarView,
 } from "@/lib/calendar/model";
-import { calendarStrings } from "@/lib/calendar/strings";
+import { calendarIntro, calendarStrings } from "@/lib/calendar/strings";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
-import { getEffectiveEnabledSections } from "@/lib/household-sections";
+import { getEffectiveEnabledSections, getHouseholdModuleFlags } from "@/lib/household-sections";
 import { redirect } from "next/navigation";
 import { CalendarBoard } from "./calendar-view";
 
@@ -70,13 +71,24 @@ export default async function CalendarPage({
   const view = parseCalendarView(sp.view);
   const anchor = parseAnchorDate(sp.date, today);
   const days = daysForView(view, anchor);
-  const copy = calendarStrings(uiLanguage);
 
   const user = await prisma.users.findFirst({
     where: { id: userId, household_id: householdId, is_active: true },
     select: { family_member_id: true },
   });
   const sections = await getEffectiveEnabledSections({ householdId, userId });
+  const moduleFlags = getHouseholdModuleFlags(sections);
+  const introScope =
+    moduleFlags.clinicEnabled && moduleFlags.householdEnabled
+      ? "both"
+      : moduleFlags.clinicEnabled
+        ? "clinic"
+        : "home";
+  const copy = {
+    ...calendarStrings(uiLanguage),
+    intro: moduleFlags.clinicEnabled || moduleFlags.householdEnabled ? calendarIntro(uiLanguage, introScope) : "",
+  };
+  const kinds = calendarKindsForModules(moduleFlags);
   const events = await loadCalendarEvents({
     householdId,
     familyMemberId: user?.family_member_id ?? null,
@@ -101,6 +113,7 @@ export default async function CalendarPage({
       <div className="w-full max-w-screen-2xl">
         <CalendarBoard
           copy={copy}
+          kinds={kinds}
           view={view}
           anchorIso={isoDateLocal(anchor)}
           periodLabel={periodLabel(view, anchor, days, uiLanguage, dateDisplayFormat)}

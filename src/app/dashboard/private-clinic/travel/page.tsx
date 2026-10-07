@@ -114,7 +114,7 @@ export default async function TravelPage({
       include: { client: true, job: true },
     }),
     prisma.therapy_consultations.findMany({
-      where: { household_id: householdId, job: jobScope },
+      where: { household_id: householdId, job: jobScope, status: "completed" },
       orderBy: { occurred_at: "desc" },
       take: 300,
       include: {

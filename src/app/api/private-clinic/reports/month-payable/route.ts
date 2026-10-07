@@ -138,6 +138,7 @@ export async function GET(req: Request) {
     const baseConsultationWhere = {
       household_id: householdId,
       job_id: jobId,
+      status: "completed" as const,
       occurred_at: { gte: monthStart, lt: monthEndExclusive },
     };
 

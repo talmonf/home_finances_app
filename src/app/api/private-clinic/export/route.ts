@@ -375,6 +375,8 @@ export async function GET() {
         program_id: c.program_id ?? "",
         consultation_type_id: c.consultation_type_id,
         occurred_at: c.occurred_at.toISOString(),
+        status: c.status,
+        duration_minutes: c.duration_minutes ?? "",
         income_amount: c.income_amount?.toString() ?? "",
         income_currency: c.income_currency,
         cost_amount: c.cost_amount?.toString() ?? "",

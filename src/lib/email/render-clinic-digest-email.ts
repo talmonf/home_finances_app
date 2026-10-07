@@ -4,6 +4,7 @@ import {
 } from "@/lib/household-date-format";
 import type { HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import type { ClinicDigestData } from "@/lib/private-clinic/compute-clinic-digest";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { UiLanguage } from "@/lib/ui-language";
 export type RenderClinicDigestEmailParams = {
@@ -51,6 +52,28 @@ function compactNote(note: string | null | undefined): string {
   return note?.replace(/\s+/g, " ").trim() ?? "";
 }
 
+function scheduledItemLine(
+  item: ClinicDigestData["appointments"][number],
+  dateDisplayFormat: HouseholdDateDisplayFormat,
+  uiLang: UiLanguage,
+): string {
+  const when = formatHouseholdDateUtcWithTime(item.startAt, dateDisplayFormat);
+  const note = compactNote(item.note);
+  if (item.kind === "consultation") {
+    const typeName = therapyLocalizedCategoryName(
+      { name: item.consultationTypeName ?? "", name_he: item.consultationTypeNameHe ?? null },
+      uiLang,
+    );
+    const parts = [when, typeName];
+    if (item.clientName.trim()) parts.push(item.clientName);
+    parts.push(item.jobLabel);
+    if (note) parts.push(note);
+    return parts.join(" · ");
+  }
+  const visitType = item.visitType ? therapyVisitTypeLabel(uiLang, item.visitType) : "";
+  return `${when} · ${item.clientName} · ${item.jobLabel}${visitType ? ` · ${visitType}` : ""}${note ? ` · ${note}` : ""}`;
+}
+
 export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): {
   subject: string;
   html: string;
@@ -84,7 +107,7 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
   let textBody = "";
   const htmlParts: string[] = [];
   htmlParts.push(
-    `<p style="font-size:13px;color:#555;">${escapeHtml(he ? `תורים בטווח ${daysAhead} הימים הקרובים.` : `Appointments within the next ${daysAhead} days.`)}</p>`,
+    `<p style="font-size:13px;color:#555;">${escapeHtml(he ? `תורים וייעוצים בטווח ${daysAhead} הימים הקרובים.` : `Appointments and consultations within the next ${daysAhead} days.`)}</p>`,
   );
 
   htmlParts.push(
@@ -97,13 +120,12 @@ export function renderClinicDigestEmail(params: RenderClinicDigestEmailParams): 
   } else {
     htmlParts.push(`<ul style="margin:0;padding-${he ? "right" : "left"}:20px;">`);
     for (const a of data.appointments) {
+      const line = scheduledItemLine(a, dateDisplayFormat, uiLang);
       const when = formatHouseholdDateUtcWithTime(a.startAt, dateDisplayFormat);
-      const visitType = therapyVisitTypeLabel(uiLang, a.visitType);
-      const note = compactNote(a.note);
-      const line = `${when} · ${a.clientName} · ${a.jobLabel} · ${visitType}${note ? ` · ${note}` : ""}`;
+      const rest = line.slice(when.length).replace(/^ · /, "");
       textBody += `  - ${line}\n`;
       htmlParts.push(
-        `<li style="margin:6px 0;"><strong>${escapeHtml(when)}</strong> · ${escapeHtml(a.clientName)} · ${escapeHtml(a.jobLabel)} · ${escapeHtml(visitType)}${note ? ` · ${escapeHtml(note)}` : ""}</li>`,
+        `<li style="margin:6px 0;"><strong>${escapeHtml(when)}</strong>${rest ? ` · ${escapeHtml(rest)}` : ""}</li>`,
       );
     }
     htmlParts.push(`</ul>`);

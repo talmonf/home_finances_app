@@ -9,8 +9,11 @@ import {
 import { privateClinicCommon, privateClinicConsultations, privateClinicReceipts } from "@/lib/private-clinic-i18n";
 import { redirect } from "next/navigation";
 import {
+  cancelTherapyConsultation,
   createTherapyConsultation,
   deleteTherapyConsultation,
+  rescheduleTherapyConsultation,
+  scheduleTherapyConsultation,
   updateTherapyConsultation,
 } from "../actions";
 import type { TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
@@ -30,18 +33,35 @@ import {
   parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
+  parseConsultationsStatusFilter,
   type ConsultationsListFilters,
 } from "./consultations-list-data";
 import { ConsultationsListClient } from "./consultations-list-client";
 import { ConsultationModalForm } from "./consultation-modal-form";
+import { ConsultationCancelForm, ConsultationRescheduleForm } from "./consultation-schedule-forms";
 import { ConsultationsAddButton } from "./consultations-add-button";
 import { PrivateClinicNavSegmentReporter } from "@/components/private-clinic-nav-segment-reporter";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { householdUserOnlyPrivateClinicSection } from "@/lib/household-sections";
 import { occurredAtToSplitDatetimeInitial } from "@/lib/therapy/occurred-at-form";
+import { getSystemDefaultSessionMinutes, resolveSessionDurationMinutes } from "@/lib/therapy/session-duration";
 
 const CONSULTATIONS_BASE = "/dashboard/private-clinic/consultations";
+
+function appendQuery(base: string, extra: string) {
+  return `${base}${base.includes("?") ? "&" : "?"}${extra}`;
+}
+
+function positiveMinutesMap(rows: Array<{ id: string; default_session_length_minutes: number | null }>) {
+  const map: Record<string, number> = {};
+  for (const row of rows) {
+    if (row.default_session_length_minutes && row.default_session_length_minutes > 0) {
+      map[row.id] = row.default_session_length_minutes;
+    }
+  }
+  return map;
+}
 
 /** Prisma row before serializing `amount` to string for `TherapyTransactionOption`. */
 type ConsultationModalTxnRow = Omit<TherapyTransactionOption, "amount"> & {
@@ -63,6 +83,8 @@ export type ConsultationsPageSearchParams = Promise<{
   consultation_type_id?: string;
   modal?: string;
   edit_id?: string;
+  report?: string;
+  status?: string;
 }>;
 
 export async function ConsultationsPageContent({
@@ -93,7 +115,13 @@ export async function ConsultationsPageContent({
     session.user.id,
     uiLanguage,
   );
-  const modalMode = sp.modal === "edit" ? "edit" : sp.modal === "new" ? "new" : null;
+  const modalMode =
+    sp.modal === "edit" || sp.modal === "schedule" || sp.modal === "reschedule" || sp.modal === "cancel"
+      ? sp.modal
+      : sp.modal === "new"
+        ? "new"
+        : null;
+  const reporting = sp.report === "1";
   const filters: ConsultationsListFilters = {
     job: sp.job?.trim() || "",
     consultation_type_id: sp.consultation_type_id?.trim() || "",
@@ -101,6 +129,7 @@ export async function ConsultationsPageContent({
     from: sp.from?.trim() || "",
     to: sp.to?.trim() || "",
     received: parseConsultationsReceivedFilter(sp.received),
+    status: parseConsultationsStatusFilter(sp.status),
     sort: parseConsultationsSortKey(sp.sort),
     dir: parseConsultationsSortDir(sp.dir),
   };
@@ -112,6 +141,7 @@ export async function ConsultationsPageContent({
   if (filters.from) listParams.set("from", filters.from);
   if (filters.to) listParams.set("to", filters.to);
   if (filters.received !== "all") listParams.set("received", filters.received);
+  if (filters.status !== "all") listParams.set("status", filters.status);
   if (filters.sort !== "occurred_at") listParams.set("sort", filters.sort);
   if (filters.dir !== "desc") listParams.set("dir", filters.dir);
   const baseListHref = listParams.size > 0 ? `${CONSULTATIONS_BASE}?${listParams.toString()}` : CONSULTATIONS_BASE;
@@ -122,6 +152,7 @@ export async function ConsultationsPageContent({
     Boolean(filters.from) ||
     Boolean(filters.to) ||
     filters.received !== "all" ||
+    filters.status !== "all" ||
     filters.sort !== "occurred_at" ||
     filters.dir !== "desc";
 
@@ -169,7 +200,7 @@ export async function ConsultationsPageContent({
 
   const editId = sp.edit_id?.trim() || "";
   const editConsultation =
-    modalMode === "edit" && editId
+    (modalMode === "edit" || modalMode === "reschedule" || modalMode === "cancel") && editId
       ? await prisma.therapy_consultations.findFirst({
           where: { id: editId, household_id: householdId, job: jobScope },
           include: { participants: true },
@@ -177,9 +208,14 @@ export async function ConsultationsPageContent({
       : null;
 
   let modalClients: Array<{ id: string; first_name: string; last_name: string | null; is_active: boolean }> = [];
-  let modalPrograms: Array<{ id: string; job_id: string; name: string }> = [];
+  let modalPrograms: Array<{
+    id: string;
+    job_id: string;
+    name: string;
+    default_session_length_minutes: number | null;
+  }> = [];
   let transactionOptions: ConsultationModalTxnRow[] = [];
-  if (modalMode === "new" || modalMode === "edit") {
+  if (modalMode === "new" || modalMode === "schedule" || modalMode === "edit") {
     const [clientsR, programsR, txRows] = await Promise.all([
       prisma.therapy_clients.findMany({
         where: {
@@ -204,7 +240,7 @@ export async function ConsultationsPageContent({
           ],
         },
         orderBy: [{ sort_order: "asc" }, { name: "asc" }],
-        select: { id: true, job_id: true, name: true },
+        select: { id: true, job_id: true, name: true, default_session_length_minutes: true },
       }),
       prisma.transactions.findMany({
         where: { household_id: householdId },
@@ -223,6 +259,19 @@ export async function ConsultationsPageContent({
     modalPrograms = programsR;
     transactionOptions = txRows as ConsultationModalTxnRow[];
   }
+  let scheduleFallbackMinutes = getSystemDefaultSessionMinutes();
+  if (modalMode === "schedule") {
+    const settings = await prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: { default_session_length_minutes: true },
+    });
+    scheduleFallbackMinutes =
+      resolveSessionDurationMinutes({
+        systemDefaultMinutes: getSystemDefaultSessionMinutes(),
+        therapySettingsDefaultMinutes: settings?.default_session_length_minutes ?? null,
+      }) ?? scheduleFallbackMinutes;
+  }
+
   const filteredReceipt = filters.receipt
     ? await prisma.therapy_receipts.findFirst({
         where: { id: filters.receipt, household_id: householdId, job: jobScope },
@@ -303,6 +352,22 @@ export async function ConsultationsPageContent({
               ))}
             </select>
           </div>
+          <div className="w-[8.5rem] shrink-0">
+            <label htmlFor="consultations-filter-status" className="block text-xs text-slate-400">
+              {co.status}
+            </label>
+            <select
+              id="consultations-filter-status"
+              name="status"
+              defaultValue={filters.status}
+              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+            >
+              <option value="all">{co.statusAll}</option>
+              <option value="scheduled">{co.statusScheduled}</option>
+              <option value="completed">{co.statusCompleted}</option>
+              <option value="cancelled">{co.statusCancelled}</option>
+            </select>
+          </div>
           <div className="w-[7.5rem] shrink-0">
             <label htmlFor="consultations-filter-received" className="block text-xs text-slate-400">
               {co.filterReceivedPayment}
@@ -369,8 +434,15 @@ export async function ConsultationsPageContent({
           ) : (
             <div className="hidden flex-1 sm:block" />
           )}
-          <div className="w-full shrink-0 sm:w-auto">
-            <ConsultationsAddButton href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`} label={co.addTitle} />
+          <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
+            <ConsultationsAddButton
+              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=schedule`}
+              label={co.scheduleTitle}
+            />
+            <ConsultationsAddButton
+              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=new`}
+              label={co.addTitle}
+            />
           </div>
         </div>
         {firstPage.rows.length === 0 ? (
@@ -393,6 +465,13 @@ export async function ConsultationsPageContent({
               receipt: co.receipt,
               notes: c.notes,
               edit: c.edit,
+              status: co.status,
+              statusScheduled: co.statusScheduled,
+              statusCompleted: co.statusCompleted,
+              statusCancelled: co.statusCancelled,
+              report: co.report,
+              reschedule: co.reschedule,
+              cancel: co.cancel,
               linked: co.receivedLinked,
               unlinked: co.receivedUnlinked,
               loadingMore: co.loadingMore,
@@ -448,6 +527,55 @@ export async function ConsultationsPageContent({
             txNoneLinked: c.txNoneLinked,
           }}
           clinicOnly={clinicOnly}
+          mode="log"
+        />
+      ) : null}
+      {modalMode === "schedule" ? (
+        <ConsultationModalForm
+          action={scheduleTherapyConsultation}
+          closeHref={baseListHref}
+          redirectOnSuccess={appendQuery(baseListHref, "created=1")}
+          redirectOnError={appendQuery(baseListHref, "modal=schedule")}
+          householdId={householdId}
+          uiLanguage={uiLanguage}
+          jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
+          programs={modalPrograms.map((p) => ({ id: p.id, jobId: p.job_id, label: p.name }))}
+          types={consultationTypesForPicker().map((t) => ({ id: t.id, name: t.name, name_he: t.name_he }))}
+          clients={modalClients.map((cl) => ({
+            id: cl.id,
+            label: `${cl.first_name} ${cl.last_name ?? ""}`.trim() + (cl.is_active ? "" : ` (${c.inactive})`),
+          }))}
+          transactionOptions={[]}
+          labels={{
+            title: co.scheduleTitle,
+            cancel: c.cancel,
+            save: c.save,
+            saving: uiLanguage === "he" ? "שומר..." : "Saving...",
+            deleting: uiLanguage === "he" ? "מוחק..." : "Deleting...",
+            delete: c.delete,
+            job: c.job,
+            program: r.programOptionalEmpty,
+            select: c.select,
+            type: c.type,
+            dateTime: co.dateTime,
+            amountLabel: co.amountLabel,
+            linkedTx: co.linkTx,
+            clients: co.clients,
+            selectClientPlaceholder: co.selectClientPlaceholder,
+            addAdditionalClient: co.addAdditionalClient,
+            remove: c.remove,
+            notes: c.notes,
+            txNoneLinked: c.txNoneLinked,
+          }}
+          clinicOnly
+          mode="schedule"
+          scheduleDuration={{
+            initialMinutes: positiveMinutesMap(jobs)[defaultClinicJobId(jobs)] ?? scheduleFallbackMinutes,
+            fallbackMinutes: scheduleFallbackMinutes,
+            label: co.durationLabel,
+            jobMinutes: positiveMinutesMap(jobs),
+            programMinutes: positiveMinutesMap(modalPrograms),
+          }}
         />
       ) : null}
       {modalMode === "edit" && editConsultation ? (
@@ -457,7 +585,10 @@ export async function ConsultationsPageContent({
           closeHref={baseListHref}
           redirectOnSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}updated=1`}
           redirectOnDeleteSuccess={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}deleted=1`}
-          redirectOnError={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(editConsultation.id)}`}
+          redirectOnError={appendQuery(
+            baseListHref,
+            `modal=edit&edit_id=${encodeURIComponent(editConsultation.id)}${reporting && editConsultation.status === "scheduled" ? "&report=1" : ""}`,
+          )}
           householdId={householdId}
           uiLanguage={uiLanguage}
           jobs={jobs.map((j) => ({ id: j.id, label: formatJobDisplayLabel(j) }))}
@@ -495,7 +626,7 @@ export async function ConsultationsPageContent({
             notes: editConsultation.notes ?? "",
           }}
           labels={{
-            title: c.edit,
+            title: reporting && editConsultation.status === "scheduled" ? co.reportTitle : c.edit,
             cancel: c.cancel,
             save: c.save,
             saving: uiLanguage === "he" ? "שומר..." : "Saving...",
@@ -516,6 +647,42 @@ export async function ConsultationsPageContent({
             txNoneLinked: c.txNoneLinked,
           }}
           clinicOnly={clinicOnly}
+          mode={reporting && editConsultation.status === "scheduled" ? "report" : "edit"}
+        />
+      ) : null}
+      {modalMode === "reschedule" && editConsultation?.status === "scheduled" ? (
+        <ConsultationRescheduleForm
+          action={rescheduleTherapyConsultation}
+          closeHref={baseListHref}
+          redirectOnSuccess={appendQuery(baseListHref, "updated=1")}
+          redirectOnError={appendQuery(baseListHref, `modal=reschedule&edit_id=${encodeURIComponent(editConsultation.id)}`)}
+          consultationId={editConsultation.id}
+          initialOccurredAt={occurredAtToSplitDatetimeInitial(editConsultation.occurred_at)}
+          initialDurationMinutes={editConsultation.duration_minutes ?? scheduleFallbackMinutes}
+          uiLanguage={uiLanguage}
+          labels={{
+            title: co.rescheduleTitle,
+            cancel: c.cancel,
+            save: c.save,
+            saving: uiLanguage === "he" ? "שומר..." : "Saving...",
+            dateTime: co.dateTime,
+            duration: co.durationLabel,
+          }}
+        />
+      ) : null}
+      {modalMode === "cancel" && editConsultation?.status === "scheduled" ? (
+        <ConsultationCancelForm
+          action={cancelTherapyConsultation}
+          closeHref={baseListHref}
+          redirectOnSuccess={appendQuery(baseListHref, "updated=1")}
+          consultationId={editConsultation.id}
+          labels={{
+            title: co.cancelTitle,
+            cancel: c.cancel,
+            confirm: co.cancelConfirm,
+            submit: co.cancelSubmit,
+            saving: uiLanguage === "he" ? "מבטל..." : "Cancelling...",
+          }}
         />
       ) : null}
       <PrivateClinicNavSegmentReporter path="/dashboard/private-clinic/consultations" />

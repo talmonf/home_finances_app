@@ -22,6 +22,13 @@ type Labels = {
   receipt: string;
   notes: string;
   edit: string;
+  status: string;
+  statusScheduled: string;
+  statusCompleted: string;
+  statusCancelled: string;
+  report: string;
+  reschedule: string;
+  cancel: string;
   linked: string;
   unlinked: string;
   loadingMore: string;
@@ -33,6 +40,10 @@ function amountValue(text: string | null): number {
   if (!text) return 0;
   const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function rowActionHref(listBaseHref: string, query: string): string {
+  return `${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}${query}`;
 }
 
 export function ConsultationsListClient({
@@ -197,6 +208,7 @@ export function ConsultationsListClient({
                   {sortArrow("amount")}
                 </button>
               </th>
+              <th className="px-3 py-2 text-slate-300">{labels.status}</th>
               <th className="px-3 py-2 text-slate-300">{labels.receipt}</th>
               <th className="px-3 py-2 text-slate-300">{labels.notes}</th>
               <th className="px-3 py-2 text-slate-300">{labels.edit}</th>
@@ -224,6 +236,13 @@ export function ConsultationsListClient({
                 <td className="px-3 py-2 text-right text-slate-300">
                   {row.amount ? formatMoneyLineForDisplay(obfuscate, row.amount, row.currency, uiLanguage) : "—"}
                 </td>
+                <td className="whitespace-nowrap px-3 py-2 text-slate-300">
+                  {row.status === "scheduled"
+                    ? labels.statusScheduled
+                    : row.status === "cancelled"
+                      ? labels.statusCancelled
+                      : labels.statusCompleted}
+                </td>
                 <td className="px-3 py-2 text-slate-400">
                   {row.linked_receipt_id && row.linked_receipt_number ? (
                     <Link
@@ -248,12 +267,37 @@ export function ConsultationsListClient({
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <Link
-                    href={`${listBaseHref}${listBaseHref.includes("?") ? "&" : "?"}modal=edit&edit_id=${encodeURIComponent(row.id)}`}
-                    className="text-xs text-sky-400 hover:underline"
-                  >
-                    {labels.edit}
-                  </Link>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {row.status === "scheduled" ? (
+                      <>
+                        <Link
+                          href={rowActionHref(listBaseHref, `modal=edit&edit_id=${encodeURIComponent(row.id)}&report=1`)}
+                          className="text-xs text-sky-400 hover:underline"
+                        >
+                          {labels.report}
+                        </Link>
+                        <Link
+                          href={rowActionHref(listBaseHref, `modal=reschedule&edit_id=${encodeURIComponent(row.id)}`)}
+                          className="text-xs text-sky-400 hover:underline"
+                        >
+                          {labels.reschedule}
+                        </Link>
+                        <Link
+                          href={rowActionHref(listBaseHref, `modal=cancel&edit_id=${encodeURIComponent(row.id)}`)}
+                          className="text-xs text-rose-300 hover:underline"
+                        >
+                          {labels.cancel}
+                        </Link>
+                      </>
+                    ) : (
+                      <Link
+                        href={rowActionHref(listBaseHref, `modal=edit&edit_id=${encodeURIComponent(row.id)}`)}
+                        className="text-xs text-sky-400 hover:underline"
+                      >
+                        {labels.edit}
+                      </Link>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -150,6 +150,28 @@ export async function saveGoogleSyncFailure(appointmentId: string, message: stri
   });
 }
 
+export async function saveGoogleConsultationSyncSuccess(consultationId: string, eventId: string | null) {
+  await prisma.therapy_consultations.update({
+    where: { id: consultationId },
+    data: {
+      google_calendar_event_id: eventId,
+      google_calendar_last_error: null,
+      google_calendar_last_error_at: null,
+      google_calendar_last_synced_at: new Date(),
+    },
+  });
+}
+
+export async function saveGoogleConsultationSyncFailure(consultationId: string, message: string) {
+  await prisma.therapy_consultations.update({
+    where: { id: consultationId },
+    data: {
+      google_calendar_last_error: message.slice(0, 1000),
+      google_calendar_last_error_at: new Date(),
+    },
+  });
+}
+
 const RRULE_DAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
 
 function formatGoogleUntil(endDate: Date): string {

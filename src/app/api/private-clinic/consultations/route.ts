@@ -5,6 +5,7 @@ import {
   parseConsultationsReceivedFilter,
   parseConsultationsSortDir,
   parseConsultationsSortKey,
+  parseConsultationsStatusFilter,
 } from "@/app/dashboard/private-clinic/consultations/consultations-list-data";
 
 export async function GET(req: NextRequest) {
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
       from: url.searchParams.get("from")?.trim() || "",
       to: url.searchParams.get("to")?.trim() || "",
       received: parseConsultationsReceivedFilter(url.searchParams.get("received") ?? undefined),
+      status: parseConsultationsStatusFilter(url.searchParams.get("status") ?? undefined),
       sort: parseConsultationsSortKey(url.searchParams.get("sort") ?? undefined),
       dir: parseConsultationsSortDir(url.searchParams.get("dir") ?? undefined),
     },

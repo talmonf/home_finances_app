@@ -13,12 +13,14 @@ import {
   jobWherePrivateClinicScoped,
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
+import { formatJobDisplayLabel } from "@/lib/job-label";
 import { dateOnlyLocal } from "@/lib/private-clinic/reminders-logic";
 import {
   getUpcomingAppointmentsForHousehold,
   nextScheduledAppointmentByClientId,
 } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 import type { UiLanguage } from "@/lib/ui-language";
 import { computeUpcomingRenewals, dateOnlyLocal as renewalDateOnly } from "@/lib/upcoming-renewals/compute";
@@ -26,6 +28,9 @@ import {
   addDays,
   appointmentReportHref,
   appointmentRescheduleHref,
+  consultationCancelHref,
+  consultationReportHref,
+  consultationRescheduleHref,
   calendarRenewalRows,
   dateOnly,
   isoDateLocal,
@@ -273,6 +278,7 @@ export async function loadCalendarEvents(params: {
 
   const kindOrder: CalendarEventKind[] = [
     "clinicAppointment",
+    "clinicConsultation",
     "clinicVisit",
     "familyDate",
     "medical",
@@ -316,7 +322,7 @@ async function loadClinicEvents(params: {
     params.rangeEnd > addMonths(params.today, 6) ? params.rangeEnd : addMonths(params.today, 6),
   );
 
-  const [displayAppointments, suppressionAppointments, clients] = await Promise.all([
+  const [displayAppointments, suppressionAppointments, clients, scheduledConsultations] = await Promise.all([
     getUpcomingAppointmentsForHousehold({
       householdId: params.householdId,
       jobWhere: jobScope,
@@ -349,6 +355,27 @@ async function loadClinicEvents(params: {
         default_session_length_minutes: true,
         default_program: { select: { default_session_length_minutes: true } },
         default_job: { select: { default_session_length_minutes: true } },
+      },
+    }),
+    prisma.therapy_consultations.findMany({
+      where: {
+        household_id: params.householdId,
+        status: "scheduled",
+        job: jobScope,
+        occurred_at: { gte: params.rangeStart, lte: displayTo },
+      },
+      select: {
+        id: true,
+        occurred_at: true,
+        duration_minutes: true,
+        notes: true,
+        job: { select: { job_title: true, employer_name: true } },
+        consultation_type: { select: { name: true, name_he: true } },
+        participants: {
+          select: {
+            client: { select: { first_name: true, last_name: true } },
+          },
+        },
       },
     }),
   ]);
@@ -390,6 +417,36 @@ async function loadClinicEvents(params: {
             seriesId: null,
             occurrenceDate: null,
           },
+    });
+  }
+
+  for (const row of scheduledConsultations) {
+    const placed = israelPlacement(row.occurred_at, row.duration_minutes);
+    if (!visibleIsos.has(placed.date)) continue;
+    const typeName = therapyLocalizedCategoryName(row.consultation_type, params.language);
+    const clientNames = row.participants
+      .map((participant) => [participant.client.first_name, participant.client.last_name].filter(Boolean).join(" "))
+      .filter(Boolean)
+      .join(", ");
+    const time = formatClock(placed.startMinutes);
+    const jobLabel = formatJobDisplayLabel(row.job);
+    events.push({
+      id: `consult-${row.id}`,
+      kind: "clinicConsultation",
+      title: clientNames ? `${typeName} · ${clientNames}` : typeName,
+      subtitle: `${time} · ${jobLabel}`,
+      date: placed.date,
+      startMinutes: placed.startMinutes,
+      endMinutes: placed.endMinutes,
+      href: consultationReportHref(row.id),
+      overdue: false,
+      hover: row.notes,
+      action: {
+        kind: "consultation",
+        rescheduleHref: consultationRescheduleHref(row.id),
+        reportHref: consultationReportHref(row.id),
+        cancelHref: consultationCancelHref(row.id),
+      },
     });
   }
 

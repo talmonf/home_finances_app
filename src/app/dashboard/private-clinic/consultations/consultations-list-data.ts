@@ -8,10 +8,12 @@ import {
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import type { Prisma } from "@/generated/prisma/client";
+import type { TherapyConsultationStatus } from "@/generated/prisma/enums";
 
 export type ConsultationsSortKey = "occurred_at" | "type" | "job" | "amount";
 export type ConsultationsSortDir = "asc" | "desc";
 export type ConsultationsReceivedFilter = "all" | "linked" | "unlinked";
+export type ConsultationsStatusFilter = "all" | TherapyConsultationStatus;
 
 export type ConsultationsListFilters = {
   job: string;
@@ -20,6 +22,7 @@ export type ConsultationsListFilters = {
   from: string;
   to: string;
   received: ConsultationsReceivedFilter;
+  status: ConsultationsStatusFilter;
   sort: ConsultationsSortKey;
   dir: ConsultationsSortDir;
 };
@@ -41,6 +44,8 @@ export type ConsultationListRowDto = {
   linked_receipt_number: string | null;
   clients: Array<{ id: string; name: string; name_he: string | null }>;
   notes: string | null;
+  status: TherapyConsultationStatus;
+  duration_minutes: number | null;
 };
 
 export type ConsultationsCursorPage = {
@@ -102,6 +107,11 @@ export function parseConsultationsReceivedFilter(raw: string | undefined): Consu
   return "all";
 }
 
+export function parseConsultationsStatusFilter(raw: string | undefined): ConsultationsStatusFilter {
+  if (raw === "scheduled" || raw === "completed" || raw === "cancelled") return raw;
+  return "all";
+}
+
 function parseDateFilter(raw: string): Date | null {
   const text = raw.trim();
   if (!text) return null;
@@ -158,6 +168,8 @@ function mapConsultationListRow(row: ConsultationListPrismaRow): ConsultationLis
     linked_receipt_number: row.receipt_allocations[0]?.receipt.receipt_number ?? null,
     clients: participantClients.length > 0 ? participantClients : fallbackReceiptClient,
     notes: row.notes,
+    status: row.status,
+    duration_minutes: row.duration_minutes,
   };
 }
 
@@ -194,6 +206,7 @@ function whereForConsultationsList(params: {
       : {}),
     ...(filters.received === "linked" ? { receipt_allocations: { some: {} } } : {}),
     ...(filters.received === "unlinked" ? { receipt_allocations: { none: {} } } : {}),
+    ...(filters.status !== "all" ? { status: filters.status } : {}),
   };
 }
 

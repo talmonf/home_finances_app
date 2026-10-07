@@ -348,6 +348,7 @@ export default async function ReceiptsPage({
           where: {
             household_id: householdId,
             job_id: editReceipt.job_id,
+            status: "completed",
             receipt_allocations: { none: {} },
             ...orgCoverageRangeWhere,
           },
