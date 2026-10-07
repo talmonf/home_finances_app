@@ -245,7 +245,7 @@ function MonthGrid({
                 ))}
                 {extra > 0 ? (
                   <Link href={calendarHref("day", parseIso(day.iso))} className="block text-[11px] text-sky-300 hover:text-sky-200">
-                    {copy.more(extra)}
+                    {copy.more.replace("{n}", String(extra))}
                   </Link>
                 ) : null}
               </div>

@@ -305,7 +305,7 @@ async function loadClinicEvents(params: {
   rangeEnd: Date;
   language: UiLanguage;
   dateDisplayFormat: HouseholdDateDisplayFormat;
-  lastVisitLabel: (date: string) => string;
+  lastVisitLabel: string;
   noLastVisit: string;
   estimatedLabel: string;
 }): Promise<CalendarEvent[]> {
@@ -441,7 +441,10 @@ async function loadClinicEvents(params: {
     const name = [client.first_name, client.last_name].filter(Boolean).join(" ") || client.first_name;
     const lastAt = lastByClient.get(client.id) ?? null;
     const lastLabel = lastAt
-      ? params.lastVisitLabel(formatHouseholdDate(lastAt, params.dateDisplayFormat))
+      ? params.lastVisitLabel.replace(
+          "{date}",
+          formatHouseholdDate(lastAt, params.dateDisplayFormat),
+        )
       : params.noLastVisit;
     const dueLabel = formatIsoDateStringForHousehold(isoDateLocal(pin.due), params.dateDisplayFormat);
     const duration =

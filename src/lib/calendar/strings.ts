@@ -12,14 +12,16 @@ export type CalendarCopy = {
   next: string;
   jumpToDate: string;
   overdueTitle: string;
-  more: (n: number) => string;
+  /** "+{n} more" */
+  more: string;
   close: string;
   open: string;
   scheduleAppointment: string;
   logTreatment: string;
   reschedule: string;
   reportTreatment: string;
-  lastVisit: (date: string) => string;
+  /** "Last visit: {date}" */
+  lastVisit: string;
   noLastVisit: string;
   scheduledTask: string;
   dueTask: string;
@@ -41,14 +43,14 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
       next: "הבא",
       jumpToDate: "מעבר לתאריך",
       overdueTitle: "ביקורים באיחור",
-      more: (n) => `+${n} נוספים`,
+      more: "+{n} נוספים",
       close: "סגירה",
       open: "פתיחה",
       scheduleAppointment: "קביעת תור",
       logTreatment: "דיווח טיפול",
       reschedule: "דחיית תור",
       reportTreatment: "דיווח טיפול",
-      lastVisit: (date) => `ביקור אחרון: ${date}`,
+      lastVisit: "ביקור אחרון: {date}",
       noLastVisit: "אין ביקור קודם",
       scheduledTask: "מתוזמן",
       dueTask: "יעד",
@@ -75,14 +77,14 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
     next: "Next",
     jumpToDate: "Jump to date",
     overdueTitle: "Overdue visits",
-    more: (n) => `+${n} more`,
+    more: "+{n} more",
     close: "Close",
     open: "Open",
     scheduleAppointment: "Schedule appointment",
     logTreatment: "Log treatment",
     reschedule: "Reschedule",
     reportTreatment: "Report treatment",
-    lastVisit: (date) => `Last visit: ${date}`,
+    lastVisit: "Last visit: {date}",
     noLastVisit: "No previous visit",
     scheduledTask: "Scheduled",
     dueTask: "Due",
