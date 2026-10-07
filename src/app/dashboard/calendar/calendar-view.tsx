@@ -13,7 +13,7 @@ import type { CalendarCopy } from "@/lib/calendar/strings";
 import { openSeriesOccurrence } from "@/app/dashboard/private-clinic/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 
 const KIND_CLASS: Record<CalendarEvent["kind"], string> = {
   clinicAppointment: "border-sky-400/50 bg-sky-500/20 text-sky-50",
@@ -466,20 +466,47 @@ function EventDetail({
   event: CalendarEvent;
   onClose: () => void;
 }) {
+  const titleId = useId();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <section className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">{copy.kinds[event.kind]}</p>
-          <h3 className="text-lg font-medium text-slate-50">{event.title}</h3>
-          {event.subtitle ? <p className="text-sm text-slate-300">{event.subtitle}</p> : null}
-          {event.hover ? <p className="mt-1 text-sm text-slate-300">{event.hover}</p> : null}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-8"
+      onClick={onClose}
+      role="presentation"
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">{copy.kinds[event.kind]}</p>
+            <h3 id={titleId} className="text-lg font-medium text-slate-50">
+              {event.title}
+            </h3>
+            {event.subtitle ? <p className="text-sm text-slate-300">{event.subtitle}</p> : null}
+            {event.hover ? <p className="mt-1 text-sm text-slate-300">{event.hover}</p> : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+          >
+            {copy.close}
+          </button>
         </div>
-        <button type="button" onClick={onClose} className="text-sm text-slate-400 hover:text-slate-200">
-          {copy.close}
-        </button>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         {event.action?.kind === "visit" ? (
           <>
             <Link href={event.action.scheduleHref} className="font-medium text-sky-400 hover:text-sky-300">
@@ -534,8 +561,9 @@ function EventDetail({
             {copy.open}
           </Link>
         ) : null}
-      </div>
-    </section>
+        </div>
+      </section>
+    </div>
   );
 }
 

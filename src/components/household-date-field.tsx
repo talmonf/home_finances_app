@@ -329,6 +329,7 @@ export function HouseholdDateIsoControl({
   valueIso,
   onIsoChange,
   required = false,
+  compact = false,
   className,
   "aria-label": ariaLabel,
 }: {
@@ -336,6 +337,8 @@ export function HouseholdDateIsoControl({
   valueIso: string;
   onIsoChange: (iso: string) => void;
   required?: boolean;
+  /** Size the text box to a 10-character date (`dd/mm/yyyy`) instead of stretching. */
+  compact?: boolean;
   className?: string;
   "aria-label"?: string;
 }) {
@@ -364,7 +367,7 @@ export function HouseholdDateIsoControl({
     text.trim() === "" ? "" : parseHouseholdDateInputToIsoYmd(text.trim(), format) ?? "";
 
   return (
-    <div className="flex w-full min-w-0 items-stretch gap-1.5">
+    <div className={compact ? "inline-flex shrink-0 items-stretch gap-1.5" : "flex w-full min-w-0 items-stretch gap-1.5"}>
       <input
         id={id}
         type="text"
@@ -391,7 +394,11 @@ export function HouseholdDateIsoControl({
             setText(isoYmdToHouseholdInputDisplay(valueIso, format));
           }
         }}
-        className={`min-w-0 flex-1 ${className ?? ""}`}
+        className={
+          compact
+            ? `box-border w-[calc(10ch+1rem+2px)] shrink-0 ${className ?? ""}`
+            : `min-w-0 flex-1 ${className ?? ""}`
+        }
       />
       <HouseholdDateCalendarLauncher
         selectedIsoYmd={pickerSelectedIso}

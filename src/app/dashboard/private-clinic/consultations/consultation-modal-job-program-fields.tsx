@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
 
 type JobOption = { id: string; label: string };
@@ -13,6 +13,40 @@ type ScheduleDuration = {
   jobMinutes: Record<string, number>;
   programMinutes: Record<string, number>;
 };
+
+type DurationFieldState = {
+  label: string;
+  minutes: number;
+  setMinutes: (value: number) => void;
+};
+
+const ConsultationDurationContext = createContext<DurationFieldState | null>(null);
+
+function DurationMinutesField({ label, minutes, setMinutes }: DurationFieldState) {
+  return (
+    <div>
+      <label className="block text-xs text-slate-400">{label}</label>
+      <input
+        name="duration_minutes"
+        type="number"
+        min={1}
+        max={999}
+        step={1}
+        required
+        value={minutes}
+        onChange={(e) => setMinutes(Number(e.target.value))}
+        className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+      />
+    </div>
+  );
+}
+
+/** Renders the schedule duration input beside the date and time. */
+export function ConsultationScheduleDurationField() {
+  const duration = useContext(ConsultationDurationContext);
+  if (!duration) return null;
+  return <DurationMinutesField {...duration} />;
+}
 
 function durationForSelection(
   scheduleDuration: ScheduleDuration,
@@ -31,6 +65,8 @@ export function ConsultationModalJobProgramFields({
   initialProgramId,
   labels,
   scheduleDuration,
+  inlineDuration = false,
+  children,
 }: {
   jobs: JobOption[];
   programs: ProgramOption[];
@@ -42,6 +78,9 @@ export function ConsultationModalJobProgramFields({
     select: string;
   };
   scheduleDuration?: ScheduleDuration;
+  /** Keep duration out of the job/program grid so it can sit on the date row. */
+  inlineDuration?: boolean;
+  children?: ReactNode;
 }) {
   const [jobId, setJobId] = useState(() => defaultClinicJobId(jobs, initialJobId));
   const [programId, setProgramId] = useState(initialProgramId ?? "");
@@ -60,8 +99,12 @@ export function ConsultationModalJobProgramFields({
     }
   }, [programsForJob, programId]);
 
+  const durationState: DurationFieldState | null = scheduleDuration
+    ? { label: scheduleDuration.label, minutes: durationMinutes, setMinutes: setDurationMinutes }
+    : null;
+
   return (
-    <>
+    <ConsultationDurationContext.Provider value={durationState}>
       <div>
         <label className="block text-xs text-slate-400">{labels.job}</label>
         <select
@@ -108,22 +151,10 @@ export function ConsultationModalJobProgramFields({
           ))}
         </select>
       </div>
-      {scheduleDuration ? (
-        <div>
-          <label className="block text-xs text-slate-400">{scheduleDuration.label}</label>
-          <input
-            name="duration_minutes"
-            type="number"
-            min={1}
-            max={999}
-            step={1}
-            required
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
-        </div>
+      {scheduleDuration && !inlineDuration ? (
+        <DurationMinutesField label={scheduleDuration.label} minutes={durationMinutes} setMinutes={setDurationMinutes} />
       ) : null}
-    </>
+      {children}
+    </ConsultationDurationContext.Provider>
   );
 }

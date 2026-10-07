@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
+import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
 
 type Props = {
   name: string;
@@ -13,6 +14,10 @@ type Props = {
    * Hour/minute are not HTML-required; `required` applies to the date input only.
    */
   timeOptional?: boolean;
+  /** Minute choices are 00, 05, 10, … 55. An existing off-grid minute stays selectable. */
+  fiveMinuteSteps?: boolean;
+  /** Date box fits `dd/mm/yyyy`, with the calendar button beside it. */
+  compactDate?: boolean;
   uiLanguage?: "en" | "he";
   dateAriaLabel?: string;
   hourAriaLabel?: string;
@@ -28,6 +33,8 @@ export function SplitDateTimeField({
   initialValue = "",
   required = false,
   timeOptional = false,
+  fiveMinuteSteps = false,
+  compactDate = false,
   uiLanguage = "en",
   dateAriaLabel,
   hourAriaLabel,
@@ -53,8 +60,11 @@ export function SplitDateTimeField({
     [],
   );
   const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
-    [],
+    () =>
+      fiveMinuteSteps
+        ? fiveMinuteClockOptions(minute)
+        : Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
+    [fiveMinuteSteps, minute],
   );
   const timeRequired = required && !timeOptional;
   const value = useMemo(() => {
@@ -70,11 +80,12 @@ export function SplitDateTimeField({
   return (
     <div className={wrapperClassName}>
       <input type="hidden" name={name} value={value} />
-      <span className="min-w-0 w-full">
+      <span className={compactDate ? "shrink-0" : "min-w-0 w-full"}>
         <HouseholdDateIsoControl
           valueIso={date}
           onIsoChange={setDate}
           required={required}
+          compact={compactDate}
           className={dateInputClassName}
           aria-label={dateAriaLabel ?? defaultDateAriaLabel}
         />

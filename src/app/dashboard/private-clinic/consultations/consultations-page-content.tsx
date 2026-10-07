@@ -560,7 +560,7 @@ export async function ConsultationsPageContent({
             dateTime: co.dateTime,
             amountLabel: co.amountLabel,
             linkedTx: co.linkTx,
-            clients: co.clients,
+            clients: co.client,
             selectClientPlaceholder: co.selectClientPlaceholder,
             addAdditionalClient: co.addAdditionalClient,
             remove: c.remove,

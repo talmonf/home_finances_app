@@ -39,33 +39,37 @@ export function ConsultationRescheduleForm({
         <input type="hidden" name="redirect_on_success" value={redirectOnSuccess} />
         <input type="hidden" name="redirect_on_error" value={redirectOnError} />
         <input type="hidden" name="id" value={consultationId} />
-        <div>
-          <label className="block text-xs text-slate-400">{labels.dateTime}</label>
-          <div className="mt-1">
-            <SplitDateTimeField
-              name="occurred_at"
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs text-slate-400">{labels.dateTime}</label>
+            <div className="mt-1">
+              <SplitDateTimeField
+                name="occurred_at"
+                required
+                fiveMinuteSteps
+                compactDate
+                initialValue={initialOccurredAt}
+                uiLanguage={uiLanguage}
+                wrapperClassName="flex items-end gap-2"
+                dateInputClassName="h-[38px] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
+                selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400">{labels.duration}</label>
+            <input
+              name="duration_minutes"
+              type="number"
+              min={1}
+              max={999}
+              step={1}
               required
-              initialValue={initialOccurredAt}
-              uiLanguage={uiLanguage}
-              wrapperClassName="flex flex-wrap items-end gap-2"
-              dateInputClassName="h-[38px] w-[11.25rem] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
-              selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+              defaultValue={initialDurationMinutes}
+              className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             />
           </div>
-        </div>
-        <div>
-          <label className="block text-xs text-slate-400">{labels.duration}</label>
-          <input
-            name="duration_minutes"
-            type="number"
-            min={1}
-            max={999}
-            step={1}
-            required
-            defaultValue={initialDurationMinutes}
-            className="mt-1 w-28 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <PendingSubmitButtonWithSpinner

@@ -13,20 +13,27 @@ type Props = {
     remove: string;
   };
   initialParticipantIds: string[];
+  /** Sit in one grid column beside Type, instead of spanning the form. */
+  column?: boolean;
 };
 
 function initialRows(ids: string[]): string[] {
   return ids.length > 0 ? [...ids] : [""];
 }
 
-export function ConsultationModalParticipantsPicker({ clients, labels, initialParticipantIds }: Props) {
+export function ConsultationModalParticipantsPicker({
+  clients,
+  labels,
+  initialParticipantIds,
+  column = false,
+}: Props) {
   const [participantIds, setParticipantIds] = useState<string[]>(() => initialRows(initialParticipantIds));
   const selectedIds = useMemo(() => new Set(participantIds.filter(Boolean)), [participantIds]);
 
   return (
-    <div className="md:col-span-2">
+    <div className={column ? undefined : "md:col-span-2"}>
       <span className="block text-xs text-slate-400">{labels.clients}</span>
-      <div className="mt-2 space-y-2">
+      <div className={column ? "mt-1 space-y-2" : "mt-2 space-y-2"}>
         {participantIds.map((clientId, index) => (
           <div key={`consultation-client-${index}`} className="flex items-center gap-2">
             <select
@@ -37,7 +44,11 @@ export function ConsultationModalParticipantsPicker({ clients, labels, initialPa
                 next[index] = e.target.value;
                 setParticipantIds(next);
               }}
-              className="w-full max-w-sm rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className={
+                column
+                  ? "w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  : "w-full max-w-sm rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              }
             >
               <option value="">{labels.selectClientPlaceholder}</option>
               {clients.map((cl) => (

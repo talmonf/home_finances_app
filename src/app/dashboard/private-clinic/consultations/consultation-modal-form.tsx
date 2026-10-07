@@ -4,7 +4,10 @@ import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-butt
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
 import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
-import { ConsultationModalJobProgramFields } from "./consultation-modal-job-program-fields";
+import {
+  ConsultationModalJobProgramFields,
+  ConsultationScheduleDurationField,
+} from "./consultation-modal-job-program-fields";
 import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
 import { ConsultationModalCancelLink, ConsultationModalShell } from "./consultation-modal-shell";
 
@@ -114,12 +117,13 @@ export function ConsultationModalForm({
           initialJobId={initial?.job_id}
           initialProgramId={initial?.program_id}
           scheduleDuration={scheduling ? scheduleDuration : undefined}
+          inlineDuration={scheduling}
           labels={{
             job: labels.job,
             program: labels.program,
             select: labels.select,
           }}
-        />
+        >
         <div>
           <label className="block text-xs text-slate-400">{labels.type}</label>
           <select
@@ -136,21 +140,59 @@ export function ConsultationModalForm({
             ))}
           </select>
         </div>
+        {scheduling ? (
+          <ConsultationModalParticipantsPicker
+            column
+            clients={clients}
+            initialParticipantIds={initial?.participant_ids ?? []}
+            labels={{
+              clients: labels.clients,
+              selectClientPlaceholder: labels.selectClientPlaceholder,
+              addAdditionalClient: labels.addAdditionalClient,
+              remove: labels.remove,
+            }}
+          />
+        ) : null}
         <div className="md:col-span-2">
-          <label className="block text-xs text-slate-400">{labels.dateTime}</label>
-          <div className="mt-1">
-            <SplitDateTimeField
-              name="occurred_at"
-              required
-              timeOptional={!scheduling}
-              initialValue={initial?.occurred_at}
-              uiLanguage={uiLanguage}
-              wrapperClassName="flex flex-wrap items-end gap-2"
-              dateInputClassName="h-[38px] w-[11.25rem] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-              timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
-              selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
-          </div>
+          {scheduling ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs text-slate-400">{labels.dateTime}</label>
+                <div className="mt-1">
+                  <SplitDateTimeField
+                    name="occurred_at"
+                    required
+                    fiveMinuteSteps
+                    compactDate
+                    initialValue={initial?.occurred_at}
+                    uiLanguage={uiLanguage}
+                    wrapperClassName="flex items-end gap-2"
+                    dateInputClassName="h-[38px] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                    timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
+                    selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                  />
+                </div>
+              </div>
+              <ConsultationScheduleDurationField />
+            </div>
+          ) : (
+            <>
+              <label className="block text-xs text-slate-400">{labels.dateTime}</label>
+              <div className="mt-1">
+                <SplitDateTimeField
+                  name="occurred_at"
+                  required
+                  timeOptional
+                  initialValue={initial?.occurred_at}
+                  uiLanguage={uiLanguage}
+                  wrapperClassName="flex flex-wrap items-end gap-2"
+                  dateInputClassName="h-[38px] w-[11.25rem] shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                  timeWrapperClassName="grid w-[8.5rem] shrink-0 grid-cols-2 gap-2"
+                  selectClassName="w-full min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
+                />
+              </div>
+            </>
+          )}
         </div>
         {scheduling ? null : (
         <div>
@@ -170,6 +212,7 @@ export function ConsultationModalForm({
           </div>
         </div>
         )}
+        {scheduling ? null : (
         <ConsultationModalParticipantsPicker
           clients={clients}
           initialParticipantIds={initial?.participant_ids ?? []}
@@ -180,6 +223,8 @@ export function ConsultationModalForm({
             remove: labels.remove,
           }}
         />
+        )}
+        </ConsultationModalJobProgramFields>
         <div className="md:col-span-2">
           <label className="block text-xs text-slate-400">{labels.notes}</label>
           <textarea
