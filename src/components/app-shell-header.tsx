@@ -39,7 +39,10 @@ export function AppShellHeader({
   const homeTitle = appBrandingStrings("home", uiLanguage).title;
   const clinicProductTitle = appBrandingStrings("clinic", uiLanguage).title;
   const clinicShortTitle = privateClinicLayoutStrings(uiLanguage).title;
-  const clinicActive = pathname.startsWith("/dashboard/private-clinic");
+  const onSharedCalendar =
+    pathname === "/dashboard/calendar" || pathname.startsWith("/dashboard/calendar/");
+  const clinicActive =
+    pathname.startsWith("/dashboard/private-clinic") || (clinicEnabled && onSharedCalendar);
   const showModuleSwitcher = householdMember && clinicEnabled && householdEnabled;
   const clinicOnly = householdMember && clinicEnabled && !householdEnabled;
   const showUserGuide = householdMember && clinicEnabled && clinicActive;

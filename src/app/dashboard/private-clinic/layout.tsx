@@ -1,16 +1,10 @@
-import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
-import {
-  privateClinicLayoutStrings,
-  privateClinicNavLabel,
-} from "@/lib/private-clinic-i18n";
-import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
+import { getAuthSession } from "@/lib/auth";
 import {
   ensureDefaultConsultationTypes,
   ensureDefaultExpenseCategories,
   ensureTherapySettings,
 } from "@/lib/therapy/bootstrap";
-import { getPrivateClinicReminderBadgeCount } from "@/lib/private-clinic/reminder-badge";
-import PrivateClinicNavClient from "./private-clinic-nav-client";
+import { PrivateClinicSectionNav } from "./private-clinic-section-nav";
 import { PrivateClinicNavPendingProvider } from "./private-clinic-nav-pending-context";
 import PrivateClinicUsageTracker from "./usage-tracker";
 
@@ -20,44 +14,11 @@ export default async function PrivateClinicLayout({
   children: React.ReactNode;
 }) {
   const session = await getAuthSession();
-  const uiLanguage = await getCurrentUiLanguage();
-  const layoutCopy = privateClinicLayoutStrings(uiLanguage);
   const householdId = session?.user?.householdId;
-  const userId = session?.user?.id;
   if (householdId && !session?.user?.isSuperAdmin) {
     await ensureTherapySettings(householdId);
     await ensureDefaultExpenseCategories(householdId);
     await ensureDefaultConsultationTypes(householdId);
-  }
-
-  let navItems = getVisiblePrivateClinicNavItems(null);
-  if (householdId && !session?.user?.isSuperAdmin) {
-    const settings = await prisma.therapy_settings.findUnique({
-      where: { household_id: householdId },
-      select: { nav_tabs_json: true, family_therapy_enabled: true },
-    });
-    navItems = getVisiblePrivateClinicNavItems(settings?.nav_tabs_json);
-    if (!settings?.family_therapy_enabled) {
-      navItems = navItems.filter((item) => item.key !== "families");
-    }
-  }
-
-  let reminderBadgeCount: number | null = null;
-  if (
-    householdId &&
-    userId &&
-    !session?.user?.isSuperAdmin &&
-    navItems.some((i) => i.key === "reminders")
-  ) {
-    const userRow = await prisma.users.findFirst({
-      where: { id: userId, household_id: householdId, is_active: true },
-      select: { family_member_id: true },
-    });
-    reminderBadgeCount = await getPrivateClinicReminderBadgeCount(
-      prisma,
-      householdId,
-      userRow?.family_member_id ?? null,
-    );
   }
 
   return (
@@ -65,25 +26,7 @@ export default async function PrivateClinicLayout({
       <div className="w-full min-w-0 max-w-screen-2xl space-y-3 sm:space-y-4">
         <PrivateClinicNavPendingProvider>
           <PrivateClinicUsageTracker />
-          <header className="space-y-2">
-            <PrivateClinicNavClient
-              navAriaLabel={layoutCopy.navAriaLabel}
-              moreMenuLabel={layoutCopy.moreMenuLabel}
-              items={navItems.map((item) => ({
-                key: item.key,
-                href: item.href,
-                label: privateClinicNavLabel(item.key, uiLanguage),
-                placement: item.placement,
-                reminderBadgeCount: item.key === "reminders" ? reminderBadgeCount : null,
-                reminderBadgeAriaLabel:
-                  item.key === "reminders" && reminderBadgeCount != null
-                    ? uiLanguage === "he"
-                      ? `${reminderBadgeCount} תזכורות קרובות`
-                      : `${reminderBadgeCount} upcoming reminders`
-                    : undefined,
-              }))}
-            />
-          </header>
+          <PrivateClinicSectionNav />
           {children}
         </PrivateClinicNavPendingProvider>
       </div>

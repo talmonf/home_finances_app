@@ -1,0 +1,69 @@
+import { getAuthSession, getCurrentUiLanguage, prisma } from "@/lib/auth";
+import {
+  privateClinicLayoutStrings,
+  privateClinicNavLabel,
+} from "@/lib/private-clinic-i18n";
+import { getVisiblePrivateClinicNavItems } from "@/lib/private-clinic-nav";
+import { getPrivateClinicReminderBadgeCount } from "@/lib/private-clinic/reminder-badge";
+import PrivateClinicNavClient from "./private-clinic-nav-client";
+
+/** Clinic section buttons (Overview, Clients, Calendar, and the rest). */
+export async function PrivateClinicSectionNav() {
+  const session = await getAuthSession();
+  const uiLanguage = await getCurrentUiLanguage();
+  const layoutCopy = privateClinicLayoutStrings(uiLanguage);
+  const householdId = session?.user?.householdId;
+  const userId = session?.user?.id;
+
+  let navItems = getVisiblePrivateClinicNavItems(null);
+  if (householdId && !session?.user?.isSuperAdmin) {
+    const settings = await prisma.therapy_settings.findUnique({
+      where: { household_id: householdId },
+      select: { nav_tabs_json: true, family_therapy_enabled: true },
+    });
+    navItems = getVisiblePrivateClinicNavItems(settings?.nav_tabs_json);
+    if (!settings?.family_therapy_enabled) {
+      navItems = navItems.filter((item) => item.key !== "families");
+    }
+  }
+
+  let reminderBadgeCount: number | null = null;
+  if (
+    householdId &&
+    userId &&
+    !session?.user?.isSuperAdmin &&
+    navItems.some((i) => i.key === "reminders")
+  ) {
+    const userRow = await prisma.users.findFirst({
+      where: { id: userId, household_id: householdId, is_active: true },
+      select: { family_member_id: true },
+    });
+    reminderBadgeCount = await getPrivateClinicReminderBadgeCount(
+      prisma,
+      householdId,
+      userRow?.family_member_id ?? null,
+    );
+  }
+
+  return (
+    <header className="space-y-2">
+      <PrivateClinicNavClient
+        navAriaLabel={layoutCopy.navAriaLabel}
+        moreMenuLabel={layoutCopy.moreMenuLabel}
+        items={navItems.map((item) => ({
+          key: item.key,
+          href: item.href,
+          label: privateClinicNavLabel(item.key, uiLanguage),
+          placement: item.placement,
+          reminderBadgeCount: item.key === "reminders" ? reminderBadgeCount : null,
+          reminderBadgeAriaLabel:
+            item.key === "reminders" && reminderBadgeCount != null
+              ? uiLanguage === "he"
+                ? `${reminderBadgeCount} תזכורות קרובות`
+                : `${reminderBadgeCount} upcoming reminders`
+              : undefined,
+        }))}
+      />
+    </header>
+  );
+}

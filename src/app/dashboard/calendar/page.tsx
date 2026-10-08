@@ -23,6 +23,8 @@ import { calendarIntro, calendarStrings } from "@/lib/calendar/strings";
 import { formatIsoDateStringForHousehold } from "@/lib/household-date-format";
 import { getEffectiveEnabledSections, getHouseholdModuleFlags } from "@/lib/household-sections";
 import { redirect } from "next/navigation";
+import { PrivateClinicSectionNav } from "../private-clinic/private-clinic-section-nav";
+import { PrivateClinicNavPendingProvider } from "../private-clinic/private-clinic-nav-pending-context";
 import { CalendarBoard } from "./calendar-view";
 
 export const dynamic = "force-dynamic";
@@ -109,9 +111,28 @@ export default async function CalendarPage({
     month: calendarHref("month", anchor),
   } as const;
 
+  const showClinicNav = moduleFlags.clinicEnabled;
+
   return (
-    <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-8">
-      <div className="w-full max-w-screen-2xl">
+    <div
+      className={
+        showClinicNav
+          ? "flex min-h-dvh justify-center bg-slate-950 px-3 py-3 sm:px-5 sm:py-4 lg:px-8"
+          : "flex min-h-screen justify-center bg-slate-950 px-4 py-8"
+      }
+    >
+      <div
+        className={
+          showClinicNav
+            ? "w-full min-w-0 max-w-screen-2xl space-y-3 sm:space-y-4"
+            : "w-full max-w-screen-2xl"
+        }
+      >
+        {showClinicNav ? (
+          <PrivateClinicNavPendingProvider>
+            <PrivateClinicSectionNav />
+          </PrivateClinicNavPendingProvider>
+        ) : null}
         <CalendarBoard
           copy={copy}
           kinds={kinds}
