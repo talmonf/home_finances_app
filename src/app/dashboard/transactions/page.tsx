@@ -6,7 +6,7 @@ import {
   getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { formatHouseholdDate, parseToDateAsEndOfUtcDay } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
@@ -64,7 +64,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const subscriptionId = resolved.subscriptionId || "";
   const direction = resolved.direction && resolved.direction !== "all" ? resolved.direction : undefined;
   const from = resolved.from ? new Date(resolved.from) : undefined;
-  const to = resolved.to ? new Date(resolved.to) : undefined;
+  const to = resolved.to ? (parseToDateAsEndOfUtcDay(resolved.to) ?? undefined) : undefined;
 
   const where: {
     household_id: string;

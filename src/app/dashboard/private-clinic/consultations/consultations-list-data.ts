@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { parseToDateAsEndOfIsraelDay } from "@/lib/household-date-format";
 import {
   addAmountToTotalsByCurrency,
   normalizeListAmountCurrency,
@@ -180,7 +181,7 @@ function whereForConsultationsList(params: {
 }): Prisma.therapy_consultationsWhereInput {
   const { householdId, familyMemberId, filters } = params;
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
 
   return {
     household_id: householdId,

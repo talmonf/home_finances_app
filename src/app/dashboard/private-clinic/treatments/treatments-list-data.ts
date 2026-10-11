@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { parseToDateAsEndOfIsraelDay } from "@/lib/household-date-format";
 import {
   addAmountToTotalsByCurrency,
   sortAmountTotalsByCurrency,
@@ -168,7 +169,7 @@ export async function loadTreatmentsCursorPage(params: {
 }): Promise<TreatmentsCursorPage> {
   const { householdId, familyMemberId, filters, take, cursorId } = params;
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
 
   const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
@@ -258,7 +259,7 @@ export async function loadTreatmentsAmountTotal(params: {
 }): Promise<AmountTotalsByCurrency> {
   const { householdId, familyMemberId, filters } = params;
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
 
   const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
@@ -303,7 +304,7 @@ export async function loadTreatmentsListRecordCount(params: {
 }): Promise<number> {
   const { householdId, familyMemberId, filters } = params;
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
 
   const baseWhere = treatmentsListWhereInput({ householdId, familyMemberId, filters, from, to });
 
@@ -357,7 +358,7 @@ export async function loadTreatmentsClientFilterOptions(params: {
   const { householdId, familyMemberId, filters } = params;
   const filtersWithoutClient = { ...filters, client: "" };
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
   const baseWhere = treatmentsListWhereInput({
     householdId,
     familyMemberId,

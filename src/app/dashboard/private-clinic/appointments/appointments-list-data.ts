@@ -1,3 +1,4 @@
+import { parseToDateAsEndOfIsraelDay } from "@/lib/household-date-format";
 import {
   listAppointmentsForHousehold,
   parseAppointmentListStatusFilter,
@@ -73,7 +74,7 @@ export async function loadAppointmentListRows(params: {
     jobId: params.filters.job || undefined,
     clientId: params.filters.client || undefined,
     fromDate: parseDateFilter(params.filters.from),
-    toDate: parseDateFilter(params.filters.to),
+    toDate: parseToDateAsEndOfIsraelDay(params.filters.to),
   });
   return sortAppointmentListRows(rows, now, params.filters.status);
 }

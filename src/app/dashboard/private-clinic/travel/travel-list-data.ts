@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { parseToDateAsEndOfIsraelDay } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import { sortAmountTotalsByCurrency, type AmountTotalsByCurrency } from "@/lib/private-clinic/list-amount-totals";
@@ -36,7 +37,7 @@ function whereForTravelList(params: {
 }): Prisma.therapy_travel_entriesWhereInput {
   const { householdId, familyMemberId, filters } = params;
   const from = parseDateFilter(filters.from);
-  const to = parseDateFilter(filters.to);
+  const to = parseToDateAsEndOfIsraelDay(filters.to);
   const jobScope = jobWherePrivateClinicScoped(familyMemberId);
 
   return {

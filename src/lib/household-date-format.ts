@@ -113,6 +113,71 @@ export function zonedTimeToUtcDate(
   return Number.isNaN(out.getTime()) ? null : out;
 }
 
+const ISRAEL_CALENDAR_YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Last millisecond of the Asia/Jerusalem calendar day for `yyyy-mm-dd`.
+ * Date-only filters use this so the chosen day includes every timestamp on that day.
+ */
+export function inclusiveEndOfIsraelCalendarDay(ymd: string): Date | null {
+  const match = ISRAEL_CALENDAR_YMD.exec(ymd.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const startOfNextDay = zonedTimeToUtcDate(
+    next.getUTCFullYear(),
+    next.getUTCMonth() + 1,
+    next.getUTCDate(),
+    0,
+    0,
+    0,
+    ISRAEL_TIME_ZONE,
+  );
+  if (!startOfNextDay) return null;
+  return new Date(startOfNextDay.getTime() - 1);
+}
+
+/**
+ * Date-only `yyyy-mm-dd` is the last instant of that Asia/Jerusalem day.
+ * Any other value is parsed as an instant.
+ */
+export function parseToDateAsEndOfIsraelDay(raw: string): Date | null {
+  const text = raw.trim();
+  if (!text) return null;
+  if (ISRAEL_CALENDAR_YMD.test(text)) return inclusiveEndOfIsraelCalendarDay(text);
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** Date-only `yyyy-mm-dd` is 23:59:59.999 UTC that day. Any other value is parsed as an instant. */
+export function parseToDateAsEndOfUtcDay(raw: string): Date | null {
+  const text = raw.trim();
+  if (!text) return null;
+  const match = ISRAEL_CALENDAR_YMD.exec(text);
+  if (!match) {
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) {
+    return null;
+  }
+  return new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+}
+
 export function formatYmdParts(
   year: number,
   month: number,
