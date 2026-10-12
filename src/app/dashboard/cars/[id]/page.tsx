@@ -456,7 +456,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                     <th className="px-3 py-2 text-slate-300">Expires</th>
                     <th className="px-3 py-2 text-slate-300">Cost</th>
                     <th className="px-3 py-2 text-slate-300">Payment</th>
-                    <th className="px-3 py-2 text-slate-300">Receipt</th>
+                    <th className="px-3 py-2 text-slate-300">License/Receipt</th>
                     <th className="px-3 py-2 text-slate-300">Notes</th>
                     <th className="px-3 py-2 text-slate-300">Action</th>
                   </tr>

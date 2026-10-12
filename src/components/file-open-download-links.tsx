@@ -7,19 +7,24 @@ const linkClass =
 export function ProxiedFileOpenDownloadLinks({
   downloadApiPath,
   downloadFileName,
+  showOpen = true,
 }: {
   downloadApiPath: string;
   /** Hint for the browser; server Content-Disposition still applies for proxied routes */
   downloadFileName?: string;
+  /** Some stored files always download, so Open is omitted. */
+  showOpen?: boolean;
 }) {
   const sep = downloadApiPath.includes("?") ? "&" : "?";
   const openHref = `${downloadApiPath}${sep}disposition=inline`;
   const downloadHref = `${downloadApiPath}${sep}disposition=attachment`;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a href={openHref} target="_blank" rel="noreferrer" className={linkClass}>
-        Open
-      </a>
+      {showOpen ? (
+        <a href={openHref} target="_blank" rel="noreferrer" className={linkClass}>
+          Open
+        </a>
+      ) : null}
       <a href={downloadHref} className={linkClass} download={downloadFileName}>
         Download
       </a>

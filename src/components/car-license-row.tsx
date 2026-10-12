@@ -80,6 +80,7 @@ export function CarLicenseRow({
           {license.hasReceipt ? (
             <ProxiedFileOpenDownloadLinks
               downloadApiPath={`/api/cars/licenses/${license.id}/download`}
+              showOpen={false}
             />
           ) : (
             <span className="text-xs text-slate-500">—</span>
@@ -199,6 +200,7 @@ export function CarLicenseRow({
                       <p className="mb-1.5 text-xs font-medium text-slate-400">Current file</p>
                       <ProxiedFileOpenDownloadLinks
                         downloadApiPath={`/api/cars/licenses/${license.id}/download`}
+                        showOpen={false}
                       />
                     </div>
                     <div className="border-t border-slate-700/80 pt-3">

@@ -165,6 +165,63 @@ test("filterRenewalRowsByDaysAhead keeps paired special-date rows when either da
   assert.deepEqual(filtered.map((r) => r.id), ["special-date-gregorian-s1", "special-date-hebrew-s1"]);
 });
 
+test("currentCarLicensesByVehicle keeps only the latest expiry per car", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const { currentCarLicensesByVehicle } = await import("@/lib/upcoming-renewals/compute");
+
+  const licenses = [
+    {
+      id: "old-toyota",
+      car_id: "toyota",
+      expires_at: new Date("2026-10-15T00:00:00.000Z"),
+      renewed_at: new Date("2025-10-16T00:00:00.000Z"),
+    },
+    {
+      id: "renewed-toyota",
+      car_id: "toyota",
+      expires_at: new Date("2027-10-15T00:00:00.000Z"),
+      renewed_at: new Date("2026-10-03T00:00:00.000Z"),
+    },
+    {
+      id: "hyundai",
+      car_id: "hyundai",
+      expires_at: new Date("2026-10-19T00:00:00.000Z"),
+      renewed_at: new Date("2025-10-19T00:00:00.000Z"),
+    },
+  ];
+
+  const current = currentCarLicensesByVehicle(licenses);
+  assert.deepEqual(
+    current.map((license) => license.id).sort(),
+    ["hyundai", "renewed-toyota"],
+  );
+});
+
+test("currentCarLicensesByVehicle breaks expiry ties by later renewal date", async () => {
+  process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
+  const { currentCarLicensesByVehicle } = await import("@/lib/upcoming-renewals/compute");
+
+  const current = currentCarLicensesByVehicle([
+    {
+      id: "a",
+      car_id: "car",
+      expires_at: new Date("2027-10-15T00:00:00.000Z"),
+      renewed_at: new Date("2026-10-01T00:00:00.000Z"),
+    },
+    {
+      id: "b",
+      car_id: "car",
+      expires_at: new Date("2027-10-15T00:00:00.000Z"),
+      renewed_at: new Date("2026-10-03T00:00:00.000Z"),
+    },
+  ]);
+
+  assert.deepEqual(
+    current.map((license) => license.id),
+    ["b"],
+  );
+});
+
 test("matchesRenewalIntervalFilter defaults annual to non-monthly rows", async () => {
   process.env.DATABASE_URL ??= "postgresql://user:pass@127.0.0.1:5432/testdb";
   const {

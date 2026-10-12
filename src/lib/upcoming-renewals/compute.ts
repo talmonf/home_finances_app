@@ -54,6 +54,41 @@ export function dateOnlyLocal(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+type CarLicenseExpiryCandidate = {
+  id: string;
+  car_id: string;
+  expires_at: Date;
+  renewed_at: Date | null;
+};
+
+/**
+ * Each car license row is a payment in the history. The vehicle's next expiry
+ * is the latest `expires_at`; an earlier row has already been renewed.
+ */
+export function currentCarLicensesByVehicle<T extends CarLicenseExpiryCandidate>(licenses: T[]): T[] {
+  const byCar = new Map<string, T>();
+  for (const license of licenses) {
+    const existing = byCar.get(license.car_id);
+    if (!existing || isMoreCurrentCarLicense(license, existing)) {
+      byCar.set(license.car_id, license);
+    }
+  }
+  return [...byCar.values()];
+}
+
+function isMoreCurrentCarLicense(
+  candidate: CarLicenseExpiryCandidate,
+  existing: CarLicenseExpiryCandidate,
+): boolean {
+  const expiryDelta = candidate.expires_at.getTime() - existing.expires_at.getTime();
+  if (expiryDelta !== 0) return expiryDelta > 0;
+  const renewedDelta =
+    (candidate.renewed_at?.getTime() ?? Number.NEGATIVE_INFINITY) -
+    (existing.renewed_at?.getTime() ?? Number.NEGATIVE_INFINITY);
+  if (renewedDelta !== 0) return renewedDelta > 0;
+  return candidate.id > existing.id;
+}
+
 function localIsoDate(d: Date): string {
   const x = dateOnlyLocal(d);
   const m = String(x.getMonth() + 1).padStart(2, "0");
@@ -468,7 +503,7 @@ export async function computeUpcomingRenewals(
       }
       return parts;
     }),
-    ...carLicenses.map((l) => ({
+    ...currentCarLicensesByVehicle(carLicenses).map((l) => ({
       id: `car-license-${l.id}`,
       category: "Car license",
       itemName: `${l.car.maker} ${l.car.model}${l.car.plate_number ? ` · ${l.car.plate_number}` : ""}`,
