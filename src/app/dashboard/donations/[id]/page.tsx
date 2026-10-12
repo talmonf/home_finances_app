@@ -81,6 +81,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
     if (!found) {
       const preserved = await prisma.credit_cards.findFirst({
         where: { id: donation.credit_card_id, household_id: householdId },
+        include: { family_member: { select: { full_name: true } } },
       });
       if (preserved) creditCards.push(preserved);
     }
