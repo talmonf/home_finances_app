@@ -6,6 +6,7 @@ import {
   getCurrentUiLanguage,
   getCurrentObfuscateSensitive,
 } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { findCurrentRental } from "@/lib/rental-current";
 import { maskSensitiveText } from "@/lib/privacy-display";
@@ -58,11 +59,15 @@ function formatUtilityPaymentMethod(
   obfuscate: boolean,
   utility: {
     bank_account: { bank_name: string; account_number: string | null } | null;
-    credit_card: { card_last_four: string } | null;
+    credit_card: {
+      card_name: string;
+      card_last_four: string;
+      family_member: { full_name: string } | null;
+    } | null;
   },
 ): string {
   if (utility.credit_card) {
-    return maskSensitiveText(obfuscate, `****${utility.credit_card.card_last_four}`);
+    return maskSensitiveText(obfuscate, formatCreditCardOptionLabel(utility.credit_card));
   }
   if (utility.bank_account) {
     const parts = [
@@ -104,7 +109,13 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
           include: {
             payee: true,
             bank_account: { select: { bank_name: true, account_number: true } },
-            credit_card: { select: { card_last_four: true } },
+            credit_card: {
+              select: {
+                card_name: true,
+                card_last_four: true,
+                family_member: { select: { full_name: true } },
+              },
+            },
           },
           orderBy: { provider_name: "asc" },
         },
@@ -130,7 +141,12 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { card_name: "asc" },
-      select: { id: true, card_name: true, card_last_four: true },
+      select: {
+        id: true,
+        card_name: true,
+        card_last_four: true,
+        family_member: { select: { full_name: true } },
+      },
     }),
   ]);
 

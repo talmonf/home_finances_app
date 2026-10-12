@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { monthlyOccurrencesInRange } from "@/lib/calendar/model";
 import { loadUpcomingFamilyEventRows } from "@/lib/family-events/upcoming";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
@@ -431,7 +432,7 @@ export async function computeUpcomingRenewals(
       .map((c) => ({
         id: `card-${c.id}`,
         category: "Credit card",
-        itemName: c.card_name,
+        itemName: formatCreditCardOptionLabel(c),
         owner: c.family_member?.full_name ?? (isHebrew ? "משק הבית" : "Household"),
         ownerId: c.family_member?.id ?? null,
         renewalDate: c.expiry_date as Date,
@@ -443,7 +444,7 @@ export async function computeUpcomingRenewals(
       .map((c) => ({
         id: `card-no-charge-${c.id}`,
         category: "Credit card",
-        itemName: c.card_name,
+        itemName: formatCreditCardOptionLabel(c),
         owner: c.family_member?.full_name ?? (isHebrew ? "משק הבית" : "Household"),
         ownerId: c.family_member?.id ?? null,
         renewalDate: c.no_charge_policy_valid_until as Date,

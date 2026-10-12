@@ -4,6 +4,7 @@ import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { formatRentalTypeLabel } from "@/lib/rental-labels";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { SensitiveTextarea, SensitiveTextInput } from "@/components/sensitive-fields";
 import RentalContractUpload from "../RentalContractUpload";
 import {
@@ -21,7 +22,12 @@ import { RentalUtilityAddRow } from "./rental-utility-add-row";
 import { RENTAL_PAYMENT_METHODS, RENTAL_TYPES } from "./rental-form-constants";
 
 type BankAccountOption = { id: string; account_name: string };
-type CreditCardOption = { id: string; card_name: string; card_last_four: string };
+type CreditCardOption = {
+  id: string;
+  card_name: string;
+  card_last_four: string;
+  family_member?: { full_name: string | null } | null;
+};
 
 type RentalTenant = {
   id: string;
@@ -250,7 +256,7 @@ export function RentalDetailPanel({
             <option value="">— None —</option>
             {creditCards.map((c) => (
               <option key={c.id} value={c.id}>
-                {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
               </option>
             ))}
           </select>

@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { SetupSectionDoneInlineToggle } from "@/app/dashboard/setup-section-done-inline-toggle";
 import { getSetupSectionIsDone } from "@/lib/setup-section-status";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -53,8 +54,8 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
       include: {
         linked_bank_account: true,
         family_member: true,
-        primary_credit_card: true,
-        secondary_credit_card: true,
+        primary_credit_card: { include: { family_member: { select: { full_name: true } } } },
+        secondary_credit_card: { include: { family_member: { select: { full_name: true } } } },
       },
     }),
     prisma.bank_accounts.findMany({
@@ -69,7 +70,14 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
     prisma.credit_cards.findMany({
       where: { household_id: householdId },
       orderBy: { card_name: "asc" },
-      select: { id: true, card_name: true, card_last_four: true, cancelled_at: true, expiry_date: true },
+      select: {
+        id: true,
+        card_name: true,
+        card_last_four: true,
+        cancelled_at: true,
+        expiry_date: true,
+        family_member: { select: { full_name: true } },
+      },
     }),
     getSetupSectionIsDone(householdId, "digitalPaymentMethods"),
   ]);
@@ -152,10 +160,10 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <tbody>
                   {methods.map((m) => {
                     const primaryCardLabel = m.primary_credit_card
-                      ? `${m.primary_credit_card.card_name} · ****${m.primary_credit_card.card_last_four}`
+                      ? formatCreditCardOptionLabel(m.primary_credit_card)
                       : "";
                     const secondaryCardLabel = m.secondary_credit_card
-                      ? `${m.secondary_credit_card.card_name} · ****${m.secondary_credit_card.card_last_four}`
+                      ? formatCreditCardOptionLabel(m.secondary_credit_card)
                       : "";
                     const bankLabel = m.linked_bank_account
                       ? `${m.linked_bank_account.account_name} (${m.linked_bank_account.bank_name})`
@@ -313,7 +321,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>
@@ -331,7 +339,7 @@ export default async function DigitalPaymentMethodsPage({ searchParams }: PagePr
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

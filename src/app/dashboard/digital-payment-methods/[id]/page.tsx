@@ -7,6 +7,7 @@ import {
 import { HouseholdDateField } from "@/components/household-date-field";
 import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -42,8 +43,8 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
       where: { id, household_id: householdId },
       include: {
         family_member: true,
-        primary_credit_card: true,
-        secondary_credit_card: true,
+        primary_credit_card: { include: { family_member: { select: { full_name: true } } } },
+        secondary_credit_card: { include: { family_member: { select: { full_name: true } } } },
       },
     }),
     prisma.bank_accounts.findMany({
@@ -58,7 +59,14 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
     prisma.credit_cards.findMany({
       where: { household_id: householdId },
       orderBy: { card_name: "asc" },
-      select: { id: true, card_name: true, card_last_four: true, cancelled_at: true, expiry_date: true },
+      select: {
+        id: true,
+        card_name: true,
+        card_last_four: true,
+        cancelled_at: true,
+        expiry_date: true,
+        family_member: { select: { full_name: true } },
+      },
     }),
   ]);
 
@@ -174,7 +182,7 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>
@@ -192,7 +200,7 @@ export default async function DigitalPaymentMethodDetailPage({ params, searchPar
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

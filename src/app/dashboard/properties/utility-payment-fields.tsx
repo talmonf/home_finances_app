@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 export type UtilityBankAccountOption = {
   id: string;
@@ -13,6 +16,7 @@ export type UtilityCreditCardOption = {
   id: string;
   card_name: string;
   card_last_four: string;
+  family_member?: { full_name: string | null } | null;
 };
 
 export type UtilityPaymentMethodValue = "" | "bank_account" | "credit_card";
@@ -38,6 +42,7 @@ export function UtilityPaymentFields({
   isHebrew = false,
   className,
 }: UtilityPaymentFieldsProps) {
+  const obfuscate = useObfuscateSensitive();
   const [method, setMethod] = useState<UtilityPaymentMethodValue>(defaultPaymentMethod);
   const paymentMethodId = `${idPrefix}payment_method`;
   const bankAccountId = `${idPrefix}bank_account_id`;
@@ -95,7 +100,7 @@ export function UtilityPaymentFields({
           <option value="">{isHebrew ? "— אין —" : "— None —"}</option>
           {creditCards.map((card) => (
             <option key={card.id} value={card.id}>
-              {card.card_name} · ****{card.card_last_four}
+              {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(card))}
             </option>
           ))}
         </select>

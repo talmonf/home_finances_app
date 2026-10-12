@@ -59,7 +59,12 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { card_name: "asc" },
-      select: { id: true, card_name: true, card_last_four: true },
+      select: {
+        id: true,
+        card_name: true,
+        card_last_four: true,
+        family_member: { select: { full_name: true } },
+      },
     }),
   ]);
 

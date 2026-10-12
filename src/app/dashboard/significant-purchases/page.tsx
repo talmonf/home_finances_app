@@ -7,6 +7,7 @@ import {
   getCurrentObfuscateSensitive,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
@@ -32,30 +33,6 @@ const PURCHASE_SOURCE_TYPE_LABELS: Record<string, string> = {
   present: "Present",
   other: "Other",
 };
-
-function formatScheme(scheme: string) {
-  if (scheme === "amex") return "Amex";
-  if (scheme === "diners_club") return "Diners Club";
-  if (scheme === "isracard") return "Isracard";
-  if (scheme === "mastercard") return "Mastercard";
-  if (scheme === "visa") return "Visa";
-  return "Other";
-}
-
-function buildCreditCardLabel(card: {
-  card_name: string;
-  scheme: string;
-  issuer_name: string;
-  co_brand: string | null;
-  product_name: string | null;
-  card_last_four: string;
-  family_member: { full_name: string } | null;
-}) {
-  const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
-  const productPart = card.product_name ? ` / ${card.product_name}` : "";
-  const familyMemberName = card.family_member?.full_name ?? "Unassigned";
-  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four} (${familyMemberName})`;
-}
 
 type PageProps = {
   searchParams?: Promise<{
@@ -242,7 +219,7 @@ export default async function SignificantPurchasesPage({ searchParams }: PagePro
                 <option value="">— None —</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

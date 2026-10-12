@@ -1,3 +1,5 @@
+"use client";
+
 import { DashboardModal } from "@/components/dashboard-modal";
 import { HouseholdDateField } from "@/components/household-date-field";
 import {
@@ -7,9 +9,17 @@ import {
 import type { UiLanguage } from "@/lib/ui-language";
 import { medicalPaymentLabel, reimbursementSourceLabel } from "@/lib/ui-labels";
 import { createMedicalAppointment } from "./actions";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
+import { maskSensitiveText } from "@/lib/privacy-display";
 
 type FamilyMemberOption = { id: string; full_name: string };
-type CreditCardOption = { id: string; card_name: string; card_last_four: string };
+type CreditCardOption = {
+  id: string;
+  card_name: string;
+  card_last_four: string;
+  family_member?: { full_name: string | null } | null;
+};
 type BankAccountOption = { id: string; account_name: string; bank_name: string };
 type DigitalMethodOption = { id: string; name: string };
 
@@ -43,6 +53,7 @@ export function MedicalAppointmentModalForm({
   bankAccounts,
   digitalMethods,
 }: MedicalAppointmentModalFormProps) {
+  const obfuscate = useObfuscateSensitive();
   return (
     <DashboardModal title={title} closeHref={closeHref} closeLabel={closeLabel}>
       {errorMessage ? (
@@ -154,7 +165,7 @@ export function MedicalAppointmentModalForm({
                 <option value="">—</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.card_name} · ****{c.card_last_four}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

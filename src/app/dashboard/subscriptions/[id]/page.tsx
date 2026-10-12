@@ -9,6 +9,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
@@ -25,30 +26,6 @@ type PageProps = {
 function startOfToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function formatScheme(scheme: string) {
-  if (scheme === "amex") return "Amex";
-  if (scheme === "diners_club") return "Diners Club";
-  if (scheme === "isracard") return "Isracard";
-  if (scheme === "mastercard") return "Mastercard";
-  if (scheme === "visa") return "Visa";
-  return "Other";
-}
-
-function buildCreditCardLabel(card: {
-  card_name: string;
-  scheme: string;
-  issuer_name: string;
-  co_brand: string | null;
-  product_name: string | null;
-  card_last_four: string;
-  cancelled_at: Date | null;
-}) {
-  const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
-  const productPart = card.product_name ? ` / ${card.product_name}` : "";
-  const cancelledPart = card.cancelled_at ? " (cancelled)" : "";
-  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four}${cancelledPart}`;
 }
 
 export default async function EditSubscriptionPage({ params, searchParams }: PageProps) {
@@ -82,6 +59,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
           },
         ],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.digital_payment_methods.findMany({
@@ -295,7 +273,7 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

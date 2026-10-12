@@ -9,6 +9,7 @@ import {
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
 import Link from "next/link";
@@ -46,7 +47,11 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
   const [job, familyMembers, benefits, payrollEntries, documents, bankAccounts, creditCards] = await Promise.all([
     prisma.jobs.findFirst({
       where: { id, household_id: householdId },
-      include: { family_member: true, linked_bank_account: true, linked_credit_card: true },
+      include: {
+        family_member: true,
+        linked_bank_account: true,
+        linked_credit_card: { include: { family_member: { select: { full_name: true } } } },
+      },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -70,6 +75,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: [{ issuer_name: "asc" }, { card_name: "asc" }],
     }),
   ]);
@@ -232,7 +238,7 @@ export default async function JobDetailsPage({ params, searchParams }: PageProps
                   <option key={card.id} value={card.id}>
                     {maskSensitiveText(
                       obfuscate,
-                      `${card.card_name} — ${card.issuer_name} — ${card.card_last_four}`,
+                      formatCreditCardOptionLabel(card),
                     )}
                   </option>
                 ))}

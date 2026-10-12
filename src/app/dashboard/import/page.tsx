@@ -1,4 +1,5 @@
 import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLanguage, getCurrentObfuscateSensitive } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { maskSensitiveText } from "@/lib/privacy-display";
@@ -28,6 +29,7 @@ export default async function ImportPage({ searchParams }: PageProps) {
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.family_members.findMany({
@@ -51,7 +53,7 @@ export default async function ImportPage({ searchParams }: PageProps) {
     id: c.id,
     label: maskSensitiveText(
       obfuscate,
-      `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
+      formatCreditCardOptionLabel(c),
     ),
   }));
   const familyMemberOptions = familyMembers.map((m) => ({

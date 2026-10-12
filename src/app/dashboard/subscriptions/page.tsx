@@ -9,6 +9,7 @@ import {
 import { SubscriptionBillingIntervalFields } from "@/components/subscription-billing-interval-fields";
 import { SubscriptionFamilyJobSelects } from "@/components/subscription-family-job-selects";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
@@ -117,35 +118,17 @@ function formatMoneyWithCurrency(value: unknown, currency: string) {
   return `${amount} ${currency}`;
 }
 
-function formatScheme(scheme: string) {
-  if (scheme === "amex") return "Amex";
-  if (scheme === "diners_club") return "Diners Club";
-  if (scheme === "isracard") return "Isracard";
-  if (scheme === "mastercard") return "Mastercard";
-  if (scheme === "visa") return "Visa";
-  return "Other";
-}
-
-function buildCreditCardLabel(card: {
-  card_name: string;
-  scheme: string;
-  issuer_name: string;
-  co_brand: string | null;
-  product_name: string | null;
-  card_last_four: string;
-}) {
-  const coBrandPart = card.co_brand ? ` / ${card.co_brand}` : "";
-  const productPart = card.product_name ? ` / ${card.product_name}` : "";
-  return `${card.card_name} (${formatScheme(card.scheme)}) - ${card.issuer_name}${coBrandPart}${productPart} - ****${card.card_last_four}`;
-}
-
 function formatSubscriptionPaymentSummary(s: {
-  credit_card: { card_name: string } | null;
+  credit_card: {
+    card_name: string;
+    card_last_four: string;
+    family_member?: { full_name: string | null } | null;
+  } | null;
   digital_payment_method: { name: string } | null;
 }) {
   const parts: string[] = [];
   if (s.digital_payment_method?.name) parts.push(s.digital_payment_method.name);
-  if (s.credit_card?.card_name) parts.push(s.credit_card.card_name);
+  if (s.credit_card) parts.push(formatCreditCardOptionLabel(s.credit_card));
   return parts.length ? parts.join(" · ") : "—";
 }
 
@@ -191,7 +174,12 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     await Promise.all([
     prisma.subscriptions.findMany({
       where: listWhere,
-      include: { credit_card: true, digital_payment_method: true, family_member: true, job: true },
+      include: {
+        credit_card: { include: { family_member: { select: { full_name: true } } } },
+        digital_payment_method: true,
+        family_member: true,
+        job: true,
+      },
       orderBy: [{ renewal_date: "asc" }, { name: "asc" }],
     }),
     prisma.subscriptions.count({ where: { household_id: householdId } }),
@@ -201,6 +189,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         cancelled_at: null,
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.digital_payment_methods.findMany({
@@ -339,7 +328,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 {creditCards.map((c) => (
                   <option key={`cc-${c.id}`} value={`cc:${c.id}`}>
                     {isHebrew ? "כרטיס: " : "Card: "}
-                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
                 {digitalPaymentMethods.map((d) => (
@@ -695,7 +684,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 <option value="">None</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, buildCreditCardLabel(c))}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

@@ -1,9 +1,19 @@
+"use client";
+
 import { HouseholdDateField } from "@/components/household-date-field";
+import { useObfuscateSensitive } from "@/components/household-preferences-context";
 import { createRental } from "../../actions";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { RENTAL_PAYMENT_METHODS, RENTAL_TYPES } from "./rental-form-constants";
 
 type BankAccountOption = { id: string; account_name: string };
-type CreditCardOption = { id: string; card_name: string; card_last_four: string };
+type CreditCardOption = {
+  id: string;
+  card_name: string;
+  card_last_four: string;
+  family_member?: { full_name: string | null } | null;
+};
 
 type RentalModalFormProps = {
   propertyId: string;
@@ -20,6 +30,7 @@ export function RentalModalForm({
   closeHref,
   redirectOnError,
 }: RentalModalFormProps) {
+  const obfuscate = useObfuscateSensitive();
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 sm:p-8">
       <div className="max-h-[92vh] w-full max-w-screen-2xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
@@ -131,7 +142,7 @@ export function RentalModalForm({
               <option value="">— None —</option>
               {creditCards.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.card_name} · ****{c.card_last_four}
+                  {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                 </option>
               ))}
             </select>

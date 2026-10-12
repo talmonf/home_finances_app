@@ -92,7 +92,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             tenants: true,
             utilities: { orderBy: { created_at: "asc" } },
             contracts: true,
-            credit_card: true,
+            credit_card: { include: { family_member: { select: { full_name: true } } } },
             bank_account: true,
             transactions: { orderBy: { transaction_date: "desc" }, take: 25 },
           },
@@ -106,6 +106,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.transactions.findMany({
@@ -213,6 +214,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
               id: c.id,
               card_name: maskSensitiveText(obfuscate, c.card_name),
               card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+              family_member: c.family_member,
             }))}
             transactions={transactions}
             dateDisplayFormat={dateDisplayFormat}
@@ -231,6 +233,7 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
               id: c.id,
               card_name: maskSensitiveText(obfuscate, c.card_name),
               card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+              family_member: c.family_member,
             }))}
             closeHref={modalCloseHref}
             redirectOnError={modalRedirectOnError}

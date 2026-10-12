@@ -46,7 +46,11 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
     await Promise.all([
     prisma.cars.findFirst({
       where: { id, household_id: householdId },
-      include: { main_driver: true, purchase_credit_card: true, purchase_bank_account: true },
+      include: {
+        main_driver: true,
+        purchase_credit_card: { include: { family_member: { select: { full_name: true } } } },
+        purchase_bank_account: true,
+      },
     }),
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
@@ -54,6 +58,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, cancelled_at: null },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
@@ -62,12 +67,18 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
     }),
     prisma.car_services.findMany({
       where: { household_id: householdId, car_id: id },
-      include: { credit_card: true, bank_account: true },
+      include: {
+        credit_card: { include: { family_member: { select: { full_name: true } } } },
+        bank_account: true,
+      },
       orderBy: { serviced_at: "desc" },
     }),
     prisma.car_licenses.findMany({
       where: { household_id: householdId, car_id: id },
-      include: { credit_card: true, bank_account: true },
+      include: {
+        credit_card: { include: { family_member: { select: { full_name: true } } } },
+        bank_account: true,
+      },
       orderBy: { expires_at: "asc" },
     }),
     prisma.insurance_policies.findMany({
@@ -217,7 +228,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, c.card_name)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>
@@ -366,7 +377,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
             </div>
             <input name="cost_amount" type="number" step="0.01" placeholder="Cost" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <input name="odometer_km" type="number" placeholder="Odometer km" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{maskSensitiveText(obfuscate, c.card_name)}</option>)}</select>
+            <select name="credit_card_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "כרטיס אשראי (אופציונלי)" : "Credit card (optional)"}</option>{creditCards.map((c) => <option key={c.id} value={c.id}>{maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}</option>)}</select>
             <select name="bank_account_id" className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"><option value="">{isHebrew ? "חשבון בנק (אופציונלי)" : "Bank account (optional)"}</option>{bankAccounts.map((b) => <option key={b.id} value={b.id}>{maskSensitiveText(obfuscate, b.account_name)}</option>)}</select>
             <input name="notes" placeholder="Service notes" className="md:col-span-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
             <p className="md:col-span-3 text-xs text-slate-500">
@@ -410,11 +421,13 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                         bankAccountId: s.bank_account_id ?? "",
                         notes: s.notes ?? "",
                         hasAttachment: Boolean(s.receipt_storage_key),
-                        paymentLabel: s.credit_card?.card_name ?? s.bank_account?.account_name ?? "—",
+                        paymentLabel: s.credit_card
+                          ? formatCreditCardOptionLabel(s.credit_card)
+                          : (s.bank_account?.account_name ?? "—"),
                       }}
                       creditCards={creditCards.map((c) => ({
                         id: c.id,
-                        label: maskSensitiveText(obfuscate, c.card_name),
+                        label: maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c)),
                       }))}
                       bankAccounts={bankAccounts.map((b) => ({
                         id: b.id,

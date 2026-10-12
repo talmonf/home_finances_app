@@ -14,6 +14,7 @@ import { createCar } from "./actions";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { formatHouseholdDate, type HouseholdDateDisplayFormat } from "@/lib/household-date-format";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +68,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, cancelled_at: null },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
@@ -238,7 +240,7 @@ export default async function CarsPage({ searchParams }: PageProps) {
                 <option value="">Purchase credit card (optional)</option>
                 {creditCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {maskSensitiveText(obfuscate, c.card_name)}
+                    {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                   </option>
                 ))}
               </select>

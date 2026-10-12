@@ -6,6 +6,7 @@ import {
   getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import { DonationKind } from "@/generated/prisma/enums";
@@ -40,7 +41,11 @@ function formatMoney(value: unknown) {
 function formatPaymentDetail(
   d: {
   payment_method: string | null;
-  credit_card?: { card_name: string; card_last_four: string } | null;
+  credit_card?: {
+    card_name: string;
+    card_last_four: string;
+    family_member?: { full_name: string | null } | null;
+  } | null;
   bank_account?: { account_name: string; bank_name: string } | null;
   digital_payment_method?: { name: string } | null;
 },
@@ -54,7 +59,7 @@ function formatPaymentDetail(
       return d.credit_card
         ? maskSensitiveText(
             obfuscate,
-            `${d.credit_card.card_name} · ****${d.credit_card.card_last_four}`,
+            formatCreditCardOptionLabel(d.credit_card),
           )
         : language === "he"
           ? "כרטיס אשראי"
@@ -101,7 +106,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
       include: {
         payee: true,
         family_member: true,
-        credit_card: true,
+        credit_card: { include: { family_member: { select: { full_name: true } } } },
         bank_account: true,
         digital_payment_method: true,
       },
@@ -121,6 +126,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
         cancelled_at: null,
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
@@ -175,7 +181,7 @@ export default async function DonationsPage({ searchParams }: PageProps) {
             action={createDonation}
             payees={payees.map((p) => ({ id: p.id, name: p.name }))}
             familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
-            creditCards={creditCards.map((c) => ({ id: c.id, label: `${c.card_name} · ****${c.card_last_four}` }))}
+            creditCards={creditCards.map((c) => ({ id: c.id, label: formatCreditCardOptionLabel(c) }))}
             bankAccounts={bankAccounts.map((a) => ({ id: a.id, label: `${a.account_name} · ${a.bank_name}` }))}
             digitalPaymentMethods={digitalPaymentMethods.map((d) => ({ id: d.id, label: d.name }))}
             uiLanguage={uiLanguage}

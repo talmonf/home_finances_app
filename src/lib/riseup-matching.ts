@@ -3,6 +3,7 @@
  */
 
 import { prisma } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import type { RiseUpParsedRow } from "@/lib/riseup-import";
 
 export type ConfidenceTier = "high" | "medium" | "low";
@@ -159,6 +160,7 @@ export async function matchRiseUpRowsForHousehold(
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
+      include: { family_member: { select: { full_name: true } } },
     }),
     prisma.payees.findMany({ where: { household_id: householdId } }),
     prisma.categories.findMany({ where: { household_id: householdId, is_active: true } }),
@@ -239,7 +241,7 @@ export async function matchRiseUpRowsForHousehold(
         if (score > 0) {
           instrumentCandidates.push({
             id: c.id,
-            label: `${c.issuer_name} · ${c.card_name} · ${c.card_last_four}`,
+            label: formatCreditCardOptionLabel(c),
             score,
             confidence: tierFromScore(score),
             reason: "card_last_four",

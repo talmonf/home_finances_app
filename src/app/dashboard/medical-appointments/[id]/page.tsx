@@ -15,6 +15,7 @@ import {
   type MedicalReimbursementSource,
 } from "@/generated/prisma/enums";
 import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -83,6 +84,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
           },
         ],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
@@ -278,7 +280,7 @@ export default async function EditMedicalAppointmentPage({ params, searchParams 
                     <option value="">—</option>
                     {creditCards.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {maskSensitiveText(obfuscate, `${c.card_name} · ****${c.card_last_four}`)}
+                        {maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c))}
                         {c.cancelled_at ? " (cancelled)" : ""}
                       </option>
                     ))}

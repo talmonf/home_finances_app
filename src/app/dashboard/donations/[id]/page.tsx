@@ -5,6 +5,7 @@ import {
   getCurrentUiLanguage,
   getCurrentHouseholdDateDisplayFormat,
 } from "@/lib/auth";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DonationForm } from "../DonationForm";
@@ -57,6 +58,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
         cancelled_at: null,
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({
@@ -162,7 +164,7 @@ export default async function EditDonationPage({ params, searchParams }: PagePro
           familyMembers={familyMembers.map((m) => ({ id: m.id, full_name: m.full_name }))}
           creditCards={creditCards.map((c) => ({
             id: c.id,
-            label: `${c.card_name} · ****${c.card_last_four}`,
+            label: formatCreditCardOptionLabel(c),
           }))}
           bankAccounts={bankAccounts.map((a) => ({
             id: a.id,

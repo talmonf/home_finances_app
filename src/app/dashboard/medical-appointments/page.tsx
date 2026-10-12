@@ -20,6 +20,7 @@ import { createMedicalAppointment } from "./actions";
 import { MedicalAppointmentModalForm } from "./medical-appointment-modal-form";
 import { getI18n } from "@/lib/i18n";
 import { medicalPaymentLabel, reimbursementSourceLabel } from "@/lib/ui-labels";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 
 export const dynamic = "force-dynamic";
@@ -112,15 +113,6 @@ function formatMoneyWithCurrency(value: unknown, currency: string) {
   return `${amount} ${currency}`;
 }
 
-function formatScheme(scheme: string) {
-  if (scheme === "amex") return "Amex";
-  if (scheme === "diners_club") return "Diners Club";
-  if (scheme === "isracard") return "Isracard";
-  if (scheme === "mastercard") return "Mastercard";
-  if (scheme === "visa") return "Visa";
-  return "Other";
-}
-
 function formatPaymentDetail(
   method: MedicalAppointmentPaymentMethod | null,
   language: "en" | "he",
@@ -130,6 +122,7 @@ function formatPaymentDetail(
       scheme: string;
       issuer_name: string;
       card_last_four: string;
+      family_member?: { full_name: string | null } | null;
     } | null;
     bank_account: { account_name: string; bank_name: string } | null;
     digital_payment_method: { name: string } | null;
@@ -144,7 +137,7 @@ function formatPaymentDetail(
     const c = row.credit_card;
     return `${base}: ${maskSensitiveText(
       obfuscate,
-      `${c.card_name} (${formatScheme(c.scheme)}) · ****${c.card_last_four}`,
+      formatCreditCardOptionLabel(c),
     )}`;
   }
   if (method === "bank_account" && row.bank_account) {
@@ -230,7 +223,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
       where: { household_id: householdId },
       include: {
         family_member: true,
-        credit_card: true,
+        credit_card: { include: { family_member: { select: { full_name: true } } } },
         bank_account: true,
         digital_payment_method: true,
       },
@@ -246,6 +239,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
         cancelled_at: null,
         OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
       },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: { card_name: "asc" },
     }),
     prisma.bank_accounts.findMany({

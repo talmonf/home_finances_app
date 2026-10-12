@@ -11,6 +11,7 @@ import { getSetupSectionIsDone } from "@/lib/setup-section-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HouseholdDateField } from "@/components/household-date-field";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveText } from "@/lib/privacy-display";
 import { createJob } from "./actions";
 import { JobsListClient } from "./jobs-list-client";
@@ -69,6 +70,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
     }),
     prisma.credit_cards.findMany({
       where: { household_id: householdId, is_active: true },
+      include: { family_member: { select: { full_name: true } } },
       orderBy: [{ issuer_name: "asc" }, { card_name: "asc" }],
     }),
     getSetupSectionIsDone(householdId, "jobs"),
@@ -245,7 +247,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
                     <option key={card.id} value={card.id}>
                       {maskSensitiveText(
                         obfuscate,
-                        `${card.card_name} — ${card.issuer_name} — ${card.card_last_four}`,
+                        formatCreditCardOptionLabel(card),
                       )}
                     </option>
                   ))}
