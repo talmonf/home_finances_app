@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  ClinicModuleUserGuideLink,
+  ModuleBrandSwitcher,
+} from "@/components/module-brand-switcher";
 import { ObfuscateSessionToggle } from "@/components/obfuscate-session-toggle";
 import { ProfileMenu } from "@/components/profile-menu";
 import { UiLanguageToggle } from "@/components/ui-language-toggle";
@@ -12,12 +16,10 @@ import { maskSensitiveText } from "@/lib/privacy-display";
 import { appHeaderStrings, type UiLanguage } from "@/lib/ui-language";
 
 const titleClass = "font-semibold tracking-tight text-slate-50";
-const quietTitleClass = "font-medium tracking-tight text-slate-400 hover:text-slate-200";
 
 export function AppShellHeader({
   uiLanguage,
   portal,
-  pathname,
   householdMember,
   clinicEnabled,
   householdEnabled,
@@ -27,7 +29,6 @@ export function AppShellHeader({
 }: {
   uiLanguage: UiLanguage;
   portal: AppPortal;
-  pathname: string;
   householdMember: boolean;
   clinicEnabled: boolean;
   householdEnabled: boolean;
@@ -39,37 +40,17 @@ export function AppShellHeader({
   const homeTitle = appBrandingStrings("home", uiLanguage).title;
   const clinicProductTitle = appBrandingStrings("clinic", uiLanguage).title;
   const clinicShortTitle = privateClinicLayoutStrings(uiLanguage).title;
-  const onSharedCalendar =
-    pathname === "/dashboard/calendar" || pathname.startsWith("/dashboard/calendar/");
-  const clinicActive =
-    pathname.startsWith("/dashboard/private-clinic") || (clinicEnabled && onSharedCalendar);
   const showModuleSwitcher = householdMember && clinicEnabled && householdEnabled;
   const clinicOnly = householdMember && clinicEnabled && !householdEnabled;
-  const showUserGuide = householdMember && clinicEnabled && clinicActive;
+  const showUserGuide = householdMember && clinicEnabled;
 
   const brand = showModuleSwitcher ? (
-    <nav
-      aria-label={uiLanguage === "he" ? "מודולים" : "Modules"}
-      className="flex flex-nowrap items-center gap-x-2 whitespace-nowrap"
-    >
-      <Link
-        href="/"
-        aria-current={clinicActive ? undefined : "page"}
-        className={clinicActive ? quietTitleClass : titleClass}
-      >
-        {homeTitle}
-      </Link>
-      <span className="text-slate-600" aria-hidden>
-        |
-      </span>
-      <Link
-        href="/dashboard/private-clinic"
-        aria-current={clinicActive ? "page" : undefined}
-        className={clinicActive ? titleClass : quietTitleClass}
-      >
-        {clinicShortTitle}
-      </Link>
-    </nav>
+    <ModuleBrandSwitcher
+      uiLanguage={uiLanguage}
+      clinicEnabled={clinicEnabled}
+      homeTitle={homeTitle}
+      clinicTitle={clinicShortTitle}
+    />
   ) : (
     <Link
       href={clinicOnly ? "/dashboard/private-clinic" : "/"}
@@ -100,12 +81,9 @@ export function AppShellHeader({
               <>
                 <UiLanguageToggle uiLanguage={uiLanguage} />
                 {showUserGuide ? (
-                  <Link
-                    href="/dashboard/private-clinic/getting-started"
-                    className="rounded-md px-2 py-1 font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-                  >
-                    {privateClinicNavLabel("gettingStarted", uiLanguage)}
-                  </Link>
+                  <ClinicModuleUserGuideLink
+                    label={privateClinicNavLabel("gettingStarted", uiLanguage)}
+                  />
                 ) : null}
                 <ObfuscateSessionToggle initialOn={obfuscate} isHebrew={uiLanguage === "he"} />
                 <div className="hidden h-4 w-px bg-slate-700 sm:block" aria-hidden />

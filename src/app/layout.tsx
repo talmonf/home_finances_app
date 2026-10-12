@@ -61,7 +61,6 @@ export default async function RootLayout({
     uiLanguage,
   });
   const headerList = await headers();
-  const pathname = headerList.get("x-pathname") ?? "";
   const clinicSplash = headerList.get("x-clinic-splash") === "1";
   const moduleAccess =
     householdMember && session?.user?.householdId && session.user.id
@@ -88,7 +87,6 @@ export default async function RootLayout({
             <AppShellHeader
               uiLanguage={uiLanguage}
               portal={portal}
-              pathname={pathname}
               householdMember={Boolean(householdMember)}
               clinicEnabled={moduleAccess.clinicEnabled}
               householdEnabled={moduleAccess.householdEnabled}
