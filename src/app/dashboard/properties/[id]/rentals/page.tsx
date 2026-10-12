@@ -212,8 +212,8 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             }))}
             creditCards={creditCards.map((c) => ({
               id: c.id,
-              card_name: maskSensitiveText(obfuscate, c.card_name),
-              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+              card_name: c.card_name,
+              card_last_four: c.card_last_four,
               family_member: c.family_member,
             }))}
             transactions={transactions}
@@ -231,8 +231,8 @@ export default async function PropertyRentalsPage({ params, searchParams }: Page
             }))}
             creditCards={creditCards.map((c) => ({
               id: c.id,
-              card_name: maskSensitiveText(obfuscate, c.card_name),
-              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
+              card_name: c.card_name,
+              card_last_four: c.card_last_four,
               family_member: c.family_member,
             }))}
             closeHref={modalCloseHref}

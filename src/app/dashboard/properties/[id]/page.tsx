@@ -451,11 +451,7 @@ export default async function PropertyDetailPage({ params, searchParams }: PageP
                   ? maskSensitiveText(obfuscate, a.account_number)
                   : null,
               }))}
-              creditCards={creditCards.map((c) => ({
-                ...c,
-                card_name: maskSensitiveText(obfuscate, c.card_name),
-                card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
-              }))}
+              creditCards={creditCards}
               utilityTypeLabels={utilityLabels}
               closeHref={propertyDetailBase}
               redirectOnSuccess={`${propertyDetailBase}?created=utility`}

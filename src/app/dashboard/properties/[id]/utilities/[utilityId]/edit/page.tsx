@@ -167,11 +167,7 @@ export default async function UtilityEditPage({ params, searchParams }: PageProp
               account_name: maskSensitiveText(obfuscate, a.account_name),
               bank_name: maskSensitiveText(obfuscate, a.bank_name),
             }))}
-            creditCards={creditCards.map((c) => ({
-              ...c,
-              card_name: maskSensitiveText(obfuscate, c.card_name),
-              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
-            }))}
+            creditCards={creditCards}
           />
 
           <div>

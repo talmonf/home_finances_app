@@ -495,11 +495,7 @@ export default async function MedicalAppointmentsPage({ searchParams }: PageProp
               ...m,
               full_name: maskSensitiveText(obfuscate, m.full_name),
             }))}
-            creditCards={creditCards.map((c) => ({
-              ...c,
-              card_name: maskSensitiveText(obfuscate, c.card_name),
-              card_last_four: maskSensitiveText(obfuscate, c.card_last_four),
-            }))}
+            creditCards={creditCards}
             bankAccounts={bankAccounts.map((a) => ({
               ...a,
               account_name: maskSensitiveText(obfuscate, a.account_name),

@@ -79,7 +79,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
         credit_card: { include: { family_member: { select: { full_name: true } } } },
         bank_account: true,
       },
-      orderBy: { expires_at: "asc" },
+      orderBy: { renewed_at: { sort: "desc", nulls: "last" } },
     }),
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, car_id: id, is_active: true },
