@@ -331,9 +331,32 @@ export function isoYmdToHouseholdInputDisplay(
   return formatYmdParts(y, mo, d, format);
 }
 
+function isoYmdFromCompactDigits(digits: string, format: HouseholdDateDisplayFormat): string | null {
+  let y: number;
+  let mo: number;
+  let d: number;
+  if (format === "YMD") {
+    y = Number(digits.slice(0, 4));
+    mo = Number(digits.slice(4, 6));
+    d = Number(digits.slice(6, 8));
+  } else if (format === "DMY") {
+    d = Number(digits.slice(0, 2));
+    mo = Number(digits.slice(2, 4));
+    y = Number(digits.slice(4, 8));
+  } else {
+    mo = Number(digits.slice(0, 2));
+    d = Number(digits.slice(2, 4));
+    y = Number(digits.slice(4, 8));
+  }
+  if (!isValidCalendarDateYmd(y, mo, d)) return null;
+  return `${String(y).padStart(4, "0")}-${pad2(mo)}-${pad2(d)}`;
+}
+
 /**
  * Parse a user-typed date in the household segment order into `yyyy-mm-dd`.
- * Also accepts pasted ISO `yyyy-mm-dd`. Returns null if empty/invalid/incomplete.
+ * Also accepts pasted ISO `yyyy-mm-dd` and 8 digits with no separators
+ * (`15102027` → 15/10/2027 when the household order is day/month/year).
+ * Returns null if empty/invalid/incomplete.
  */
 export function parseHouseholdDateInputToIsoYmd(
   raw: string,
@@ -349,6 +372,7 @@ export function parseHouseholdDateInputToIsoYmd(
     if (!isValidCalendarDateYmd(y, mo, d)) return null;
     return `${iso[1]}-${iso[2]}-${iso[3]}`;
   }
+  if (/^\d{8}$/.test(s)) return isoYmdFromCompactDigits(s, format);
   const parts = s.split(/[/.\s]+/).filter((p) => p.length > 0);
   if (parts.length !== 3) return null;
   const nums = parts.map((p) => Number.parseInt(p, 10));

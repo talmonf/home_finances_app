@@ -12,7 +12,8 @@ import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/househol
 import { maskSensitiveAmount, maskSensitiveText } from "@/lib/privacy-display";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CarLicenseCreateForm } from "@/components/car-license-create-form";
+import { CarLicenseAddButton } from "@/components/car-license-create-form";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { CarLicenseRow } from "@/components/car-license-row";
 import { CarServiceRow } from "@/components/car-service-row";
 import { createCarService, updateCar } from "../actions";
@@ -435,19 +436,17 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
               <span className="font-medium text-slate-400">Expires on</span> is when the license stops being valid (required).
             </p>
           </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <CarLicenseCreateForm
-              carId={car.id}
-              creditCards={creditCards.map((c) => ({
-                id: c.id,
-                label: maskSensitiveText(obfuscate, c.card_name),
-              }))}
-              bankAccounts={bankAccounts.map((b) => ({
-                id: b.id,
-                label: maskSensitiveText(obfuscate, b.account_name),
-              }))}
-            />
-          </div>
+          <CarLicenseAddButton
+            carId={car.id}
+            creditCards={creditCards.map((c) => ({
+              id: c.id,
+              label: maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c)),
+            }))}
+            bankAccounts={bankAccounts.map((b) => ({
+              id: b.id,
+              label: maskSensitiveText(obfuscate, b.account_name),
+            }))}
+          />
           {licenses.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-700">
               <table className="w-full min-w-[640px] text-left text-sm">
@@ -476,11 +475,13 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
                         bankAccountId: l.bank_account_id ?? "",
                         notes: l.notes ?? "",
                         hasReceipt: Boolean(l.receipt_storage_key),
-                        paymentLabel: l.credit_card?.card_name ?? l.bank_account?.account_name ?? "—",
+                        paymentLabel: l.credit_card
+                          ? formatCreditCardOptionLabel(l.credit_card)
+                          : (l.bank_account?.account_name ?? "—"),
                       }}
                       creditCards={creditCards.map((c) => ({
                         id: c.id,
-                        label: maskSensitiveText(obfuscate, c.card_name),
+                        label: maskSensitiveText(obfuscate, formatCreditCardOptionLabel(c)),
                       }))}
                       bankAccounts={bankAccounts.map((b) => ({
                         id: b.id,
