@@ -20,6 +20,12 @@ import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options
 import { therapyClientFormErrorMessage } from "./form-error-message";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import {
+  kupatHolimClientMatch,
+  kupatHolimFilterSelectOptions,
+  parseKupatHolimFilter,
+  type KupatHolimFilter,
+} from "@/lib/private-clinic/kupat-holim-filter";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 
@@ -31,6 +37,7 @@ type ListFilterQs = {
   job: string;
   program: string;
   family: string;
+  kupatHolim: KupatHolimFilter;
   from: string;
   to: string;
 };
@@ -189,6 +196,7 @@ function clientsListHref(p: {
   job?: string;
   program?: string;
   family?: string;
+  kupatHolim?: KupatHolimFilter;
   from?: string;
   to?: string;
   sort: SortKey;
@@ -200,6 +208,7 @@ function clientsListHref(p: {
   if (p.job?.trim()) sp.set("job", p.job.trim());
   if (p.program?.trim()) sp.set("program", p.program.trim());
   if (p.family?.trim()) sp.set("family", p.family.trim());
+  if (p.kupatHolim) sp.set("kupat_holim", p.kupatHolim);
   if (p.from?.trim()) sp.set("from", p.from.trim());
   if (p.to?.trim()) sp.set("to", p.to.trim());
   sp.set("sort", p.sort);
@@ -253,6 +262,7 @@ export default async function ClientsPage({
     job?: string;
     program?: string;
     family?: string;
+    kupat_holim?: string;
     from?: string;
     to?: string;
     sort?: string;
@@ -314,6 +324,17 @@ export default async function ClientsPage({
   const familyIdRaw = (resolved?.family ?? "").trim();
   const allowedFamilyIds = new Set(families.map((f) => f.id));
   const familyId = allowedFamilyIds.has(familyIdRaw) ? familyIdRaw : "";
+  const kupatHolim = parseKupatHolimFilter(resolved?.kupat_holim);
+  const kupatHolimOptions = kupatHolimFilterSelectOptions(
+    {
+      clalit: cl.kupatClalit,
+      maccabi: cl.kupatMaccabi,
+      meuhedet: cl.kupatMeuhedet,
+      leumit: cl.kupatLeumit,
+      none: c.none,
+    },
+    uiLanguage === "he" ? "he" : "en",
+  );
 
   let dateFrom = parseFilterYmd(fromRaw);
   let dateTo = parseFilterYmd(toRaw);
@@ -330,6 +351,7 @@ export default async function ClientsPage({
     job: jobId,
     program: programId,
     family: familyId,
+    kupatHolim,
     from: fromRaw,
     to: toRaw,
   };
@@ -354,6 +376,7 @@ export default async function ClientsPage({
       : {}),
     ...(programId ? { default_program_id: programId } : {}),
     ...(familyId ? { family_id: familyId } : {}),
+    ...(kupatHolim ? kupatHolimClientMatch(kupatHolim) : {}),
     ...(dateRangeActive && dateFrom && dateTo
       ? {
           AND: [
@@ -520,6 +543,7 @@ export default async function ClientsPage({
     Boolean(jobId) ||
     Boolean(programId) ||
     Boolean(familyId) ||
+    Boolean(kupatHolim) ||
     Boolean(fromRaw) ||
     Boolean(toRaw);
 
@@ -623,6 +647,24 @@ export default async function ClientsPage({
                 </select>
               </div>
             ) : null}
+            <div className="min-w-0 grow basis-44 space-y-1">
+              <label htmlFor="clients_filter_kupat_holim" className="block text-[11px] text-slate-400">
+                {cl.colKupatHolim}
+              </label>
+              <select
+                id="clients_filter_kupat_holim"
+                name="kupat_holim"
+                defaultValue={kupatHolim}
+                className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
+              >
+                <option value="">{c.anyF}</option>
+                {kupatHolimOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="min-w-0 grow basis-44 space-y-1">
               <label htmlFor="clients_filter_status" className="block text-[11px] text-slate-400">
                 {cl.filterStatusLabel}
