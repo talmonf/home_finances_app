@@ -65,8 +65,9 @@ export async function POST(req: Request) {
     if (value && !KUPAT_VALUES.has(value as KupatHolimValue)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    stored = value ? (value as KupatHolimValue) : null;
-    data = { kupat_holim: stored };
+    const kupat: KupatHolimValue | null = value ? (value as KupatHolimValue) : null;
+    stored = kupat;
+    data = { kupat_holim: kupat };
   } else if (field === "address" || field === "team_members") {
     const value = rawValue.trim();
     if (value.length > MAX_TEXT_LENGTH) {
