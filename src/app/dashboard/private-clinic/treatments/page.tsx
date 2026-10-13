@@ -21,6 +21,10 @@ import {
   therapyClientsWhereLinkedPrivateClinicJobs,
 } from "@/lib/private-clinic/jobs-scope";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import {
+  kupatHolimFilterSelectOptions,
+  parseKupatHolimFilter,
+} from "@/lib/private-clinic/kupat-holim-filter";
 import { addDays } from "@/lib/private-clinic/reminders-logic";
 import { getUpcomingAppointmentsForHousehold, isoDateOnly } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
@@ -56,6 +60,7 @@ type Search = {
   program?: string | string[];
   visit_type?: string | string[];
   client?: string;
+  kupat_holim?: string;
   family?: string;
   receipt?: string;
   from?: string;
@@ -93,6 +98,7 @@ export default async function TreatmentsPage({
     programs: parseTreatmentsProgramsFilter(sp.program),
     visitTypes: parseTreatmentsVisitTypesFilter(sp.visit_type),
     client: sp.client?.trim() || "",
+    kupatHolim: parseKupatHolimFilter(sp.kupat_holim),
     family: sp.family?.trim() || "",
     receipt: sp.receipt?.trim() || "",
     from: sp.from?.trim() || "",
@@ -275,6 +281,7 @@ export default async function TreatmentsPage({
   for (const programId of filters.programs) queryParams.append("program", programId);
   for (const visitType of filters.visitTypes) queryParams.append("visit_type", visitType);
   if (filters.client) queryParams.set("client", filters.client);
+  if (filters.kupatHolim) queryParams.set("kupat_holim", filters.kupatHolim);
   if (filters.family) queryParams.set("family", filters.family);
   if (filters.receipt) queryParams.set("receipt", filters.receipt);
   if (filters.from) queryParams.set("from", filters.from);
@@ -543,6 +550,7 @@ export default async function TreatmentsPage({
           programs={filters.programs}
           visitTypes={filters.visitTypes}
           client={filters.client}
+          kupatHolim={filters.kupatHolim}
           family={filters.family}
           from={filters.from}
           to={filters.to}
@@ -558,6 +566,16 @@ export default async function TreatmentsPage({
             label: therapyVisitTypeLabel(uiLanguage, visitType),
           }))}
           clients={clientFilterOptions}
+          kupatHolimOptions={kupatHolimFilterSelectOptions(
+            {
+              clalit: tr.kupatClalit,
+              maccabi: tr.kupatMaccabi,
+              meuhedet: tr.kupatMeuhedet,
+              leumit: tr.kupatLeumit,
+              none: tr.kupatNone,
+            },
+            uiLanguage === "he" ? "he" : "en",
+          )}
           families={families.map((family) => ({ id: family.id, label: family.name }))}
           labels={{
             filters: tr.filters,
@@ -572,6 +590,7 @@ export default async function TreatmentsPage({
             program: c.program,
             visitType: tr.visitType,
             client: c.client,
+            kupatHolim: tr.kupatHolim,
             from: c.from,
             to: c.to,
             apply: c.apply,

@@ -10,6 +10,10 @@ import { redirect } from "next/navigation";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { privateClinicDashboard } from "@/lib/private-clinic-i18n";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import {
+  kupatHolimFilterSelectOptions,
+  parseKupatHolimFilter,
+} from "@/lib/private-clinic/kupat-holim-filter";
 import { jobWherePrivateClinicScoped } from "@/lib/private-clinic/jobs-scope";
 import {
   loadClinicDashboardData,
@@ -33,6 +37,7 @@ const DASHBOARD_BASE = "/dashboard/private-clinic/dashboard";
 type Search = {
   job?: string;
   program?: string | string[];
+  kupat_holim?: string;
   from?: string;
   to?: string;
 };
@@ -84,6 +89,7 @@ export default async function PrivateClinicDashboardPage({
   const programsForJob = jobId ? programs.filter((p) => p.job_id === jobId) : programs;
   const validProgramIds = new Set(programsForJob.map((p) => p.id));
   const programIds = requestedPrograms.filter((id) => allowedProgramIds.has(id) && validProgramIds.has(id));
+  const kupatHolim = parseKupatHolimFilter(sp.kupat_holim);
 
   const { fromYmd, toYmd, rangeStart, rangeEndExclusive } = resolveDashboardDateRange(
     sp.from?.trim() ?? "",
@@ -95,6 +101,7 @@ export default async function PrivateClinicDashboardPage({
     familyMemberId,
     jobId,
     programIds,
+    kupatHolim,
     rangeStart,
     rangeEndExclusive,
     fromYmd,
@@ -142,16 +149,28 @@ export default async function PrivateClinicDashboardPage({
         action={DASHBOARD_BASE}
         job={jobId}
         programs={programIds}
+        kupatHolim={kupatHolim}
         from={data.fromYmd}
         to={data.toYmd}
         jobs={jobOptions}
         programOptions={programOptions}
+        kupatHolimOptions={kupatHolimFilterSelectOptions(
+          {
+            clalit: d.kupatClalit,
+            maccabi: d.kupatMaccabi,
+            meuhedet: d.kupatMeuhedet,
+            leumit: d.kupatLeumit,
+            none: d.kupatNone,
+          },
+          uiLanguage === "he" ? "he" : "en",
+        )}
         filterResetHref={DASHBOARD_BASE}
         filterResetLabel={d.filterReset}
         labels={{
           filters: d.filters,
           job: d.job,
           program: d.program,
+          kupatHolim: d.kupatHolim,
           from: d.from,
           to: d.to,
           apply: d.apply,

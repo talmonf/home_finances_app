@@ -13,6 +13,10 @@ import {
 import type { TherapyVisitType } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
+import {
+  kupatHolimClientMatch,
+  type KupatHolimFilter,
+} from "@/lib/private-clinic/kupat-holim-filter";
 
 export type TreatmentsSortKey = "occurred_at" | "client" | "job" | "amount";
 export type TreatmentsSortDir = "asc" | "desc";
@@ -26,6 +30,7 @@ export type TreatmentsListFilters = {
   programs: string[];
   visitTypes: TherapyVisitType[];
   client: string;
+  kupatHolim: KupatHolimFilter;
   family: string;
   receipt: string;
   from: string;
@@ -114,6 +119,7 @@ function treatmentsListWhereInput(params: {
     ...(filters.programs.length ? { program_id: { in: filters.programs } } : {}),
     ...(filters.visitTypes.length ? { visit_type: { in: filters.visitTypes } } : {}),
     ...(filters.client ? { client_id: filters.client } : {}),
+    ...(filters.kupatHolim ? { client: kupatHolimClientMatch(filters.kupatHolim) } : {}),
     ...(filters.family ? { family_id: filters.family } : {}),
     ...(filters.receipt
       ? {

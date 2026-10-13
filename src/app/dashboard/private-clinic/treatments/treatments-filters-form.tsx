@@ -5,6 +5,7 @@ import { HouseholdDateField } from "@/components/household-date-field";
 import { FilterCheckboxDropdown } from "@/components/filter-checkbox-dropdown";
 import { PrivateClinicFilterResetButton } from "@/components/private-clinic-filter-reset-button";
 import { defaultClinicJobId } from "@/lib/private-clinic/default-clinic-job-id";
+import type { KupatHolimFilter } from "@/lib/private-clinic/kupat-holim-filter";
 
 type Option = { id: string; label: string };
 type ProgramOption = { id: string; jobId: string; label: string };
@@ -18,6 +19,7 @@ type Props = {
   programs: string[];
   visitTypes: string[];
   client: string;
+  kupatHolim: KupatHolimFilter;
   family: string;
   from: string;
   to: string;
@@ -28,6 +30,7 @@ type Props = {
   programOptions: ProgramOption[];
   visitTypeOptions: Option[];
   clients: Array<Option & { inactive?: boolean }>;
+  kupatHolimOptions: Option[];
   families: Option[];
   /** When set with `filterResetLabel`, shows a compact link next to Apply */
   filterResetHref?: string;
@@ -45,6 +48,7 @@ type Props = {
     program: string;
     visitType: string;
     client: string;
+    kupatHolim: string;
     from: string;
     to: string;
     apply: string;
@@ -182,6 +186,22 @@ export function TreatmentsFiltersForm(props: Props) {
             <option key={cl.id} value={cl.id}>
               {cl.label}
               {cl.inactive ? ` (${props.labels.inactive})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex-none">
+        <label className="block text-[11px] leading-4 text-slate-400">{props.labels.kupatHolim}</label>
+        <select
+          name="kupat_holim"
+          defaultValue={props.kupatHolim}
+          className="w-auto min-w-[7rem] max-w-[10rem] rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+        >
+          <option value="">{props.labels.anyF}</option>
+          {props.kupatHolimOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
             </option>
           ))}
         </select>

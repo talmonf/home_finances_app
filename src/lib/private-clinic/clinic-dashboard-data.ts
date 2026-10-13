@@ -25,6 +25,10 @@ import {
   utcMonthKey,
   utcMonthKeys,
 } from "@/lib/private-clinic/clinic-dashboard-range";
+import {
+  kupatHolimClientMatch,
+  type KupatHolimFilter,
+} from "@/lib/private-clinic/kupat-holim-filter";
 
 export const CLINIC_DASHBOARD_NO_PROGRAM_ID = "__none__";
 export {
@@ -96,6 +100,7 @@ export async function loadClinicDashboardData(params: {
   familyMemberId: string | null;
   jobId: string;
   programIds: string[];
+  kupatHolim: KupatHolimFilter;
   rangeStart: Date;
   rangeEndExclusive: Date;
   fromYmd: string;
@@ -108,6 +113,7 @@ export async function loadClinicDashboardData(params: {
     familyMemberId,
     jobId,
     programIds,
+    kupatHolim,
     rangeStart,
     rangeEndExclusive,
     fromYmd,
@@ -119,6 +125,7 @@ export async function loadClinicDashboardData(params: {
   const jobScope = jobWherePrivateClinicScoped(familyMemberId);
   const occurredAtRange = { gte: rangeStart, lt: rangeEndExclusive };
   const rangeLastDay = new Date(rangeEndExclusive.getTime() - 24 * 60 * 60 * 1000);
+  const kupatMatch = kupatHolim ? kupatHolimClientMatch(kupatHolim) : null;
 
   const treatmentWhere: Prisma.therapy_treatmentsWhereInput = {
     household_id: householdId,
@@ -126,6 +133,7 @@ export async function loadClinicDashboardData(params: {
     occurred_at: occurredAtRange,
     ...(jobId ? { job_id: jobId } : {}),
     ...(programIds.length ? { program_id: { in: programIds } } : {}),
+    ...(kupatMatch ? { client: kupatMatch } : {}),
   };
 
   const consultationWhere: Prisma.therapy_consultationsWhereInput = {
@@ -135,6 +143,7 @@ export async function loadClinicDashboardData(params: {
     occurred_at: occurredAtRange,
     ...(jobId ? { job_id: jobId } : {}),
     ...(programIds.length ? { program_id: { in: programIds } } : {}),
+    ...(kupatMatch ? { participants: { some: { client: kupatMatch } } } : {}),
   };
 
   const travelAnd: Prisma.therapy_travel_entriesWhereInput[] = [
@@ -155,6 +164,14 @@ export async function loadClinicDashboardData(params: {
       ],
     });
   }
+  if (kupatMatch) {
+    travelAnd.push({
+      OR: [
+        { treatment: { client: kupatMatch } },
+        { consultation: { participants: { some: { client: kupatMatch } } } },
+      ],
+    });
+  }
 
   const travelWhere: Prisma.therapy_travel_entriesWhereInput = {
     household_id: householdId,
@@ -167,6 +184,7 @@ export async function loadClinicDashboardData(params: {
     ...therapyClientsWhereLinkedPrivateClinicJobs(familyMemberId),
     ...(jobId ? therapyClientsWhereForJob(jobId) : {}),
     ...(programIds.length ? { default_program_id: { in: programIds } } : {}),
+    ...(kupatMatch ? kupatMatch : {}),
     AND: [
       { OR: [{ start_date: null }, { start_date: { lte: rangeLastDay } }] },
       { OR: [{ end_date: null }, { end_date: { gte: rangeStart } }] },

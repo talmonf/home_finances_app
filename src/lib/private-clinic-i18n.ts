@@ -595,6 +595,7 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
 export function privateClinicTreatments(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   const c = privateClinicCommon(lang);
+  const cl = privateClinicClients(lang);
   return {
     filters: p("Filters", "סינון"),
     payment: p("Payment", "תשלום"),
@@ -613,6 +614,12 @@ export function privateClinicTreatments(lang: UiLanguage) {
       "שעה (אופציונלי, 24 שעות, שעון ישראל)",
     ),
     visitType: p("Visit type", "סוג ביקור"),
+    kupatHolim: cl.colKupatHolim,
+    kupatClalit: cl.kupatClalit,
+    kupatMaccabi: cl.kupatMaccabi,
+    kupatMeuhedet: cl.kupatMeuhedet,
+    kupatLeumit: cl.kupatLeumit,
+    kupatNone: c.none,
     saveTreatment: p("Save treatment", "שמירת טיפול"),
     treatmentsCount: (n: number) => p(`Treatments (${n})`, `טיפולים (${n})`),
     clinicIncomeLink: p("Link bank transaction — clinic income", "קישור לתנועת בנק — הכנסה מהקליניקה"),
@@ -1318,16 +1325,23 @@ export function privateClinicReports(lang: UiLanguage) {
 export function privateClinicDashboard(lang: UiLanguage) {
   const p = (en: string, he: string) => pc(lang, en, he);
   const c = privateClinicCommon(lang);
+  const cl = privateClinicClients(lang);
   return {
     title: p("Dashboard", "דשבורד"),
     intro: p(
-      "Monthly clinic income from treatments, consultations, and travel. Filter by job, program, and date range.",
-      "הכנסה חודשית מטיפולים, ייעוצים ונסיעות. סינון לפי משרה, תוכנית וטווח תאריכים.",
+      "Monthly clinic income from treatments, consultations, and travel. Filter by job, program, Kupat Holim, and date range.",
+      "הכנסה חודשית מטיפולים, ייעוצים ונסיעות. סינון לפי משרה, תוכנית, קופת חולים וטווח תאריכים.",
     ),
     backToClinic: p("← Clinic", "קליניקה →"),
     filters: p("Filters", "סינון"),
     job: c.job,
     program: c.program,
+    kupatHolim: cl.colKupatHolim,
+    kupatClalit: cl.kupatClalit,
+    kupatMaccabi: cl.kupatMaccabi,
+    kupatMeuhedet: cl.kupatMeuhedet,
+    kupatLeumit: cl.kupatLeumit,
+    kupatNone: c.none,
     from: c.from,
     to: c.to,
     apply: c.apply,

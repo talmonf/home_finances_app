@@ -9,6 +9,7 @@ import {
   parseTreatmentsSortKey,
   parseTreatmentsVisitTypesFilter,
 } from "@/app/dashboard/private-clinic/treatments/treatments-list-data";
+import { parseKupatHolimFilter } from "@/lib/private-clinic/kupat-holim-filter";
 
 export async function GET(req: NextRequest) {
   const session = await requireHouseholdMember();
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
       programs: parseTreatmentsProgramsFilter(url.searchParams.getAll("program")),
       visitTypes: parseTreatmentsVisitTypesFilter(url.searchParams.getAll("visit_type")),
       client: url.searchParams.get("client")?.trim() || "",
+      kupatHolim: parseKupatHolimFilter(url.searchParams.get("kupat_holim")),
       family: url.searchParams.get("family")?.trim() || "",
       receipt: url.searchParams.get("receipt")?.trim() || "",
       from: url.searchParams.get("from")?.trim() || "",
