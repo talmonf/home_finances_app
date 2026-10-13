@@ -569,8 +569,13 @@ export default async function ClientsPage({
         </p>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-lg font-medium text-slate-200">{cl.clientsHeading}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="flex items-baseline gap-2 text-lg font-medium text-slate-200">
+          <span>{cl.clientsHeading}</span>
+          <span className="text-sm font-normal text-slate-400">
+            {clients.length} {c.records}
+          </span>
+        </h1>
         <Link
           href={`${CLIENTS_BASE}/new`}
           className="inline-flex shrink-0 items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
