@@ -16,6 +16,8 @@ export function FilterCheckboxDropdown({
   deselectAllLabel,
   doneLabel,
   closeHint,
+  className,
+  summaryClassName,
 }: {
   name: string;
   label: string;
@@ -28,6 +30,8 @@ export function FilterCheckboxDropdown({
   deselectAllLabel: string;
   doneLabel: string;
   closeHint?: string;
+  className?: string;
+  summaryClassName?: string;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -43,10 +47,15 @@ export function FilterCheckboxDropdown({
   }
 
   return (
-    <div className="flex-none">
+    <div className={className ?? "flex-none"}>
       <span className="block text-[11px] leading-4 text-slate-400">{label}</span>
       <details ref={detailsRef} className="group relative">
-        <summary className="mt-0.5 flex w-auto min-w-[7.5rem] max-w-[11rem] cursor-pointer list-none items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 [&::-webkit-details-marker]:hidden">
+        <summary
+          className={
+            summaryClassName ??
+            "mt-0.5 flex w-auto min-w-[7.5rem] max-w-[11rem] cursor-pointer list-none items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 [&::-webkit-details-marker]:hidden"
+          }
+        >
           <span className="min-w-0 flex-1 truncate">{summaryText}</span>
           <span
             className="shrink-0 text-[10px] text-slate-400 transition-transform group-open:rotate-180"

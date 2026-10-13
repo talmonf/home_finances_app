@@ -447,6 +447,7 @@ export function privateClinicClients(lang: UiLanguage) {
     filterJobAny: p("Any job", "כל משרה"),
     filterProgramLabel: p("Program", "תכנית"),
     filterProgramAny: p("Any program", "כל תכנית"),
+    filterSelectedCountTemplate: p("{count} selected", "{count} נבחרו"),
     filterFamilyLabel: p("Family", "משפחה"),
     filterFamilyAny: p("Any family", "כל משפחה"),
     filterDateRangeHelp: p(

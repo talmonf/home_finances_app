@@ -17,6 +17,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { ClientInlineKupatField, ClientInlineTextField } from "./client-inline-fields";
+import { ClientsProgramFilter } from "./clients-program-filter";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "./form-error-message";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
@@ -37,7 +38,7 @@ type ListFilterQs = {
   q: string;
   status: ClientStatusFilter;
   job: string;
-  program: string;
+  programs: string[];
   family: string;
   kupatHolim: KupatHolimFilter;
   from: string;
@@ -196,7 +197,7 @@ function clientsListHref(p: {
   q?: string;
   status?: ClientStatusFilter;
   job?: string;
-  program?: string;
+  programs?: string[];
   family?: string;
   kupatHolim?: KupatHolimFilter;
   from?: string;
@@ -208,7 +209,9 @@ function clientsListHref(p: {
   if (p.q?.trim()) sp.set("q", p.q.trim());
   if (p.status && p.status !== "active") sp.set("status", p.status);
   if (p.job?.trim()) sp.set("job", p.job.trim());
-  if (p.program?.trim()) sp.set("program", p.program.trim());
+  for (const programId of p.programs ?? []) {
+    if (programId.trim()) sp.append("program", programId.trim());
+  }
   if (p.family?.trim()) sp.set("family", p.family.trim());
   if (p.kupatHolim) sp.set("kupat_holim", p.kupatHolim);
   if (p.from?.trim()) sp.set("from", p.from.trim());
@@ -262,7 +265,7 @@ export default async function ClientsPage({
     q?: string;
     status?: string;
     job?: string;
-    program?: string;
+    program?: string | string[];
     family?: string;
     kupat_holim?: string;
     from?: string;
@@ -321,8 +324,8 @@ export default async function ClientsPage({
       : ""
     : defaultClinicJobId(jobs);
   const allowedProgramIds = new Set(programs.map((p) => p.id));
-  const programIdRaw = (resolved?.program ?? "").trim();
-  const programId = allowedProgramIds.has(programIdRaw) ? programIdRaw : "";
+  const requestedProgramIds = resolved?.program == null ? [] : Array.isArray(resolved.program) ? resolved.program : [resolved.program];
+  const programIds = [...new Set(requestedProgramIds.map((id) => id.trim()).filter((id) => allowedProgramIds.has(id)))];
   const familyIdRaw = (resolved?.family ?? "").trim();
   const allowedFamilyIds = new Set(families.map((f) => f.id));
   const familyId = allowedFamilyIds.has(familyIdRaw) ? familyIdRaw : "";
@@ -355,7 +358,7 @@ export default async function ClientsPage({
     q,
     status,
     job: jobId,
-    program: programId,
+    programs: programIds,
     family: familyId,
     kupatHolim,
     from: fromRaw,
@@ -380,7 +383,7 @@ export default async function ClientsPage({
           OR: [{ default_job_id: jobId }, { client_jobs: { some: { job_id: jobId } } }],
         }
       : {}),
-    ...(programId ? { default_program_id: programId } : {}),
+    ...(programIds.length ? { default_program_id: { in: programIds } } : {}),
     ...(familyId ? { family_id: familyId } : {}),
     ...(kupatHolim ? kupatHolimClientMatch(kupatHolim) : {}),
     ...(dateRangeActive && dateFrom && dateTo
@@ -547,7 +550,7 @@ export default async function ClientsPage({
     Boolean(q) ||
     status !== "active" ||
     Boolean(jobId) ||
-    Boolean(programId) ||
+    programIds.length > 0 ||
     Boolean(familyId) ||
     Boolean(kupatHolim) ||
     Boolean(fromRaw) ||
@@ -614,24 +617,19 @@ export default async function ClientsPage({
               </select>
             </div>
             {programs.length > 0 ? (
-              <div className="min-w-0 grow basis-44 space-y-1">
-                <label htmlFor="clients_filter_program" className="block text-[11px] text-slate-400">
-                  {cl.filterProgramLabel}
-                </label>
-                <select
-                  id="clients_filter_program"
-                  name="program"
-                  defaultValue={programId}
-                  className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-slate-100"
-                >
-                  <option value="">{cl.filterProgramAny}</option>
-                  {programs.map((program) => (
-                    <option key={program.id} value={program.id}>
-                      {program.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ClientsProgramFilter
+                options={programs.map((program) => ({ id: program.id, label: program.label }))}
+                selectedIds={programIds}
+                labels={{
+                  program: cl.filterProgramLabel,
+                  any: cl.filterProgramAny,
+                  selectedCountTemplate: cl.filterSelectedCountTemplate,
+                  selectAll: c.selectAll,
+                  deselectAll: c.deselectAll,
+                  done: c.filterDone,
+                  closeHint: c.filterCloseHint,
+                }}
+              />
             ) : null}
             {familyTherapyEnabled ? (
               <div className="min-w-0 grow basis-44 space-y-1">
