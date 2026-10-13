@@ -16,6 +16,7 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatHouseholdDate, formatHouseholdDateUtcWithTime } from "@/lib/household-date-format";
 import { formatJobDisplayLabel } from "@/lib/job-label";
+import { ClientInlineKupatField, ClientInlineTextField } from "./client-inline-fields";
 import { loadTherapyClientFormOptions } from "./load-therapy-client-form-options";
 import { therapyClientFormErrorMessage } from "./form-error-message";
 import { therapyClientsWhereLinkedPrivateClinicJobs } from "@/lib/private-clinic/jobs-scope";
@@ -25,6 +26,7 @@ import {
   kupatHolimFilterSelectOptions,
   parseKupatHolimFilter,
   type KupatHolimFilter,
+  type KupatHolimValue,
 } from "@/lib/private-clinic/kupat-holim-filter";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
@@ -335,6 +337,10 @@ export default async function ClientsPage({
     },
     uiLanguage === "he" ? "he" : "en",
   );
+  const kupatEditOptions: Array<{ id: "" | KupatHolimValue; label: string }> = [
+    { id: "", label: c.none },
+    ...kupatHolimOptions.filter((option): option is { id: KupatHolimValue; label: string } => option.id !== "none"),
+  ];
 
   let dateFrom = parseFilterYmd(fromRaw);
   let dateTo = parseFilterYmd(toRaw);
@@ -843,7 +849,6 @@ export default async function ClientsPage({
               {sortedClients.map((row) => {
                 const jobLabel = formatJobDisplayLabel(row.default_job);
                 const programLabel = row.default_program?.name ?? c.none;
-                const kupatHolimLabelText = kupatHolimLabel(row.kupat_holim, cl, c);
                 const treatmentsCount = treatmentCountByClientId.get(row.id) ?? 0;
                 const lastVisitAt = lastVisitAtByClientId.get(row.id);
                 const vc = row.visits_per_period_count;
@@ -893,11 +898,27 @@ export default async function ClientsPage({
                         {clientName}
                       </Link>
                     </td>
-                    <td className="max-w-[16rem] truncate px-3 py-2 text-slate-300" title={row.address ?? undefined}>
-                      {obfuscate ? (row.address ? OBFUSCATED : "") : row.address?.trim() ? row.address : "—"}
+                    <td className="max-w-[16rem] px-3 py-2">
+                      {obfuscate ? (
+                        <span className="block truncate text-slate-300">{row.address ? OBFUSCATED : "—"}</span>
+                      ) : (
+                        <ClientInlineTextField
+                          clientId={row.id}
+                          field="address"
+                          value={row.address ?? ""}
+                          ariaLabel={cl.colAddress}
+                          saveFailedLabel={cl.inlineSaveFailed}
+                        />
+                      )}
                     </td>
-                    <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={row.team_members ?? undefined}>
-                      {row.team_members?.trim() ? row.team_members : "—"}
+                    <td className="max-w-[14rem] px-3 py-2">
+                      <ClientInlineTextField
+                        clientId={row.id}
+                        field="team_members"
+                        value={row.team_members ?? ""}
+                        ariaLabel={cl.colTeamMembers}
+                        saveFailedLabel={cl.inlineSaveFailed}
+                      />
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       {!row.is_active ? (
@@ -919,8 +940,14 @@ export default async function ClientsPage({
                     <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={programLabel}>
                       {programLabel}
                     </td>
-                    <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={kupatHolimLabelText}>
-                      {kupatHolimLabelText}
+                    <td className="max-w-[12rem] px-3 py-2">
+                      <ClientInlineKupatField
+                        clientId={row.id}
+                        value={row.kupat_holim ?? ""}
+                        options={kupatEditOptions}
+                        ariaLabel={cl.colKupatHolim}
+                        saveFailedLabel={cl.inlineSaveFailed}
+                      />
                     </td>
                     {familyTherapyEnabled ? (
                       <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={row.family?.name ?? "—"}>

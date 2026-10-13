@@ -466,6 +466,7 @@ export function privateClinicClients(lang: UiLanguage) {
     colKupatHolim: p("Kupat Holim", "קופת חולים"),
     colFamily: p("Family", "משפחה"),
     colTeamMembers: p("Team members", "חברי צוות"),
+    inlineSaveFailed: p("Could not save this change.", "לא ניתן לשמור את השינוי."),
     colTreatmentsCount: p("# treatments", "מס׳ טיפולים"),
     colNextVisitDue: p("Next visit", "הביקור הבא"),
     nextVisitScheduledLabel: p("Scheduled", "מתוזמן"),
