@@ -62,6 +62,7 @@ export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
       signOutConfirm: "האם להתנתק עכשיו?",
       signIn: "התחבר",
       superAdmin: "מנהל על",
+      privacyPolicy: "מדיניות פרטיות",
     };
   }
   return {
@@ -73,5 +74,6 @@ export function appHeaderStrings(lang: UiLanguage, portal: AppPortal = "home") {
     signOutConfirm: "Do you want to sign out now?",
     signIn: "Sign in",
     superAdmin: "Super admin",
+    privacyPolicy: "Privacy policy",
   };
 }

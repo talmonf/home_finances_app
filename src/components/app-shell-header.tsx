@@ -13,6 +13,7 @@ import {
 } from "@/lib/app-branding-strings";
 import { privateClinicLayoutStrings, privateClinicNavLabel } from "@/lib/private-clinic-i18n";
 import { maskSensitiveText } from "@/lib/privacy-display";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import { appHeaderStrings, type UiLanguage } from "@/lib/ui-language";
 
 const titleClass = "font-semibold tracking-tight text-slate-50";
@@ -94,6 +95,7 @@ export function AppShellHeader({
               signedInAs={h.signedInAs}
               signedInName={maskedName}
               changePasswordLabel={h.changePassword}
+              privacyPolicyLabel={h.privacyPolicy}
               signOutLabel={h.signOut}
               signOutConfirm={h.signOutConfirm}
               isSuperAdmin={isSuperAdmin}
@@ -101,12 +103,20 @@ export function AppShellHeader({
             />
           </div>
         ) : (
-          <Link
-            href={loginHrefForPortal(portal)}
-            className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-          >
-            {h.signIn}
-          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              href={PRIVACY_POLICY_PATH}
+              className="rounded-lg px-3 py-1 text-xs font-medium text-slate-300 hover:text-sky-300"
+            >
+              {h.privacyPolicy}
+            </Link>
+            <Link
+              href={loginHrefForPortal(portal)}
+              className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+            >
+              {h.signIn}
+            </Link>
+          </div>
         )}
       </div>
     </header>

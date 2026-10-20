@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { safePostLoginPath } from "@/lib/household-member-login-path";
 import type { AppPortal } from "@/lib/app-branding-strings";
 import { loginPageStrings } from "@/lib/login-i18n";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import { uiLanguageDirection, type UiLanguage } from "@/lib/ui-language";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
@@ -232,6 +234,11 @@ export function LoginForm({
             {loading ? copy.signingIn : copy.signIn}
           </button>
         </form>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          <Link href={PRIVACY_POLICY_PATH} className="text-sky-300 hover:text-sky-200">
+            {copy.privacyPolicy}
+          </Link>
+        </p>
       </div>
     </div>
   );

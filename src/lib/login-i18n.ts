@@ -19,6 +19,7 @@ export function loginPageStrings(portal: AppPortal, lang: UiLanguage) {
       householdCalendarAccount:
         "חיבור Google Calendar שייך לחשבון משק הבית. התחברו עם החשבון הזה, לא עם חשבון המנהל.",
       goToLogin: "לדף ההתחברות",
+      privacyPolicy: "מדיניות פרטיות",
     };
   }
 
@@ -34,5 +35,6 @@ export function loginPageStrings(portal: AppPortal, lang: UiLanguage) {
     householdCalendarAccount:
       "This Google Calendar connection belongs to a household account. Sign in with that account, not the admin account.",
     goToLogin: "Go to login",
+    privacyPolicy: "Privacy policy",
   };
 }

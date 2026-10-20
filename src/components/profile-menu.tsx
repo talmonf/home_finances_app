@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 
 type ProfileMenuProps = {
   menuLabel: string;
   signedInAs: string;
   signedInName: string;
   changePasswordLabel: string;
+  privacyPolicyLabel: string;
   signOutLabel: string;
   signOutConfirm: string;
   isSuperAdmin: boolean;
@@ -20,6 +22,7 @@ export function ProfileMenu({
   signedInAs,
   signedInName,
   changePasswordLabel,
+  privacyPolicyLabel,
   signOutLabel,
   signOutConfirm,
   isSuperAdmin,
@@ -83,6 +86,14 @@ export function ProfileMenu({
             className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800 hover:text-sky-300"
           >
             {changePasswordLabel}
+          </Link>
+          <Link
+            role="menuitem"
+            href={PRIVACY_POLICY_PATH}
+            onClick={() => setOpen(false)}
+            className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800 hover:text-sky-300"
+          >
+            {privacyPolicyLabel}
           </Link>
           <button
             type="button"

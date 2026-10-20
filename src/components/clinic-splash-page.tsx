@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { clinicSplashCopy, type ClinicSplashCopy } from "@/lib/clinic-splash-copy";
 import { clinicLoginHref, uiLanguageFromBrowser } from "@/lib/clinic-splash-language";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import { uiLanguageDirection, type UiLanguage } from "@/lib/ui-language";
 
 function browserLanguage(): UiLanguage {
@@ -90,6 +92,11 @@ function SplashColumn({
           onRequestDemo={onRequestDemo}
         />
       </div>
+      <p className="mt-8 text-sm">
+        <Link href={PRIVACY_POLICY_PATH} className="text-sky-300 hover:text-sky-200">
+          {copy.privacyPolicy}
+        </Link>
+      </p>
     </section>
   );
 }

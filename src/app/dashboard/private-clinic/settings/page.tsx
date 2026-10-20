@@ -5,7 +5,9 @@ import {
   getCurrentUiLanguage,
   getAuthSession,
 } from "@/lib/auth";
+import Link from "next/link";
 import { headers } from "next/headers";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import {
   ensureDefaultConsultationTypes,
   ensureDefaultExpenseCategories,
@@ -271,6 +273,11 @@ export default async function PrivateClinicSettingsPage({
       <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 sm:p-6">
         <h2 className="text-lg font-medium text-slate-200">{st.googleCalendarTitle}</h2>
         <p className="mt-2 text-sm text-slate-400">{st.googleCalendarIntro}</p>
+        <p className="mt-2 text-xs text-slate-500">
+          <Link href={PRIVACY_POLICY_PATH} className="text-sky-300 hover:text-sky-200">
+            {st.privacyPolicy}
+          </Link>
+        </p>
         <form action={updateMyGoogleCalendarSettings} className="mt-4 space-y-3">
           {!googleConnected ? (
             <p className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">

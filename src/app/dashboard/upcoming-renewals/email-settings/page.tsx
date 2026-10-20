@@ -8,6 +8,7 @@ import {
 import { formatInstantInIsraelTime } from "@/lib/household-date-format";
 import { SensitiveTextInput } from "@/components/sensitive-fields";
 import { maskSensitiveText } from "@/lib/privacy-display";
+import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -198,6 +199,11 @@ export default async function RenewalEmailSettingsPage({
             {isHebrew
               ? "ימי הולדת, ימי נישואין ומועדים מיוחדים מתווספים ליומן הזה."
               : "Birthdays, anniversaries, and special dates are added to this calendar."}
+          </p>
+          <p className="text-xs text-slate-500">
+            <Link href={PRIVACY_POLICY_PATH} className="text-sky-300 hover:text-sky-200">
+              {isHebrew ? "מדיניות פרטיות" : "Privacy policy"}
+            </Link>
           </p>
           <label className="inline-flex items-center gap-2 text-sm text-slate-200">
             <input

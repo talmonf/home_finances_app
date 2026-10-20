@@ -31,6 +31,7 @@ export type ClinicSplashCopy = {
   errorGeneric: string;
   languageLabel: string;
   close: string;
+  privacyPolicy: string;
 };
 
 const SECTIONS_EN: ClinicSplashSection[] = [
@@ -127,6 +128,7 @@ export function clinicSplashCopy(lang: UiLanguage): ClinicSplashCopy {
       errorGeneric: "לא הצלחנו לשלוח את הבקשה. נסו שוב.",
       languageLabel: "שפה",
       close: "סגירה",
+      privacyPolicy: "מדיניות פרטיות",
     };
   }
   return {
@@ -155,5 +157,6 @@ export function clinicSplashCopy(lang: UiLanguage): ClinicSplashCopy {
     errorGeneric: "We couldn't send the request. Try again.",
     languageLabel: "Language",
     close: "Close",
+    privacyPolicy: "Privacy policy",
   };
 }

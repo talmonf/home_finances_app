@@ -1569,6 +1569,7 @@ export function privateClinicSettings(lang: UiLanguage) {
       "Enable one-way sync so appointment create, reschedule, and cancel actions update your Google Calendar.",
       "הפעילו סנכרון חד־כיווני כדי שיצירה, שינוי מועד וביטול תורים יעדכנו את Google Calendar.",
     ),
+    privacyPolicy: p("Privacy policy", "מדיניות פרטיות"),
     googleConnectFirst: p(
       "Connect your Google account first. The integration toggle is disabled until a Google account is connected.",
       "חברו תחילה את חשבון Google. מתג האינטגרציה מושבת עד לחיבור חשבון Google.",
