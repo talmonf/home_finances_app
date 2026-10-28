@@ -25,6 +25,12 @@ const KIND_CLASS: Record<CalendarEvent["kind"], string> = {
   renewal: "border-lime-400/40 bg-lime-500/15 text-lime-50",
 };
 
+const COMPLETED_CLASS = "border-sky-400/35 bg-sky-500/10 text-sky-100/80";
+
+function chipClass(event: CalendarEvent): string {
+  return event.completed ? COMPLETED_CLASS : KIND_CLASS[event.kind];
+}
+
 type DayCell = {
   iso: string;
   label: string;
@@ -56,6 +62,25 @@ function formatClock(minutes: number): string {
 }
 
 type PeriodNavKey = "prev" | "current" | "next";
+type NavControl = PeriodNavKey | CalendarView;
+
+type PendingCalendarNav = {
+  view: CalendarView;
+  anchorIso: string;
+  control: NavControl;
+};
+
+const NAV_PENDING_TIMEOUT_MS = 120_000;
+
+function parseCalendarTarget(href: string): { view: CalendarView; anchorIso: string } | null {
+  const query = href.split("?")[1]?.split("#")[0] ?? "";
+  const params = new URLSearchParams(query);
+  const view = params.get("view");
+  const anchorIso = params.get("date");
+  if (view !== "day" && view !== "week" && view !== "month") return null;
+  if (!anchorIso || !/^\d{4}-\d{2}-\d{2}$/.test(anchorIso)) return null;
+  return { view, anchorIso };
+}
 
 function PeriodNavControl({
   href,
@@ -70,7 +95,7 @@ function PeriodNavControl({
   label: string;
   title?: string;
   navKey: PeriodNavKey;
-  pendingNav: PeriodNavKey | null;
+  pendingNav: NavControl | null;
   onNavigate: (key: PeriodNavKey, href: string) => void;
   disabled?: boolean;
 }) {
@@ -107,14 +132,15 @@ function PeriodNavControl({
 }
 
 function chipLabel(event: CalendarEvent): string {
-  if (event.startMinutes == null) return event.title;
-  return `${formatClock(event.startMinutes)} ${event.title}`;
+  const title = event.completed ? `✓ ${event.title}` : event.title;
+  if (event.startMinutes == null) return title;
+  return `${formatClock(event.startMinutes)} ${title}`;
 }
 
 export function CalendarBoard(props: Props) {
   const router = useRouter();
-  const [pendingNav, setPendingNav] = useState<PeriodNavKey | null>(null);
-  const [isNavPending, startNavTransition] = useTransition();
+  const [pendingNav, setPendingNav] = useState<PendingCalendarNav | null>(null);
+  const [, startNavTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hiddenKinds, setHiddenKinds] = useState<CalendarEventKind[]>([]);
   const [jumpIso, setJumpIso] = useState(props.anchorIso);
@@ -122,11 +148,22 @@ export function CalendarBoard(props: Props) {
     setJumpIso(props.anchorIso);
   }, [props.anchorIso]);
   useEffect(() => {
-    if (!isNavPending) setPendingNav(null);
-  }, [isNavPending]);
+    if (!pendingNav) return;
+    if (pendingNav.view === props.view && pendingNav.anchorIso === props.anchorIso) {
+      setPendingNav(null);
+    }
+  }, [pendingNav, props.view, props.anchorIso]);
+  useEffect(() => {
+    if (!pendingNav) return;
+    const id = window.setTimeout(() => setPendingNav(null), NAV_PENDING_TIMEOUT_MS);
+    return () => window.clearTimeout(id);
+  }, [pendingNav]);
 
-  function navigatePeriod(key: PeriodNavKey, href: string) {
-    setPendingNav(key);
+  function navigateCalendar(control: NavControl, href: string) {
+    const target = parseCalendarTarget(href);
+    if (!target) return;
+    if (target.view === props.view && target.anchorIso === props.anchorIso) return;
+    setPendingNav({ ...target, control });
     startNavTransition(() => {
       router.push(href);
     });
@@ -151,7 +188,7 @@ export function CalendarBoard(props: Props) {
   }
 
   return (
-    <div className="space-y-4" data-testid="calendar-board">
+    <div className="space-y-4" data-testid="calendar-board" aria-busy={pendingNav != null}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-50">{props.copy.title}</h1>
@@ -182,42 +219,52 @@ export function CalendarBoard(props: Props) {
             href={props.prevHref}
             label={props.copy.previous}
             navKey="prev"
-            pendingNav={isNavPending ? pendingNav : null}
-            onNavigate={navigatePeriod}
+            pendingNav={pendingNav?.control ?? null}
+            onNavigate={navigateCalendar}
           />
           <PeriodNavControl
             href={props.todayHref}
             label={props.copy.today}
             title={props.copy.todayHint}
             navKey="current"
-            pendingNav={isNavPending ? pendingNav : null}
-            onNavigate={navigatePeriod}
+            pendingNav={pendingNav?.control ?? null}
+            onNavigate={navigateCalendar}
             disabled={props.showingCurrentPeriod}
           />
           <PeriodNavControl
             href={props.nextHref}
             label={props.copy.next}
             navKey="next"
-            pendingNav={isNavPending ? pendingNav : null}
-            onNavigate={navigatePeriod}
+            pendingNav={pendingNav?.control ?? null}
+            onNavigate={navigateCalendar}
           />
           <h2 className="px-1 text-base font-medium text-slate-100">{props.periodLabel}</h2>
         </div>
         <div className="flex rounded-lg bg-slate-900 p-1 ring-1 ring-slate-700" role="group" aria-label={props.copy.title}>
-          {(["day", "week", "month"] as const).map((view) => (
-            <Link
-              key={view}
-              href={props.viewHrefs[view]}
-              aria-current={props.view === view ? "page" : undefined}
-              className={
-                props.view === view
-                  ? "rounded-md bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100"
-                  : "rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-slate-100"
-              }
-            >
-              {props.copy[view]}
-            </Link>
-          ))}
+          {(["day", "week", "month"] as const).map((view) => {
+            const pending = pendingNav?.control === view;
+            return (
+              <Link
+                key={view}
+                href={props.viewHrefs[view]}
+                aria-current={props.view === view ? "page" : undefined}
+                aria-busy={pending}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                  event.preventDefault();
+                  navigateCalendar(view, props.viewHrefs[view]);
+                }}
+                className={
+                  props.view === view
+                    ? "inline-flex items-center gap-1.5 rounded-md bg-sky-500/20 px-3 py-1.5 text-sm text-sky-100"
+                    : "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-slate-100"
+                }
+              >
+                {pending ? <LoadingSpinner className="h-3.5 w-3.5" /> : null}
+                {props.copy[view]}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -268,26 +315,28 @@ export function CalendarBoard(props: Props) {
         </section>
       ) : null}
 
-      {props.view === "month" ? (
-        <MonthGrid
-          copy={props.copy}
-          days={props.days}
-          weekdayLabels={props.weekdayLabels}
-          events={visibleEvents}
-          onSelect={setSelectedId}
-        />
-      ) : (
-        <TimeGrid
-          copy={props.copy}
-          days={props.days}
-          events={visibleEvents}
-          onSelect={setSelectedId}
-        />
-      )}
+      <div className={pendingNav ? "space-y-4 opacity-60" : "space-y-4"}>
+        {props.view === "month" ? (
+          <MonthGrid
+            copy={props.copy}
+            days={props.days}
+            weekdayLabels={props.weekdayLabels}
+            events={visibleEvents}
+            onSelect={setSelectedId}
+          />
+        ) : (
+          <TimeGrid
+            copy={props.copy}
+            days={props.days}
+            events={visibleEvents}
+            onSelect={setSelectedId}
+          />
+        )}
 
-      {visibleEvents.length === 0 && overdue.length === 0 ? (
-        <p className="text-sm text-slate-400">{props.copy.empty}</p>
-      ) : null}
+        {visibleEvents.length === 0 && overdue.length === 0 ? (
+          <p className="text-sm text-slate-400">{props.copy.empty}</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -309,7 +358,7 @@ function EventChip({
       type="button"
       title={event.hover ?? event.subtitle ?? event.title}
       onClick={() => onSelect(event.id)}
-      className={`block w-full truncate rounded border px-1 py-0.5 text-start text-[11px] leading-4 ${KIND_CLASS[event.kind]}`}
+      className={`block w-full truncate rounded border px-1 py-0.5 text-start text-[11px] leading-4 ${chipClass(event)}`}
     >
       {chipLabel(event)}
     </button>
@@ -443,7 +492,7 @@ function TimeGrid({
                     type="button"
                     title={event.hover ?? event.subtitle ?? event.title}
                     onClick={() => onSelect(event.id)}
-                    className={`absolute inset-x-0.5 overflow-hidden rounded border px-1 text-start text-[11px] leading-4 ${KIND_CLASS[event.kind]}`}
+                    className={`absolute inset-x-0.5 overflow-hidden rounded border px-1 text-start text-[11px] leading-4 ${chipClass(event)}`}
                     style={{ top, height }}
                   >
                     {chipLabel(event)}
@@ -491,7 +540,9 @@ function EventDetail({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">{copy.kinds[event.kind]}</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              {event.completed ? `${copy.kinds[event.kind]} · ${copy.completed}` : copy.kinds[event.kind]}
+            </p>
             <h3 id={titleId} className="text-lg font-medium text-slate-50">
               {event.title}
             </h3>
@@ -507,7 +558,7 @@ function EventDetail({
           </button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        {event.action?.kind === "visit" ? (
+        {!event.completed && event.action?.kind === "visit" ? (
           <>
             <Link href={event.action.scheduleHref} className="font-medium text-sky-400 hover:text-sky-300">
               {copy.scheduleAppointment}
@@ -517,17 +568,17 @@ function EventDetail({
             </Link>
           </>
         ) : null}
-        {event.action?.kind === "appointment" && event.action.rescheduleHref ? (
+        {!event.completed && event.action?.kind === "appointment" && event.action.rescheduleHref ? (
           <Link href={event.action.rescheduleHref} className="font-medium text-sky-400 hover:text-sky-300">
             {copy.reschedule}
           </Link>
         ) : null}
-        {event.action?.kind === "appointment" && event.action.reportHref ? (
+        {!event.completed && event.action?.kind === "appointment" && event.action.reportHref ? (
           <Link href={event.action.reportHref} className="font-medium text-sky-400 hover:text-sky-300">
             {copy.reportTreatment}
           </Link>
         ) : null}
-        {event.action?.kind === "consultation" ? (
+        {!event.completed && event.action?.kind === "consultation" ? (
           <>
             <Link href={event.action.rescheduleHref} className="font-medium text-sky-400 hover:text-sky-300">
               {copy.rescheduleConsultation}
@@ -540,7 +591,7 @@ function EventDetail({
             </Link>
           </>
         ) : null}
-        {event.action?.kind === "appointment" && event.action.seriesId && event.action.occurrenceDate ? (
+        {!event.completed && event.action?.kind === "appointment" && event.action.seriesId && event.action.occurrenceDate ? (
           <>
             <SeriesForm
               seriesId={event.action.seriesId}

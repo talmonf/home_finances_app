@@ -1,5 +1,7 @@
 import { nextAnnualGregorianOccurrence } from "@/lib/hebrew-calendar";
+import { getDateTimePartsInIsraelTime } from "@/lib/household-date-format";
 import { logTreatmentHref } from "@/lib/therapy/log-treatment";
+import { isTherapyOccurredAtDateOnly } from "@/lib/therapy/occurred-at-form";
 
 export const CALENDAR_PATH = "/dashboard/calendar";
 
@@ -63,6 +65,8 @@ export type CalendarEvent = {
   endMinutes: number | null;
   href: string | null;
   overdue: boolean;
+  /** Reported treatment, including a scheduled appointment that was logged. */
+  completed: boolean;
   hover: string | null;
   action: CalendarEventAction | null;
 };
@@ -95,6 +99,51 @@ export function isoDateLocal(d: Date): string {
   const m = String(x.getMonth() + 1).padStart(2, "0");
   const day = String(x.getDate()).padStart(2, "0");
   return `${x.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * Place a reported treatment on the calendar.
+ * Date-only rows are UTC midnight and stay all-day on that calendar date.
+ * A stored time is an Israel wall-clock instant.
+ */
+export function placeOccurredAtOnCalendar(
+  occurredAt: Date,
+  durationMinutes: number | null,
+): { date: string; startMinutes: number | null; endMinutes: number | null } {
+  if (isTherapyOccurredAtDateOnly(occurredAt)) {
+    return {
+      date: occurredAt.toISOString().slice(0, 10),
+      startMinutes: null,
+      endMinutes: null,
+    };
+  }
+  const parts = getDateTimePartsInIsraelTime(occurredAt);
+  const startMinutes = parts.hour * 60 + parts.minute;
+  const duration = durationMinutes != null && durationMinutes > 0 ? durationMinutes : 60;
+  return {
+    date: `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`,
+    startMinutes,
+    endMinutes: startMinutes + duration,
+  };
+}
+
+export function seriesOccurrenceKey(
+  seriesId: string | null | undefined,
+  occurrenceDate: string | null | undefined,
+): string | null {
+  if (!seriesId || !occurrenceDate) return null;
+  return `${seriesId}:${occurrenceDate}`;
+}
+
+/** Drop scheduled series rows already represented by a completed instance. */
+export function withoutCompletedSeriesOccurrences<
+  T extends { seriesId: string | null; occurrenceDate: string | null },
+>(rows: readonly T[], completedKeys: ReadonlySet<string>): T[] {
+  if (completedKeys.size === 0) return [...rows];
+  return rows.filter((row) => {
+    const key = seriesOccurrenceKey(row.seriesId, row.occurrenceDate);
+    return key == null || !completedKeys.has(key);
+  });
 }
 
 export function parseCalendarView(raw: string | undefined): CalendarView {

@@ -34,6 +34,7 @@ export type CalendarCopy = {
   dueTask: string;
   empty: string;
   allDay: string;
+  completed: string;
   kinds: Record<CalendarEventKind, string>;
 };
 
@@ -84,6 +85,7 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
       dueTask: "יעד",
       empty: "אין אירועים בטווח הזה.",
       allDay: "כל היום",
+      completed: "הושלם",
       kinds: {
         clinicAppointment: "תור בקליניקה",
         clinicConsultation: "ייעוץ",
@@ -123,6 +125,7 @@ export function calendarStrings(lang: UiLanguage): CalendarCopy {
     dueTask: "Due",
     empty: "Nothing in this range.",
     allDay: "All day",
+    completed: "Completed",
     kinds: {
       clinicAppointment: "Clinic appointment",
       clinicConsultation: "Consultation",

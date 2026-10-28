@@ -7,7 +7,8 @@ import {
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 const HM = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
 
-function isUtcMidnight(d: Date): boolean {
+/** Date-only treatments are stored as UTC midnight so list formatting can omit the time. */
+export function isTherapyOccurredAtDateOnly(d: Date): boolean {
   return (
     d.getUTCHours() === 0 &&
     d.getUTCMinutes() === 0 &&
@@ -66,7 +67,7 @@ export function parseTherapyOccurredAtDatetimeLocal(raw: string): Date | null {
 /** Initial value for SplitDateTimeField: Israel wall clock, or date-only when UTC midnight. */
 export function occurredAtToSplitDatetimeInitial(d: Date | null | undefined): string {
   if (!d || Number.isNaN(d.getTime())) return "";
-  if (isUtcMidnight(d)) {
+  if (isTherapyOccurredAtDateOnly(d)) {
     return d.toISOString().slice(0, 10);
   }
   const parts = getDateTimePartsInIsraelTime(d);
@@ -79,7 +80,7 @@ export function occurredAtToSplitDatetimeInitial(d: Date | null | undefined): st
 }
 
 export function defaultOccurredTimeInputValue(d: Date): string {
-  if (Number.isNaN(d.getTime()) || isUtcMidnight(d)) return "";
+  if (Number.isNaN(d.getTime()) || isTherapyOccurredAtDateOnly(d)) return "";
   const parts = getDateTimePartsInIsraelTime(d);
   const hh = String(parts.hour).padStart(2, "0");
   const mm = String(parts.minute).padStart(2, "0");

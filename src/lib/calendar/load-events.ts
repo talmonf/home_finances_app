@@ -17,6 +17,7 @@ import { formatJobDisplayLabel } from "@/lib/job-label";
 import { dateOnlyLocal } from "@/lib/private-clinic/reminders-logic";
 import {
   getUpcomingAppointmentsForHousehold,
+  isoDateOnly,
   nextScheduledAppointmentByClientId,
 } from "@/lib/therapy/series-occurrences";
 import { nextVisitDueDateAfterLastTreatment } from "@/lib/therapy/visit-frequency";
@@ -36,9 +37,12 @@ import {
   isoDateLocal,
   overdueVisitsForStrip,
   pinsInVisibleRange,
+  placeOccurredAtOnCalendar,
   scheduleAppointmentHref,
   selectUnscheduledVisits,
+  seriesOccurrenceKey,
   visitLogTreatmentHref,
+  withoutCompletedSeriesOccurrences,
   type CalendarEvent,
   type CalendarEventKind,
 } from "@/lib/calendar/model";
@@ -91,7 +95,17 @@ function israelPlacement(startAt: Date, durationMinutes: number | null): {
   };
 }
 
-function maskTitle(obfuscate: boolean, event: CalendarEvent): CalendarEvent {
+type CalendarEventDraft = Omit<CalendarEvent, "completed"> & { completed?: boolean };
+
+function finishEvent(event: CalendarEventDraft): CalendarEvent {
+  return { ...event, completed: event.completed ?? false };
+}
+
+function treatmentEditHref(treatmentId: string): string {
+  return `/dashboard/private-clinic/treatments?modal=edit&edit_id=${encodeURIComponent(treatmentId)}`;
+}
+
+function maskTitle(obfuscate: boolean, event: CalendarEventDraft): CalendarEventDraft {
   if (!obfuscate) return event;
   return { ...event, title: maskSensitiveText(true, event.title) };
 }
@@ -113,7 +127,7 @@ export async function loadCalendarEvents(params: {
   enabledSectionIds: ReadonlySet<string>;
 }): Promise<CalendarEvent[]> {
   const copy = calendarStrings(params.language);
-  const events: CalendarEvent[] = [];
+  const events: CalendarEventDraft[] = [];
   const today = dateOnly(params.today);
   const rangeStart = dateOnly(params.rangeStart);
   const rangeEnd = dateOnly(params.rangeEnd);
@@ -299,7 +313,7 @@ export async function loadCalendarEvents(params: {
     return a.title.localeCompare(b.title);
   });
 
-  return events.map((event) => maskTitle(params.obfuscate, event));
+  return events.map((event) => finishEvent(maskTitle(params.obfuscate, event)));
 }
 
 async function loadClinicEvents(params: {
@@ -314,7 +328,7 @@ async function loadClinicEvents(params: {
   lastVisitLabel: string;
   noLastVisit: string;
   estimatedLabel: string;
-}): Promise<CalendarEvent[]> {
+}): Promise<CalendarEventDraft[]> {
   const jobScope = jobWherePrivateClinicScoped(params.familyMemberId);
   const clientWhere = therapyClientsWhereLinkedPrivateClinicJobs(params.familyMemberId);
   const displayTo = endOfLocalDay(params.rangeEnd);
@@ -322,7 +336,8 @@ async function loadClinicEvents(params: {
     params.rangeEnd > addMonths(params.today, 6) ? params.rangeEnd : addMonths(params.today, 6),
   );
 
-  const [displayAppointments, suppressionAppointments, clients, scheduledConsultations] = await Promise.all([
+  const [displayAppointments, suppressionAppointments, clients, scheduledConsultations, completedAppointments, reportedTreatments] =
+    await Promise.all([
     getUpcomingAppointmentsForHousehold({
       householdId: params.householdId,
       jobWhere: jobScope,
@@ -378,12 +393,70 @@ async function loadClinicEvents(params: {
         },
       },
     }),
+    prisma.therapy_appointments.findMany({
+      where: {
+        household_id: params.householdId,
+        status: "completed",
+        job: jobScope,
+        start_at: { gte: params.rangeStart, lte: displayTo },
+      },
+      select: {
+        id: true,
+        client_id: true,
+        series_id: true,
+        occurrence_date: true,
+        start_at: true,
+        duration_minutes: true,
+        visit_type: true,
+        treatment_id: true,
+        note: true,
+        client: { select: { first_name: true, last_name: true } },
+      },
+    }),
+    prisma.therapy_treatments.findMany({
+      where: {
+        household_id: params.householdId,
+        job: jobScope,
+        occurred_at: {
+          gte: addDays(params.rangeStart, -1),
+          lte: endOfLocalDay(addDays(params.rangeEnd, 1)),
+        },
+        appointments_completed: { none: {} },
+      },
+      select: {
+        id: true,
+        occurred_at: true,
+        visit_type: true,
+        note_1: true,
+        client: {
+          select: {
+            first_name: true,
+            last_name: true,
+            default_session_length_minutes: true,
+            default_program: { select: { default_session_length_minutes: true } },
+            default_job: { select: { default_session_length_minutes: true } },
+          },
+        },
+      },
+    }),
   ]);
 
-  const events: CalendarEvent[] = [];
+  const events: CalendarEventDraft[] = [];
   const visibleIsos = new Set(params.visibleDays.map((d) => isoDateLocal(d)));
+  const completedSeriesKeys = new Set<string>();
+  for (const row of completedAppointments) {
+    const key = seriesOccurrenceKey(
+      row.series_id,
+      row.occurrence_date ? isoDateOnly(row.occurrence_date) : null,
+    );
+    if (key) completedSeriesKeys.add(key);
+  }
+  const scheduledAppointments = withoutCompletedSeriesOccurrences(
+    displayAppointments,
+    completedSeriesKeys,
+  );
 
-  for (const row of displayAppointments) {
+  for (const row of scheduledAppointments) {
     if (row.status !== "scheduled") continue;
     const placed = israelPlacement(row.startAt, row.durationMinutes);
     if (!visibleIsos.has(placed.date)) continue;
@@ -417,6 +490,57 @@ async function loadClinicEvents(params: {
             seriesId: null,
             occurrenceDate: null,
           },
+    });
+  }
+
+  for (const row of completedAppointments) {
+    const placed = israelPlacement(row.start_at, row.duration_minutes);
+    if (!visibleIsos.has(placed.date)) continue;
+    const name = [row.client.first_name, row.client.last_name].filter(Boolean).join(" ") || row.client_id;
+    const time = formatClock(placed.startMinutes);
+    const visitLabel = therapyVisitTypeLabel(params.language, row.visit_type);
+    events.push({
+      id: `appt-${row.id}`,
+      kind: "clinicAppointment",
+      title: name,
+      subtitle: `${time} · ${visitLabel}`,
+      date: placed.date,
+      startMinutes: placed.startMinutes,
+      endMinutes: placed.endMinutes,
+      href: row.treatment_id
+        ? treatmentEditHref(row.treatment_id)
+        : `/dashboard/private-clinic/appointments/${row.id}/edit`,
+      overdue: false,
+      completed: true,
+      hover: row.note,
+      action: null,
+    });
+  }
+
+  for (const row of reportedTreatments) {
+    const duration =
+      row.client.default_session_length_minutes ??
+      row.client.default_program?.default_session_length_minutes ??
+      row.client.default_job?.default_session_length_minutes ??
+      null;
+    const placed = placeOccurredAtOnCalendar(row.occurred_at, duration);
+    if (!visibleIsos.has(placed.date)) continue;
+    const name = [row.client.first_name, row.client.last_name].filter(Boolean).join(" ") || row.id;
+    const visitLabel = therapyVisitTypeLabel(params.language, row.visit_type);
+    const time = placed.startMinutes == null ? null : formatClock(placed.startMinutes);
+    events.push({
+      id: `treatment-${row.id}`,
+      kind: "clinicAppointment",
+      title: name,
+      subtitle: time ? `${time} · ${visitLabel}` : visitLabel,
+      date: placed.date,
+      startMinutes: placed.startMinutes,
+      endMinutes: placed.endMinutes,
+      href: treatmentEditHref(row.id),
+      overdue: false,
+      completed: true,
+      hover: row.note_1,
+      action: null,
     });
   }
 

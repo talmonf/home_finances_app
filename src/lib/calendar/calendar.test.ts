@@ -6,11 +6,15 @@ import {
   isoDateLocal,
   overdueVisitsForStrip,
   pinsInVisibleRange,
+  placeOccurredAtOnCalendar,
   selectUnscheduledVisits,
+  seriesOccurrenceKey,
+  withoutCompletedSeriesOccurrences,
   daysForView,
   isCurrentCalendarPeriod,
   monthlyOccurrencesInRange,
 } from "@/lib/calendar/model";
+import { parseTherapyOccurredAtFromForm } from "@/lib/therapy/occurred-at-form";
 
 const today = new Date(2026, 9, 7);
 
@@ -114,6 +118,49 @@ test("annual and monthly occurrences fall inside a past month and a future month
   assert.deepEqual(
     monthly.map((d) => isoDateLocal(d)),
     ["2026-10-01", "2026-11-01"],
+  );
+});
+
+test("date-only treatments stay all-day on their calendar date", () => {
+  const placed = placeOccurredAtOnCalendar(new Date("2026-10-28T00:00:00.000Z"), 50);
+  assert.deepEqual(placed, {
+    date: "2026-10-28",
+    startMinutes: null,
+    endMinutes: null,
+  });
+});
+
+test("timed treatments land on the Israel hour", () => {
+  const at = parseTherapyOccurredAtFromForm("2026-10-28", "14:00");
+  assert.ok(at);
+  const placed = placeOccurredAtOnCalendar(at, 50);
+  assert.equal(placed.date, "2026-10-28");
+  assert.equal(placed.startMinutes, 14 * 60);
+  assert.equal(placed.endMinutes, 14 * 60 + 50);
+
+  const early = parseTherapyOccurredAtFromForm("2026-07-08", "01:15");
+  assert.ok(early);
+  const earlyPlaced = placeOccurredAtOnCalendar(early, null);
+  assert.equal(earlyPlaced.date, "2026-07-08");
+  assert.equal(earlyPlaced.startMinutes, 75);
+  assert.equal(earlyPlaced.endMinutes, 75 + 60);
+});
+
+test("a completed series occurrence suppresses the matching virtual row", () => {
+  const rows = [
+    { seriesId: "s1", occurrenceDate: "2026-10-28", id: "virtual" },
+    { seriesId: "s1", occurrenceDate: "2026-11-04", id: "later" },
+    { seriesId: null, occurrenceDate: null, id: "one-off" },
+  ];
+  const keys = new Set([seriesOccurrenceKey("s1", "2026-10-28")!]);
+  assert.deepEqual(
+    withoutCompletedSeriesOccurrences(rows, keys).map((row) => row.id),
+    ["later", "one-off"],
+  );
+  assert.equal(seriesOccurrenceKey(null, "2026-10-28"), null);
+  assert.deepEqual(
+    withoutCompletedSeriesOccurrences(rows, new Set()).map((row) => row.id),
+    ["virtual", "later", "one-off"],
   );
 });
 
