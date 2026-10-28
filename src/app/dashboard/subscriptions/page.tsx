@@ -494,7 +494,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
         </section>
 
         {modalMode === "new" ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 py-4 sm:px-4 sm:py-6">
+          <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-slate-950/75">
+            <div className="flex min-h-dvh items-start justify-center px-3 py-4 sm:items-center sm:px-4 sm:py-6">
             <div className="w-full max-w-screen-2xl rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-medium text-slate-100">
@@ -742,6 +743,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               </form>
+            </div>
             </div>
           </div>
         ) : null}
