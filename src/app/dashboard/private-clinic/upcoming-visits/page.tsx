@@ -77,6 +77,32 @@ function upcomingVisitsHref(p: { family?: string; sort: SortKey; dir: SortDir })
   return qs ? `${UPCOMING_VISITS_BASE}?${qs}` : UPCOMING_VISITS_BASE;
 }
 
+/** Relative column weights. Percentages are normalized so the table stays within the page. */
+function upcomingVisitColumnWidths(flags: {
+  showScheduled: boolean;
+  showOverdue: boolean;
+  showFamily: boolean;
+}): string[] {
+  const weights = [
+    9, // client
+    7, // address
+    15, // team members
+    11, // next visit
+  ];
+  if (flags.showScheduled) weights.push(11);
+  if (flags.showOverdue) weights.push(7);
+  weights.push(
+    9, // last visit
+    12, // job
+    9, // program
+    7, // kupat holim
+  );
+  if (flags.showFamily) weights.push(8);
+  weights.push(14); // actions
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  return weights.map((weight) => `${((weight / total) * 100).toFixed(3)}%`);
+}
+
 function SortHeader({
   column,
   label,
@@ -85,7 +111,6 @@ function SortHeader({
   family,
   sortHintAsc,
   sortHintDesc,
-  sticky,
 }: {
   column: SortKey;
   label: string;
@@ -94,7 +119,6 @@ function SortHeader({
   family: string;
   sortHintAsc: string;
   sortHintDesc: string;
-  sticky?: boolean;
 }) {
   const nextDir: SortDir = sort === column ? (dir === "asc" ? "desc" : "asc") : "asc";
   const href = upcomingVisitsHref({ family, sort: column, dir: nextDir });
@@ -103,19 +127,19 @@ function SortHeader({
     <th
       scope="col"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
-      className={
-        sticky
-          ? "sticky start-0 z-20 w-[1%] whitespace-nowrap bg-slate-900/95 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400 shadow-[8px_0_12px_-12px_rgb(15_23_42)]"
-          : "px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
-      }
+      className="px-1.5 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
     >
       <Link
         href={href}
-        className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300"
+        className="inline-flex max-w-full flex-wrap items-center gap-x-1 text-sky-400 hover:text-sky-300"
         title={active ? (dir === "asc" ? sortHintDesc : sortHintAsc) : sortHintAsc}
       >
         <span>{label}</span>
-        {active ? <span aria-hidden="true">{dir === "asc" ? "↑" : "↓"}</span> : null}
+        {active ? (
+          <span className="shrink-0" aria-hidden="true">
+            {dir === "asc" ? "↑" : "↓"}
+          </span>
+        ) : null}
       </Link>
     </th>
   );
@@ -418,6 +442,11 @@ export default async function UpcomingVisitsPage({
 
   const showScheduledColumn = scheduled.some((row) => row.nextAppointment != null);
   const showOverdueColumn = scheduled.some((row) => row.isOverdue);
+  const columnWidths = upcomingVisitColumnWidths({
+    showScheduled: showScheduledColumn,
+    showOverdue: showOverdueColumn,
+    showFamily: Boolean(settings?.family_therapy_enabled),
+  });
 
   const appointmentNewBase = "/dashboard/private-clinic/appointments/new";
 
@@ -496,8 +525,13 @@ export default async function UpcomingVisitsPage({
         <>
           {scheduled.length > 0 ? (
             <section className="space-y-3">
-              <div className="overflow-x-auto rounded-xl border border-slate-700">
-                <table className="min-w-full divide-y divide-slate-700 text-sm">
+              <div className="overflow-hidden rounded-xl border border-slate-700">
+                <table className="w-full table-fixed divide-y divide-slate-700 text-sm [&_td]:min-w-0 [&_th]:min-w-0">
+                  <colgroup>
+                    {columnWidths.map((width, index) => (
+                      <col key={index} style={{ width }} />
+                    ))}
+                  </colgroup>
                   <thead className="bg-slate-900/80">
                     <tr>
                       <SortHeader
@@ -508,7 +542,6 @@ export default async function UpcomingVisitsPage({
                         family={familyFilter}
                         sortHintAsc={cl.sortHintAsc}
                         sortHintDesc={cl.sortHintDesc}
-                        sticky
                       />
                       <SortHeader
                         column="address"
@@ -608,7 +641,7 @@ export default async function UpcomingVisitsPage({
                       ) : null}
                       <th
                         scope="col"
-                        className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
+                        className="px-1.5 py-2 text-start text-xs font-semibold uppercase tracking-wide text-slate-400"
                       >
                         {uv.colActions}
                       </th>
@@ -628,22 +661,15 @@ export default async function UpcomingVisitsPage({
                                 : "hover:bg-slate-800/50"
                         }
                       >
-                        <td
-                          className={`sticky start-0 z-10 w-[1%] whitespace-nowrap px-3 py-2 text-slate-200 shadow-[8px_0_12px_-12px_rgb(15_23_42)] ${
-                            r.isOverdue
-                              ? "bg-rose-950"
-                              : r.isDueToday
-                                ? "bg-amber-950"
-                                : "bg-slate-900"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-200">
+                          <div className="flex min-w-0 items-center gap-1.5">
                             {obfuscate ? (
-                              <span>{OBFUSCATED}</span>
+                              <span className="min-w-0 truncate">{OBFUSCATED}</span>
                             ) : (
                               <Link
                                 href={`/dashboard/private-clinic/clients/${encodeURIComponent(r.clientId)}/edit?fromUpcoming=1&modal=1`}
-                                className="font-medium text-sky-400 hover:text-sky-300"
+                                title={r.name}
+                                className="min-w-0 truncate font-medium text-sky-400 hover:text-sky-300"
                               >
                                 {r.name}
                               </Link>
@@ -655,27 +681,33 @@ export default async function UpcomingVisitsPage({
                             ) : null}
                           </div>
                         </td>
-                        <td className="max-w-[16rem] truncate px-3 py-2 text-slate-300" title={r.address || undefined}>
-                          {obfuscate ? (r.address ? OBFUSCATED : "") : r.address || "—"}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate" title={r.address || undefined}>
+                            {obfuscate ? (r.address ? OBFUSCATED : "") : r.address || "—"}
+                          </div>
                         </td>
-                        <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={r.teamMembers || undefined}>
-                          {r.teamMembers || "—"}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate" title={r.teamMembers || undefined}>
+                            {r.teamMembers || "—"}
+                          </div>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2">
-                          <span className="font-medium text-slate-100">
-                            {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
-                          </span>
-                          {r.isDueToday ? (
-                            <span className="ms-2 rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-950">
-                              {uv.dueToday}
+                        <td className="overflow-hidden px-1.5 py-2">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <span className="whitespace-nowrap font-medium text-slate-100">
+                              {formatHouseholdDate(r.nextDue, dateDisplayFormat)}
                             </span>
-                          ) : null}
+                            {r.isDueToday ? (
+                              <span className="rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-950">
+                                {uv.dueToday}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         {showScheduledColumn ? (
-                          <td className="px-3 py-2 text-slate-300">
+                          <td className="overflow-hidden px-1.5 py-2 text-slate-300">
                             {r.nextAppointment ? (
-                              <div>
-                                <div className="whitespace-nowrap">
+                              <div className="min-w-0">
+                                <div>
                                   {formatHouseholdDateUtcWithTime(
                                     r.nextAppointment.startAt,
                                     dateDisplayFormat,
@@ -683,7 +715,7 @@ export default async function UpcomingVisitsPage({
                                 </div>
                                 {r.nextAppointment.note ? (
                                   <div
-                                    className="mt-0.5 max-w-[16rem] whitespace-normal text-xs text-slate-400"
+                                    className="mt-0.5 truncate text-xs text-slate-400"
                                     title={r.nextAppointment.note}
                                   >
                                     {r.nextAppointment.note}
@@ -696,7 +728,7 @@ export default async function UpcomingVisitsPage({
                           </td>
                         ) : null}
                         {showOverdueColumn ? (
-                          <td className="whitespace-nowrap px-3 py-2">
+                          <td className="px-1.5 py-2">
                             {r.isOverdue ? (
                               <span className="rounded bg-rose-600/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
                                 {uv.overdue}
@@ -704,41 +736,55 @@ export default async function UpcomingVisitsPage({
                             ) : null}
                           </td>
                         ) : null}
-                        <td className="whitespace-nowrap px-3 py-2 text-slate-300">
-                          {formatHouseholdDate(r.lastVisit, dateDisplayFormat)}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate">
+                            {formatHouseholdDate(r.lastVisit, dateDisplayFormat)}
+                          </div>
                         </td>
-                        <td className="max-w-[14rem] truncate px-3 py-2 text-slate-300" title={r.jobLabel}>
-                          {r.jobLabel}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate" title={r.jobLabel}>
+                            {r.jobLabel}
+                          </div>
                         </td>
-                        <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.programLabel}>
-                          {r.programLabel}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate" title={r.programLabel}>
+                            {r.programLabel}
+                          </div>
                         </td>
-                        <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.kupatHolimLabel}>
-                          {r.kupatHolimLabel}
+                        <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                          <div className="truncate" title={r.kupatHolimLabel}>
+                            {r.kupatHolimLabel}
+                          </div>
                         </td>
                         {settings?.family_therapy_enabled ? (
-                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-300" title={r.familyLabel}>
-                            {r.familyLabel}
+                          <td className="overflow-hidden px-1.5 py-2 text-slate-300">
+                            <div className="truncate" title={r.familyLabel}>
+                              {r.familyLabel}
+                            </div>
                           </td>
                         ) : null}
-                        <td className="whitespace-nowrap px-3 py-2">
-                          <LogTreatmentLink
-                            label={uv.logTreatment}
-                            clientId={r.clientId}
-                            nextAppointment={r.nextAppointment}
-                          />
-                          {" · "}
-                          <UpcomingVisitAppointmentActions
-                            nextAppointment={r.nextAppointment}
-                            scheduleAppointmentHref={scheduleAppointmentHref(
-                              r.clientId,
-                              r.nextDue,
-                              r.isOverdue,
-                            )}
-                            scheduleAppointmentLabel={uv.scheduleAppointment}
-                            rescheduleLabel={ap.reschedule}
-                            cancelLabel={ap.cancel}
-                          />
+                        <td className="overflow-hidden px-1.5 py-2">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 [&_a]:whitespace-normal [&_button]:whitespace-normal">
+                            <LogTreatmentLink
+                              label={uv.logTreatment}
+                              clientId={r.clientId}
+                              nextAppointment={r.nextAppointment}
+                            />
+                            <span className="text-slate-500" aria-hidden="true">
+                              ·
+                            </span>
+                            <UpcomingVisitAppointmentActions
+                              nextAppointment={r.nextAppointment}
+                              scheduleAppointmentHref={scheduleAppointmentHref(
+                                r.clientId,
+                                r.nextDue,
+                                r.isOverdue,
+                              )}
+                              scheduleAppointmentLabel={uv.scheduleAppointment}
+                              rescheduleLabel={ap.reschedule}
+                              cancelLabel={ap.cancel}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
