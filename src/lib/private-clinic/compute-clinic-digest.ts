@@ -245,7 +245,9 @@ export async function computeClinicDigestData(args: {
 
     if (!lastAt) {
       if (!row.start_date) {
-        needsFirstVisit.push({ clientId: row.id, name, nextAppointment });
+        if (!nextAppointment) {
+          needsFirstVisit.push({ clientId: row.id, name, nextAppointment });
+        }
         continue;
       }
       pushVisit(row, null, dateOnlyLocal(row.start_date), nextAppointment);
@@ -262,7 +264,10 @@ export async function computeClinicDigestData(args: {
     if (!row) continue;
 
     pushVisit(row, lastVisitAtByClientId.get(row.id) ?? null, null, nextAppointment);
+    visitClientIds.add(clientId);
   }
+
+  const needsFirstVisitOnly = needsFirstVisit.filter((row) => !visitClientIds.has(row.clientId));
 
   visits.sort((a, b) => {
     const holdCmp = Number(a.onHold) - Number(b.onHold);
@@ -272,7 +277,7 @@ export async function computeClinicDigestData(args: {
     return aTime - bTime;
   });
 
-  return { appointments, visits, needsFirstVisit };
+  return { appointments, visits, needsFirstVisit: needsFirstVisitOnly };
 }
 
 /** Resolve family member id for digest scoping. */

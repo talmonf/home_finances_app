@@ -561,8 +561,8 @@ export function privateClinicUpcomingVisits(lang: UiLanguage) {
   return {
     pageTitle: p("Upcoming visits", "ביקורים קרובים"),
     pageIntro: p(
-      "Active clients with a visit frequency. Default order is next visit due; click a column header to sort. Scheduled appointments set the next visit; clients on hold appear last with a blank next visit.",
-      "לקוחות פעילים עם תדירות ביקורים. ברירת המחדל היא לפי מועד הביקור הבא; לחצו על כותרת עמודה למיון. תור מתוזמן קובע את הביקור הבא; לקוחות מושהים מופיעים בסוף עם ביקור הבא ריק.",
+      "Active clients with a visit frequency. Default order is scheduled appointment, then next visit; click a column header to sort. Scheduled appointments set the next visit; clients on hold appear last with a blank next visit.",
+      "לקוחות פעילים עם תדירות ביקורים. ברירת המחדל היא לפי תור מתוזמן ואז לפי הביקור הבא; לחצו על כותרת עמודה למיון. תור מתוזמן קובע את הביקור הבא; לקוחות מושהים מופיעים בסוף עם ביקור הבא ריק.",
     ),
     onHold: p("On hold", "מושהה"),
     colClient: p("Client", "לקוח"),

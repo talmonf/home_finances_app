@@ -47,6 +47,10 @@ type SortKey =
 
 type SortDir = "asc" | "desc";
 
+/** Booked appointment time, then next-visit due date for clients with no appointment. */
+const DEFAULT_SORT: SortKey = "scheduled";
+const DEFAULT_DIR: SortDir = "asc";
+
 function parseSortKey(raw: string | undefined): SortKey {
   const allowed: SortKey[] = [
     "client",
@@ -61,7 +65,7 @@ function parseSortKey(raw: string | undefined): SortKey {
     "family",
     "team_members",
   ];
-  return allowed.includes(raw as SortKey) ? (raw as SortKey) : "next_due";
+  return allowed.includes(raw as SortKey) ? (raw as SortKey) : DEFAULT_SORT;
 }
 
 function parseSortDir(raw: string | undefined): SortDir {
@@ -71,8 +75,8 @@ function parseSortDir(raw: string | undefined): SortDir {
 function upcomingVisitsHref(p: { family?: string; sort: SortKey; dir: SortDir }) {
   const sp = new URLSearchParams();
   if (p.family?.trim()) sp.set("family", p.family.trim());
-  if (p.sort !== "next_due") sp.set("sort", p.sort);
-  if (p.dir !== "asc") sp.set("dir", p.dir);
+  if (p.sort !== DEFAULT_SORT) sp.set("sort", p.sort);
+  if (p.dir !== DEFAULT_DIR) sp.set("dir", p.dir);
   const qs = sp.toString();
   return qs ? `${UPCOMING_VISITS_BASE}?${qs}` : UPCOMING_VISITS_BASE;
 }
@@ -325,7 +329,8 @@ export default async function UpcomingVisitsPage({
 
     if (!lastAt) {
       if (!row.start_date) {
-        needsFirstVisit.push(row);
+        // A booked appointment already lists this client in the table below.
+        if (!nextAppointment) needsFirstVisit.push(row);
         continue;
       }
 
@@ -362,7 +367,10 @@ export default async function UpcomingVisitsPage({
     scheduled.push(
       toScheduledRow(row, nextDue, lastVisitAtByClientId.get(row.id) ?? null, nextAppointment),
     );
+    scheduledClientIds.add(clientId);
   }
+
+  const needsFirstVisitOnly = needsFirstVisit.filter((row) => !scheduledClientIds.has(row.id));
 
   const direction = dir === "asc" ? 1 : -1;
   scheduled.sort((a, b) => {
@@ -456,8 +464,8 @@ export default async function UpcomingVisitsPage({
           method="get"
           className="flex flex-wrap items-end gap-x-2 gap-y-2 rounded-xl border border-slate-700 bg-slate-900/40 p-3 sm:gap-x-3 sm:p-4"
         >
-          {sort !== "next_due" ? <input type="hidden" name="sort" value={sort} /> : null}
-          {dir !== "asc" ? <input type="hidden" name="dir" value={dir} /> : null}
+          {sort !== DEFAULT_SORT ? <input type="hidden" name="sort" value={sort} /> : null}
+          {dir !== DEFAULT_DIR ? <input type="hidden" name="dir" value={dir} /> : null}
           <div className="min-w-0 flex-1 basis-[12rem]">
             <label className="mb-1 block text-xs text-slate-400">{familyLabel}</label>
             <select
@@ -748,12 +756,12 @@ export default async function UpcomingVisitsPage({
             </section>
           ) : null}
 
-          {needsFirstVisit.length > 0 ? (
+          {needsFirstVisitOnly.length > 0 ? (
             <section className="space-y-2">
               <h3 className="text-sm font-medium text-slate-300">{uv.sectionNeedsFirstVisit}</h3>
               <p className="text-xs text-slate-500">{uv.sectionNeedsFirstVisitHint}</p>
               <ul className="list-inside list-disc space-y-1 text-sm text-slate-300">
-                {needsFirstVisit.map((row) => {
+                {needsFirstVisitOnly.map((row) => {
                   const name =
                     [row.first_name, row.last_name].filter(Boolean).join(" ") || row.first_name;
                   const nextAppointment = nextAppointmentByClientId.get(row.id) ?? null;
