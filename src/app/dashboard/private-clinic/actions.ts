@@ -2524,6 +2524,7 @@ export async function createTherapyTreatment(formData: FormData) {
   const treatmentId = crypto.randomUUID();
   const inlineReceiptNumber = (formData.get("receipt_number") as string)?.trim() || "";
   const inlineReceiptIssuedAt = parseDateRequired((formData.get("receipt_issued_at") as string)?.trim() || null);
+  let nextAppointmentId: string | null = null;
   try {
     await prisma.$transaction(async (tx) => {
       await tx.therapy_treatments.create({
@@ -2624,9 +2625,11 @@ export async function createTherapyTreatment(formData: FormData) {
           throw new Error("NEXT_APPOINTMENT_INVALID");
         }
         const nextEnd = new Date(nextStart.getTime() + nextDuration * 60 * 1000);
+        const scheduledNextId = crypto.randomUUID();
+        nextAppointmentId = scheduledNextId;
         await tx.therapy_appointments.create({
           data: {
-            id: crypto.randomUUID(),
+            id: scheduledNextId,
             household_id: householdId,
             client_id,
             family_id: primaryClient?.family_id ?? appointmentToComplete.family_id,
@@ -2690,6 +2693,49 @@ export async function createTherapyTreatment(formData: FormData) {
           },
         });
       }
+      if (nextAppointmentId) {
+        const createdNext = await prisma.therapy_appointments.findFirst({
+          where: { id: nextAppointmentId, household_id: householdId },
+          include: APPOINTMENT_AUDIT_INCLUDE,
+        });
+        if (createdNext) {
+          await logTherapyAppointmentAudit({
+            householdId,
+            userId,
+            appointmentId: createdNext.id,
+            action: TherapyAppointmentAuditAction.create,
+            metadata: {
+              snapshot: appointmentToSnapshot(createdNext),
+              reason: "scheduled_from_treatment",
+            },
+          });
+          await logClinicUsage("appointments", "create", {
+            resourceType: "appointment",
+            resourceId: createdNext.id,
+          });
+          const actingUser = await prisma.users.findFirst({
+            where: { id: userId, household_id: householdId },
+            select: { ui_language: true },
+          });
+          await syncAppointmentToGoogleCalendar({
+            householdId,
+            actingUserId: userId,
+            actingUserLanguage: actingUser?.ui_language === "he" ? "he" : "en",
+            appointment: {
+              id: createdNext.id,
+              start_at: createdNext.start_at,
+              duration_minutes: createdNext.duration_minutes,
+              google_calendar_event_id: createdNext.google_calendar_event_id,
+              status: createdNext.status,
+              client: {
+                first_name: createdNext.client.first_name,
+                last_name: createdNext.client.last_name,
+              },
+              job: { job_title: createdNext.job.job_title },
+            },
+          });
+        }
+      }
     }
   }
   revalidatePath(`${BASE}/treatments`);
@@ -2697,6 +2743,7 @@ export async function createTherapyTreatment(formData: FormData) {
   if (appointmentToComplete) {
     revalidatePath(`${BASE}/appointments`);
     revalidatePath(`${BASE}/upcoming-visits`);
+    revalidatePath("/dashboard/calendar");
   }
   redirectPrivateClinicScoped(formData, "success", `${BASE}/treatments?created=1`);
 }
