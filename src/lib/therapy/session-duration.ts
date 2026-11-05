@@ -7,6 +7,14 @@ function parsePositiveMinutes(raw: unknown): number | null {
   return rounded;
 }
 
+/** Elapsed minutes from start to end. Returns null unless end is after start. */
+export function positiveMinutesBetween(start: Date, end: Date): number | null {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  return minutes;
+}
+
 export function getSystemDefaultSessionMinutes(): number {
   const envValue = process.env.PRIVATE_CLINIC_DEFAULT_SESSION_MINUTES;
   if (!envValue) return DEFAULT_SYSTEM_SESSION_LENGTH_MINUTES;

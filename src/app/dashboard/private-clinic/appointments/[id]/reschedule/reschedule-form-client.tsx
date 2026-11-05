@@ -2,10 +2,27 @@
 
 import { HouseholdDateIsoControl } from "@/components/household-date-field";
 import { fiveMinuteClockOptions } from "@/lib/therapy/clock-minutes";
+import { positiveMinutesBetween } from "@/lib/therapy/session-duration";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { AppointmentChangeReasonFields } from "../../appointment-change-reason-fields";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+
+function durationFromSchedule(schedule: {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  durationMinutes: string;
+}): string {
+  if (!schedule.startDate || !schedule.startTime || !schedule.endDate || !schedule.endTime) {
+    return schedule.durationMinutes;
+  }
+  const start = new Date(`${schedule.startDate}T${schedule.startTime}`);
+  const end = new Date(`${schedule.endDate}T${schedule.endTime}`);
+  const minutes = positiveMinutesBetween(start, end);
+  return minutes ? String(minutes) : schedule.durationMinutes;
+}
 
 type Props = {
   action: (formData: FormData) => void | Promise<void>;
@@ -59,18 +76,18 @@ export function RescheduleFormClient({
   const [endDate, setEndDate] = useState(defaults.endDate || defaults.startDate);
   const [endTimeHour, setEndTimeHour] = useState(endHour ?? "00");
   const [endTimeMinute, setEndTimeMinute] = useState(endMinute ?? "00");
-  const [durationMinutes, setDurationMinutes] = useState(defaults.durationMinutes);
+  const [durationMinutes, setDurationMinutes] = useState(() => durationFromSchedule(defaults));
   const timeHourOptions = useMemo(
     () => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")),
-    [],
-  );
-  const endMinuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
     [],
   );
   const startMinuteOptions = useMemo(
     () => fiveMinuteClockOptions(startTimeMinute),
     [startTimeMinute],
+  );
+  const endMinuteOptions = useMemo(
+    () => fiveMinuteClockOptions(endTimeMinute),
+    [endTimeMinute],
   );
 
   const startAtValue = useMemo(() => {
@@ -87,6 +104,18 @@ export function RescheduleFormClient({
     setStartDate(nextDate);
     setEndDate(nextDate);
   };
+
+  const syncDurationFromEnd = (nextEndDate: string, nextEndHour: string, nextEndMinute: string) => {
+    if (!startDate || !startTimeHour || !startTimeMinute) return;
+    if (!nextEndDate || !nextEndHour || !nextEndMinute) return;
+    const start = new Date(`${startDate}T${startTimeHour}:${startTimeMinute}`);
+    const end = new Date(`${nextEndDate}T${nextEndHour}:${nextEndMinute}`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+    const deltaMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (!Number.isFinite(deltaMinutes) || deltaMinutes <= 0) return;
+    setDurationMinutes(String(deltaMinutes));
+  };
+
   const navigateWithPending = (href: string, target: "cancel" | "close") => {
     setNavTarget(target);
     startNavigation(() => {
@@ -185,7 +214,11 @@ export function RescheduleFormClient({
           <div className="flex shrink-0 items-center gap-1">
             <select
               value={endTimeHour}
-              onChange={(e) => setEndTimeHour(e.target.value)}
+              onChange={(e) => {
+                const nextHour = e.target.value;
+                setEndTimeHour(nextHour);
+                syncDurationFromEnd(endDate, nextHour, endTimeMinute);
+              }}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
               aria-label={`${labels.startTime} ${timeHourSuffix}`}
             >
@@ -198,7 +231,11 @@ export function RescheduleFormClient({
             <span className="text-slate-300">:</span>
             <select
               value={endTimeMinute}
-              onChange={(e) => setEndTimeMinute(e.target.value)}
+              onChange={(e) => {
+                const nextMinute = e.target.value;
+                setEndTimeMinute(nextMinute);
+                syncDurationFromEnd(endDate, endTimeHour, nextMinute);
+              }}
               className="w-[4.2rem] rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
               aria-label={`${labels.startTime} ${timeMinuteSuffix}`}
             >

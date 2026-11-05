@@ -32,6 +32,7 @@ import {
 import { startOfTodayLocal } from "@/lib/private-clinic/reminders-logic";
 import {
   getSystemDefaultSessionMinutes,
+  positiveMinutesBetween,
   resolveSessionDurationMinutes,
 } from "@/lib/therapy/session-duration";
 import { isEligiblePetrolTankerOnFillDate } from "@/lib/family-member-age";
@@ -2724,6 +2725,7 @@ export async function createTherapyTreatment(formData: FormData) {
             appointment: {
               id: createdNext.id,
               start_at: createdNext.start_at,
+              end_at: createdNext.end_at,
               duration_minutes: createdNext.duration_minutes,
               google_calendar_event_id: createdNext.google_calendar_event_id,
               status: createdNext.status,
@@ -4121,6 +4123,7 @@ async function syncAppointmentToGoogleCalendar(params: {
   appointment: {
     id: string;
     start_at: Date;
+    end_at?: Date | null;
     duration_minutes: number | null;
     google_calendar_event_id: string | null;
     status: TherapyAppointmentStatus;
@@ -4149,13 +4152,20 @@ async function syncAppointmentToGoogleCalendar(params: {
     }
 
     const duration = params.appointment.duration_minutes;
-    if (!duration || duration <= 0) {
+    const explicitEnd = params.appointment.end_at ?? null;
+    const endFromDuration =
+      duration && duration > 0
+        ? new Date(params.appointment.start_at.getTime() + duration * 60 * 1000)
+        : null;
+    const endAt =
+      explicitEnd && explicitEnd.getTime() > params.appointment.start_at.getTime()
+        ? explicitEnd
+        : endFromDuration;
+    if (!endAt) {
       const error = "Missing valid session duration; Google Calendar sync skipped.";
       await saveGoogleSyncFailure(params.appointment.id, error);
       return error;
     }
-
-    const endAt = new Date(params.appointment.start_at.getTime() + duration * 60 * 1000);
     const action = params.appointment.google_calendar_event_id ? "update" : "create";
     const text = appointmentTextByLanguage(params.actingUserLanguage, action);
     const clientFullName = [params.appointment.client.first_name, params.appointment.client.last_name]
@@ -4441,6 +4451,7 @@ export async function createTherapyAppointment(formData: FormData) {
     appointment: {
       id: created.id,
       start_at: created.start_at,
+      end_at: created.end_at,
       duration_minutes: resolvedDurationMinutes,
       google_calendar_event_id: created.google_calendar_event_id ?? null,
       status: created.status,
@@ -4754,18 +4765,24 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
 
   const start_at = parseDatetimeLocalInTimeZone(start_at_raw, APPOINTMENT_TIME_ZONE);
   if (!start_at || Number.isNaN(start_at.getTime())) redirect(`${BASE}/appointments?error=date`);
+  const explicitEndAt = parseDatetimeLocalInTimeZone(
+    (formData.get("end_at") as string) || null,
+    APPOINTMENT_TIME_ZONE,
+  );
+  const minutesFromExplicitEnd = explicitEndAt
+    ? positiveMinutesBetween(start_at, explicitEndAt)
+    : null;
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
     clientId: before.client_id,
     jobId: before.job_id,
     programId: before.program_id,
     appointmentDurationMinutes:
-      appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+      minutesFromExplicitEnd ??
+      appointmentDurationMinutesInput ??
+      before.duration_minutes ??
+      null,
   });
-  const explicitEndAt = parseDatetimeLocalInTimeZone(
-    (formData.get("end_at") as string) || null,
-    APPOINTMENT_TIME_ZONE,
-  );
   const end_at =
     explicitEndAt ??
     (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
@@ -4776,7 +4793,11 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
       start_at,
       end_at,
       reschedule_reason,
-      duration_minutes: appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+      duration_minutes:
+        minutesFromExplicitEnd ??
+        appointmentDurationMinutesInput ??
+        before.duration_minutes ??
+        null,
     },
   });
 
@@ -4808,7 +4829,8 @@ export async function rescheduleTherapyAppointment(formData: FormData) {
       appointment: {
         id: after.id,
         start_at: after.start_at,
-        duration_minutes: resolvedDurationMinutes,
+        end_at: after.end_at,
+        duration_minutes: minutesFromExplicitEnd ?? resolvedDurationMinutes,
         google_calendar_event_id: after.google_calendar_event_id ?? null,
         status: after.status,
         client: {
@@ -4883,18 +4905,24 @@ export async function updateTherapyAppointment(formData: FormData) {
     select: { family_id: true },
   });
 
+  const explicitEndAt = parseDatetimeLocalInTimeZone(
+    (formData.get("end_at") as string) || null,
+    APPOINTMENT_TIME_ZONE,
+  );
+  const minutesFromExplicitEnd = explicitEndAt
+    ? positiveMinutesBetween(start_at, explicitEndAt)
+    : null;
   const resolvedDurationMinutes = await resolveAppointmentDurationMinutes({
     householdId,
     clientId: client_id,
     jobId: job_id,
     programId: programIdOrNull,
     appointmentDurationMinutes:
-      appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+      minutesFromExplicitEnd ??
+      appointmentDurationMinutesInput ??
+      before.duration_minutes ??
+      null,
   });
-  const explicitEndAt = parseDatetimeLocalInTimeZone(
-    (formData.get("end_at") as string) || null,
-    APPOINTMENT_TIME_ZONE,
-  );
   const resolvedEndAt =
     explicitEndAt ??
     (resolvedDurationMinutes ? new Date(start_at.getTime() + resolvedDurationMinutes * 60 * 1000) : null);
@@ -4910,7 +4938,11 @@ export async function updateTherapyAppointment(formData: FormData) {
       status,
       start_at,
       end_at: resolvedEndAt,
-      duration_minutes: appointmentDurationMinutesInput ?? before.duration_minutes ?? null,
+      duration_minutes:
+        minutesFromExplicitEnd ??
+        appointmentDurationMinutesInput ??
+        before.duration_minutes ??
+        null,
       cancellation_reason:
         status === "cancelled"
           ? (formData.get("cancellation_reason") as string | null)?.trim() || null
@@ -4951,7 +4983,8 @@ export async function updateTherapyAppointment(formData: FormData) {
       appointment: {
         id: after.id,
         start_at: after.start_at,
-        duration_minutes: resolvedDurationMinutes,
+        end_at: after.end_at,
+        duration_minutes: minutesFromExplicitEnd ?? resolvedDurationMinutes,
         google_calendar_event_id: after.google_calendar_event_id ?? null,
         status: after.status,
         client: {
