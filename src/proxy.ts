@@ -47,7 +47,14 @@ function applyLoginPortalCookie(
 }
 
 function applyLoginRouteCookies(pathname: string, req: NextRequest): NextResponse {
-  let res = NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  const lang = req.nextUrl.searchParams.get("lang");
+  if (lang === "en" || lang === "he") {
+    requestHeaders.set("x-login-lang", lang);
+  }
+  let res = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
   res = applyLoginUiLanguageFromQuery(req, res);
   if (pathname.startsWith("/login")) {
     res = applyLoginPortalCookie(pathname, req, res);

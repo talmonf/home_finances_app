@@ -5,7 +5,11 @@ import {
   isClinicSplashHost,
   isClinicSplashRequest,
 } from "@/lib/clinic-splash-host";
-import { clinicLoginHref, uiLanguageFromBrowser } from "@/lib/clinic-splash-language";
+import {
+  clinicLoginHref,
+  uiLanguageFromAcceptLanguage,
+  uiLanguageFromBrowser,
+} from "@/lib/clinic-splash-language";
 
 test("hostnameFromHostHeader strips port and lowercases", () => {
   assert.equal(hostnameFromHostHeader("LocalHost:3000"), "localhost");
@@ -37,4 +41,14 @@ test("uiLanguageFromBrowser", () => {
   assert.equal(uiLanguageFromBrowser(""), "he");
   assert.equal(clinicLoginHref("en"), "/login?lang=en");
   assert.equal(clinicLoginHref("he"), "/login?lang=he");
+});
+
+test("uiLanguageFromAcceptLanguage prefers the highest-quality supported tag", () => {
+  assert.equal(uiLanguageFromAcceptLanguage("en-US,en;q=0.9,he;q=0.8"), "en");
+  assert.equal(uiLanguageFromAcceptLanguage("he-IL,he;q=0.9,en-US;q=0.8"), "he");
+  assert.equal(uiLanguageFromAcceptLanguage("fr-FR,fr;q=0.9,en;q=0.8"), "en");
+  assert.equal(uiLanguageFromAcceptLanguage("en;q=0.1,he;q=0.9"), "he");
+  assert.equal(uiLanguageFromAcceptLanguage("fr"), "he");
+  assert.equal(uiLanguageFromAcceptLanguage(null), "he");
+  assert.equal(uiLanguageFromAcceptLanguage(""), "he");
 });

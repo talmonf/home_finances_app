@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { AuthLanguageToggle } from "@/components/auth-language-toggle";
 import { clinicSplashCopy, type ClinicSplashCopy } from "@/lib/clinic-splash-copy";
-import { clinicLoginHref, uiLanguageFromBrowser } from "@/lib/clinic-splash-language";
+import { clinicLoginHref } from "@/lib/clinic-splash-language";
 import { PRIVACY_POLICY_PATH } from "@/lib/privacy-policy-content";
 import { uiLanguageDirection, type UiLanguage } from "@/lib/ui-language";
 
-function browserLanguage(): UiLanguage {
-  if (typeof navigator === "undefined") return "he";
-  return uiLanguageFromBrowser(navigator.language);
+function persistUiLanguage(language: UiLanguage) {
+  return fetch("/api/auth/login-ui-language", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
 }
 
 function SplashActions({
@@ -64,7 +68,7 @@ function SplashColumn({
   onRequestDemo: () => void;
 }) {
   return (
-    <section dir={dir} className="flex flex-col px-6 py-10 sm:px-10 lg:px-12 lg:py-16">
+    <section dir={dir} className="flex flex-col px-6 pb-10 pt-4 sm:px-10 lg:px-12 lg:pb-16 lg:pt-6">
       <p className="text-sm font-medium uppercase tracking-wide text-sky-300">{copy.kicker}</p>
       <h1 className="mt-3 text-3xl font-semibold text-slate-50 sm:text-4xl">{copy.productName}</h1>
       <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-300">{copy.pitch}</p>
@@ -101,12 +105,12 @@ function SplashColumn({
   );
 }
 
-export function ClinicSplashPage() {
-  const english = clinicSplashCopy("en");
-  const hebrew = clinicSplashCopy("he");
+export function ClinicSplashPage({ initialLanguage }: { initialLanguage: UiLanguage }) {
+  const [language, setLanguage] = useState<UiLanguage>(initialLanguage);
+  const languageRef = useRef(initialLanguage);
+  const persistQueue = useRef(Promise.resolve());
   const [open, setOpen] = useState(false);
   const [requestKind, setRequestKind] = useState<"access" | "demo">("access");
-  const [language, setLanguage] = useState<UiLanguage>("he");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -115,16 +119,42 @@ export function ClinicSplashPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorCode, setErrorCode] = useState<"invalid" | "unavailable" | "generic">("generic");
 
-  const formCopy = clinicSplashCopy(language);
-  const formDir = uiLanguageDirection(language);
+  languageRef.current = language;
+  const copy = clinicSplashCopy(language);
+  const dir = uiLanguageDirection(language);
 
-  function signIn() {
-    window.location.href = clinicLoginHref(browserLanguage());
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = dir;
+    document.title = copy.productName;
+  }, [language, dir, copy.productName]);
+
+  function queueLanguagePersist(next: UiLanguage) {
+    const job = persistQueue.current.then(async () => {
+      try {
+        await persistUiLanguage(next);
+      } catch {
+        // Sign-in still passes the chosen language on the login URL.
+      }
+    });
+    persistQueue.current = job;
+    return job;
+  }
+
+  function applyLanguage(next: UiLanguage) {
+    languageRef.current = next;
+    setLanguage(next);
+    void queueLanguagePersist(next);
+  }
+
+  async function signIn() {
+    const next = languageRef.current;
+    await queueLanguagePersist(next);
+    window.location.assign(clinicLoginHref(next));
   }
 
   function openForm(kind: "access" | "demo") {
     setRequestKind(kind);
-    setLanguage(browserLanguage());
     setStatus("idle");
     setName("");
     setEmail("");
@@ -158,90 +188,61 @@ export function ClinicSplashPage() {
 
   const errorText =
     errorCode === "invalid"
-      ? formCopy.errorInvalid
+      ? copy.errorInvalid
       : errorCode === "unavailable"
-        ? formCopy.errorUnavailable
-        : formCopy.errorGeneric;
+        ? copy.errorUnavailable
+        : copy.errorGeneric;
 
   return (
-    <div dir="ltr" className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto grid min-h-screen max-w-screen-2xl lg:grid-cols-2">
-        <div className="order-2 border-slate-800 lg:order-1 lg:border-e">
-          <SplashColumn
-            copy={english}
-            dir="ltr"
-            onSignIn={signIn}
-            onRequestAccess={() => openForm("access")}
-            onRequestDemo={() => openForm("demo")}
-          />
-        </div>
-        <div className="order-1 lg:order-2">
-          <SplashColumn
-            copy={hebrew}
-            dir="rtl"
-            onSignIn={signIn}
-            onRequestAccess={() => openForm("access")}
-            onRequestDemo={() => openForm("demo")}
-          />
-        </div>
+    <div lang={language} dir={dir} className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col">
+        <AuthLanguageToggle
+          language={language}
+          label={copy.languageLabel}
+          onSelect={applyLanguage}
+          className="px-6 pt-6 sm:px-10 lg:px-12"
+        />
+        <SplashColumn
+          copy={copy}
+          dir={dir}
+          onSignIn={() => void signIn()}
+          onRequestAccess={() => openForm("access")}
+          onRequestDemo={() => openForm("demo")}
+        />
       </div>
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
           <div
-            dir={formDir}
+            dir={dir}
             className="w-full max-w-md rounded-2xl bg-slate-900 p-6 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700"
             role="dialog"
             aria-labelledby="clinic-access-title"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 id="clinic-access-title" className="text-lg font-semibold text-slate-50">
-                {requestKind === "demo" ? formCopy.demoFormTitle : formCopy.formTitle}
+                {requestKind === "demo" ? copy.demoFormTitle : copy.formTitle}
               </h2>
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-slate-500">{formCopy.languageLabel}</span>
-                <button
-                  type="button"
-                  onClick={() => setLanguage("en")}
-                  className={
-                    language === "en"
-                      ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
-                      : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800"
-                  }
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLanguage("he")}
-                  className={
-                    language === "he"
-                      ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
-                      : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800"
-                  }
-                >
-                  עב
-                </button>
-              </div>
+              <AuthLanguageToggle language={language} label={copy.languageLabel} onSelect={applyLanguage} />
             </div>
             {status === "sent" ? (
               <div>
-                <p className="text-sm text-emerald-200">{formCopy.success}</p>
+                <p className="text-sm text-emerald-200">{copy.success}</p>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   className="mt-6 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
                 >
-                  {formCopy.close}
+                  {copy.close}
                 </button>
               </div>
             ) : (
               <form onSubmit={(event) => void submitRequest(event)} className="flex flex-col gap-3">
                 <p className="text-sm text-slate-400">
-                  {requestKind === "demo" ? formCopy.demoFormIntro : formCopy.formIntro}
+                  {requestKind === "demo" ? copy.demoFormIntro : copy.formIntro}
                 </p>
                 <label className="text-sm text-slate-200">
-                  {formCopy.nameLabel}
+                  {copy.nameLabel}
                   <input
                     required
                     name="name"
@@ -251,7 +252,7 @@ export function ClinicSplashPage() {
                   />
                 </label>
                 <label className="text-sm text-slate-200">
-                  {formCopy.emailLabel}
+                  {copy.emailLabel}
                   <input
                     required
                     type="email"
@@ -262,7 +263,7 @@ export function ClinicSplashPage() {
                   />
                 </label>
                 <label className="text-sm text-slate-200">
-                  {formCopy.phoneLabel}
+                  {copy.phoneLabel}
                   <input
                     name="phone"
                     value={phone}
@@ -271,7 +272,7 @@ export function ClinicSplashPage() {
                   />
                 </label>
                 <label className="text-sm text-slate-200">
-                  {formCopy.messageLabel}
+                  {copy.messageLabel}
                   <textarea
                     name="message"
                     rows={3}
@@ -298,14 +299,14 @@ export function ClinicSplashPage() {
                     disabled={status === "sending"}
                     className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60"
                   >
-                    {status === "sending" ? formCopy.submitting : formCopy.submit}
+                    {status === "sending" ? copy.submitting : copy.submit}
                   </button>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
                   >
-                    {formCopy.cancel}
+                    {copy.cancel}
                   </button>
                 </div>
               </form>

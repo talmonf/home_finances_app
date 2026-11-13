@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AuthLanguageToggle } from "@/components/auth-language-toggle";
 import { PasswordInputWithToggle } from "@/components/PasswordInputWithToggle";
 import { safePostLoginPath } from "@/lib/household-member-login-path";
 import type { AppPortal } from "@/lib/app-branding-strings";
@@ -151,31 +152,12 @@ export function LoginForm({
       dir={dir}
     >
       <div className="w-full max-w-md rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
-        <div className="mb-4 flex items-center justify-end gap-1.5 text-xs">
-          <span className="text-slate-500">{copy.languageLabel}</span>
-          <button
-            type="button"
-            onClick={() => void applyLanguage("en", true)}
-            className={
-              language === "en"
-                ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
-                : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-            }
-          >
-            EN
-          </button>
-          <button
-            type="button"
-            onClick={() => void applyLanguage("he", true)}
-            className={
-              language === "he"
-                ? "rounded-md bg-slate-700 px-2 py-1 font-medium text-slate-100"
-                : "rounded-md px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-            }
-          >
-            עב
-          </button>
-        </div>
+        <AuthLanguageToggle
+          language={language}
+          label={copy.languageLabel}
+          onSelect={(next) => void applyLanguage(next, true)}
+          className="mb-4"
+        />
         <h1 className="mb-2 text-center text-2xl font-semibold text-slate-50">
           {copy.title}
         </h1>

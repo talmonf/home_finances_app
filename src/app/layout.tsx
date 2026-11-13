@@ -13,7 +13,7 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { getEffectiveModuleAccess } from "@/lib/household-sections";
-import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
+import { resolveLoggedOutUiLanguage } from "@/lib/login-ui-language";
 import { htmlLangForDateDisplayFormat } from "@/lib/household-date-format";
 import { uiLanguageDirection } from "@/lib/ui-language";
 
@@ -21,9 +21,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const session = await getAuthSession();
   const householdMember =
     Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
+  const headerList = await headers();
   const uiLanguage = householdMember
     ? await getCurrentUiLanguage()
-    : await resolveLoginPageUiLanguage();
+    : await resolveLoggedOutUiLanguage(headerList);
   const portal = await resolveAppPortal({
     isAuthenticated: Boolean(session?.user),
     isSuperAdmin: Boolean(session?.user?.isSuperAdmin),
@@ -49,9 +50,10 @@ export default async function RootLayout({
   const session = await getAuthSession();
   const householdMember =
     Boolean(session?.user?.householdId) && session?.user && !session.user.isSuperAdmin;
+  const headerList = await headers();
   const uiLanguage = householdMember
     ? await getCurrentUiLanguage()
-    : await resolveLoginPageUiLanguage();
+    : await resolveLoggedOutUiLanguage(headerList);
   const dir = uiLanguageDirection(uiLanguage);
   const portal = await resolveAppPortal({
     isAuthenticated: Boolean(session?.user),
@@ -60,7 +62,6 @@ export default async function RootLayout({
     userId: session?.user?.id,
     uiLanguage,
   });
-  const headerList = await headers();
   const clinicSplash = headerList.get("x-clinic-splash") === "1";
   const moduleAccess =
     householdMember && session?.user?.householdId && session.user.id

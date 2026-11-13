@@ -1,4 +1,5 @@
 import { resolveLoginPageUiLanguage } from "@/lib/login-ui-language";
+import type { UiLanguage } from "@/lib/ui-language";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
@@ -52,8 +53,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackUrl = resolvedSearchParams?.callbackUrl;
   const passwordUpdated = resolvedSearchParams?.passwordUpdated === "1";
   const langParam = resolvedSearchParams?.lang?.trim();
-  const pinInitialLanguage = langParam === "en" || langParam === "he";
-  const initialLanguage = await resolveLoginPageUiLanguage();
+  const explicitLanguage: UiLanguage | null =
+    langParam === "en" || langParam === "he" ? langParam : null;
+  const pinInitialLanguage = explicitLanguage != null;
+  const initialLanguage = explicitLanguage ?? (await resolveLoginPageUiLanguage());
   const portal = resolvedSearchParams?.portal === "home" ? "home" : "clinic";
 
   return (

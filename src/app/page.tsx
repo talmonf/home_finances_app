@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ClinicSplashPage } from "@/components/clinic-splash-page";
 import { isClinicSplashRequest } from "@/lib/clinic-splash-host";
+import { resolveClinicSplashUiLanguage } from "@/lib/login-ui-language";
 import { getAuthSession, getCurrentObfuscateSensitive, getCurrentUiLanguage, prisma } from "@/lib/auth";
 import { googleCalendarReconnectHref } from "@/lib/household-member-login-path";
 import { redirectIfPasswordChangeRequired } from "@/lib/require-password-change";
@@ -52,7 +53,7 @@ export default async function Home({ searchParams }: HomeProps) {
     if (!homePortal && !passwordUpdated) {
       const headerList = await headers();
       if (isClinicSplashRequest({ headers: headerList })) {
-        return <ClinicSplashPage />;
+        return <ClinicSplashPage initialLanguage={await resolveClinicSplashUiLanguage()} />;
       }
     }
     const qs = new URLSearchParams();
