@@ -164,7 +164,6 @@ export function ConsultationModalForm({
                   <SplitDateTimeField
                     name="occurred_at"
                     required
-                    fiveMinuteSteps={scheduling}
                     timeOptional={reporting}
                     compactDate
                     initialValue={initial?.occurred_at}

@@ -46,7 +46,6 @@ export function ConsultationRescheduleForm({
               <SplitDateTimeField
                 name="occurred_at"
                 required
-                fiveMinuteSteps
                 compactDate
                 initialValue={initialOccurredAt}
                 uiLanguage={uiLanguage}

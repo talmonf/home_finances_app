@@ -14,8 +14,6 @@ type Props = {
    * Hour/minute are not HTML-required; `required` applies to the date input only.
    */
   timeOptional?: boolean;
-  /** Minute choices are 00, 05, 10, … 55. An existing off-grid minute stays selectable. */
-  fiveMinuteSteps?: boolean;
   /** Date box fits `dd/mm/yyyy`, with the calendar button beside it. */
   compactDate?: boolean;
   uiLanguage?: "en" | "he";
@@ -33,7 +31,6 @@ export function SplitDateTimeField({
   initialValue = "",
   required = false,
   timeOptional = false,
-  fiveMinuteSteps = false,
   compactDate = false,
   uiLanguage = "en",
   dateAriaLabel,
@@ -59,13 +56,7 @@ export function SplitDateTimeField({
     () => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")),
     [],
   );
-  const minuteOptions = useMemo(
-    () =>
-      fiveMinuteSteps
-        ? fiveMinuteClockOptions(minute)
-        : Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
-    [fiveMinuteSteps, minute],
-  );
+  const minuteOptions = useMemo(() => fiveMinuteClockOptions(minute), [minute]);
   const timeRequired = required && !timeOptional;
   const value = useMemo(() => {
     if (!date) return "";
