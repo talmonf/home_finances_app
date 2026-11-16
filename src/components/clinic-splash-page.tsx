@@ -198,7 +198,6 @@ export function ClinicSplashPage({ initialLanguage }: { initialLanguage: UiLangu
       <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col">
         <AuthLanguageToggle
           language={language}
-          label={copy.languageLabel}
           onSelect={applyLanguage}
           className="px-6 pt-6 sm:px-10 lg:px-12"
         />
@@ -223,7 +222,7 @@ export function ClinicSplashPage({ initialLanguage }: { initialLanguage: UiLangu
               <h2 id="clinic-access-title" className="text-lg font-semibold text-slate-50">
                 {requestKind === "demo" ? copy.demoFormTitle : copy.formTitle}
               </h2>
-              <AuthLanguageToggle language={language} label={copy.languageLabel} onSelect={applyLanguage} />
+              <AuthLanguageToggle language={language} onSelect={applyLanguage} />
             </div>
             {status === "sent" ? (
               <div>

@@ -154,7 +154,6 @@ export function LoginForm({
       <div className="w-full max-w-md rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
         <AuthLanguageToggle
           language={language}
-          label={copy.languageLabel}
           onSelect={(next) => void applyLanguage(next, true)}
           className="mb-4"
         />

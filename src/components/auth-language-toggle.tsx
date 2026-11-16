@@ -9,24 +9,23 @@ function languageButtonClass(active: boolean): string {
 /** EN / עב control used on the clinic splash page and the sign-in screen. */
 export function AuthLanguageToggle({
   language,
-  label,
   onSelect,
   className = "",
 }: {
   language: UiLanguage;
-  label: string;
   onSelect: (language: UiLanguage) => void;
   className?: string;
 }) {
   return (
-    <div className={`flex items-center justify-end gap-1.5 text-xs ${className}`.trim()}>
-      <span className="text-slate-500">{label}</span>
-      <button type="button" onClick={() => onSelect("en")} className={languageButtonClass(language === "en")}>
-        EN
-      </button>
-      <button type="button" onClick={() => onSelect("he")} className={languageButtonClass(language === "he")}>
-        עב
-      </button>
+    <div className={`flex items-center justify-end ${className}`.trim()}>
+      <div dir="ltr" className="flex items-center gap-1.5 text-xs">
+        <button type="button" onClick={() => onSelect("en")} className={languageButtonClass(language === "en")}>
+          EN
+        </button>
+        <button type="button" onClick={() => onSelect("he")} className={languageButtonClass(language === "he")}>
+          עב
+        </button>
+      </div>
     </div>
   );
 }
