@@ -188,9 +188,8 @@ export function ConsultationModalJobProgramFields({
   const applyDefault = useCallback(
     (nextJobId: string, nextProgramId: string, nextTypeId: string) => {
       const resolved = resolveConsultationTypeDefault(typeDefaults, nextJobId, nextProgramId, nextTypeId);
-      if (!resolved) return;
-      setAmount(resolved.amount);
-      setCurrency(resolved.currency);
+      setAmount(resolved?.amount ?? "");
+      setCurrency(resolved?.currency ?? "ILS");
     },
     [typeDefaults],
   );
