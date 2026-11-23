@@ -160,7 +160,7 @@ export async function ConsultationsPageContent({
   apiListParams.set("take", "50");
   const apiHrefBase = `/api/private-clinic/consultations?${apiListParams.toString()}`;
 
-  const [jobs, firstPage, consultationTypes, amountTotalsByCurrency, recordCount] = await Promise.all([
+  const [jobs, firstPage, consultationTypes, consultationTypeDefaults, amountTotalsByCurrency, recordCount] = await Promise.all([
     prisma.jobs.findMany({
       where: jobsWhereActiveForPrivateClinicPickers({ householdId, familyMemberId }),
       orderBy: { start_date: "desc" },
@@ -176,6 +176,16 @@ export async function ConsultationsPageContent({
       orderBy: [{ sort_order: "asc" }, { name: "asc" }],
       select: { id: true, name: true, name_he: true, is_active: true },
     }),
+    prisma.therapy_consultation_type_default_amounts.findMany({
+      where: { household_id: householdId },
+      select: {
+        job_id: true,
+        program_id: true,
+        consultation_type_id: true,
+        amount: true,
+        currency: true,
+      },
+    }),
     loadConsultationsAmountTotal({
       householdId,
       familyMemberId,
@@ -188,6 +198,13 @@ export async function ConsultationsPageContent({
     }),
   ]);
 
+  const consultationTypeDefaultRows = consultationTypeDefaults.map((row) => ({
+    job_id: row.job_id,
+    program_id: row.program_id,
+    consultation_type_id: row.consultation_type_id,
+    amount: row.amount.toString(),
+    currency: row.currency,
+  }));
   const activeConsultationTypes = consultationTypes.filter((t) => t.is_active);
   const consultationTypesForPicker = (currentTypeId?: string) => {
     if (!currentTypeId) return activeConsultationTypes;
@@ -528,6 +545,7 @@ export async function ConsultationsPageContent({
           }}
           clinicOnly={clinicOnly}
           mode="log"
+          typeDefaults={consultationTypeDefaultRows}
         />
       ) : null}
       {modalMode === "schedule" ? (
@@ -648,6 +666,7 @@ export async function ConsultationsPageContent({
           }}
           clinicOnly={clinicOnly}
           mode={reporting && editConsultation.status === "scheduled" ? "report" : "edit"}
+          typeDefaults={consultationTypeDefaultRows}
         />
       ) : null}
       {modalMode === "reschedule" && editConsultation?.status === "scheduled" ? (

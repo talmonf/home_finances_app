@@ -104,6 +104,7 @@ model households {
   riseup_import_audits              riseup_import_audits[]
   riseup_import_drafts              riseup_import_drafts?
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
+  therapy_consultation_type_default_amounts therapy_consultation_type_default_amounts[]
   therapy_treatment_attachments      therapy_treatment_attachments[]
   private_clinic_reminders           private_clinic_reminders[]
   therapy_import_audits              therapy_import_audits[]
@@ -636,6 +637,7 @@ model jobs {
   therapy_consultations      therapy_consultations[]
   therapy_travel_entries     therapy_travel_entries[]
   therapy_visit_type_default_amounts therapy_visit_type_default_amounts[]
+  therapy_consultation_type_default_amounts therapy_consultation_type_default_amounts[]
   subscriptions                    subscriptions[]
   transactions                     transactions[]
   morning_integration              job_morning_integrations?
@@ -2140,6 +2142,7 @@ model therapy_service_programs {
   appointment_series  therapy_appointment_series[]
   appointments        therapy_appointments[]
   visit_type_default_amounts therapy_visit_type_default_amounts[]
+  consultation_type_default_amounts therapy_consultation_type_default_amounts[]
   therapy_receipts    therapy_receipts[]
   consultations       therapy_consultations[]
 }
@@ -2692,8 +2695,29 @@ model therapy_consultation_types {
 
   household households @relation(fields: [household_id], references: [id], onDelete: Cascade)
   consultations therapy_consultations[]
+  default_amounts therapy_consultation_type_default_amounts[]
 
   @@unique([household_id, name])
+}
+
+model therapy_consultation_type_default_amounts {
+  id                   String   @id @default(uuid())
+  household_id         String
+  job_id               String
+  program_id           String?
+  consultation_type_id String
+  amount               Decimal  @db.Decimal(15, 2)
+  currency             String   @default("ILS")
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  household         households                 @relation(fields: [household_id], references: [id], onDelete: Cascade)
+  job               jobs                       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  program           therapy_service_programs?  @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  consultation_type therapy_consultation_types @relation(fields: [consultation_type_id], references: [id], onDelete: Cascade)
+
+  @@index([household_id, job_id])
+  @@index([program_id])
 }
 
 model therapy_consultations {

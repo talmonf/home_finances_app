@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 150_therapy_consultation_type_default_amounts.sql
 - [x] 149_therapy_consultation_scheduling.sql
 - [x] 148_renewal_email_layout.sql (2026-10-04)
 - [x] 147_therapy_receipt_intake_import_key.sql (2026-09-30)
@@ -170,6 +171,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 150 | `150_therapy_consultation_type_default_amounts.sql` | CREATE | `therapy_consultation_type_default_amounts`: default consultation fee per consultation type at job scope (`program_id` null) or program scope. Program rows override job rows when logging a consultation. |
 | 149 | `149_therapy_consultation_scheduling.sql` | ALTER | `therapy_consultation_status` (`scheduled`, `cancelled`, `completed`) on `therapy_consultations`, plus `duration_minutes` and Google Calendar event fields. Existing rows default to `completed` so logged consultations stay payable. |
 | 148 | `148_renewal_email_layout.sql` (2026-10-04) | ALTER | `renewal_email_layout` enum (`grouped`, `flat`) and `renewal_email_subscriptions.layout` (default `grouped`) so the upcoming-renewals digest can stay grouped by topic or list every item by date. |
 | 147 | `147_therapy_receipt_intake_import_key.sql` (2026-09-30) | ALTER | Unique `(household_id, import_key)` on `therapy_receipts` for keys beginning with `gform-receipt:`, so a retried receipt form response cannot insert a second receipt. |

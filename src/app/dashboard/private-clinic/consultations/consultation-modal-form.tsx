@@ -3,11 +3,13 @@ import { GlobalFormSubmitFeedback } from "@/components/global-form-submit-feedba
 import { PendingSubmitButtonWithSpinner } from "@/components/pending-submit-button-with-spinner";
 import { SplitDateTimeField } from "@/components/split-datetime-field";
 import { TherapyTransactionLinkSelect, type TherapyTransactionOption } from "@/components/therapy-transaction-link-select";
-import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import {
+  ConsultationAmountFields,
   ConsultationModalJobProgramFields,
   ConsultationScheduleDurationField,
+  ConsultationTypeSelect,
 } from "./consultation-modal-job-program-fields";
+import type { ConsultationTypeDefaultRow } from "@/lib/therapy/consultation-type-defaults";
 import { ConsultationModalParticipantsPicker } from "./consultation-modal-participants-client";
 import { ConsultationReportActions } from "./consultation-report-actions";
 import { ConsultationModalCancelLink, ConsultationModalShell } from "./consultation-modal-shell";
@@ -75,6 +77,7 @@ export function ConsultationModalForm({
   transactionOptions,
   labels,
   initial,
+  typeDefaults = [],
   clinicOnly = false,
   mode = "log",
   scheduleDuration,
@@ -95,6 +98,8 @@ export function ConsultationModalForm({
   transactionOptions: TherapyTransactionOption[];
   labels: Labels;
   initial?: InitialConsultation;
+  /** Job and program consultation-type fees used to prefill amount on log, report, and edit. */
+  typeDefaults?: ConsultationTypeDefaultRow[];
   /** When true, omit bank link UI (clinic-only households). */
   clinicOnly?: boolean;
   /** log and report use the payable form. schedule omits amount and requires a time. */
@@ -118,6 +123,10 @@ export function ConsultationModalForm({
           programs={programs}
           initialJobId={initial?.job_id}
           initialProgramId={initial?.program_id}
+          initialTypeId={initial?.consultation_type_id}
+          initialAmount={scheduling ? undefined : initial?.amount}
+          initialCurrency={scheduling ? undefined : initial?.currency}
+          typeDefaults={scheduling ? [] : typeDefaults}
           scheduleDuration={scheduling ? scheduleDuration : undefined}
           inlineDuration={scheduling}
           labels={{
@@ -126,22 +135,7 @@ export function ConsultationModalForm({
             select: labels.select,
           }}
         >
-        <div>
-          <label className="block text-xs text-slate-400">{labels.type}</label>
-          <select
-            name="consultation_type_id"
-            required
-            defaultValue={initial?.consultation_type_id ?? ""}
-            className="mt-1 w-full max-w-md rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-          >
-            <option value="">{uiLanguage === "he" ? "בחר..." : "Select..."}</option>
-            {types.map((type) => (
-              <option key={type.id} value={type.id}>
-                {therapyLocalizedCategoryName(type, uiLanguage)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ConsultationTypeSelect types={types} label={labels.type} uiLanguage={uiLanguage} />
         {scheduling || reporting ? (
           <ConsultationModalParticipantsPicker
             column
@@ -178,22 +172,7 @@ export function ConsultationModalForm({
               {scheduling ? (
                 <ConsultationScheduleDurationField />
               ) : (
-                <div>
-                  <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
-                  <div className="mt-1 flex gap-2">
-                    <input
-                      name="amount"
-                      defaultValue={initial?.amount ?? ""}
-                      placeholder="0.00"
-                      className="w-28 max-w-[9rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                    />
-                    <input
-                      name="currency"
-                      defaultValue={initial?.currency ?? "ILS"}
-                      className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-                    />
-                  </div>
-                </div>
+                <ConsultationAmountFields label={labels.amountLabel} />
               )}
             </div>
           ) : (
@@ -215,24 +194,7 @@ export function ConsultationModalForm({
             </>
           )}
         </div>
-        {scheduling || reporting ? null : (
-        <div>
-          <label className="block text-xs text-slate-400">{labels.amountLabel}</label>
-          <div className="mt-1 flex gap-2">
-            <input
-              name="amount"
-              defaultValue={initial?.amount ?? ""}
-              placeholder="0.00"
-              className="w-28 max-w-[9rem] rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-            />
-            <input
-              name="currency"
-              defaultValue={initial?.currency ?? "ILS"}
-              className="w-20 rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-slate-100"
-            />
-          </div>
-        </div>
-        )}
+        {scheduling || reporting ? null : <ConsultationAmountFields label={labels.amountLabel} />}
         {scheduling || reporting ? null : (
         <ConsultationModalParticipantsPicker
           clients={clients}

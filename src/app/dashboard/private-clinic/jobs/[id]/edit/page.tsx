@@ -8,7 +8,8 @@ import { prisma, requireHouseholdMember, getCurrentHouseholdId, getCurrentUiLang
 import { formatJobDisplayLabel } from "@/lib/job-label";
 import { employmentTypeOptionLabel, privateClinicCommon, privateClinicJobs } from "@/lib/private-clinic-i18n";
 import { notFound, redirect } from "next/navigation";
-import { saveTherapyJobVisitTypeDefaults, updateTherapyJob } from "../../../actions";
+import { saveTherapyJobConsultationTypeDefaults, saveTherapyJobVisitTypeDefaults, updateTherapyJob } from "../../../actions";
+import { therapyLocalizedCategoryName } from "@/lib/therapy-localized-name";
 import { therapyVisitTypesOrdered } from "@/lib/therapy/visit-type-defaults";
 import { therapyVisitTypeLabel } from "@/lib/ui-labels";
 
@@ -49,14 +50,31 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
   });
   if (!job) notFound();
 
-  const jobVisitDefaults = await prisma.therapy_visit_type_default_amounts.findMany({
-    where: {
-      household_id: householdId,
-      program_id: null,
-      job_id: job.id,
-    },
-  });
+  const [jobVisitDefaults, consultationTypes, jobConsultationDefaults] = await Promise.all([
+    prisma.therapy_visit_type_default_amounts.findMany({
+      where: {
+        household_id: householdId,
+        program_id: null,
+        job_id: job.id,
+      },
+    }),
+    prisma.therapy_consultation_types.findMany({
+      where: { household_id: householdId },
+      orderBy: [{ sort_order: "asc" }, { name: "asc" }],
+    }),
+    prisma.therapy_consultation_type_default_amounts.findMany({
+      where: {
+        household_id: householdId,
+        program_id: null,
+        job_id: job.id,
+      },
+    }),
+  ]);
   const visitTypes = therapyVisitTypesOrdered();
+  const pricedConsultationTypeIds = new Set(jobConsultationDefaults.map((row) => row.consultation_type_id));
+  const consultationFeeTypes = consultationTypes.filter(
+    (type) => type.is_active || pricedConsultationTypeIds.has(type.id),
+  );
 
   function jobDefaultFor(vt: (typeof visitTypes)[number]) {
     const row = jobVisitDefaults.find((r) => r.visit_type === vt);
@@ -235,6 +253,44 @@ export default async function EditJobPage({ params, searchParams }: PageProps) {
                     name={`currency_${vt}`}
                     type="text"
                     defaultValue={d.currency}
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">
+            {c.saveDefaults}
+          </button>
+        </form>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <h2 className="text-sm font-medium text-slate-200">{c.defaultFeesByConsultationType}</h2>
+        <p className="text-xs text-slate-500">{c.defaultFeesByConsultationTypeHint}</p>
+        <form action={saveTherapyJobConsultationTypeDefaults} className="space-y-3">
+          <input type="hidden" name="redirect_on_success" value={`${editHref}?updated=1`} />
+          <input type="hidden" name="redirect_on_error" value={editHref} />
+          <input type="hidden" name="job_id" value={job.id} />
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {consultationFeeTypes.map((type) => {
+              const row = jobConsultationDefaults.find((entry) => entry.consultation_type_id === type.id);
+              return (
+                <div key={type.id} className="rounded border border-slate-700/80 bg-slate-950/40 p-2">
+                  <label className="block text-xs text-slate-400">
+                    {therapyLocalizedCategoryName(type, uiLanguage)}
+                  </label>
+                  <input
+                    name={`amount_${type.id}`}
+                    type="text"
+                    defaultValue={row ? row.amount.toString() : ""}
+                    placeholder="0.00"
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  />
+                  <input
+                    name={`currency_${type.id}`}
+                    type="text"
+                    defaultValue={row?.currency ?? "ILS"}
                     className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
                   />
                 </div>

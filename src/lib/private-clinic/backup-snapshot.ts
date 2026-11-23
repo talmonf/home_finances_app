@@ -55,6 +55,9 @@ export async function buildPrivateClinicSnapshot(householdId: string): Promise<{
     therapy_visit_type_default_amounts: await prisma.therapy_visit_type_default_amounts.findMany({
       where: { household_id: householdId },
     }),
+    therapy_consultation_type_default_amounts: await prisma.therapy_consultation_type_default_amounts.findMany({
+      where: { household_id: householdId },
+    }),
     private_clinic_reminders: await prisma.private_clinic_reminders.findMany({ where: { household_id: householdId } }),
   };
 
@@ -88,6 +91,7 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     await tx.therapy_import_audits.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_appointment_audits.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_visit_type_default_amounts.deleteMany({ where: { household_id: householdId } });
+    await tx.therapy_consultation_type_default_amounts.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_travel_entries.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_consultations.deleteMany({ where: { household_id: householdId } });
     await tx.therapy_consultation_types.deleteMany({ where: { household_id: householdId } });
@@ -202,6 +206,15 @@ export async function applyPrivateClinicSnapshot(snapshot: SnapshotPayload, hous
     if (Array.isArray(d.therapy_consultation_types) && d.therapy_consultation_types.length) {
       await tx.therapy_consultation_types.createMany({
         data: d.therapy_consultation_types as never[],
+        skipDuplicates: true,
+      });
+    }
+    if (
+      Array.isArray(d.therapy_consultation_type_default_amounts) &&
+      d.therapy_consultation_type_default_amounts.length
+    ) {
+      await tx.therapy_consultation_type_default_amounts.createMany({
+        data: d.therapy_consultation_type_default_amounts as never[],
         skipDuplicates: true,
       });
     }

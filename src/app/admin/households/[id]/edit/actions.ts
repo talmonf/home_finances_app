@@ -373,6 +373,7 @@ async function deleteTherapyScopedRowsForHousehold(
   await tx.therapy_import_audits.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_appointment_audits.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_visit_type_default_amounts.deleteMany({ where: { household_id: householdId } });
+  await tx.therapy_consultation_type_default_amounts.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_travel_entries.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_consultation_participants.deleteMany({ where: { household_id: householdId } });
   await tx.therapy_consultations.deleteMany({ where: { household_id: householdId } });

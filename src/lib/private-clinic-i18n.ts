@@ -228,6 +228,14 @@ export function privateClinicCommon(lang: UiLanguage) {
       "Used when logging a treatment. Program defaults override job defaults.",
       "משמש בעת רישום טיפול. ברירות מחדל לתכנית גוברות על ברירות המחדל של המשרה.",
     ),
+    defaultFeesByConsultationType: p(
+      "Default consultation fees by type",
+      "תעריפי ברירת מחדל לייעוץ לפי סוג",
+    ),
+    defaultFeesByConsultationTypeHint: p(
+      "Used when logging a consultation. Program defaults override job defaults.",
+      "משמש בעת רישום ייעוץ. ברירות מחדל לתכנית גוברות על ברירות המחדל של המשרה.",
+    ),
     saveDefaults: p("Save defaults", "שמירת ברירות מחדל"),
     filteredByReceipt: (receiptNumber: string) =>
       p(`Filtered by receipt #${receiptNumber}`, `סינון לפי קבלה #${receiptNumber}`),

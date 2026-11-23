@@ -1431,6 +1431,113 @@ export async function saveTherapyProgramVisitTypeDefaults(formData: FormData) {
   redirectPrivateClinicScoped(formData, "success", `${BASE}/programs/${program_id}/edit?updated=1`);
 }
 
+async function saveConsultationTypeDefaultRows(params: {
+  householdId: string;
+  jobId: string;
+  programId: string | null;
+  formData: FormData;
+}) {
+  const scope = params.programId
+    ? { household_id: params.householdId, program_id: params.programId }
+    : { household_id: params.householdId, job_id: params.jobId, program_id: null };
+  const existingRows = await prisma.therapy_consultation_type_default_amounts.findMany({
+    where: scope,
+    select: { consultation_type_id: true },
+  });
+  const types = await prisma.therapy_consultation_types.findMany({
+    where: {
+      household_id: params.householdId,
+      OR: [
+        { is_active: true },
+        ...(existingRows.length
+          ? [{ id: { in: existingRows.map((row) => row.consultation_type_id) } }]
+          : []),
+      ],
+    },
+    select: { id: true },
+  });
+
+  for (const type of types) {
+    const amountStr = parseMoney(params.formData.get(`amount_${type.id}`) as string);
+    const currencyRaw = (params.formData.get(`currency_${type.id}`) as string)?.trim() || "ILS";
+    const currency = currencyRaw.slice(0, 12) || "ILS";
+    const existing = await prisma.therapy_consultation_type_default_amounts.findFirst({
+      where: { ...scope, consultation_type_id: type.id },
+    });
+
+    if (!amountStr) {
+      if (existing) {
+        await prisma.therapy_consultation_type_default_amounts.delete({ where: { id: existing.id } });
+      }
+    } else if (existing) {
+      await prisma.therapy_consultation_type_default_amounts.update({
+        where: { id: existing.id },
+        data: { amount: amountStr, currency, job_id: params.jobId },
+      });
+    } else {
+      await prisma.therapy_consultation_type_default_amounts.create({
+        data: {
+          id: crypto.randomUUID(),
+          household_id: params.householdId,
+          job_id: params.jobId,
+          program_id: params.programId,
+          consultation_type_id: type.id,
+          amount: amountStr,
+          currency,
+        },
+      });
+    }
+  }
+}
+
+export async function saveTherapyJobConsultationTypeDefaults(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const job_id = (formData.get("job_id") as string)?.trim() || "";
+  if (!job_id) redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "missing");
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, job_id))) {
+    redirectPrivateClinicScoped(formData, "error", `${BASE}/jobs`, "job");
+  }
+
+  await saveConsultationTypeDefaultRows({
+    householdId,
+    jobId: job_id,
+    programId: null,
+    formData,
+  });
+
+  revalidatePath(`${BASE}/jobs`);
+  revalidatePath(`${BASE}/jobs/${job_id}/edit`);
+  revalidatePath(`${BASE}/consultations`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/jobs?updated=1`);
+}
+
+export async function saveTherapyProgramConsultationTypeDefaults(formData: FormData) {
+  const householdId = await householdIdOrRedirect();
+  const userFamilyMemberId = await getCurrentUserFamilyMemberId(householdId);
+  const program_id = (formData.get("program_id") as string)?.trim() || "";
+  const fallbackError = `${BASE}/programs`;
+  if (!program_id) redirectPrivateClinicScoped(formData, "error", fallbackError, "missing");
+
+  const prog = await assertProgram(householdId, program_id);
+  if (!prog) redirectPrivateClinicScoped(formData, "error", fallbackError, "notfound");
+  if (!(await assertJobForCurrentUserScope(householdId, userFamilyMemberId, prog.job_id))) {
+    redirectPrivateClinicScoped(formData, "error", fallbackError, "job");
+  }
+
+  await saveConsultationTypeDefaultRows({
+    householdId,
+    jobId: prog.job_id,
+    programId: program_id,
+    formData,
+  });
+
+  revalidatePath(`${BASE}/programs`);
+  revalidatePath(`${BASE}/programs/${program_id}/edit`);
+  revalidatePath(`${BASE}/consultations`);
+  redirectPrivateClinicScoped(formData, "success", `${BASE}/programs/${program_id}/edit?updated=1`);
+}
+
 // --- Clients ---
 
 export async function createTherapyClient(formData: FormData) {
