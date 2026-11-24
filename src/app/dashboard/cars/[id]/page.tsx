@@ -306,7 +306,7 @@ export default async function CarDetailsPage({ params, searchParams }: PageProps
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-800/80">
-                    <th className="px-3 py-2 text-slate-300">Provider</th>
+                    <th className="px-3 py-2 text-slate-300">{isHebrew ? "סוכן ביטוח" : "Insurance agent"}</th>
                     <th className="px-3 py-2 text-slate-300">Policy</th>
                     <th className="px-3 py-2 text-slate-300">Taken out</th>
                     <th className="px-3 py-2 text-slate-300">Premium</th>

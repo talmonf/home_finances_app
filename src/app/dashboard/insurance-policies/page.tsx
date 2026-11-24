@@ -7,7 +7,8 @@ import {
   getCurrentUiLanguage,
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
-import { formatHouseholdDate } from "@/lib/household-date-format";
+import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
 import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
@@ -22,6 +23,15 @@ import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(s: string) {
+  return UUID_RE.test(s);
+}
+
+const PREMIUM_CURRENCIES = ["ILS", "USD", "EUR", "GBP"] as const;
+
 type PageProps = {
   searchParams?: Promise<{
     created?: string;
@@ -29,6 +39,7 @@ type PageProps = {
     error?: string;
     urls?: string;
     modal?: string;
+    cloneFrom?: string;
   }>;
 };
 
@@ -50,8 +61,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
   const lang: "en" | "he" = isHebrew ? "he" : "en";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
+  const cloneFromId = (resolvedSearchParams?.cloneFrom ?? "").trim();
 
-  const [policies, cars, familyMembers] = await Promise.all([
+  const [policies, cars, familyMembers, cloneSource] = await Promise.all([
     prisma.insurance_policies.findMany({
       where: { household_id: householdId },
       include: { car: true, family_member: true },
@@ -65,7 +77,27 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
+    modalMode === "new" && cloneFromId && isUuid(cloneFromId)
+      ? prisma.insurance_policies.findFirst({
+          where: { id: cloneFromId, household_id: householdId },
+          include: { car: true },
+        })
+      : Promise.resolve(null),
   ]);
+
+  const carsForForm =
+    cloneSource?.car && !cars.some((car) => car.id === cloneSource.car?.id)
+      ? [...cars, cloneSource.car]
+      : cars;
+  const cloneFamilyMemberId =
+    cloneSource?.family_member_id &&
+    familyMembers.some((member) => member.id === cloneSource.family_member_id)
+      ? cloneSource.family_member_id
+      : "";
+  const premiumCurrency = cloneSource?.premium_currency ?? "ILS";
+  const currencyChoices = (PREMIUM_CURRENCIES as readonly string[]).includes(premiumCurrency)
+    ? [...PREMIUM_CURRENCIES]
+    : [...PREMIUM_CURRENCIES, premiumCurrency];
 
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
@@ -80,8 +112,8 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
             </h1>
             <p className="text-sm text-slate-400">
               {isHebrew
-                ? "ביטוח רכב (מקושר לרכב) או ביטוח אחר עם ספק, מספר פוליסה, פרמיה ותאריך חידוש."
-                : "Car insurance (linked to a vehicle) or other coverage: provider, optional policy number, premium, and renewal."}
+                ? "ביטוח רכב (מקושר לרכב) או ביטוח אחר עם סוכן ביטוח, מספר פוליסה, פרמיה ותאריך חידוש."
+                : "Car insurance (linked to a vehicle) or other coverage: insurance agent, optional policy number, premium, and renewal."}
             </p>
             <p className="text-xs text-slate-500">
               <Link href="/dashboard/savings-policies" className="text-sky-400 hover:text-sky-300">
@@ -121,7 +153,15 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
 
         {modalMode === "new" ? (
           <DashboardModal
-            title={isHebrew ? "הוספה חדשה" : "Add new"}
+            title={
+              cloneSource
+                ? isHebrew
+                  ? `שכפול: ${maskSensitiveText(obfuscate, cloneSource.policy_name)}`
+                  : `Clone: ${maskSensitiveText(obfuscate, cloneSource.policy_name)}`
+                : isHebrew
+                  ? "הוספה חדשה"
+                  : "Add new"
+            }
             closeHref="/dashboard/insurance-policies"
             closeLabel={isHebrew ? "סגירה" : "Close"}
             maxWidthClassName="max-w-screen-2xl"
@@ -139,7 +179,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 id="policy_type"
                 name="policy_type"
                 required
-                defaultValue="car"
+                defaultValue={cloneSource?.policy_type ?? "car"}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 {INSURANCE_POLICY_TYPE_VALUES.map((t) => (
@@ -157,10 +197,11 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 id="car_id"
                 name="car_id"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                disabled={cars.length === 0}
+                disabled={carsForForm.length === 0}
+                defaultValue={cloneSource?.car_id ?? ""}
               >
                 <option value="">{isHebrew ? "ללא / לא רלוונטי" : "None / N/A"}</option>
-                {cars.map((car) => (
+                {carsForForm.map((car) => (
                   <option key={car.id} value={car.id}>
                     {maskSensitiveText(
                       obfuscate,
@@ -169,7 +210,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                   </option>
                 ))}
               </select>
-              {cars.length === 0 ? (
+              {carsForForm.length === 0 ? (
                 <p className="mt-1 text-xs text-slate-500">
                   {isHebrew ? "הוסיפו רכב תחת " : "Add a vehicle under "}
                   <Link href="/dashboard/cars" className="text-sky-400 hover:text-sky-300">
@@ -186,6 +227,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <select
                 id="family_member_id"
                 name="family_member_id"
+                defaultValue={cloneFamilyMemberId}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">{isHebrew ? "לא הוגדר" : "Not set"}</option>
@@ -198,24 +240,28 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
             </div>
             <div>
               <label htmlFor="provider_name" className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "ספק" : "Provider"} <span className="text-rose-400">*</span>
+                {isHebrew ? "סוכן ביטוח" : "Insurance agent"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
                 id="provider_name"
                 name="provider_name"
                 required
+                obfuscate={obfuscate}
+                value={cloneSource?.provider_name ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder={isHebrew ? "למשל הראל" : "e.g. Harel"}
+                placeholder={isHebrew ? "למשל שם הסוכן" : "e.g. agent name"}
               />
             </div>
             <div>
               <label htmlFor="insurance_company" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "חברת ביטוח" : "Insurance company"}
               </label>
-              <input
+              <SensitiveTextInput
                 id="insurance_company"
                 name="insurance_company"
                 maxLength={200}
+                obfuscate={obfuscate}
+                value={cloneSource?.insurance_company ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
@@ -224,10 +270,12 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="policy_name" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "שם הפוליסה" : "Policy name"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
                 id="policy_name"
                 name="policy_name"
                 required
+                obfuscate={obfuscate}
+                value={cloneSource?.policy_name ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "למשל מקיף" : "e.g. Comprehensive"}
               />
@@ -236,9 +284,11 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="policy_number" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "מספר פוליסה" : "Policy number"}
               </label>
-              <input
+              <SensitiveTextInput
                 id="policy_number"
                 name="policy_number"
+                obfuscate={obfuscate}
+                value={cloneSource?.policy_number ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
@@ -247,10 +297,12 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="contact_phone" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "טלפון ליצירת קשר" : "Contact phone"}
               </label>
-              <input
+              <SensitiveTextInput
                 id="contact_phone"
                 name="contact_phone"
                 type="tel"
+                obfuscate={obfuscate}
+                value={cloneSource?.contact_phone ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
@@ -259,10 +311,12 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="contact_email" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "אימייל ליצירת קשר" : "Contact email"}
               </label>
-              <input
+              <SensitiveTextInput
                 id="contact_email"
                 name="contact_email"
                 type="email"
+                obfuscate={obfuscate}
+                value={cloneSource?.contact_email ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
@@ -271,10 +325,12 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="website_url" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "אתר אינטרנט" : "Website"}
               </label>
-              <input
+              <SensitiveTextInput
                 id="website_url"
                 name="website_url"
                 type="url"
+                obfuscate={obfuscate}
+                value={cloneSource?.website_url ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="https://"
               />
@@ -283,11 +339,13 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="notes" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "הערות" : "Notes"}
               </label>
-              <textarea
+              <SensitiveTextarea
                 id="notes"
                 name="notes"
                 rows={3}
                 maxLength={16000}
+                obfuscate={obfuscate}
+                value={cloneSource?.notes ?? ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder={isHebrew ? "אופציונלי" : "Optional"}
               />
@@ -300,6 +358,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 id="policy_start_date"
                 name="policy_start_date"
                 required
+                defaultIsoYmd={utcDateToHtmlDateInputValue(cloneSource?.policy_start_date ?? null)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -312,6 +371,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 id="expiration_date"
                 name="expiration_date"
                 required
+                defaultIsoYmd={utcDateToHtmlDateInputValue(cloneSource?.expiration_date ?? null)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -319,13 +379,15 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               <label htmlFor="premium_paid" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "פרמיה ששולמה" : "Premium paid"} <span className="text-rose-400">*</span>
               </label>
-              <input
+              <SensitiveTextInput
                 id="premium_paid"
                 name="premium_paid"
                 type="number"
                 step="0.01"
                 min="0"
                 required
+                obfuscate={obfuscate}
+                value={cloneSource ? cloneSource.premium_paid.toString() : ""}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
                 placeholder="0.00"
               />
@@ -338,13 +400,14 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 id="premium_currency"
                 name="premium_currency"
                 required
-                defaultValue="ILS"
+                defaultValue={premiumCurrency}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               >
-                <option value="ILS">ILS</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
+                {currencyChoices.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-1">
@@ -352,7 +415,13 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 type="submit"
                 className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-sky-400"
               >
-                {isHebrew ? "הוספת פוליסה" : "Add policy"}
+                {cloneSource
+                  ? isHebrew
+                    ? "שכפול פוליסה"
+                    : "Clone policy"
+                  : isHebrew
+                    ? "הוספת פוליסה"
+                    : "Add policy"}
               </button>
             </div>
             </form>
@@ -360,6 +429,11 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
               {isHebrew
                 ? "לביטוח רכב יש לבחור סוג «רכב» ורכב. לשאר הסוגים השאירו את שדה הרכב ריק."
                 : 'For car insurance, choose type "Car" and select a vehicle. For other types, leave Car as "None".'}
+              {cloneSource
+                ? isHebrew
+                  ? " הקובץ המצורף אינו מועתק."
+                  : " The attached document is not copied."
+                : ""}
             </p>
           </DashboardModal>
         ) : null}
@@ -388,7 +462,7 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                       {isHebrew ? "רכב / בעלים" : "Car / holder"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
-                      {isHebrew ? "ספק" : "Provider"}
+                      {isHebrew ? "סוכן ביטוח" : "Insurance agent"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
                       {isHebrew ? "פוליסה" : "Policy"}
@@ -490,6 +564,12 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                             className="text-xs font-medium text-sky-400 hover:text-sky-300"
                           >
                             {isHebrew ? "עריכה" : "Edit"}
+                          </Link>
+                          <Link
+                            href={`/dashboard/insurance-policies?modal=new&cloneFrom=${encodeURIComponent(p.id)}`}
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {isHebrew ? "שכפול" : "Clone"}
                           </Link>
                           <form action={toggleInsurancePolicyActive} className="inline">
                             <input type="hidden" name="policy_id" value={p.id} />

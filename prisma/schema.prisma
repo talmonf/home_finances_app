@@ -1009,9 +1009,10 @@ model insurance_policies {
   policy_type        InsurancePolicyType @default(car)
   car_id             String?
   family_member_id   String?
+  /// Insurance agent or broker shown in lists.
   provider_name      String
   policy_name        String
-  /// Insurer / underwriting company (distinct from agent or plan label when needed).
+  /// Insurer / underwriting company (distinct from the agent when needed).
   insurance_company  String?
   policy_number      String?
   contact_phone      String?

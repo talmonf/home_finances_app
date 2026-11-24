@@ -187,7 +187,7 @@ export async function createInsurancePolicy(formData: FormData) {
   if (!provider_name || !policy_name || !policy_start_date || !expiration_date || !premium_paid) {
     redirectInsurance(
       context,
-      "error=Provider%2C+policy+name%2C+start+date%2C+expiration%2C+and+premium+are+required",
+      "error=Insurance+agent%2C+policy+name%2C+start+date%2C+expiration%2C+and+premium+are+required",
     );
   }
 
@@ -300,7 +300,7 @@ export async function updateInsurancePolicy(formData: FormData) {
   if (!provider_name || !policy_name || !policy_start_date || !expiration_date || !premium_paid) {
     redirectInsurance(
       context,
-      "error=Provider%2C+policy+name%2C+start+date%2C+expiration%2C+and+premium+are+required",
+      "error=Insurance+agent%2C+policy+name%2C+start+date%2C+expiration%2C+and+premium+are+required",
     );
   }
 

@@ -237,7 +237,7 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">
-                {isHebrew ? "ספק" : "Provider"} <span className="text-rose-400">*</span>
+                {isHebrew ? "סוכן ביטוח" : "Insurance agent"} <span className="text-rose-400">*</span>
               </label>
               <SensitiveTextInput
                 obfuscate={obfuscate}

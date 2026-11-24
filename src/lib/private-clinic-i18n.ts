@@ -1736,8 +1736,8 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
   return {
     title: p("Clinic insurance", "ביטוח קליניקה"),
     blurb: p(
-      "Professional liability and clinic premises coverage: provider, contacts, website, annual premium, and renewal date. Stored with your household insurance policies.",
-      "ביטוח אחריות מקצועית ונכס הקליניקה: ספק, יצירת קשר, אתר, פרמיה שנתית ותאריך חידוש. נשמר יחד עם פוליסות הביטוח של המשקה.",
+      "Professional liability and clinic premises coverage: insurance agent, contacts, website, annual premium, and renewal date. Stored with your household insurance policies.",
+      "ביטוח אחריות מקצועית ונכס הקליניקה: סוכן ביטוח, יצירת קשר, אתר, פרמיה שנתית ותאריך חידוש. נשמר יחד עם פוליסות הביטוח של המשקה.",
     ),
     allHouseholdPolicies: p("All household insurance policies →", "כל פוליסות הביטוח של המשקה ←"),
     urlsUpdated: p("Links updated.", "הקישורים עודכנו."),
@@ -1747,7 +1747,7 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     policyType: p("Policy type", "סוג פוליסה"),
     policyHolderOptional: p("Policy holder (optional)", "בעל פוליסה (אופציונלי)"),
     notSet: p("Not set", "לא הוגדר"),
-    provider: p("Provider", "ספק"),
+    provider: p("Insurance agent", "סוכן ביטוח"),
     insuranceCompany: p("Insurance company", "חברת ביטוח"),
     policyName: p("Policy name", "שם הפוליסה"),
     policyNumber: p("Policy number", "מספר פוליסה"),
@@ -1763,7 +1763,7 @@ export function privateClinicClinicInsurance(lang: UiLanguage) {
     listTitle: p("Your clinic policies", "פוליסות הקליניקה"),
     empty: p("No clinic policies yet. Add one above.", "אין פוליסות קליניקה. הוסיפו למעלה."),
     colType: p("Type", "סוג"),
-    colProvider: p("Provider", "ספק"),
+    colProvider: p("Insurance agent", "סוכן ביטוח"),
     colPolicy: p("Policy", "פוליסה"),
     colAnnual: p("Annual premium", "פרמיה שנתית"),
     colRenewal: p("Renewal", "חידוש"),
