@@ -166,29 +166,25 @@ export default async function EditSubscriptionPage({ params, searchParams }: Pag
             <SubscriptionBillingIntervalFields
               defaultInterval={subscription.billing_interval}
               defaultMonthlyDay={subscription.monthly_day_of_month}
-              intervalLabel="Billing interval"
-              monthlyDayLabel="Monthly renewal day (1-31)"
-              monthlyOptionLabel="Monthly"
-              annualOptionLabel="Annual"
-              monthlyDayPlaceholder="Required for monthly interval"
+              intervalLabel={isHebrew ? "אופן חיוב" : "Billing interval"}
+              monthlyDayLabel={isHebrew ? "יום חידוש חודשי (1-31)" : "Monthly renewal day (1-31)"}
+              monthlyOptionLabel={isHebrew ? "חודשי" : "Monthly"}
+              annualOptionLabel={isHebrew ? "שנתי" : "Annual"}
+              usageOptionLabel={isHebrew ? "לפי שימוש" : "Usage-based"}
+              usageHint={
+                isHebrew
+                  ? "אין מועד חידוש קבוע. אפשר להשאיר את הסכום ריק."
+                  : "No fixed renewal. Leave the fee blank if it varies."
+              }
+              monthlyDayPlaceholder={isHebrew ? "חובה לחיוב חודשי" : "Required for monthly interval"}
               className={inputClass}
+              feeLabel={isHebrew ? "סכום" : "Fee amount"}
+              feeOptionalLabel={isHebrew ? "סכום אופייני (אופציונלי)" : "Typical fee (optional)"}
+              feeDefaultValue={
+                subscription.fee_amount != null ? subscription.fee_amount.toString() : ""
+              }
+              obfuscateFee={obfuscate}
             />
-            <div>
-              <label htmlFor="fee_amount" className="mb-1 block text-xs font-medium text-slate-400">
-                Fee amount
-              </label>
-              <SensitiveTextInput
-                obfuscate={obfuscate}
-                id="fee_amount"
-                name="fee_amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={subscription.fee_amount.toString()}
-                className={inputClass}
-              />
-            </div>
             <div>
               <label htmlFor="currency" className="mb-1 block text-xs font-medium text-slate-400">
                 Currency

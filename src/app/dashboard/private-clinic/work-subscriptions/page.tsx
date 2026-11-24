@@ -160,10 +160,15 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
               monthlyDayLabel={t.monthlyDay}
               monthlyOptionLabel={t.monthly}
               annualOptionLabel={t.annual}
+              usageOptionLabel={t.usage}
+              usageHint={t.usageHint}
               monthlyDayPlaceholder="1–31"
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               intervalOptionsOrder="annual-first"
               showIntervalRequiredMark
+              feeLabel={t.feeAmount}
+              feeOptionalLabel={t.feeAmountOptional}
+              showFeeRequiredMark
             />
             <div>
               <label htmlFor="renewal_date" className="mb-1 block text-xs font-medium text-slate-400">
@@ -172,20 +177,6 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
               <HouseholdDateField
                 id="renewal_date"
                 name="renewal_date"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="fee_amount" className="mb-1 block text-xs font-medium text-slate-400">
-                {t.feeAmount} <span className="text-rose-400">*</span>
-              </label>
-              <input
-                id="fee_amount"
-                name="fee_amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
               />
             </div>
@@ -259,7 +250,13 @@ export default async function WorkSubscriptionsPage({ searchParams }: PageProps)
                     <td className="px-4 py-3 text-slate-300 tabular-nums">
                       {formatMoneyWithCurrency(s.fee_amount, s.currency, obfuscate)}
                       <span className="ml-1 text-xs text-slate-500">
-                        ({s.billing_interval === "annual" ? t.annual : t.monthly})
+                        (
+                        {s.billing_interval === "annual"
+                          ? t.annual
+                          : s.billing_interval === "usage"
+                            ? t.usage
+                            : t.monthly}
+                        )
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-400">

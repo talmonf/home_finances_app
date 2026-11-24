@@ -20,6 +20,24 @@ function revalidateSubscriptionPaths() {
   revalidatePath("/dashboard/private-clinic/reminders");
 }
 
+type SubscriptionBillingIntervalValue = "monthly" | "annual" | "usage";
+
+function parseBillingInterval(raw: string | undefined): SubscriptionBillingIntervalValue | null {
+  if (raw === "monthly" || raw === "annual" || raw === "usage") return raw;
+  return null;
+}
+
+/** Usage-based subscriptions may omit the fee. Other intervals require a non-negative amount. */
+function parseFeeAmount(
+  raw: string | undefined,
+  interval: SubscriptionBillingIntervalValue,
+): number | null | "missing" | "invalid" {
+  if (!raw) return interval === "usage" ? null : "missing";
+  const fee = parseFloat(raw);
+  if (Number.isNaN(fee) || fee < 0) return "invalid";
+  return fee;
+}
+
 function normalizeWebsiteUrl(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -44,7 +62,9 @@ export async function createSubscription(formData: FormData) {
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const fee_amount_raw = (formData.get("fee_amount") as string | null)?.trim();
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
-  const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
+  const billing_interval = parseBillingInterval(
+    (formData.get("billing_interval") as string | null)?.trim(),
+  );
   const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const digital_payment_method_id =
@@ -60,7 +80,7 @@ export async function createSubscription(formData: FormData) {
   const description = (formData.get("description") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
 
-  if (!name || !fee_amount_raw || !billing_interval) {
+  if (!name || !billing_interval) {
     redirect(
       formCtx === "private_clinic_work"
         ? "/dashboard/private-clinic/work-subscriptions?error=Required+fields+missing"
@@ -72,13 +92,6 @@ export async function createSubscription(formData: FormData) {
       formCtx === "private_clinic_work"
         ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+status"
         : "/dashboard/subscriptions?error=Invalid+status",
-    );
-  }
-  if (billing_interval !== "monthly" && billing_interval !== "annual") {
-    redirect(
-      formCtx === "private_clinic_work"
-        ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+billing+interval"
-        : "/dashboard/subscriptions?error=Invalid+billing+interval",
     );
   }
 
@@ -102,14 +115,22 @@ export async function createSubscription(formData: FormData) {
     monthly_day_of_month = parsedDay;
   }
 
-  const fee_amount = parseFloat(fee_amount_raw);
-  if (Number.isNaN(fee_amount) || fee_amount < 0) {
+  const parsedFee = parseFeeAmount(fee_amount_raw, billing_interval);
+  if (parsedFee === "missing") {
+    redirect(
+      formCtx === "private_clinic_work"
+        ? "/dashboard/private-clinic/work-subscriptions?error=Required+fields+missing"
+        : "/dashboard/subscriptions?error=Required+fields+missing",
+    );
+  }
+  if (parsedFee === "invalid") {
     redirect(
       formCtx === "private_clinic_work"
         ? "/dashboard/private-clinic/work-subscriptions?error=Invalid+fee+amount"
         : "/dashboard/subscriptions?error=Invalid+fee+amount",
     );
   }
+  const fee_amount = parsedFee;
   let website_url: string | null = null;
   try {
     website_url = normalizeWebsiteUrl(website_url_raw);
@@ -236,7 +257,7 @@ export async function createSubscription(formData: FormData) {
       renewal_date,
       fee_amount,
       currency,
-      billing_interval: billing_interval as "monthly" | "annual",
+      billing_interval,
       monthly_day_of_month,
       credit_card_id,
       digital_payment_method_id,
@@ -269,7 +290,9 @@ export async function updateSubscription(formData: FormData) {
   const renewal_date_raw = (formData.get("renewal_date") as string | null)?.trim() || null;
   const fee_amount_raw = (formData.get("fee_amount") as string | null)?.trim();
   const currency = (formData.get("currency") as string | null)?.trim() || "ILS";
-  const billing_interval = (formData.get("billing_interval") as string | null)?.trim();
+  const billing_interval = parseBillingInterval(
+    (formData.get("billing_interval") as string | null)?.trim(),
+  );
   const monthly_day_of_month_raw = (formData.get("monthly_day_of_month") as string | null)?.trim() || null;
   const credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
   const digital_payment_method_id =
@@ -281,7 +304,7 @@ export async function updateSubscription(formData: FormData) {
   const description = (formData.get("description") as string | null)?.trim() || null;
   const website_url_raw = (formData.get("website_url") as string | null) || null;
 
-  if (!id || !name || !fee_amount_raw || !billing_interval) {
+  if (!id || !name || !billing_interval) {
     redirect("/dashboard/subscriptions?error=Required+fields+missing");
   }
 
@@ -296,9 +319,6 @@ export async function updateSubscription(formData: FormData) {
   if (status !== "active" && status !== "cancelled") {
     redirect(`/dashboard/subscriptions/${id}?error=Invalid+status`);
   }
-  if (billing_interval !== "monthly" && billing_interval !== "annual") {
-    redirect(`/dashboard/subscriptions/${id}?error=Invalid+billing+interval`);
-  }
 
   let monthly_day_of_month: number | null = null;
   if (billing_interval === "monthly") {
@@ -312,10 +332,14 @@ export async function updateSubscription(formData: FormData) {
     monthly_day_of_month = parsedDay;
   }
 
-  const fee_amount = parseFloat(fee_amount_raw);
-  if (Number.isNaN(fee_amount) || fee_amount < 0) {
+  const parsedFee = parseFeeAmount(fee_amount_raw, billing_interval);
+  if (parsedFee === "missing") {
+    redirect(`/dashboard/subscriptions/${id}?error=Required+fields+missing`);
+  }
+  if (parsedFee === "invalid") {
     redirect(`/dashboard/subscriptions/${id}?error=Invalid+fee+amount`);
   }
+  const fee_amount = parsedFee;
   let website_url: string | null = null;
   try {
     website_url = normalizeWebsiteUrl(website_url_raw);
@@ -408,7 +432,7 @@ export async function updateSubscription(formData: FormData) {
       renewal_date,
       fee_amount,
       currency,
-      billing_interval: billing_interval as "monthly" | "annual",
+      billing_interval,
       monthly_day_of_month,
       credit_card_id,
       digital_payment_method_id,

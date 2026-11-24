@@ -52,7 +52,7 @@ export function reminderDateWithinWindow(
 export type SubscriptionReminderFields = {
   id: string;
   name: string;
-  billing_interval: "monthly" | "annual";
+  billing_interval: "monthly" | "annual" | "usage";
   monthly_day_of_month: number | null;
   renewal_date: Date | null;
   is_active: boolean;

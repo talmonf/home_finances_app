@@ -440,7 +440,11 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-300 capitalize">
-                        {s.billing_interval}
+                        {s.billing_interval === "usage"
+                          ? isHebrew
+                            ? "לפי שימוש"
+                            : "Usage-based"
+                          : s.billing_interval}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {s.family_member ? (
@@ -593,32 +597,26 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             <SubscriptionBillingIntervalFields
               defaultInterval={cloneSource?.billing_interval ?? "monthly"}
               defaultMonthlyDay={cloneSource?.monthly_day_of_month ?? undefined}
-              intervalLabel="Billing interval"
-              monthlyDayLabel="Monthly renewal day (1-31)"
-              monthlyOptionLabel="Monthly"
-              annualOptionLabel="Annual"
-              monthlyDayPlaceholder="Required for monthly interval"
+              intervalLabel={isHebrew ? "אופן חיוב" : "Billing interval"}
+              monthlyDayLabel={isHebrew ? "יום חידוש חודשי (1-31)" : "Monthly renewal day (1-31)"}
+              monthlyOptionLabel={isHebrew ? "חודשי" : "Monthly"}
+              annualOptionLabel={isHebrew ? "שנתי" : "Annual"}
+              usageOptionLabel={isHebrew ? "לפי שימוש" : "Usage-based"}
+              usageHint={
+                isHebrew
+                  ? "אין מועד חידוש קבוע. אפשר להשאיר את הסכום ריק."
+                  : "No fixed renewal. Leave the fee blank if it varies."
+              }
+              monthlyDayPlaceholder={isHebrew ? "חובה לחיוב חודשי" : "Required for monthly interval"}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              feeLabel={isHebrew ? "סכום" : "Fee amount"}
+              feeOptionalLabel={isHebrew ? "סכום אופייני (אופציונלי)" : "Typical fee (optional)"}
+              feeDefaultValue={
+                cloneSource?.fee_amount != null ? cloneSource.fee_amount.toString() : ""
+              }
+              feePlaceholder="0.00"
+              obfuscateFee={obfuscate}
             />
-            <div>
-              <label
-                htmlFor="fee_amount"
-                className="mb-1 block text-xs font-medium text-slate-400"
-              >
-                Fee amount
-              </label>
-              <input
-                id="fee_amount"
-                name="fee_amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                defaultValue={cloneSource ? cloneSource.fee_amount.toString() : ""}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
-                placeholder="0.00"
-              />
-            </div>
             <div>
               <label
                 htmlFor="currency"

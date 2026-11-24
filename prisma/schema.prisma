@@ -1517,7 +1517,7 @@ model subscriptions {
   name             String
   start_date       DateTime?
   renewal_date     DateTime?
-  fee_amount       Decimal                    @db.Decimal(15, 2)
+  fee_amount       Decimal?                   @db.Decimal(15, 2)
   currency         String                     @default("ILS")
   billing_interval SubscriptionBillingInterval
   monthly_day_of_month Int?
@@ -1550,6 +1550,7 @@ enum StudyOrClassType {
 enum SubscriptionBillingInterval {
   monthly
   annual
+  usage
 
   @@map("subscription_billing_interval")
 }
