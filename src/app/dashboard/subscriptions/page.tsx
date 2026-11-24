@@ -45,6 +45,7 @@ type PageProps = {
     job_id?: string;
     status?: string;
     pay?: string;
+    name?: string;
     cloneFrom?: string;
   }>;
 };
@@ -62,6 +63,7 @@ function subscriptionsListWhere(
     familyMemberId: string | null;
     jobId: string | null;
     pay: string | null;
+    name: string | null;
   },
 ): Prisma.subscriptionsWhereInput {
   const where: Prisma.subscriptionsWhereInput = { household_id: householdId };
@@ -69,6 +71,9 @@ function subscriptionsListWhere(
   if (filters.status === "cancelled") where.is_active = false;
   if (filters.familyMemberId) where.family_member_id = filters.familyMemberId;
   if (filters.jobId) where.job_id = filters.jobId;
+  if (filters.name) {
+    where.name = { contains: filters.name, mode: "insensitive" };
+  }
   if (filters.pay === "none") {
     where.credit_card_id = null;
     where.digital_payment_method_id = null;
@@ -88,6 +93,7 @@ function subscriptionsListQueryString(args: {
   job_id?: string;
   status?: ListStatusFilter;
   pay?: string;
+  name?: string;
 }) {
   const sp = new URLSearchParams();
   if (args.modal) sp.set("modal", args.modal);
@@ -95,6 +101,7 @@ function subscriptionsListQueryString(args: {
   if (args.job_id) sp.set("job_id", args.job_id);
   if (args.status && args.status !== "active") sp.set("status", args.status);
   if (args.pay) sp.set("pay", args.pay);
+  if (args.name) sp.set("name", args.name);
   const q = sp.toString();
   return q ? `?${q}` : "";
 }
@@ -154,6 +161,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
   const jobIdRaw = resolvedSearchParams?.job_id?.trim() ?? "";
   const statusFilter = parseListStatusFilter(resolvedSearchParams?.status);
   const payRaw = resolvedSearchParams?.pay?.trim() ?? "";
+  const nameFilter = (resolvedSearchParams?.name ?? "").trim().slice(0, 200);
   const cloneFromId = (resolvedSearchParams?.cloneFrom ?? "").trim();
   const familyMemberId =
     familyMemberIdRaw && isUuid(familyMemberIdRaw) ? familyMemberIdRaw : null;
@@ -168,6 +176,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     familyMemberId,
     jobId,
     pay: payFilter,
+    name: nameFilter || null,
   });
 
   const [subscriptions, subscriptionTotalCount, creditCards, digitalPaymentMethods, familyMembers, jobs, cloneSource] =
@@ -219,7 +228,9 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
     return base.some((j) => j.id === selected.id) ? base : [...base, selected];
   })();
 
-  const hasActiveFilters = Boolean(familyMemberId || jobId || payFilter || statusFilter !== "active");
+  const hasActiveFilters = Boolean(
+    familyMemberId || jobId || payFilter || nameFilter || statusFilter !== "active",
+  );
   return (
     <div className="flex min-h-screen justify-center bg-slate-950 px-4 py-10">
       <div className="w-full max-w-screen-2xl space-y-8 rounded-2xl bg-slate-900 p-8 shadow-xl shadow-slate-950/60 ring-1 ring-slate-700">
@@ -257,6 +268,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 job_id: jobId ?? undefined,
                 status: statusFilter,
                 pay: payFilter ?? undefined,
+                name: nameFilter || undefined,
               })}`}
               className="w-full rounded-lg bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950 hover:bg-sky-400 sm:w-auto"
             >
@@ -267,6 +279,20 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
             method="get"
             className="grid items-end gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-6"
           >
+            <div>
+              <label htmlFor="filter_name" className="mb-1 block text-xs font-medium text-slate-400">
+                {isHebrew ? "שם" : "Name"}
+              </label>
+              <input
+                id="filter_name"
+                name="name"
+                type="search"
+                defaultValue={nameFilter}
+                placeholder={isHebrew ? "חיפוש לפי שם" : "Search by name"}
+                maxLength={200}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500"
+              />
+            </div>
             <div>
               <label htmlFor="filter_family_member_id" className="mb-1 block text-xs font-medium text-slate-400">
                 {isHebrew ? "בן/בת משפחה" : "Family member"}
@@ -339,7 +365,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                 ))}
               </select>
             </div>
-            <div className="flex flex-none items-end gap-2 lg:col-span-2 sm:col-span-2">
+            <div className="flex flex-none items-end gap-2 sm:col-span-2 lg:col-span-1">
               <button
                 type="submit"
                 className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600"
@@ -509,6 +535,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                     job_id: jobId ?? undefined,
                     status: statusFilter,
                     pay: payFilter ?? undefined,
+                    name: nameFilter || undefined,
                   })}`}
                   className="text-sm text-slate-400 hover:text-slate-200"
                 >
@@ -736,6 +763,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps) {
                       job_id: jobId ?? undefined,
                       status: statusFilter,
                       pay: payFilter ?? undefined,
+                      name: nameFilter || undefined,
                     })}`}
                     className="text-sm text-slate-400 hover:text-slate-200"
                   >
