@@ -3,8 +3,11 @@ import {
   requireHouseholdMember,
   getCurrentHouseholdId,
   getCurrentHouseholdDateDisplayFormat,
+  getCurrentObfuscateSensitive,
   getCurrentUiLanguage,
 } from "@/lib/auth";
+import { UtilityPaymentFields } from "@/app/dashboard/properties/utility-payment-fields";
+import { maskSensitiveText } from "@/lib/privacy-display";
 import { formatHouseholdDate } from "@/lib/household-date-format";
 import { getInsurancePolicyTypeLabel } from "@/lib/insurance-policy-type-labels";
 import { CLINIC_INSURANCE_POLICY_TYPES } from "@/lib/private-clinic/constants";
@@ -39,6 +42,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
   if (!householdId) redirect("/");
 
   const dateDisplayFormat = await getCurrentHouseholdDateDisplayFormat();
+  const obfuscate = await getCurrentObfuscateSensitive();
   const uiLanguage = await getCurrentUiLanguage();
   const isHebrew = uiLanguage === "he";
   const lang: "en" | "he" = isHebrew ? "he" : "en";
@@ -47,7 +51,7 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
 
-  const [policies, familyMembers] = await Promise.all([
+  const [policies, familyMembers, bankAccounts, creditCards] = await Promise.all([
     prisma.insurance_policies.findMany({
       where: { household_id: householdId, policy_type: { in: [...CLINIC_INSURANCE_POLICY_TYPES] } },
       include: { car: true, family_member: true },
@@ -56,6 +60,21 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
     prisma.family_members.findMany({
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
+    }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+      select: { id: true, account_name: true, bank_name: true, account_number: true },
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+      select: {
+        id: true,
+        card_name: true,
+        card_last_four: true,
+        family_member: { select: { full_name: true } },
+      },
     }),
   ]);
 
@@ -364,6 +383,20 @@ export default async function ClinicInsurancePage({ searchParams }: PageProps) {
                   <option value="GBP">GBP</option>
                 </select>
               </div>
+              <UtilityPaymentFields
+                isHebrew={isHebrew}
+                className="grid gap-4 sm:col-span-2 lg:col-span-3 sm:grid-cols-2 lg:grid-cols-3"
+                bankMethodLabel={isHebrew ? "העברה בנקאית" : "Bank transfer"}
+                creditCardMethodLabel={isHebrew ? "כרטיס אשראי" : "Credit card"}
+                showPaymentDate
+                showPaymentCount
+                bankAccounts={bankAccounts.map((account) => ({
+                  ...account,
+                  account_name: maskSensitiveText(obfuscate, account.account_name),
+                  bank_name: maskSensitiveText(obfuscate, account.bank_name),
+                }))}
+                creditCards={creditCards}
+              />
               <div className="flex flex-wrap items-end gap-3 lg:col-span-3">
                 <button
                   type="submit"

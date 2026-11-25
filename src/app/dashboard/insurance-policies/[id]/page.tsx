@@ -29,6 +29,8 @@ import {
   toggleInsurancePolicyActive,
   updateInsurancePolicy,
 } from "../actions";
+import { UtilityPaymentFields } from "@/app/dashboard/properties/utility-payment-fields";
+import { includeById, insurancePaymentMethodValue } from "@/lib/insurance-policy-payment";
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +58,28 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
 
   const { id } = await params;
 
-  const [policy, cars, familyMembers] = await Promise.all([
+  const bankAccountSelect = {
+    id: true,
+    account_name: true,
+    bank_name: true,
+    account_number: true,
+  } as const;
+  const creditCardSelect = {
+    id: true,
+    card_name: true,
+    card_last_four: true,
+    family_member: { select: { full_name: true } },
+  } as const;
+
+  const [policy, cars, familyMembers, bankAccounts, creditCards] = await Promise.all([
     prisma.insurance_policies.findFirst({
       where: { id, household_id: householdId },
-      include: { car: true, family_member: true },
+      include: {
+        car: true,
+        family_member: true,
+        bank_account: { select: bankAccountSelect },
+        credit_card: { select: creditCardSelect },
+      },
     }),
     prisma.cars.findMany({
       where: { household_id: householdId, is_active: true },
@@ -69,11 +89,24 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+      select: bankAccountSelect,
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+      select: creditCardSelect,
+    }),
   ]);
 
   if (!policy) {
     redirect("/dashboard/insurance-policies?error=Policy+not+found");
   }
+
+  const bankAccountsForForm = includeById(bankAccounts, policy.bank_account);
+  const creditCardsForForm = includeById(creditCards, policy.credit_card);
 
   const insuranceEntityUrls =
     !showEntityUrlPanels
@@ -384,6 +417,25 @@ export default async function EditInsurancePolicyPage({ params, searchParams }: 
                 <option value="GBP">GBP</option>
               </select>
             </div>
+            <UtilityPaymentFields
+              isHebrew={isHebrew}
+              className="grid gap-4 sm:col-span-2 lg:col-span-3 xl:col-span-4 sm:grid-cols-2 lg:grid-cols-4"
+              bankMethodLabel={isHebrew ? "העברה בנקאית" : "Bank transfer"}
+              creditCardMethodLabel={isHebrew ? "כרטיס אשראי" : "Credit card"}
+              defaultPaymentMethod={insurancePaymentMethodValue(policy)}
+              defaultBankAccountId={policy.bank_account_id ?? ""}
+              defaultCreditCardId={policy.credit_card_id ?? ""}
+              defaultPaymentDate={utcDateToHtmlDateInputValue(policy.payment_date)}
+              defaultPaymentCount={policy.payment_count?.toString() ?? ""}
+              showPaymentDate
+              showPaymentCount
+              bankAccounts={bankAccountsForForm.map((account) => ({
+                ...account,
+                account_name: maskSensitiveText(obfuscate, account.account_name),
+                bank_name: maskSensitiveText(obfuscate, account.bank_name),
+              }))}
+              creditCards={creditCardsForForm}
+            />
             <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-1">
               <button
                 type="submit"

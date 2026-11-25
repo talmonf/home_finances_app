@@ -131,6 +131,88 @@ async function resolveCarAndFamilyMember(
   return { car_id, family_member_id, error: null };
 }
 
+type InsurancePaymentMethodValue = "bank_account" | "credit_card";
+
+function parseOptionalDate(raw: string | null | undefined): { value: Date | null; invalid: boolean } {
+  const v = raw?.trim() ?? "";
+  if (!v) return { value: null, invalid: false };
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return { value: null, invalid: true };
+  return { value: d, invalid: false };
+}
+
+function parsePaymentCount(raw: string | null | undefined): { value: number | null; invalid: boolean } {
+  const v = raw?.trim() ?? "";
+  if (!v) return { value: null, invalid: false };
+  if (!/^\d+$/.test(v)) return { value: null, invalid: true };
+  const n = Number(v);
+  if (n < 1 || n > 36) return { value: null, invalid: true };
+  return { value: n, invalid: false };
+}
+
+async function parseInsurancePayment(
+  formData: FormData,
+  householdId: string,
+): Promise<
+  | {
+      ok: true;
+      payment_method: InsurancePaymentMethodValue | null;
+      bank_account_id: string | null;
+      credit_card_id: string | null;
+      payment_date: Date | null;
+      payment_count: number | null;
+    }
+  | { ok: false; error: string }
+> {
+  const methodRaw = (formData.get("payment_method") as string | null)?.trim() || "";
+  let payment_method: InsurancePaymentMethodValue | null = null;
+  if (methodRaw === "bank_account" || methodRaw === "credit_card") {
+    payment_method = methodRaw;
+  } else if (methodRaw) {
+    return { ok: false, error: "Invalid+payment+method" };
+  }
+
+  let bank_account_id = (formData.get("bank_account_id") as string | null)?.trim() || null;
+  let credit_card_id = (formData.get("credit_card_id") as string | null)?.trim() || null;
+  if (payment_method !== "bank_account") bank_account_id = null;
+  if (payment_method !== "credit_card") credit_card_id = null;
+
+  if (bank_account_id) {
+    const account = await prisma.bank_accounts.findFirst({
+      where: { id: bank_account_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!account) return { ok: false, error: "Invalid+bank+account" };
+  }
+
+  if (credit_card_id) {
+    const card = await prisma.credit_cards.findFirst({
+      where: { id: credit_card_id, household_id: householdId },
+      select: { id: true },
+    });
+    if (!card) return { ok: false, error: "Invalid+credit+card" };
+  }
+
+  const paymentDate = parseOptionalDate(formData.get("payment_date") as string | null);
+  if (paymentDate.invalid) return { ok: false, error: "Invalid+payment+date" };
+
+  const paymentCount = parsePaymentCount(
+    payment_method === "credit_card" ? (formData.get("payment_count") as string | null) : "",
+  );
+  if (paymentCount.invalid) {
+    return { ok: false, error: "Number+of+payments+must+be+from+1+to+36" };
+  }
+
+  return {
+    ok: true,
+    payment_method,
+    bank_account_id,
+    credit_card_id,
+    payment_date: payment_method ? paymentDate.value : null,
+    payment_count: paymentCount.value,
+  };
+}
+
 export async function createInsurancePolicy(formData: FormData) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -195,6 +277,11 @@ export async function createInsurancePolicy(formData: FormData) {
     redirectInsurance(context, "error=Use+a+3-letter+currency+code+%28e.g.+ILS%29");
   }
 
+  const payment = await parseInsurancePayment(formData, householdId);
+  if (!payment.ok) {
+    redirectInsurance(context, `error=${payment.error}`);
+  }
+
   const pn = provider_name as string;
   const pnm = policy_name as string;
   const psd = policy_start_date as Date;
@@ -220,6 +307,11 @@ export async function createInsurancePolicy(formData: FormData) {
       expiration_date: exp,
       premium_paid: prem,
       premium_currency,
+      payment_method: payment.ok ? payment.payment_method : null,
+      bank_account_id: payment.ok ? payment.bank_account_id : null,
+      credit_card_id: payment.ok ? payment.credit_card_id : null,
+      payment_date: payment.ok ? payment.payment_date : null,
+      payment_count: payment.ok ? payment.payment_count : null,
       is_active: true,
     },
   });
@@ -308,6 +400,11 @@ export async function updateInsurancePolicy(formData: FormData) {
     redirectInsurance(context, "error=Use+a+3-letter+currency+code+%28e.g.+ILS%29");
   }
 
+  const payment = await parseInsurancePayment(formData, householdId);
+  if (!payment.ok) {
+    redirectInsurance(context, `error=${payment.error}`);
+  }
+
   const pnU = provider_name as string;
   const pnmU = policy_name as string;
   const psdU = policy_start_date as Date;
@@ -332,6 +429,11 @@ export async function updateInsurancePolicy(formData: FormData) {
       expiration_date: expU,
       premium_paid: premU,
       premium_currency,
+      payment_method: payment.ok ? payment.payment_method : null,
+      bank_account_id: payment.ok ? payment.bank_account_id : null,
+      credit_card_id: payment.ok ? payment.credit_card_id : null,
+      payment_date: payment.ok ? payment.payment_date : null,
+      payment_count: payment.ok ? payment.payment_count : null,
     },
   });
 

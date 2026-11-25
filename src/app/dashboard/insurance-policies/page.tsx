@@ -8,7 +8,9 @@ import {
 } from "@/lib/auth";
 import { HouseholdDateField } from "@/components/household-date-field";
 import { SensitiveTextInput, SensitiveTextarea } from "@/components/sensitive-fields";
+import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { formatHouseholdDate, utcDateToHtmlDateInputValue } from "@/lib/household-date-format";
+import { includeById, insurancePaymentMethodValue } from "@/lib/insurance-policy-payment";
 import {
   getInsurancePolicyTypeLabel,
   INSURANCE_POLICY_TYPE_VALUES,
@@ -19,6 +21,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardAddButton } from "@/components/dashboard-add-button";
 import { DashboardModal } from "@/components/dashboard-modal";
+import { UtilityPaymentFields } from "@/app/dashboard/properties/utility-payment-fields";
 import { createInsurancePolicy, toggleInsurancePolicyActive } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +52,53 @@ function formatPremium(paid: { toString(): string }, currency: string) {
   return `${n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 }
 
+function formatPolicyPayment(
+  policy: {
+    payment_method: string | null;
+    payment_count: number | null;
+    payment_date: Date | null;
+    bank_account: { bank_name: string; account_name: string } | null;
+    credit_card: {
+      card_name: string;
+      card_last_four: string;
+      family_member?: { full_name: string | null } | null;
+    } | null;
+  },
+  isHebrew: boolean,
+  obfuscate: boolean,
+  dateDisplayFormat: Parameters<typeof formatHouseholdDate>[1],
+): string {
+  const date = policy.payment_date
+    ? formatHouseholdDate(policy.payment_date, dateDisplayFormat)
+    : "";
+  if (policy.payment_method === "credit_card" || policy.credit_card) {
+    const card = policy.credit_card
+      ? maskSensitiveText(obfuscate, formatCreditCardOptionLabel(policy.credit_card))
+      : isHebrew
+        ? "כרטיס אשראי"
+        : "Credit card";
+    const count =
+      policy.payment_count != null
+        ? isHebrew
+          ? `${policy.payment_count} תשלומים`
+          : `${policy.payment_count} payments`
+        : "";
+    return [card, count, date].filter(Boolean).join(" · ");
+  }
+  if (policy.payment_method === "bank_account" || policy.bank_account) {
+    const account = policy.bank_account
+      ? maskSensitiveText(
+          obfuscate,
+          `${policy.bank_account.bank_name} · ${policy.bank_account.account_name}`,
+        )
+      : isHebrew
+        ? "העברה בנקאית"
+        : "Bank transfer";
+    return [account, date].filter(Boolean).join(" · ");
+  }
+  return "—";
+}
+
 export default async function InsurancePoliciesPage({ searchParams }: PageProps) {
   await requireHouseholdMember();
   const householdId = await getCurrentHouseholdId();
@@ -63,10 +113,28 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
   const modalMode = resolvedSearchParams?.modal === "new" ? "new" : null;
   const cloneFromId = (resolvedSearchParams?.cloneFrom ?? "").trim();
 
-  const [policies, cars, familyMembers, cloneSource] = await Promise.all([
+  const bankAccountSelect = {
+    id: true,
+    account_name: true,
+    bank_name: true,
+    account_number: true,
+  } as const;
+  const creditCardSelect = {
+    id: true,
+    card_name: true,
+    card_last_four: true,
+    family_member: { select: { full_name: true } },
+  } as const;
+
+  const [policies, cars, familyMembers, bankAccounts, creditCards, cloneSource] = await Promise.all([
     prisma.insurance_policies.findMany({
       where: { household_id: householdId },
-      include: { car: true, family_member: true },
+      include: {
+        car: true,
+        family_member: true,
+        bank_account: { select: bankAccountSelect },
+        credit_card: { select: creditCardSelect },
+      },
       orderBy: { expiration_date: "asc" },
     }),
     prisma.cars.findMany({
@@ -77,10 +145,24 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
       where: { household_id: householdId, is_active: true },
       orderBy: { full_name: "asc" },
     }),
+    prisma.bank_accounts.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: [{ bank_name: "asc" }, { account_name: "asc" }],
+      select: bankAccountSelect,
+    }),
+    prisma.credit_cards.findMany({
+      where: { household_id: householdId, is_active: true },
+      orderBy: { card_name: "asc" },
+      select: creditCardSelect,
+    }),
     modalMode === "new" && cloneFromId && isUuid(cloneFromId)
       ? prisma.insurance_policies.findFirst({
           where: { id: cloneFromId, household_id: householdId },
-          include: { car: true },
+          include: {
+            car: true,
+            bank_account: { select: bankAccountSelect },
+            credit_card: { select: creditCardSelect },
+          },
         })
       : Promise.resolve(null),
   ]);
@@ -94,6 +176,8 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
     familyMembers.some((member) => member.id === cloneSource.family_member_id)
       ? cloneSource.family_member_id
       : "";
+  const bankAccountsForForm = includeById(bankAccounts, cloneSource?.bank_account);
+  const creditCardsForForm = includeById(creditCards, cloneSource?.credit_card);
   const premiumCurrency = cloneSource?.premium_currency ?? "ILS";
   const currencyChoices = (PREMIUM_CURRENCIES as readonly string[]).includes(premiumCurrency)
     ? [...PREMIUM_CURRENCIES]
@@ -410,6 +494,25 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                 ))}
               </select>
             </div>
+            <UtilityPaymentFields
+              isHebrew={isHebrew}
+              className="grid gap-4 sm:col-span-2 lg:col-span-3 xl:col-span-4 sm:grid-cols-2 lg:grid-cols-4"
+              bankMethodLabel={isHebrew ? "העברה בנקאית" : "Bank transfer"}
+              creditCardMethodLabel={isHebrew ? "כרטיס אשראי" : "Credit card"}
+              defaultPaymentMethod={insurancePaymentMethodValue(cloneSource)}
+              defaultBankAccountId={cloneSource?.bank_account_id ?? ""}
+              defaultCreditCardId={cloneSource?.credit_card_id ?? ""}
+              defaultPaymentDate={utcDateToHtmlDateInputValue(cloneSource?.payment_date ?? null)}
+              defaultPaymentCount={cloneSource?.payment_count?.toString() ?? ""}
+              showPaymentDate
+              showPaymentCount
+              bankAccounts={bankAccountsForForm.map((account) => ({
+                ...account,
+                account_name: maskSensitiveText(obfuscate, account.account_name),
+                bank_name: maskSensitiveText(obfuscate, account.bank_name),
+              }))}
+              creditCards={creditCardsForForm}
+            />
             <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-1">
               <button
                 type="submit"
@@ -477,6 +580,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                       {isHebrew ? "פרמיה" : "Premium"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
+                      {isHebrew ? "תשלום" : "Payment"}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-slate-300">
                       {isHebrew ? "תפוגה" : "Expires"}
                     </th>
                     <th className="px-4 py-3 font-medium text-slate-300">
@@ -542,6 +648,9 @@ export default async function InsurancePoliciesPage({ searchParams }: PageProps)
                           obfuscate,
                           formatPremium(p.premium_paid, p.premium_currency),
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {formatPolicyPayment(p, isHebrew, obfuscate, dateDisplayFormat)}
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatHouseholdDate(p.expiration_date, dateDisplayFormat)}

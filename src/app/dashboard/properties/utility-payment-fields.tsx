@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HouseholdDateField } from "@/components/household-date-field";
 import { useObfuscateSensitive } from "@/components/household-preferences-context";
 import { formatCreditCardOptionLabel } from "@/lib/credit-card-label";
 import { maskSensitiveText } from "@/lib/privacy-display";
@@ -30,6 +31,16 @@ type UtilityPaymentFieldsProps = {
   creditCards: UtilityCreditCardOption[];
   isHebrew?: boolean;
   className?: string;
+  /** Overrides the bank option label. Defaults to Bank / בנק. */
+  bankMethodLabel?: string;
+  /** Overrides the card option label. Defaults to Credit card / כרטיס אשראי. */
+  creditCardMethodLabel?: string;
+  /** Payment date, shown once a bank account or credit card is selected. */
+  showPaymentDate?: boolean;
+  defaultPaymentDate?: string;
+  /** Installment count, shown only for credit card. */
+  showPaymentCount?: boolean;
+  defaultPaymentCount?: string;
 };
 
 export function UtilityPaymentFields({
@@ -41,6 +52,12 @@ export function UtilityPaymentFields({
   creditCards,
   isHebrew = false,
   className,
+  bankMethodLabel,
+  creditCardMethodLabel,
+  showPaymentDate = false,
+  defaultPaymentDate = "",
+  showPaymentCount = false,
+  defaultPaymentCount = "",
 }: UtilityPaymentFieldsProps) {
   const obfuscate = useObfuscateSensitive();
   const [method, setMethod] = useState<UtilityPaymentMethodValue>(defaultPaymentMethod);
@@ -62,8 +79,10 @@ export function UtilityPaymentFields({
           className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         >
           <option value="">{isHebrew ? "— אין —" : "— None —"}</option>
-          <option value="bank_account">{isHebrew ? "בנק" : "Bank"}</option>
-          <option value="credit_card">{isHebrew ? "כרטיס אשראי" : "Credit card"}</option>
+          <option value="bank_account">{bankMethodLabel ?? (isHebrew ? "בנק" : "Bank")}</option>
+          <option value="credit_card">
+            {creditCardMethodLabel ?? (isHebrew ? "כרטיס אשראי" : "Credit card")}
+          </option>
         </select>
       </div>
       <div>
@@ -105,6 +124,45 @@ export function UtilityPaymentFields({
           ))}
         </select>
       </div>
+      {showPaymentDate ? (
+        method === "bank_account" || method === "credit_card" ? (
+          <div>
+            <label htmlFor={`${idPrefix}payment_date`} className="mb-1 block text-xs font-medium text-slate-400">
+              {isHebrew ? "תאריך תשלום" : "Payment date"}
+            </label>
+            <HouseholdDateField
+              id={`${idPrefix}payment_date`}
+              name="payment_date"
+              defaultIsoYmd={defaultPaymentDate}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="payment_date" value="" />
+        )
+      ) : null}
+      {showPaymentCount ? (
+        method === "credit_card" ? (
+          <div>
+            <label htmlFor={`${idPrefix}payment_count`} className="mb-1 block text-xs font-medium text-slate-400">
+              {isHebrew ? "מספר תשלומים" : "Number of payments"}
+            </label>
+            <input
+              id={`${idPrefix}payment_count`}
+              name="payment_count"
+              type="number"
+              min={1}
+              max={36}
+              step={1}
+              defaultValue={defaultPaymentCount}
+              placeholder={isHebrew ? "למשל 5" : "e.g. 5"}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="payment_count" value="" />
+        )
+      ) : null}
     </div>
   );
 }

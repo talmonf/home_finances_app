@@ -14,6 +14,7 @@ Run scripts **in numeric order** (001 → 002 → …), not in the order listed 
 
 Check off each script after you run it. Newest first — same order as the detailed table below. Skip items your DB already has.
 
+- [x] 152_insurance_policy_payment.sql
 - [x] 151_subscriptions_usage_billing.sql
 - [x] 150_therapy_consultation_type_default_amounts.sql
 - [x] 149_therapy_consultation_scheduling.sql
@@ -172,6 +173,7 @@ Check off each script after you run it. Newest first — same order as the detai
 
 | #   | Script | Type | Description |
 |-----|--------|------|-------------|
+| 152 | `152_insurance_policy_payment.sql` | ALTER | `insurance_policies`: optional payment method (`bank_account` or `credit_card`), bank account, credit card, payment date, and credit-card installment count. |
 | 151 | `151_subscriptions_usage_billing.sql` | ALTER | `subscription_billing_interval`: add `usage` for flexible, usage-based subscriptions. `subscriptions.fee_amount` becomes optional so a usage-based subscription can be recorded without a fixed fee. |
 | 150 | `150_therapy_consultation_type_default_amounts.sql` | CREATE | `therapy_consultation_type_default_amounts`: default consultation fee per consultation type at job scope (`program_id` null) or program scope. Program rows override job rows when logging a consultation. |
 | 149 | `149_therapy_consultation_scheduling.sql` | ALTER | `therapy_consultation_status` (`scheduled`, `cancelled`, `completed`) on `therapy_consultations`, plus `duration_minutes` and Google Calendar event fields. Existing rows default to `completed` so logged consultations stay payable. |
